@@ -228,7 +228,99 @@
     /* toast tighter to top */
     .toast{top:calc(env(safe-area-inset-top,0px) + 12px);font-size:13px;padding:7px 14px;}
   }
+
+/* AUTH */
+.auth-overlay{position:fixed;inset:0;z-index:200;background:rgba(6,18,28,.96);display:flex;align-items:center;justify-content:center;padding:16px;}
+.auth-box{background:#10212e;border:2px solid var(--wood);border-radius:18px;padding:28px 24px;width:100%;max-width:360px;box-shadow:0 8px 32px rgba(0,0,0,.6);}
+.auth-logo{text-align:center;font-size:22px;font-weight:900;color:var(--accent);margin-bottom:4px;}
+.auth-sub{text-align:center;font-size:11.5px;color:var(--text-soft);margin-bottom:18px;}
+.auth-tabs{display:flex;margin-bottom:18px;border:1.5px solid var(--wood);border-radius:10px;overflow:hidden;}
+.auth-tab{flex:1;padding:9px;font-size:13px;font-weight:700;background:transparent;color:var(--text-soft);border:none;cursor:pointer;}
+.auth-tab.active{background:var(--wood);color:#fff;}
+.auth-field{display:block;width:100%;box-sizing:border-box;padding:10px 12px;margin-bottom:10px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:14px;font-family:inherit;}
+.auth-field::placeholder{color:rgba(255,255,255,.3);}
+.auth-field:focus{outline:none;border-color:var(--accent);}
+.auth-btn{width:100%;padding:12px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:800;cursor:pointer;margin-top:4px;}
+.auth-err{color:#e05050;font-size:12px;margin-top:6px;min-height:16px;text-align:center;}
+.auth-guest{display:block;text-align:center;color:var(--text-soft);font-size:12px;margin-top:12px;cursor:pointer;text-decoration:underline;}
+/* TUTORIAL */
+.tut-overlay{position:fixed;inset:0;z-index:190;background:rgba(6,18,28,.92);display:flex;align-items:flex-end;justify-content:center;padding:20px;}
+.tut-box{background:#10212e;border:2px solid var(--wood);border-radius:18px;padding:22px 20px 18px;width:100%;max-width:420px;margin-bottom:40px;}
+.tut-dots{display:flex;gap:5px;justify-content:center;margin-bottom:14px;}
+.tut-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);}
+.tut-dot.active{background:var(--accent);}
+.tut-icon{font-size:32px;text-align:center;margin-bottom:8px;}
+.tut-title{font-size:17px;font-weight:900;color:#fff;text-align:center;margin-bottom:6px;}
+.tut-desc{font-size:13.5px;color:var(--text-soft);text-align:center;line-height:1.6;margin-bottom:16px;}
+.tut-btns{display:flex;gap:8px;}
+.tut-skip{flex:0 0 auto;padding:10px 14px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:var(--text-soft);font-size:13px;cursor:pointer;}
+.tut-next{flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
+/* TOURNAMENT */
+.tourn-card{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;padding:13px 14px;margin-bottom:10px;}
+.tourn-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.tourn-name{font-size:13.5px;font-weight:800;color:#fff;}
+.tourn-zone-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:rgba(255,255,255,.12);color:var(--text-soft);}
+.tourn-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-soft);margin-bottom:4px;}
+.tourn-status{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.tourn-status.open{background:rgba(40,180,80,.25);color:#3dc870;}
+.tourn-status.soon{background:rgba(220,160,40,.18);color:#d4a030;}
+.tourn-status.closed{background:rgba(255,255,255,.07);color:rgba(255,255,255,.3);}
+.tourn-enter-btn{width:100%;margin-top:9px;padding:9px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:800;cursor:pointer;}
+.tourn-enter-btn:disabled{background:rgba(255,255,255,.1);color:var(--text-soft);cursor:not-allowed;}
+/* LOBBY */
+.lobby-overlay{position:fixed;inset:0;z-index:180;background:rgba(6,18,28,.95);display:none;align-items:center;justify-content:center;padding:16px;}
+.lobby-box{background:#10212e;border:2px solid var(--accent);border-radius:18px;padding:24px 20px;width:100%;max-width:380px;}
+.lobby-title{font-size:18px;font-weight:900;color:var(--accent);text-align:center;margin-bottom:4px;}
+.lobby-sub{font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;}
+.lobby-timer{font-size:36px;font-weight:900;color:#fff;text-align:center;letter-spacing:2px;margin-bottom:14px;}
+.lobby-players{list-style:none;padding:0;margin:0 0 14px;max-height:200px;overflow-y:auto;}
+.lobby-player{display:flex;align-items:center;gap:8px;padding:7px 10px;border-radius:8px;background:rgba(255,255,255,.05);margin-bottom:5px;font-size:13px;font-weight:700;color:#fff;}
+.lobby-player .bot-tag{font-size:10px;color:var(--text-soft);font-weight:400;}
+.lobby-shop-btn{width:100%;padding:10px;border-radius:9px;border:1.5px solid var(--wood);background:transparent;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;}
+.lobby-cancel-btn{width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,255,255,.07);color:var(--text-soft);font-size:12px;cursor:pointer;}
+/* FRIENDS */
+.friend-search-row{display:flex;gap:8px;margin-bottom:12px;}
+.friend-input{flex:1;padding:9px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:13px;font-family:inherit;}
+.friend-input::placeholder{color:rgba(255,255,255,.3);}
+.friend-input:focus{outline:none;border-color:var(--accent);}
+.friend-add-btn{padding:9px 14px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+.friend-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);margin-bottom:7px;}
+.friend-name{font-size:13.5px;font-weight:800;color:#fff;}
+.friend-lvl{font-size:11px;color:var(--text-soft);}
+.friend-rm{font-size:11px;color:rgba(255,80,80,.7);cursor:pointer;background:none;border:none;padding:0;}
+.friend-msg{font-size:12px;color:#e05050;margin-top:4px;min-height:16px;}
+/* LEADERBOARD */
+.lb-tabs{display:flex;gap:6px;margin-bottom:10px;}
+.lb-tab{flex:1;padding:7px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:transparent;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
+.lb-tab.active{background:rgba(255,255,255,.12);color:#fff;}
+.lb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.04);margin-bottom:5px;}
+.lb-rank{font-size:14px;font-weight:900;color:var(--accent);width:24px;text-align:center;}
+.lb-uname{font-size:13px;font-weight:800;color:#fff;flex:1;}
+.lb-stat{font-size:12px;color:var(--text-soft);}
+.lb-empty{text-align:center;color:var(--text-soft);font-size:13px;padding:20px 0;}
+/* LOGBOOK SUB-TABS */
+.lb-subtabs{display:flex;gap:6px;margin-bottom:10px;}
+.lb-subtab{flex:1;padding:6px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:transparent;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
+.lb-subtab.active{background:rgba(255,255,255,.12);color:#fff;}
+/* STRUCTURES */
+.struct-card{padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.09);margin-bottom:8px;}
+.struct-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.struct-icon{font-size:20px;}
+.struct-sname{font-size:13.5px;font-weight:800;color:#fff;}
+.struct-depth{font-size:10px;color:var(--text-soft);background:rgba(255,255,255,.08);padding:2px 7px;border-radius:20px;margin-left:auto;}
+.struct-fish-list{display:flex;flex-wrap:wrap;gap:5px;}
+.struct-fish-pill{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;}
+/* USER PILL */
+.user-pill{display:flex;align-items:center;gap:4px;cursor:pointer;}
+.uavatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
+/* TOURNAMENT BANNER */
+.tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.9);color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:20px;pointer-events:none;display:none;}
+
 </style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
 <div class="stage">
@@ -271,7 +363,7 @@
   <div class="menu-tabs">
     <button class="menu-tab active" data-mtab="shop">Shop</button>
     <button class="menu-tab" data-mtab="logbook">Logbook</button>
-    <button class="menu-tab" data-mtab="stats">Stats</button>
+    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="tournament">Tourn.</button><button class="menu-tab" data-mtab="friends">Friends</button>
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
@@ -279,8 +371,10 @@
       <div id="shop-list"></div>
     </div>
     <div class="mpanel" id="mp-logbook">
-      <div style="font-size:11px;font-weight:800;color:var(--text-soft);margin-bottom:8px;">Discovered <span id="species-count">0</span> / <span id="species-total">0</span> species &middot; tap a fish to learn about it</div>
-      <div id="logbook-zones"></div>
+      <div class="lb-subtabs"><button class="lb-subtab active" id="lbsub-fish" onclick="setLbSubtab('fish')">Fish Log</button><button class="lb-subtab" id="lbsub-structs" onclick="setLbSubtab('structs')">Structures</button><button class="lb-subtab" id="lbsub-lb" onclick="setLbSubtab('lb')">Leaderboard</button></div>
+      <div id="lb-sub-fish"><div style="font-size:11px;font-weight:800;color:var(--text-soft);margin-bottom:8px;">Discovered <span id="species-count">0</span> / <span id="species-total">0</span> species &middot; tap a fish</div><div id="logbook-zones"></div></div>
+      <div id="lb-sub-structs" style="display:none"><div id="structs-guide"></div></div>
+      <div id="lb-sub-lb" style="display:none"><div class="lb-tabs"><button class="lb-tab active" id="lbt-global" onclick="setLbTab('global')">Global Top 20</button><button class="lb-tab" id="lbt-friends" onclick="setLbTab('friends')">Friends</button></div><div id="lb-list"></div></div>
     </div>
     <div class="mpanel" id="mp-stats">
       <div class="angler-head"><span class="angler-name">Your Angler</span><span class="level-badge" id="m-lvl">Lv 1</span></div>
@@ -289,6 +383,8 @@
       <div style="margin-top:14px;" id="stats-list"></div>
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
+    <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
+    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friends-list"></div></div>
   </div>
 </div>
 
@@ -297,7 +393,497 @@
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 <div class="modal-bg" id="catch-bg"><div class="catch-card" id="catch-card"></div></div>
 
+
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">Tide & Tackle</div>
+    <div class="auth-sub">Gulf Coast Fishing Simulator</div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
+      <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
+    </div>
+    <div id="auth-login">
+      <input class="auth-field" id="li-email" type="email" placeholder="Email">
+      <input class="auth-field" id="li-pass" type="password" placeholder="Password">
+      <button class="auth-btn" onclick="doLogin()">Log In</button>
+      <div class="auth-err" id="li-err"></div>
+    </div>
+    <div id="auth-signup" style="display:none">
+      <input class="auth-field" id="su-user" type="text" placeholder="Username (3-16 chars)" maxlength="16">
+      <input class="auth-field" id="su-email" type="email" placeholder="Email">
+      <input class="auth-field" id="su-pass" type="password" placeholder="Password (min 6 chars)">
+      <button class="auth-btn" onclick="doSignup()">Create Account</button>
+      <div class="auth-err" id="su-err"></div>
+    </div>
+    <a class="auth-guest" onclick="playAsGuest()">Play as guest (no online features)</a>
+  </div>
+</div>
+<div class="tut-overlay" id="tut-overlay" style="display:none">
+  <div class="tut-box">
+    <div class="tut-dots" id="tut-dots"></div>
+    <div class="tut-icon" id="tut-icon"></div>
+    <div class="tut-title" id="tut-title"></div>
+    <div class="tut-desc" id="tut-desc"></div>
+    <div class="tut-btns">
+      <button class="tut-skip" onclick="closeTutorial()">Skip</button>
+      <button class="tut-next" id="tut-next-btn" onclick="nextTutStep()">Next</button>
+    </div>
+  </div>
+</div>
+<div class="lobby-overlay" id="lobby-overlay">
+  <div class="lobby-box">
+    <div class="lobby-title" id="lobby-title">Tournament Lobby</div>
+    <div class="lobby-sub" id="lobby-sub"></div>
+    <div class="lobby-timer" id="lobby-timer">2:00</div>
+    <ul class="lobby-players" id="lobby-players"></ul>
+    <button class="lobby-shop-btn" onclick="openShopFromLobby()">Open Shop</button>
+    <button class="lobby-cancel-btn" onclick="cancelLobby()">Cancel and Refund</button>
+  </div>
+</div>
+<div class="tourn-banner" id="tourn-banner">TOURNAMENT IN PROGRESS</div>
+
 <script>
+// ─────────────────────────────────────────────────────────────
+// FIREBASE
+// ─────────────────────────────────────────────────────────────
+const FB_CFG={apiKey:"AIzaSyCGNI5snGBSfrL5c-2lRp7X-sIPqLIXmSw",authDomain:"tide-and-tackle.firebaseapp.com",projectId:"tide-and-tackle",storageBucket:"tide-and-tackle.firebasestorage.app",messagingSenderId:"208248255812",appId:"1:208248255812:web:498d580f5e05aaaf885311"};
+let fbApp,fbAuth,fbDb,fbUser=null,fbUsername="Guest",fbFriends=[],isGuest=false;
+try{fbApp=firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.firestore();}catch(e){console.warn("Firebase unavailable",e);}
+
+// ─────────────────────────────────────────────────────────────
+// AUTH
+// ─────────────────────────────────────────────────────────────
+function showAuthTab(tab){
+  document.getElementById("auth-login").style.display=tab==="login"?"":"none";
+  document.getElementById("auth-signup").style.display=tab==="signup"?"":"none";
+  document.getElementById("tab-login").classList.toggle("active",tab==="login");
+  document.getElementById("tab-signup").classList.toggle("active",tab==="signup");
+}
+function fbErr(code){
+  const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account with that email.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect email or password."};
+  return map[code]||"Something went wrong. Try again.";
+}
+async function doLogin(){
+  const email=document.getElementById("li-email").value.trim();
+  const pass=document.getElementById("li-pass").value;
+  const err=document.getElementById("li-err");
+  err.textContent="";
+  if(!email||!pass){err.textContent="Please fill in all fields.";return;}
+  try{const c=await fbAuth.signInWithEmailAndPassword(email,pass);await afterAuth(c.user,false);}
+  catch(e){err.textContent=fbErr(e.code);}
+}
+async function doSignup(){
+  const uname=document.getElementById("su-user").value.trim().replace(/[^a-zA-Z0-9_]/g,"");
+  const email=document.getElementById("su-email").value.trim();
+  const pass=document.getElementById("su-pass").value;
+  const err=document.getElementById("su-err");
+  err.textContent="";
+  if(!uname||!email||!pass){err.textContent="Please fill in all fields.";return;}
+  if(uname.length<3){err.textContent="Username must be at least 3 characters.";return;}
+  if(pass.length<6){err.textContent="Password must be at least 6 characters.";return;}
+  try{
+    const taken=await fbDb.collection("usernames").doc(uname.toLowerCase()).get();
+    if(taken.exists){err.textContent="That username is taken. Try another.";return;}
+    const c=await fbAuth.createUserWithEmailAndPassword(email,pass);
+    await fbDb.collection("usernames").doc(uname.toLowerCase()).set({uid:c.user.uid});
+    await fbDb.collection("users").doc(c.user.uid).set({username:uname,email:email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false,totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
+    await afterAuth(c.user,true);
+  }catch(e){err.textContent=fbErr(e.code);}
+}
+async function afterAuth(user,isNew){
+  fbUser=user;
+  try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
+    const tutDone=(doc.data()||{}).tutorialDone;
+    document.getElementById("auth-overlay").style.display="none";
+    document.getElementById("user-pill-btn").style.display="flex";
+    document.getElementById("user-avatar").textContent=fbUsername[0].toUpperCase();
+    loadFriends();
+    if(isNew||tutDone===false){showTutorial();}
+  }catch(e){document.getElementById("auth-overlay").style.display="none";}
+}
+function playAsGuest(){
+  isGuest=true;
+  document.getElementById("auth-overlay").style.display="none";
+}
+function showUserMenu(){
+  if(!fbUser){return;}
+  if(confirm("Log out of "+fbUsername+"?")){
+    fbAuth.signOut().then(function(){
+      fbUser=null;fbUsername="Guest";isGuest=false;
+      document.getElementById("user-pill-btn").style.display="none";
+      document.getElementById("auth-overlay").style.display="flex";
+    });
+  }
+}
+if(typeof fbAuth!=="undefined"&&fbAuth){
+  fbAuth.onAuthStateChanged(function(user){if(user&&!fbUser){afterAuth(user,false);}});
+}
+
+// ─────────────────────────────────────────────────────────────
+// TUTORIAL
+// ─────────────────────────────────────────────────────────────
+const TUT=[
+  {icon:"🎣",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Cast your line, catch fish, and become the top angler on the leaderboard."},
+  {icon:"💧",title:"Cast Your Line",desc:"Tap anywhere on the water to cast. The circle shows your casting range. Tap the water again while waiting to reel in and try a different spot."},
+  {icon:"⚡",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Too slow and the fish gets away."},
+  {icon:"🧰",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups — match your rig to the target."},
+  {icon:"🎽",title:"Upgrade Your Gear",desc:"Open the menu to visit the Shop. Better reels cast farther, reaching deeper water where rarer fish live."},
+  {icon:"🌊",title:"Deeper Means Rarer",desc:"Structures far from your boat hold Epic and Legendary species. You need a 6000+ reel to reach them."},
+  {icon:"🏆",title:"Compete and Connect",desc:"Daily Tournaments let you compete for prize gold. Add friends to compare catches on the Leaderboard. Good luck out there!"},
+];
+let tutStep=0;
+function showTutorial(){
+  tutStep=0;renderTutStep();
+  document.getElementById("tut-overlay").style.display="flex";
+}
+function renderTutStep(){
+  const s=TUT[tutStep];
+  document.getElementById("tut-dots").innerHTML=TUT.map(function(_,i){return "<div class=\"tut-dot"+(i===tutStep?" active":"")+"\">&nbsp;</div>";}).join("");
+  document.getElementById("tut-icon").textContent=s.icon;
+  document.getElementById("tut-title").textContent=s.title;
+  document.getElementById("tut-desc").textContent=s.desc;
+  document.getElementById("tut-next-btn").textContent=tutStep===TUT.length-1?"Start Fishing!":"Next";
+}
+function nextTutStep(){
+  if(tutStep<TUT.length-1){tutStep++;renderTutStep();}
+  else{closeTutorial();}
+}
+function closeTutorial(){
+  document.getElementById("tut-overlay").style.display="none";
+  if(fbUser&&fbDb){fbDb.collection("users").doc(fbUser.uid).update({tutorialDone:true}).catch(function(){});}
+}
+
+// ─────────────────────────────────────────────────────────────
+// LEADERBOARD
+// ─────────────────────────────────────────────────────────────
+let lbMode="global";
+function setLbTab(mode){
+  lbMode=mode;
+  document.getElementById("lbt-global").classList.toggle("active",mode==="global");
+  document.getElementById("lbt-friends").classList.toggle("active",mode==="friends");
+  renderLeaderboard();
+}
+function pushLeaderboard(){
+  if(!fbUser||!fbDb)return;
+  fbDb.collection("leaderboard").doc(fbUser.uid).set({username:fbUsername,totalCatches:S.totalCatches,biggestWeight:S.biggest||0,biggestName:S.biggestName||"",goldEarned:S.goldEarned||0,level:S.level,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});
+}
+async function renderLeaderboard(){
+  const el=document.getElementById("lb-list");
+  if(!el)return;
+  if(!fbDb){el.innerHTML="<div class=\"lb-empty\">Sign in for leaderboard.</div>";return;}
+  el.innerHTML="<div class=\"lb-empty\">Loading...</div>";
+  try{
+    let snap;
+    if(lbMode==="friends"&&fbFriends.length>0){
+      const ids=[fbUser.uid,...fbFriends.slice(0,9)];
+      snap=await fbDb.collection("leaderboard").where(firebase.firestore.FieldPath.documentId(),"in",ids).orderBy("biggestWeight","desc").get();
+    }else if(lbMode==="friends"){
+      el.innerHTML="<div class=\"lb-empty\">Add friends to compare.</div>";return;
+    }else{
+      snap=await fbDb.collection("leaderboard").orderBy("biggestWeight","desc").limit(20).get();
+    }
+    if(snap.empty){el.innerHTML="<div class=\"lb-empty\">No entries yet. Be the first!</div>";return;}
+    const medals=["🥇","🥈","🥉"];
+    el.innerHTML=snap.docs.map(function(doc,i){
+      const d=doc.data();
+      const me=fbUser&&doc.id===fbUser.uid;
+      return "<div class=\"lb-row\"><div class=\"lb-rank\">"+(medals[i]||(i+1))+"</div><div class=\"lb-uname\">"+(me?"★ ":"")+d.username+"</div><div class=\"lb-stat\">"+(d.biggestName||"—")+" "+(d.biggestWeight?d.biggestWeight.toFixed(1)+"lb":"")+"</div></div>";
+    }).join("");
+  }catch(e){el.innerHTML="<div class=\"lb-empty\">Could not load leaderboard.</div>";}
+}
+
+// ─────────────────────────────────────────────────────────────
+// FRIENDS
+// ─────────────────────────────────────────────────────────────
+function loadFriends(){
+  if(!fbUser||!fbDb)return;
+  fbDb.collection("friends").doc(fbUser.uid).get().then(function(doc){
+    fbFriends=((doc.data()||{}).list)||[];
+    renderFriendsPanel();
+  }).catch(function(){});
+}
+async function searchFriend(){
+  const errEl=document.getElementById("friend-err");
+  const input=document.getElementById("friend-search");
+  const uname=input.value.trim().toLowerCase();
+  errEl.textContent="";
+  if(!fbUser){errEl.textContent="Sign in to add friends.";return;}
+  if(!uname){errEl.textContent="Enter a username.";return;}
+  if(uname===fbUsername.toLowerCase()){errEl.textContent="That is you!";return;}
+  try{
+    const snap=await fbDb.collection("usernames").doc(uname).get();
+    if(!snap.exists){errEl.textContent="Username not found.";return;}
+    const uid=snap.data().uid;
+    if(fbFriends.indexOf(uid)>=0){errEl.textContent="Already friends!";return;}
+    fbFriends.push(uid);
+    await fbDb.collection("friends").doc(fbUser.uid).set({list:fbFriends},{merge:true});
+    input.value="";
+    renderFriendsPanel();
+    toast("Friend added!","#2aa890");
+  }catch(e){errEl.textContent="Error adding friend.";}
+}
+function removeFriend(uid){
+  fbFriends=fbFriends.filter(function(f){return f!==uid;});
+  if(fbUser&&fbDb){fbDb.collection("friends").doc(fbUser.uid).set({list:fbFriends},{merge:true}).catch(function(){});}
+  renderFriendsPanel();
+}
+function renderFriendsPanel(){
+  const el=document.getElementById("friends-list");
+  if(!el)return;
+  if(!fbFriends.length){el.innerHTML="<div class=\"lb-empty\">No friends yet. Search by username above.</div>";return;}
+  if(!fbDb){el.innerHTML="<div class=\"lb-empty\">Sign in to view friends.</div>";return;}
+  Promise.all(fbFriends.slice(0,10).map(function(uid){return fbDb.collection("users").doc(uid).get();})).then(function(snaps){
+    el.innerHTML=snaps.map(function(s){
+      const d=s.data()||{};
+      return "<div class=\"friend-card\"><div><div class=\"friend-name\">"+d.username+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+"</div></div><button class=\"friend-rm\" onclick=\"removeFriend('"+s.id+"')\">Remove</button></div>";
+    }).join("");
+  }).catch(function(){el.innerHTML="<div class=\"lb-empty\">Could not load friends.</div>";});
+}
+
+// ─────────────────────────────────────────────────────────────
+// TOURNAMENTS
+// ─────────────────────────────────────────────────────────────
+const BOT_NAMES=["BigRedDaddy","FlatsFisherman","BayouBob","TarponsRule","SlowRollShrimp","SnookHunter88","PermitChaser","OilRigOllie","WreckDiver","GrouperGary","MangroveManiac","GulfCoastPro","SaltLifeSam","BottomBouncer","ReefRaider","BackwaterBill","PinefishPete","CobiaKing","TideRunner","DockSide_D"];
+const TOURN_DEFS=[
+  {id:"i_am",zone:0,name:"Inshore Morning Cup",openH:10,closeH:12,rarity:"rare",fee:300,maxP:10},
+  {id:"i_pm",zone:0,name:"Inshore Evening Cast",openH:17,closeH:18,rarity:"rare",fee:300,maxP:10},
+  {id:"n_am",zone:1,name:"Nearshore Midday Derby",openH:11,closeH:13,rarity:"epic",fee:700,maxP:15},
+  {id:"n_pm",zone:1,name:"Nearshore Afternoon Slam",openH:15,closeH:17,rarity:"epic",fee:700,maxP:15},
+  {id:"o_am",zone:2,name:"Offshore Early Bird",openH:9,closeH:10,rarity:"legendary",fee:2000,maxP:20},
+  {id:"o_pm",zone:2,name:"Offshore Night Bite",openH:19,closeH:20,rarity:"legendary",fee:2000,maxP:20},
+];
+const ZONE_LBL=["Inshore","Nearshore","Offshore"];
+const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary"};
+let activeLobby=null,lobbyInt=null,activeTournament=null;
+
+function etHour(){
+  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",hour:"2-digit",hour12:false});
+  return parseInt(s);
+}
+function etHM(){
+  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",hour:"2-digit",minute:"2-digit",hour12:false});
+  const p=s.split(":");return{h:parseInt(p[0]),m:parseInt(p[1])};
+}
+function tStatus(def){
+  const h=etHour();
+  if(h>=def.openH&&h<def.closeH)return"open";
+  if(h<def.openH)return"soon";
+  return"closed";
+}
+function tCountdown(def){
+  const t=etHM();
+  const diff=def.openH*60-(t.h*60+t.m);
+  if(diff<=0)return"";
+  return Math.floor(diff/60)+"h "+(diff%60)+"m";
+}
+function renderTournamentPanel(){
+  const el=document.getElementById("tournament-list");
+  if(!el)return;
+  el.innerHTML=TOURN_DEFS.map(function(def){
+    const st=tStatus(def);
+    const rc=RARITY_COLORS[def.rarity];
+    const canAfford=S.gold>=def.fee;
+    const statusHtml=st==="open"
+      ?"<span class=\"tourn-status open\">OPEN</span>"
+      :st==="soon"
+        ?"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>"
+        :"<span class=\"tourn-status closed\">Closed</span>";
+    const btn=st==="open"
+      ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up — "+def.fee+"g entry</button>"
+      :"";
+    return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
+      +"<div class=\"tourn-row\"><span>Target: <b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish</span>"+statusHtml+"</div>"
+      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>"+def.openH+":00 - "+def.closeH+":00 ET</span></div>"
+      +btn+"</div>";
+  }).join("");
+}
+function enterTournament(defId){
+  const def=TOURN_DEFS.find(function(d){return d.id===defId;});
+  if(!def)return;
+  if(S.gold<def.fee){toast("Not enough gold!","#b3402a");return;}
+  if(tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
+  S.gold-=def.fee;updatePills();queueSave();
+  const meEntry={uid:fbUser?fbUser.uid:"guest",username:fbUsername,isBot:false};
+  activeLobby={def:def,players:[meEntry],timeLeft:120};
+  document.getElementById("lobby-title").textContent=def.name;
+  document.getElementById("lobby-sub").textContent=RAR_LBL[def.rarity]+" fish · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
+  document.getElementById("lobby-overlay").style.display="flex";
+  document.getElementById("menu-panel").classList.remove("open");
+  renderLobbyPlayers();
+  // Pull real entrants from Firestore
+  if(fbUser&&fbDb){
+    const today=new Date().toISOString().slice(0,10);
+    const ref=fbDb.collection("tournament_lobbies").doc(def.id+"_"+today);
+    ref.set({entries:firebase.firestore.FieldValue.arrayUnion({uid:fbUser.uid,username:fbUsername,joinedAt:Date.now()})},{merge:true})
+      .then(function(){return ref.get();})
+      .then(function(snap){
+        const entries=((snap.data()||{}).entries||[]).filter(function(e){return e.uid!==fbUser.uid;});
+        activeLobby.players=[meEntry].concat(entries.slice(0,def.maxP-1).map(function(e){return{uid:e.uid,username:e.username,isBot:false};}));
+        renderLobbyPlayers();
+      }).catch(function(){});
+  }
+  startLobbyCountdown();
+}
+function renderLobbyPlayers(){
+  document.getElementById("lobby-players").innerHTML=activeLobby.players.map(function(p){
+    return "<li class=\"lobby-player\">"+p.username+(p.isBot?"<span class=\"bot-tag\"> Bot</span>":"")+"</li>";
+  }).join("");
+}
+function startLobbyCountdown(){
+  clearInterval(lobbyInt);
+  lobbyInt=setInterval(function(){
+    activeLobby.timeLeft--;
+    const m=Math.floor(activeLobby.timeLeft/60),s=activeLobby.timeLeft%60;
+    document.getElementById("lobby-timer").textContent=m+":"+(s<10?"0":"")+s;
+    if(activeLobby.timeLeft<=0){clearInterval(lobbyInt);fillBotsAndStart();}
+  },1000);
+}
+function fillBotsAndStart(){
+  const def=activeLobby.def;
+  const needed=def.maxP-activeLobby.players.length;
+  const bots=[].concat(BOT_NAMES).sort(function(){return Math.random()-.5;});
+  for(let i=0;i<needed;i++){activeLobby.players.push({uid:"bot_"+i,username:bots[i]||("Angler"+i),isBot:true});}
+  renderLobbyPlayers();
+  setTimeout(function(){
+    document.getElementById("lobby-overlay").style.display="none";
+    startTournamentMode(def);
+  },1000);
+}
+function cancelLobby(){
+  clearInterval(lobbyInt);
+  if(activeLobby){
+    S.gold+=activeLobby.def.fee;updatePills();queueSave();
+    toast("Entry refunded.","#2aa890");
+  }
+  activeLobby=null;
+  document.getElementById("lobby-overlay").style.display="none";
+}
+function openShopFromLobby(){
+  document.querySelectorAll(".menu-tab").forEach(function(t){t.classList.remove("active");});
+  document.querySelectorAll(".mpanel").forEach(function(p){p.classList.remove("active");});
+  document.querySelector("[data-mtab='shop']").classList.add("active");
+  document.getElementById("mp-shop").classList.add("active");
+  document.getElementById("menu-panel").classList.add("open");
+  renderShop();
+}
+function startTournamentMode(def){
+  activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[]};
+  S.zone=def.zone;updateZonePill();
+  document.getElementById("tourn-banner").style.display="block";
+  toast("Tournament started! 5 minutes to fish!","#e0a93c");
+  // Simulate bot catches
+  if(activeLobby){
+    activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
+      const delay=20000+Math.random()*250000;
+      setTimeout(function(){
+        if(!activeTournament)return;
+        const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
+        if(!pool.length)return;
+        const f=pool[Math.floor(Math.random()*pool.length)];
+        const w=parseFloat((f.size[0]+(f.size[1]-f.size[0])*Math.random()).toFixed(1));
+        activeTournament.botCatches.push({username:bot.username,fish:f.name,weight:w});
+      },delay);
+    });
+  }
+  setTimeout(endTournament,5*60*1000);
+}
+function recordTournamentCatch(fishName,weight){
+  if(!activeTournament)return;
+  if(weight>activeTournament.biggestWeight){activeTournament.biggestWeight=weight;activeTournament.biggestName=fishName;}
+}
+function endTournament(){
+  if(!activeTournament)return;
+  document.getElementById("tourn-banner").style.display="none";
+  const def=activeTournament.def;
+  const entries=[{username:fbUsername,weight:activeTournament.biggestWeight,name:activeTournament.biggestName,isPlayer:true}];
+  activeTournament.botCatches.forEach(function(b){
+    const ex=entries.find(function(e){return e.username===b.username;});
+    if(!ex){entries.push({username:b.username,weight:b.weight,name:b.fish,isPlayer:false});}
+    else if(b.weight>ex.weight){ex.weight=b.weight;ex.name=b.fish;}
+  });
+  if(activeLobby){activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(p){if(!entries.find(function(e){return e.username===p.username;})){entries.push({username:p.username,weight:0,name:"No catch",isPlayer:false});}});}
+  entries.sort(function(a,b){return b.weight-a.weight;});
+  const pool=def.maxP*def.fee;
+  const prizes=[Math.round(pool*.7),Math.round(pool*.2),Math.round(pool*.1)];
+  const rank=entries.findIndex(function(e){return e.isPlayer;});
+  let winnings=rank>=0&&rank<3?prizes[rank]:0;
+  if(winnings>0){S.gold+=winnings;updatePills();queueSave();}
+  const medals=["🥇","🥈","🥉"];
+  const body=document.getElementById("modal");
+  body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
+    +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
+    +entries.slice(0,10).map(function(e,i){
+      return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:rgba(255,255,255,.05);margin-bottom:5px;"+(e.isPlayer?"border:1.5px solid var(--accent);":"")+"\">"
+        +"<span style=\"font-size:16px;width:24px;text-align:center;\">"+(medals[i]||(i+1))+"</span>"
+        +"<span style=\"flex:1;font-size:13px;font-weight:700;color:#fff;\">"+e.username+"</span>"
+        +"<span style=\"font-size:12px;color:var(--text-soft);\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span></div>";
+    }).join("")
+    +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#e0a93c;margin-top:10px;\">+"+winnings+"g prize!</div>":"")
+    +"<button onclick=\"document.getElementById('modal-bg').classList.remove('open')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
+  document.getElementById("modal-bg").classList.add("open");
+  activeTournament=null;activeLobby=null;
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRUCTURES GUIDE
+// ─────────────────────────────────────────────────────────────
+const STRUCT_META={
+  dock:{icon:"🪵",label:"Dock Pilings",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  grass:{icon:"🌿",label:"Grass Flat",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  oyster:{icon:"🦪",label:"Oyster Bar",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  sand:{icon:"🏖",label:"Sandy Bottom",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  crab_trap:{icon:"🦀",label:"Crab Trap",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  mangrove:{icon:"🌳",label:"Mangrove Edge",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  bridge:{icon:"🌉",label:"Bridge Pilings",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  pass:{icon:"🌊",label:"Tidal Pass",zone:"Inshore",depth:"Deep",depthColor:"#8060c8"},
+  channel:{icon:"⚓",label:"Channel Edge",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  reef:{icon:"🪸",label:"Artificial Reef",zone:"Nearshore",depth:"Near",depthColor:"#2aa890"},
+  wreck:{icon:"⛵",label:"Shipwreck",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  ledge:{icon:"📉",label:"Ledge / Drop-off",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  rip:{icon:"💨",label:"Rip Current",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  baitball:{icon:"🐟",label:"Bait Ball",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  open:{icon:"🌊",label:"Open Water",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  weedline:{icon:"🌾",label:"Weedline",zone:"Offshore",depth:"Near",depthColor:"#2aa890"},
+  deep:{icon:"🔵",label:"Deep Water",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  platform:{icon:"🛢",label:"Oil Platform",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  bluhole:{icon:"🔵",label:"Blue Hole",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+};
+function renderStructuresGuide(){
+  const el=document.getElementById("structs-guide");
+  if(!el)return;
+  const sMap={};
+  FISH.forEach(function(f){(f.structure||[]).forEach(function(sk){if(!sMap[sk])sMap[sk]=[];if(!sMap[sk].find(function(x){return x.id===f.id;}))sMap[sk].push(f);});});
+  const rarOrder=["common","uncommon","rare","epic","legendary"];
+  el.innerHTML=Object.keys(STRUCT_META).map(function(k){
+    const info=STRUCT_META[k];
+    const fish=(sMap[k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
+    const pills=fish.map(function(f){
+      return "<span class=\"struct-fish-pill\" style=\"background:"+RARITY_COLORS[f.rarity]+"22;color:"+RARITY_COLORS[f.rarity]+";\">"+f.name+"</span>";
+    }).join("");
+    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+info.icon+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(pills?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
+  }).join("");
+}
+
+// ─────────────────────────────────────────────────────────────
+// LOGBOOK SUB-TABS
+// ─────────────────────────────────────────────────────────────
+function setLbSubtab(tab){
+  ["fish","structs","lb"].forEach(function(t){
+    const el=document.getElementById("lb-sub-"+t);
+    if(el)el.style.display=t===tab?"":"none";
+    const btn=document.getElementById("lbsub-"+t);
+    if(btn)btn.classList.toggle("active",t===tab);
+  });
+  if(tab==="structs")renderStructuresGuide();
+  if(tab==="lb")renderLeaderboard();
+}
+
+// Refresh tournament panel every 60s when visible
+setInterval(function(){
+  const tp=document.getElementById("mp-tournament");
+  if(tp&&tp.classList.contains("active"))renderTournamentPanel();
+},60000);
+
 // ===================== DATA =====================
 const SEASONS=['spring','summer','fall','winter'];
 const SEASON_ICON={spring:'\uD83C\uDF31',summer:'\u2600\uFE0F',fall:'\uD83C\uDF42',winter:'\u2744\uFE0F'};
@@ -445,10 +1031,10 @@ const FISH=[
   {id:'trigger',name:'Gray Triggerfish',zone:1,rarity:'uncommon',size:[1,7],line:10,methods:['bottom'],baits:['squid'],leader:'any',structure:['reef','wreck'],season:['all'],time:['day'],xp:32,gold:18,weight:24,fact:'A leathery mouth and beak-like teeth; it locks a dorsal \u201Ctrigger\u201D spine to wedge in reef holes.'},
   {id:'hogfish',name:'Hogfish',zone:1,rarity:'uncommon',size:[1,7],line:10,methods:['livebait','bottom'],baits:['shrimp'],leader:'fluoro',structure:['reef'],season:['all'],time:['day'],xp:38,gold:21,weight:20,fact:'Roots out crustaceans with a pig-like snout; born female, some turn male. A prized table fish.'},
   {id:'nearmangrove',name:'Mangrove Snapper (offshore)',zone:1,rarity:'uncommon',size:[2,9],line:20,methods:['livebait','bottom'],baits:['pilchard','squid'],leader:'fluoro',structure:['wreck','reef'],season:['summer','fall'],time:['dusk','night'],xp:42,gold:25,weight:16,fact:'Same species as inshore \u201Cmangos,\u201D but wreck fish grow far bigger and warier. Light fluoro is key.'},
-  {id:'king',name:'King Mackerel',zone:1,rarity:'rare',size:[8,50],line:40,methods:['troll','livebait'],baits:['cutbait','pinfish'],leader:'wire',structure:['open','wreck'],season:['spring','fall'],time:['day'],xp:90,gold:56,weight:9,fact:'\u201CSmoker kings\u201D scream drag and skyrocket on slow-trolled baits. Always rig a wire stinger.'},
+  {id:'king',name:'King Mackerel',zone:1,rarity:'epic',size:[8,50],line:40,methods:['troll','livebait'],baits:['cutbait','pinfish'],leader:'wire',structure:['open','wreck'],season:['spring','fall'],time:['day'],xp:90,gold:56,weight:9,fact:'\u201CSmoker kings\u201D scream drag and skyrocket on slow-trolled baits. Always rig a wire stinger.'},
   {id:'gag',name:'Gag Grouper',zone:1,rarity:'rare',size:[5,40],line:40,methods:['livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['reef','ledge'],season:['all'],time:['day'],xp:112,gold:72,weight:8,fact:'The instant it\u2019s hooked it bolts for its hole. Turn its head and crank hard or it\u2019s gone.'},
-  {id:'cobia',name:'Cobia',zone:1,rarity:'epic',size:[15,60],line:40,methods:['livebait','jig'],baits:['pinfish','crab'],leader:'any',structure:['wreck','open'],season:['spring'],time:['day'],xp:170,gold:112,weight:3.5,fact:'Curious and shark-like, cobia shadow rays, turtles and buoys, perfect for sight-casting a jig.'},
-  {id:'blacktip',name:'Blacktip Shark',zone:1,rarity:'legendary',size:[20,90],line:80,methods:['chunk','livebait'],baits:['cutbait','menhaden'],leader:'wire',structure:['open'],season:['summer'],time:['day','dusk'],xp:280,gold:165,weight:2.5,fact:'Blacktips and spinners launch fully out of the water, twisting in mid-air, when hooked.'},
+  {id:'cobia',name:'Cobia',zone:1,rarity:'legendary',size:[15,60],line:40,methods:['livebait','jig'],baits:['pinfish','crab'],leader:'any',structure:['wreck','open'],season:['spring'],time:['day'],xp:170,gold:112,weight:3.5,fact:'Curious and shark-like, cobia shadow rays, turtles and buoys, perfect for sight-casting a jig.'},
+  {id:'blacktip',name:'Blacktip Shark',zone:1,rarity:'epic',size:[20,90],line:80,methods:['chunk','livebait'],baits:['cutbait','menhaden'],leader:'wire',structure:['open'],season:['summer'],time:['day','dusk'],xp:280,gold:165,weight:2.5,fact:'Blacktips and spinners launch fully out of the water, twisting in mid-air, when hooked.'},
   // ---------- OFFSHORE ----------
   {id:'vermilion',name:'Vermilion Snapper',zone:2,rarity:'common',size:[0.5,2.5],line:40,methods:['bottom'],baits:['squid'],leader:'fluoro',structure:['wreck'],season:['all'],time:['day'],xp:30,gold:18,weight:50,fact:'Bright red \u201Cbeeliners\u201D swarm deep hard bottom; small hooks, fast steady bites.'},
   {id:'almaco',name:'Almaco Jack',zone:2,rarity:'common',size:[5,25],line:40,methods:['jig','bottom'],baits:['squid','pinfish'],leader:'any',structure:['wreck'],season:['all'],time:['day'],xp:46,gold:27,weight:44,fact:'An amberjack cousin that hammers vertical jigs near deep structure.'},
@@ -1176,6 +1762,7 @@ function ensureRig(){
 function nearestStruct(x,y){let best=null,bd=1e9;for(const s of curZone().structures){const d=dist(x,y,s.x,s.y);if(d<bd){bd=d;best=s;}}return bd<62?best:null;}
 
 canvas.addEventListener('click',e=>{
+  if(phase==='waiting'){clearTimeout(biteTimeout);phase='idle';bobber.active=false;setStatus('Reeled in. Cast again.');return;}
   if(phase!=='idle')return;
   const rect=canvas.getBoundingClientRect();
   const x=(e.clientX-rect.left)*(CW/rect.width);
@@ -1317,7 +1904,7 @@ function land(f,w,perfect){
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
-  S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;
+  S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
@@ -1420,13 +2007,15 @@ document.getElementById('menu-open').addEventListener('click',openMenu);
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
+    if(t.dataset.mtab==='friends'){renderFriendsPanel();}
+    if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
   document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('mp-'+t.dataset.mtab).classList.add('active');
 }));
 
 let shopTab='boats';
-function refreshMenu(){renderLogbook();renderShop();renderStats();}
+function refreshMenu(){renderLogbook();renderShop();renderStats();renderTournamentPanel();}
 
 function renderLogbook(){
   let html='';
