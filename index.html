@@ -47,7 +47,8 @@
   .catch-game .hint{color:#fff;font-size:12px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
   .catch-track{position:relative;height:28px;background:linear-gradient(180deg,#bfe0ec,#93c9da);border-radius:9px;border:2px solid var(--sea);overflow:hidden;}
   .catch-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#34c2a8,#34c2a8 6px,#2aa890 6px,#2aa890 12px);border-left:2px solid #1f7a6d;border-right:2px solid #1f7a6d;}
-  .catch-ind{position:absolute;top:-2px;width:5px;height:calc(100% + 4px);background:var(--accent-dark);border-radius:3px;box-shadow:0 0 6px rgba(196,111,40,.7);}
+  .catch-bullseye{position:absolute;top:0;height:100%;background:rgba(255,220,0,.9);border-left:2px solid #c8a800;border-right:2px solid #c8a800;pointer-events:none;}
+  .catch-ind{position:absolute;top:-2px;width:5px;height:calc(100% + 4px);background:var(--accent-dark);border-radius:3px;box-shadow:0 0 6px rgba(196,111,40,.7);z-index:2;}
   .reel-btn{width:100%;margin-top:9px;padding:10px;font-family:'Fredoka';font-size:16px;font-weight:600;color:#fff;background:var(--accent);border:2px solid var(--accent-dark);border-radius:11px;box-shadow:0 4px 0 var(--accent-dark);cursor:pointer;}
   .reel-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-dark);}
 
@@ -256,17 +257,22 @@
 .tut-skip{flex:0 0 auto;padding:10px 14px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:var(--text-soft);font-size:13px;cursor:pointer;}
 .tut-next{flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
 /* TOURNAMENT */
-.tourn-card{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.1);border-radius:12px;padding:13px 14px;margin-bottom:10px;}
+.tourn-card{background:var(--parchment);border:1.5px solid #d2b886;border-radius:12px;padding:13px 14px;margin-bottom:10px;}
 .tourn-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.tourn-name{font-size:13.5px;font-weight:800;color:#fff;}
-.tourn-zone-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:rgba(255,255,255,.12);color:var(--text-soft);}
+.tourn-name{font-size:13.5px;font-weight:800;color:var(--wood-dark);}
+.tourn-zone-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:#e2d4b8;color:var(--text-soft);}
 .tourn-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-soft);margin-bottom:4px;}
 .tourn-status{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;}
-.tourn-status.open{background:rgba(40,180,80,.25);color:#3dc870;}
-.tourn-status.soon{background:rgba(220,160,40,.18);color:#d4a030;}
-.tourn-status.closed{background:rgba(255,255,255,.07);color:rgba(255,255,255,.3);}
+.tourn-status.open{background:rgba(40,180,80,.15);color:#1f8040;}
+.tourn-status.soon{background:rgba(200,140,20,.15);color:#8a6010;}
+.tourn-status.closed{background:#e2d4b8;color:var(--text-soft);}
 .tourn-enter-btn{width:100%;margin-top:9px;padding:9px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:800;cursor:pointer;}
-.tourn-enter-btn:disabled{background:rgba(255,255,255,.1);color:var(--text-soft);cursor:not-allowed;}
+.tourn-enter-btn:disabled{background:#c9b897;color:var(--text-soft);cursor:not-allowed;}
+.tourn-card.always-on{background:linear-gradient(135deg,#fff8ee,#fdefd6);border:2px solid var(--accent);margin-bottom:14px;}
+.tourn-card.always-on .tourn-name{color:var(--accent-dark);font-size:14.5px;}
+.always-live{display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:900;color:#fff;background:var(--grass);border:1.5px solid var(--grass-dark);padding:3px 9px;border-radius:20px;letter-spacing:.4px;}
+.always-live::before{content:'';width:7px;height:7px;border-radius:50%;background:#fff;display:inline-block;animation:livepulse 1.2s ease-in-out infinite;}
+@keyframes livepulse{0%,100%{opacity:1;}50%{opacity:.3;}}
 /* LOBBY */
 .lobby-overlay{position:fixed;inset:0;z-index:180;background:rgba(6,18,28,.95);display:none;align-items:center;justify-content:center;padding:16px;}
 .lobby-box{background:#10212e;border:2px solid var(--accent);border-radius:18px;padding:24px 20px;width:100%;max-width:380px;}
@@ -280,34 +286,34 @@
 .lobby-cancel-btn{width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,255,255,.07);color:var(--text-soft);font-size:12px;cursor:pointer;}
 /* FRIENDS */
 .friend-search-row{display:flex;gap:8px;margin-bottom:12px;}
-.friend-input{flex:1;padding:9px 12px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:rgba(255,255,255,.07);color:#fff;font-size:13px;font-family:inherit;}
-.friend-input::placeholder{color:rgba(255,255,255,.3);}
+.friend-input{flex:1;padding:9px 12px;border-radius:9px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--ink);font-size:13px;font-family:inherit;}
+.friend-input::placeholder{color:var(--text-soft);}
 .friend-input:focus{outline:none;border-color:var(--accent);}
 .friend-add-btn{padding:9px 14px;border-radius:9px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
-.friend-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.08);margin-bottom:7px;}
-.friend-name{font-size:13.5px;font-weight:800;color:#fff;}
+.friend-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:7px;}
+.friend-name{font-size:13.5px;font-weight:800;color:var(--ink);}
 .friend-lvl{font-size:11px;color:var(--text-soft);}
-.friend-rm{font-size:11px;color:rgba(255,80,80,.7);cursor:pointer;background:none;border:none;padding:0;}
-.friend-msg{font-size:12px;color:#e05050;margin-top:4px;min-height:16px;}
+.friend-rm{font-size:11px;color:#b3402a;cursor:pointer;background:none;border:none;padding:0;}
+.friend-msg{font-size:12px;color:#b3402a;margin-top:4px;min-height:16px;}
 /* LEADERBOARD */
 .lb-tabs{display:flex;gap:6px;margin-bottom:10px;}
-.lb-tab{flex:1;padding:7px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:transparent;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
-.lb-tab.active{background:rgba(255,255,255,.12);color:#fff;}
-.lb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:rgba(255,255,255,.04);margin-bottom:5px;}
+.lb-tab{flex:1;padding:7px;border-radius:8px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
+.lb-tab.active{background:var(--sea);color:#fff;border-color:#13506f;}
+.lb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;background:var(--parchment);border:1px solid #e2d4b8;margin-bottom:5px;}
 .lb-rank{font-size:14px;font-weight:900;color:var(--accent);width:24px;text-align:center;}
-.lb-uname{font-size:13px;font-weight:800;color:#fff;flex:1;}
+.lb-uname{font-size:13px;font-weight:800;color:var(--ink);flex:1;}
 .lb-stat{font-size:12px;color:var(--text-soft);}
 .lb-empty{text-align:center;color:var(--text-soft);font-size:13px;padding:20px 0;}
 /* LOGBOOK SUB-TABS */
 .lb-subtabs{display:flex;gap:6px;margin-bottom:10px;}
-.lb-subtab{flex:1;padding:6px;border-radius:8px;border:1.5px solid rgba(255,255,255,.12);background:transparent;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
-.lb-subtab.active{background:rgba(255,255,255,.12);color:#fff;}
+.lb-subtab{flex:1;padding:6px;border-radius:8px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
+.lb-subtab.active{background:var(--sea);color:#fff;border-color:#13506f;}
 /* STRUCTURES */
-.struct-card{padding:11px 13px;border-radius:11px;background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.09);margin-bottom:8px;}
+.struct-card{padding:11px 13px;border-radius:11px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:8px;}
 .struct-card-head{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
 .struct-icon{font-size:20px;}
-.struct-sname{font-size:13.5px;font-weight:800;color:#fff;}
-.struct-depth{font-size:10px;color:var(--text-soft);background:rgba(255,255,255,.08);padding:2px 7px;border-radius:20px;margin-left:auto;}
+.struct-sname{font-size:13.5px;font-weight:800;color:var(--wood-dark);}
+.struct-depth{font-size:10px;color:var(--text-soft);background:#e2d4b8;padding:2px 7px;border-radius:20px;margin-left:auto;}
 .struct-fish-list{display:flex;flex-wrap:wrap;gap:5px;}
 .struct-fish-pill{font-size:11px;padding:3px 8px;border-radius:20px;font-weight:700;}
 /* USER PILL */
@@ -334,6 +340,7 @@
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
+      <div class="pill click" id="cosmetic-pill" onclick="openMenu('shop');setTimeout(()=>{shopTab='cosmetics';renderShop();},80);" title="Cosmetics">👤</div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -342,7 +349,7 @@
 
     <div class="catch-game" id="catch-game">
       <div class="hint" id="catch-hint">Stop the marker in the green!</div>
-      <div class="catch-track"><div class="catch-zone" id="catch-zone"></div><div class="catch-ind" id="catch-ind"></div></div>
+      <div class="catch-track"><div class="catch-zone" id="catch-zone"></div><div class="catch-bullseye" id="catch-bullseye"></div><div class="catch-ind" id="catch-ind"></div></div>
       <button class="reel-btn" id="reel-btn">Set the Hook!</button>
     </div>
 
@@ -383,8 +390,8 @@
       <div style="margin-top:14px;" id="stats-list"></div>
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
-    <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
-    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:#fff;margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friends-list"></div></div>
+    <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
+    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friends-list"></div></div>
   </div>
 </div>
 
@@ -416,6 +423,31 @@
       <div class="auth-err" id="su-err"></div>
     </div>
     <a class="auth-guest" onclick="playAsGuest()">Play as guest (no online features)</a>
+  </div>
+</div>
+<div class="auth-overlay" id="gender-overlay" style="display:none">
+  <div class="auth-box" style="text-align:center;">
+    <div class="auth-logo">Choose Your Angler</div>
+    <div class="auth-sub" style="margin-bottom:24px;">How do you identify?</div>
+    <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
+      <div id="gender-male" onclick="selectGender('male')" style="flex:1;max-width:130px;cursor:pointer;border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:20px 10px;transition:border-color .15s;">
+        <div style="font-size:52px;margin-bottom:8px;">🧑‍🎣</div>
+        <div style="color:#fff;font-size:15px;font-weight:800;">Male</div>
+      </div>
+      <div id="gender-female" onclick="selectGender('female')" style="flex:1;max-width:130px;cursor:pointer;border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:20px 10px;transition:border-color .15s;">
+        <div style="font-size:52px;margin-bottom:8px;">👩‍🎣</div>
+        <div style="color:#fff;font-size:15px;font-weight:800;">Female</div>
+      </div>
+    </div>
+    <button class="auth-btn" id="gender-confirm-btn" onclick="confirmGender()" style="opacity:.4;pointer-events:none;">Continue</button>
+  </div>
+</div>
+<div class="auth-overlay" id="skin-overlay" style="display:none">
+  <div class="auth-box" style="text-align:center;max-width:400px;">
+    <div class="auth-logo">Choose Your Skin Tone</div>
+    <div class="auth-sub" style="margin-bottom:22px;">Personalize your angler</div>
+    <div id="skin-options" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:22px;"></div>
+    <button class="auth-btn" id="skin-confirm-btn" onclick="confirmSkin()" style="opacity:.4;pointer-events:none;">Continue</button>
   </div>
 </div>
 <div class="tut-overlay" id="tut-overlay" style="display:none">
@@ -490,6 +522,7 @@ async function doSignup(){
     await afterAuth(c.user,true);
   }catch(e){err.textContent=fbErr(e.code);}
 }
+let _pendingNewUser=false;
 async function afterAuth(user,isNew){
   fbUser=user;
   try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
@@ -498,8 +531,64 @@ async function afterAuth(user,isNew){
     document.getElementById("user-pill-btn").style.display="flex";
     document.getElementById("user-avatar").textContent=fbUsername[0].toUpperCase();
     loadFriends();
-    if(isNew||tutDone===false){showTutorial();}
+    if(isNew){showGenderSelect();}
+    else if(tutDone===false){showTutorial();}
   }catch(e){document.getElementById("auth-overlay").style.display="none";}
+}
+let _selectedGender='';
+function showGenderSelect(){
+  _selectedGender='';
+  document.getElementById('gender-overlay').style.display='flex';
+  document.getElementById('gender-male').style.borderColor='rgba(255,255,255,.15)';
+  document.getElementById('gender-female').style.borderColor='rgba(255,255,255,.15)';
+  document.getElementById('gender-confirm-btn').style.opacity='.4';
+  document.getElementById('gender-confirm-btn').style.pointerEvents='none';
+}
+function selectGender(g){
+  _selectedGender=g;
+  document.getElementById('gender-male').style.borderColor=g==='male'?'var(--accent)':'rgba(255,255,255,.15)';
+  document.getElementById('gender-female').style.borderColor=g==='female'?'var(--accent)':'rgba(255,255,255,.15)';
+  document.getElementById('gender-confirm-btn').style.opacity='1';
+  document.getElementById('gender-confirm-btn').style.pointerEvents='auto';
+}
+function confirmGender(){
+  if(!_selectedGender)return;
+  S.gender=_selectedGender;
+  document.getElementById('gender-overlay').style.display='none';
+  if(fbUser&&fbDb){fbDb.collection("users").doc(fbUser.uid).update({gender:_selectedGender}).catch(function(){});}
+  showSkinSelect();
+}
+
+let _selectedSkin='';
+function showSkinSelect(){
+  _selectedSkin='';
+  const gender=S.gender||'male';
+  document.getElementById('skin-options').innerHTML=SKIN_TONES.map(function(t){
+    return '<div id="skin-opt-'+t.id+'" onclick="selectSkin(\''+t.id+'\')" style="cursor:pointer;border:3px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 8px;min-width:64px;transition:border-color .15s;box-sizing:border-box;">'
+      +'<div style="font-size:38px;line-height:1;margin-bottom:8px;">'+anglerEmoji(gender,t.id)+'</div>'
+      +'<div style="width:18px;height:18px;border-radius:50%;background:'+t.color+';margin:0 auto;border:2px solid rgba(0,0,0,.2);"></div>'
+      +'</div>';
+  }).join('');
+  const btn=document.getElementById('skin-confirm-btn');
+  btn.style.opacity='.4';btn.style.pointerEvents='none';
+  document.getElementById('skin-overlay').style.display='flex';
+}
+function selectSkin(id){
+  _selectedSkin=id;
+  SKIN_TONES.forEach(function(t){
+    const el=document.getElementById('skin-opt-'+t.id);
+    if(el)el.style.borderColor=t.id===id?'var(--accent)':'rgba(255,255,255,.15)';
+  });
+  const btn=document.getElementById('skin-confirm-btn');
+  btn.style.opacity='1';btn.style.pointerEvents='auto';
+}
+function confirmSkin(){
+  if(!_selectedSkin)return;
+  S.skinTone=_selectedSkin;
+  document.getElementById('skin-overlay').style.display='none';
+  if(fbUser&&fbDb){fbDb.collection("users").doc(fbUser.uid).update({skinTone:_selectedSkin}).catch(function(){});}
+  updateCosmeticHUD();
+  showTutorial();
 }
 function playAsGuest(){
   isGuest=true;
@@ -645,16 +734,48 @@ function renderFriendsPanel(){
 // ─────────────────────────────────────────────────────────────
 const BOT_NAMES=["BigRedDaddy","FlatsFisherman","BayouBob","TarponsRule","SlowRollShrimp","SnookHunter88","PermitChaser","OilRigOllie","WreckDiver","GrouperGary","MangroveManiac","GulfCoastPro","SaltLifeSam","BottomBouncer","ReefRaider","BackwaterBill","PinefishPete","CobiaKing","TideRunner","DockSide_D"];
 const TOURN_DEFS=[
-  {id:"i_am",zone:0,name:"Inshore Morning Cup",openH:10,closeH:12,rarity:"rare",fee:300,maxP:10},
-  {id:"i_pm",zone:0,name:"Inshore Evening Cast",openH:17,closeH:18,rarity:"rare",fee:300,maxP:10},
-  {id:"n_am",zone:1,name:"Nearshore Midday Derby",openH:11,closeH:13,rarity:"epic",fee:700,maxP:15},
-  {id:"n_pm",zone:1,name:"Nearshore Afternoon Slam",openH:15,closeH:17,rarity:"epic",fee:700,maxP:15},
-  {id:"o_am",zone:2,name:"Offshore Early Bird",openH:9,closeH:10,rarity:"legendary",fee:2000,maxP:20},
-  {id:"o_pm",zone:2,name:"Offshore Night Bite",openH:19,closeH:20,rarity:"legendary",fee:2000,maxP:20},
+  {id:"i_am",zone:0,name:"Inshore Morning Cup",openH:10,closeH:12,maxP:10},
+  {id:"i_pm",zone:0,name:"Inshore Evening Cast",openH:17,closeH:18,maxP:10},
+  {id:"n_am",zone:1,name:"Nearshore Midday Derby",openH:11,closeH:13,maxP:15},
+  {id:"n_pm",zone:1,name:"Nearshore Afternoon Slam",openH:15,closeH:17,maxP:15},
+  {id:"o_am",zone:2,name:"Offshore Early Bird",openH:9,closeH:10,maxP:20},
+  {id:"o_pm",zone:2,name:"Offshore Night Bite",openH:19,closeH:20,maxP:20},
 ];
+const TOURN_RARITIES=["rare","epic","legendary"];
+const TOURN_FEES={rare:300,epic:700,legendary:2000};
+const ALWAYS_TOURN_NAMES=["Open Gulf Challenge","Gulf Coast Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
 const ZONE_LBL=["Inshore","Nearshore","Offshore"];
 const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary"};
 let activeLobby=null,lobbyInt=null,activeTournament=null;
+
+function getAlwaysTournament(){
+  const seed=parseInt(etDateSeed());
+  const zone=Math.floor(seededRnd(seed*3)*3);
+  const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed*7+1)*3)];
+  const fee=TOURN_FEES[rarity];
+  const name=ALWAYS_TOURN_NAMES[Math.floor(seededRnd(seed*17+5)*ALWAYS_TOURN_NAMES.length)];
+  const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&f.rarity===rarity;}):[];
+  const targetFish=pool.length?pool[Math.floor(seededRnd(seed*11+2)*pool.length)]:null;
+  return {id:"always",zone:zone,name:name,maxP:100,rarity:rarity,fee:fee,targetFish:targetFish,alwaysOn:true};
+}
+function etDateSeed(){
+  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
+  return s.replace(/\D/g,""); // e.g. "05282026" unique per day
+}
+function seededRnd(seed){const x=Math.sin(seed)*73856093;return x-Math.floor(x);}
+function getDailyTournaments(){
+  const seed=parseInt(etDateSeed());
+  return TOURN_DEFS.map(function(def,i){
+    if(typeof FISH==="undefined")return Object.assign({},def,{rarity:"rare",fee:300,targetFish:null});
+    // Pick rarity evenly from rare/epic/legendary using a different seed per slot
+    const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed+i*13337)*3)];
+    const fee=TOURN_FEES[rarity];
+    // Pick a specific fish of that rarity in this zone
+    const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===rarity;});
+    const targetFish=pool.length?pool[Math.floor(seededRnd(seed+i*97331)*pool.length)]:null;
+    return Object.assign({},def,{rarity:rarity,fee:fee,targetFish:targetFish});
+  });
+}
 
 function etHour(){
   const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",hour:"2-digit",hour12:false});
@@ -676,37 +797,56 @@ function tCountdown(def){
   if(diff<=0)return"";
   return Math.floor(diff/60)+"h "+(diff%60)+"m";
 }
+function renderTournCard(def){
+  const rc=RARITY_COLORS[def.rarity];
+  const canAfford=S.gold>=def.fee;
+  const fishLabel=def.targetFish
+    ?"<b style=\"color:"+rc+"\">"+def.targetFish.name+"</b> <span style=\"color:"+rc+";font-size:10px;\">("+RAR_LBL[def.rarity]+")</span>"
+    :"<b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish";
+  if(def.alwaysOn){
+    return "<div class=\"tourn-card always-on\">"
+      +"<div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"always-live\">LIVE 24/7</span></div>"
+      +"<div class=\"tourn-row\"><span>"+ZONE_LBL[def.zone]+" &middot; Target: "+fishLabel+"</span></div>"
+      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; Resets daily</span></div>"
+      +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up — "+def.fee+"g entry</button>"
+      +"</div>";
+  }
+  const st=tStatus(def);
+  const statusHtml=st==="open"
+    ?"<span class=\"tourn-status open\">OPEN</span>"
+    :st==="soon"
+      ?"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>"
+      :"<span class=\"tourn-status closed\">Closed</span>";
+  const btn=st==="open"
+    ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up — "+def.fee+"g entry</button>"
+    :"";
+  return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
+    +"<div class=\"tourn-row\"><span>Target: "+fishLabel+"</span>"+statusHtml+"</div>"
+    +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>"+def.openH+":00 - "+def.closeH+":00 ET</span></div>"
+    +btn+"</div>";
+}
 function renderTournamentPanel(){
   const el=document.getElementById("tournament-list");
   if(!el)return;
-  el.innerHTML=TOURN_DEFS.map(function(def){
-    const st=tStatus(def);
-    const rc=RARITY_COLORS[def.rarity];
-    const canAfford=S.gold>=def.fee;
-    const statusHtml=st==="open"
-      ?"<span class=\"tourn-status open\">OPEN</span>"
-      :st==="soon"
-        ?"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>"
-        :"<span class=\"tourn-status closed\">Closed</span>";
-    const btn=st==="open"
-      ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up — "+def.fee+"g entry</button>"
-      :"";
-    return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
-      +"<div class=\"tourn-row\"><span>Target: <b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish</span>"+statusHtml+"</div>"
-      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>"+def.openH+":00 - "+def.closeH+":00 ET</span></div>"
-      +btn+"</div>";
+  const always=getAlwaysTournament();
+  const daily=getDailyTournaments();
+  el.innerHTML=renderTournCard(always)
+    +"<div style=\"font-size:11px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;\">Daily Time Windows</div>"
+    +daily.map(function(def){
+    return renderTournCard(def);
   }).join("");
 }
 function enterTournament(defId){
-  const def=TOURN_DEFS.find(function(d){return d.id===defId;});
+  const def=defId==="always"?getAlwaysTournament():getDailyTournaments().find(function(d){return d.id===defId;});
   if(!def)return;
   if(S.gold<def.fee){toast("Not enough gold!","#b3402a");return;}
-  if(tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
+  if(!def.alwaysOn&&tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
   S.gold-=def.fee;updatePills();queueSave();
   const meEntry={uid:fbUser?fbUser.uid:"guest",username:fbUsername,isBot:false};
   activeLobby={def:def,players:[meEntry],timeLeft:120};
   document.getElementById("lobby-title").textContent=def.name;
-  document.getElementById("lobby-sub").textContent=RAR_LBL[def.rarity]+" fish · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
+  const fishStr=def.targetFish?def.targetFish.name+" ("+RAR_LBL[def.rarity]+")":RAR_LBL[def.rarity]+" fish";
+  document.getElementById("lobby-sub").textContent=fishStr+" · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
   document.getElementById("lobby-overlay").style.display="flex";
   document.getElementById("menu-panel").classList.remove("open");
   renderLobbyPlayers();
@@ -777,7 +917,7 @@ function startTournamentMode(def){
       const delay=20000+Math.random()*250000;
       setTimeout(function(){
         if(!activeTournament)return;
-        const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
+        const pool=def.targetFish?[def.targetFish]:FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
         if(!pool.length)return;
         const f=pool[Math.floor(Math.random()*pool.length)];
         const w=parseFloat((f.size[0]+(f.size[1]-f.size[0])*Math.random()).toFixed(1));
@@ -813,9 +953,9 @@ function endTournament(){
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
     +entries.slice(0,10).map(function(e,i){
-      return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:rgba(255,255,255,.05);margin-bottom:5px;"+(e.isPlayer?"border:1.5px solid var(--accent);":"")+"\">"
+      return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#d2b886")+";margin-bottom:5px;\">"
         +"<span style=\"font-size:16px;width:24px;text-align:center;\">"+(medals[i]||(i+1))+"</span>"
-        +"<span style=\"flex:1;font-size:13px;font-weight:700;color:#fff;\">"+e.username+"</span>"
+        +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);\">"+e.username+"</span>"
         +"<span style=\"font-size:12px;color:var(--text-soft);\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span></div>";
     }).join("")
     +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#e0a93c;margin-top:10px;\">+"+winnings+"g prize!</div>":"")
@@ -845,7 +985,8 @@ const STRUCT_META={
   open:{icon:"🌊",label:"Open Water",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
   weedline:{icon:"🌾",label:"Weedline",zone:"Offshore",depth:"Near",depthColor:"#2aa890"},
   deep:{icon:"🔵",label:"Deep Water",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
-  platform:{icon:"🛢",label:"Oil Platform",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  oil_rig:{icon:"🛢",label:"Oil Rig",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  power_plant:{icon:"🏭",label:"Power Plant",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8"},
   bluhole:{icon:"🔵",label:"Blue Hole",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
 };
 function renderStructuresGuide(){
@@ -857,10 +998,13 @@ function renderStructuresGuide(){
   el.innerHTML=Object.keys(STRUCT_META).map(function(k){
     const info=STRUCT_META[k];
     const fish=(sMap[k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
-    const pills=fish.map(function(f){
+    const total=fish.length;
+    const caught=fish.filter(function(f){return (S.caught[f.id]||0)>0;});
+    const unknown=total-caught.length;
+    const pills=caught.map(function(f){
       return "<span class=\"struct-fish-pill\" style=\"background:"+RARITY_COLORS[f.rarity]+"22;color:"+RARITY_COLORS[f.rarity]+";\">"+f.name+"</span>";
-    }).join("");
-    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+info.icon+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(pills?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
+    }).join("")+(unknown>0?"<span class=\"struct-fish-pill\" style=\"background:rgba(0,0,0,.06);color:var(--text-soft);\">+"+unknown+" unknown</span>":"");
+    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+info.icon+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
   }).join("");
 }
 
@@ -927,6 +1071,7 @@ const TACKLE=[
 const BAIT=[
   {id:'shrimp',  name:'Live Shrimp', icon:'\uD83E\uDD90', cost:30, pack:15, lvl:1, desc:'The all-around inshore favorite.'},
   {id:'crab',    name:'Fiddler Crab', icon:'\uD83E\uDD80', cost:40, pack:12, lvl:1, desc:'Sheepshead & black drum candy.'},
+  {id:'blue_crab',name:'Blue Crab',   icon:'\uD83E\uDD80', cost:0,  pack:0,  lvl:1, desc:'Pulled from a crab trap. Premium bait for drum, sheepshead & tarpon.'},
   {id:'pinfish', name:'Live Pinfish', icon:'\uD83D\uDC1F', cost:45, pack:12, lvl:2, desc:'Big-predator bait: snook, grouper, cobia.'},
   {id:'pilchard',name:'Pilchards', icon:'\uD83D\uDC1F', cost:50, pack:12, lvl:2, desc:'Lively whitebait for snook, tarpon, mahi.'},
   {id:'squid',   name:'Squid Strips', icon:'\uD83E\uDD91', cost:35, pack:15, lvl:1, desc:'Tough bottom bait for reef fish.'},
@@ -940,6 +1085,55 @@ const LEADERS=[
   {id:'fluoro',name:'Fluorocarbon', cost:140, lvl:2, desc:'Nearly invisible. Fools line-shy fish.'},
   {id:'wire',  name:'Wire Leader', cost:90, lvl:2, desc:'Bite-proof for toothy fish; spooks the wary.'},
 ];
+
+// ── COSMETICS ─────────────────────────────────────────────────
+const COSMETICS={
+  hats:[
+    {id:'none',      slot:'hat', name:'No Hat',           icon:'🚫', cost:0,   lvl:1, desc:'Just vibes.'},
+    {id:'bucket',    slot:'hat', name:'Bucket Hat',        icon:'🪣', cost:120, lvl:1, desc:'Classic sun protection for the flats angler.'},
+    {id:'baseball',  slot:'hat', name:'Baseball Cap',      icon:'🧢', cost:150, lvl:1, desc:'Keep the glare off and look sharp.'},
+    {id:'cowboy',    slot:'hat', name:'Cowboy Hat',        icon:'🤠', cost:280, lvl:3, desc:'Gulf Coast swagger. Brim wide enough for tarpon weather.'},
+    {id:'visor',     slot:'hat', name:'Sun Visor',         icon:'🎽', cost:200, lvl:2, desc:'Minimalist. You trust the sunscreen.'},
+    {id:'beanie',    slot:'hat', name:'Beanie',            icon:'🧶', cost:160, lvl:1, desc:'For those cold January flounder trips.'},
+    {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'⛵', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
+    {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'👒', cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
+    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'🥷', cost:10000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+  ],
+  shirts:[
+    {id:'none',      slot:'shirt', name:'No Shirt',        icon:'🚫', cost:0,     lvl:1, desc:'Living free.'},
+    {id:'fishing_tee',slot:'shirt',name:'Fishing Tee',     icon:'👕', cost:130,   lvl:1, desc:'Faded logo, salt-stiff collar. A classic.'},
+    {id:'performance',slot:'shirt',name:'Performance Shirt',icon:'🏃', cost:250,  lvl:2, desc:'UPF 50+. Wicks sweat in August heat.'},
+    {id:'flannel',   slot:'shirt', name:'Flannel Shirt',   icon:'🔲', cost:200,   lvl:1, desc:'Winter runs call for flannel.'},
+    {id:'vest',      slot:'shirt', name:'Fishing Vest',    icon:'🦺', cost:380,   lvl:4, desc:'Twelve pockets. You are the tackle box.'},
+    {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'🧥', cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
+    {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'🎽',cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
+    {id:'overalls',  slot:'shirt', name:'Waders',          icon:'🩱', cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
+    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'🖤', cost:12000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+  ],
+  shades:[
+    {id:'none',      slot:'shades', name:'No Shades',      icon:'🚫', cost:0,     lvl:1, desc:'Squinting into the sun.'},
+    {id:'polarized', slot:'shades', name:'Polarized',       icon:'🕶️', cost:180,  lvl:1, desc:'Cut the glare. See the fish below the surface.'},
+    {id:'wrap',      slot:'shades', name:'Wrap-Arounds',    icon:'😎', cost:240,  lvl:2, desc:'Max coverage. Zero fish escapes your gaze.'},
+    {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'🥽', cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
+    {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'🪞', cost:350, lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
+    {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'🏅', cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
+    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'🎭', cost:3000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+  ],
+};
+
+const SKIN_TONES=[
+  {id:'light',   mod:'🏻', color:'#FDDBB4', label:'Light'},
+  {id:'medlight',mod:'🏼', color:'#E8B88A', label:'Medium-Light'},
+  {id:'medium',  mod:'🏽', color:'#C68642', label:'Medium'},
+  {id:'meddark', mod:'🏾', color:'#8D5524', label:'Medium-Dark'},
+  {id:'dark',    mod:'🏿', color:'#4A2912', label:'Dark'},
+];
+function anglerEmoji(gender,skinId){
+  const tone=SKIN_TONES.find(t=>t.id===skinId);
+  const mod=tone?tone.mod:'';
+  const base=gender==='female'?'👩':'🧑';
+  return base+mod+'‍🎣';
+}
 
 // boats: maxZone gates water; perk applied in logic
 const BOATS=[
@@ -985,11 +1179,11 @@ const ZONE_STRUCTS=[
    {kind:'ledge',xF:.44,yF:.32,tier:2},{kind:'wreck',xF:.18,yF:.44,tier:2},
    {kind:'rip',xF:.66,yF:.50,tier:2},{kind:'baitball',xF:.38,yF:.61,tier:3},
    {kind:'ledge',xF:.24,yF:.68,tier:3},{kind:'wreck',xF:.74,yF:.74,tier:3},
-   {kind:'channel',xF:.48,yF:.81,tier:3},{kind:'open',xF:.26,yF:.87,tier:3}],
+   {kind:'power_plant',xF:.54,yF:.80,tier:3},{kind:'open',xF:.26,yF:.87,tier:3}],
   [{kind:'weedline',xF:.52,yF:.16,tier:1},{kind:'rip',xF:.24,yF:.26,tier:2},
    {kind:'open',xF:.72,yF:.33,tier:2},{kind:'wreck',xF:.36,yF:.44,tier:2},
    {kind:'deep',xF:.68,yF:.53,tier:3},{kind:'baitball',xF:.26,yF:.61,tier:3},
-   {kind:'platform',xF:.62,yF:.69,tier:3},{kind:'bluhole',xF:.22,yF:.76,tier:3},
+   {kind:'oil_rig',xF:.62,yF:.69,tier:3},{kind:'bluhole',xF:.22,yF:.76,tier:3},
    {kind:'weedline',xF:.74,yF:.82,tier:3},{kind:'deep',xF:.40,yF:.88,tier:3}],
 ];
 function initStructures(){
@@ -998,7 +1192,7 @@ function initStructures(){
   });
 }
 function structKindAlias(k){
-  return {crab_trap:'dock',channel:'pass',baitball:'open',platform:'wreck',bluhole:'deep'}[k]||k;
+  return {crab_trap:'dock',channel:'pass',baitball:'open',oil_rig:'wreck',bluhole:'deep',power_plant:'wreck'}[k]||k;
 }
 
 const ZONES=[
@@ -1018,12 +1212,12 @@ const FISH=[
   {id:'trout',name:'Spotted Seatrout',zone:0,rarity:'common',size:[1,5],line:10,methods:['cork','jig','livebait'],baits:['shrimp','pilchard'],leader:'any',structure:['grass','open'],season:['all'],time:['dawn','dusk','night'],xp:14,gold:6,weight:48,fact:'Big \u201Cgator trout\u201D have fang-like teeth and feed best in low light over grass flats.'},
   {id:'ladyfish',name:'Ladyfish',zone:0,rarity:'common',size:[1,3],line:10,methods:['cork','jig','livebait'],baits:['shrimp','cutbait'],leader:'any',structure:['open','pass'],season:['all'],time:['all'],xp:12,gold:5,weight:42,fact:'The \u201Cpoor man\u2019s tarpon\u201D: wild jumps pound for pound, and prime cut bait for predators.'},
   {id:'mangrovesnap',name:'Mangrove Snapper',zone:0,rarity:'uncommon',size:[0.5,3],line:10,methods:['livebait','structure'],baits:['shrimp','pilchard'],leader:'fluoro',structure:['dock','mangrove','bridge'],season:['summer','fall'],time:['dusk','night'],xp:20,gold:11,weight:26,fact:'Sharp-eyed and line-shy. Scale down to a light fluorocarbon leader to fool them.'},
-  {id:'sheepshead',name:'Sheepshead',zone:0,rarity:'uncommon',size:[1,6],line:10,methods:['structure'],baits:['crab','shrimp'],leader:'fluoro',structure:['dock','oyster','bridge'],season:['winter','spring'],time:['day'],xp:26,gold:15,weight:24,fact:'The \u201Cconvict fish\u201D crushes barnacles with human-like teeth and steals bait. Set the hook early.'},
+  {id:'sheepshead',name:'Sheepshead',zone:0,rarity:'uncommon',size:[1,6],line:10,methods:['structure'],baits:['crab','blue_crab','shrimp'],leader:'fluoro',structure:['dock','oyster','bridge'],season:['winter','spring'],time:['day'],xp:26,gold:15,weight:24,fact:'The \u201Cconvict fish\u201D crushes barnacles with human-like teeth and steals bait. Set the hook early.'},
   {id:'flounder',name:'Southern Flounder',zone:0,rarity:'uncommon',size:[1,5],line:10,methods:['jig','livebait'],baits:['pinfish','shrimp'],leader:'any',structure:['sand'],season:['fall','summer'],time:['day','dusk'],xp:30,gold:17,weight:18,fact:'Both eyes migrate to one side; it lies flat in the sand and ambushes bait drifting overhead.'},
-  {id:'redfish',name:'Red Drum (Redfish)',zone:0,rarity:'rare',size:[3,18],line:20,methods:['cork','jig','livebait'],baits:['shrimp','crab','cutbait'],leader:'any',structure:['oyster','grass'],season:['fall','summer','spring'],time:['dawn','day','dusk'],xp:65,gold:34,weight:9,fact:'The tail eyespot fools predators; fall \u201Cbull reds\u201D school in copper-colored wolfpacks.'},
+  {id:'redfish',name:'Red Drum (Redfish)',zone:0,rarity:'rare',size:[3,18],line:20,methods:['cork','jig','livebait'],baits:['shrimp','crab','blue_crab','cutbait'],leader:'any',structure:['oyster','grass'],season:['fall','summer','spring'],time:['dawn','day','dusk'],xp:65,gold:34,weight:9,fact:'The tail eyespot fools predators; fall \u201Cbull reds\u201D school in copper-colored wolfpacks.'},
   {id:'snook',name:'Snook',zone:0,rarity:'rare',size:[3,20],line:20,methods:['livebait','jig'],baits:['pilchard','pinfish'],leader:'fluoro',structure:['mangrove','dock','bridge','pass'],season:['summer','spring'],time:['night','dawn','dusk'],xp:82,gold:44,weight:9,fact:'Cold-sensitive and protected; the black lateral line marks this ambush predator of the mangroves.'},
-  {id:'blackdrum',name:'Black Drum',zone:0,rarity:'epic',size:[5,40],line:20,methods:['structure','bottom','livebait'],baits:['crab','shrimp'],leader:'any',structure:['oyster','dock','bridge'],season:['winter','spring'],time:['all'],xp:120,gold:72,weight:7,fact:'It \u201Cdrums\u201D with its swim bladder; old \u201Cbull\u201D black drum push well past 30 lb.'},
-  {id:'tarpon',name:'Tarpon',zone:0,rarity:'legendary',size:[40,160],line:40,methods:['livebait','jig'],baits:['pilchard','crab','cutbait'],leader:'fluoro',structure:['pass','open'],season:['summer'],time:['dawn','dusk','night'],xp:320,gold:190,weight:2.2,fact:'The \u201CSilver King\u201D: 100+ lb, gulps air at the surface, and cartwheels into the sky. Released.'},
+  {id:'blackdrum',name:'Black Drum',zone:0,rarity:'epic',size:[5,40],line:20,methods:['structure','bottom','livebait'],baits:['crab','blue_crab','shrimp'],leader:'any',structure:['oyster','dock','bridge'],season:['winter','spring'],time:['all'],xp:120,gold:72,weight:7,fact:'It \u201Cdrums\u201D with its swim bladder; old \u201Cbull\u201D black drum push well past 30 lb.'},
+  {id:'tarpon',name:'Tarpon',zone:0,rarity:'legendary',size:[40,160],line:40,methods:['livebait','jig'],baits:['pilchard','crab','blue_crab','cutbait'],leader:'fluoro',structure:['pass','open'],season:['summer'],time:['dawn','dusk','night'],xp:320,gold:190,weight:2.2,fact:'The \u201CSilver King\u201D: 100+ lb, gulps air at the surface, and cartwheels into the sky. Released.'},
   // ---------- NEARSHORE ----------
   {id:'grunt',name:'White Grunt',zone:1,rarity:'common',size:[0.5,1.5],line:10,methods:['bottom','livebait'],baits:['squid','shrimp'],leader:'any',structure:['reef'],season:['all'],time:['day'],xp:13,gold:7,weight:52,fact:'Grunts \u201Ctalk\u201D by grinding teeth in their throat. A dependable reef bite and good eating.'},
   {id:'lanesnap',name:'Lane Snapper',zone:1,rarity:'common',size:[0.5,2],line:10,methods:['bottom','livebait'],baits:['squid','shrimp'],leader:'fluoro',structure:['reef'],season:['summer','fall'],time:['day','night'],xp:18,gold:10,weight:46,fact:'Rosy pink with yellow stripes and a side spot; abundant on shallow reefs.'},
@@ -1033,7 +1227,7 @@ const FISH=[
   {id:'nearmangrove',name:'Mangrove Snapper (offshore)',zone:1,rarity:'uncommon',size:[2,9],line:20,methods:['livebait','bottom'],baits:['pilchard','squid'],leader:'fluoro',structure:['wreck','reef'],season:['summer','fall'],time:['dusk','night'],xp:42,gold:25,weight:16,fact:'Same species as inshore \u201Cmangos,\u201D but wreck fish grow far bigger and warier. Light fluoro is key.'},
   {id:'king',name:'King Mackerel',zone:1,rarity:'epic',size:[8,50],line:40,methods:['troll','livebait'],baits:['cutbait','pinfish'],leader:'wire',structure:['open','wreck'],season:['spring','fall'],time:['day'],xp:90,gold:56,weight:9,fact:'\u201CSmoker kings\u201D scream drag and skyrocket on slow-trolled baits. Always rig a wire stinger.'},
   {id:'gag',name:'Gag Grouper',zone:1,rarity:'rare',size:[5,40],line:40,methods:['livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['reef','ledge'],season:['all'],time:['day'],xp:112,gold:72,weight:8,fact:'The instant it\u2019s hooked it bolts for its hole. Turn its head and crank hard or it\u2019s gone.'},
-  {id:'cobia',name:'Cobia',zone:1,rarity:'legendary',size:[15,60],line:40,methods:['livebait','jig'],baits:['pinfish','crab'],leader:'any',structure:['wreck','open'],season:['spring'],time:['day'],xp:170,gold:112,weight:3.5,fact:'Curious and shark-like, cobia shadow rays, turtles and buoys, perfect for sight-casting a jig.'},
+  {id:'cobia',name:'Cobia',zone:1,rarity:'legendary',size:[15,60],line:40,methods:['livebait','jig'],baits:['pinfish','crab','blue_crab'],leader:'any',structure:['wreck','open','power_plant'],season:['spring'],time:['day'],xp:170,gold:112,weight:3.5,fact:'Curious and shark-like, cobia shadow rays, turtles and buoys, perfect for sight-casting a jig.'},
   {id:'blacktip',name:'Blacktip Shark',zone:1,rarity:'epic',size:[20,90],line:80,methods:['chunk','livebait'],baits:['cutbait','menhaden'],leader:'wire',structure:['open'],season:['summer'],time:['day','dusk'],xp:280,gold:165,weight:2.5,fact:'Blacktips and spinners launch fully out of the water, twisting in mid-air, when hooked.'},
   // ---------- OFFSHORE ----------
   {id:'vermilion',name:'Vermilion Snapper',zone:2,rarity:'common',size:[0.5,2.5],line:40,methods:['bottom'],baits:['squid'],leader:'fluoro',structure:['wreck'],season:['all'],time:['day'],xp:30,gold:18,weight:50,fact:'Bright red \u201Cbeeliners\u201D swarm deep hard bottom; small hooks, fast steady bites.'},
@@ -1054,6 +1248,7 @@ let S={
   xp:0,level:1,gold:0,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],
+  ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
@@ -1427,7 +1622,7 @@ else if(s.kind==='crab_trap'){
     for(let r=12;r<32;r+=9){ctx.beginPath();ctx.arc(x,y,r+Math.sin(t*2)*2,0,6.28);ctx.stroke();}
     ctx.strokeStyle='rgba(240,240,255,.5)';ctx.lineWidth=1.2;
     for(let i=0;i<3;i++){const bx=x-12+i*12,by=y-32+Math.sin(t*1.5+i)*3;ctx.beginPath();ctx.moveTo(bx-5,by+2);ctx.lineTo(bx,by);ctx.lineTo(bx+5,by+2);ctx.stroke();}
-  }else if(s.kind==='platform'){
+  }else if(s.kind==='oil_rig'){
     ctx.fillStyle='rgba(0,0,0,.22)';ctx.fillRect(x-24,y-24,50,50);
     ctx.fillStyle='#4a4e58';ctx.fillRect(x-23,y-23,46,46);
     ctx.fillStyle='#3e4452';ctx.fillRect(x-20,y-20,40,40);
@@ -1438,6 +1633,20 @@ else if(s.kind==='crab_trap'){
     ctx.fillStyle='rgba(255,130,0,'+fl_+')';ctx.beginPath();ctx.arc(x+15,y-22,3.2,0,6.28);ctx.fill();
     ctx.fillStyle='#3a3e46';[[x-18,y-18],[x+18,y-18],[x-18,y+18],[x+18,y+18]].forEach(([px,py])=>{ctx.beginPath();ctx.arc(px,py,3.2,0,6.28);ctx.fill();});
     if(dark>0.3){ctx.fillStyle='rgba(255,160,50,'+(dark*.75)+')';[[x-18,y-18],[x+18,y-18]].forEach(([px,py])=>{ctx.beginPath();ctx.arc(px,py,2.5,0,6.28);ctx.fill();});ctx.fillStyle='rgba(255,60,60,'+(dark*.6)+')';ctx.beginPath();ctx.arc(x+15,y-25,2,0,6.28);ctx.fill();}
+  }else if(s.kind==='power_plant'){
+    // main building
+    ctx.fillStyle='#5a6070';ctx.fillRect(x-22,y-10,44,22);
+    ctx.fillStyle='#4a5060';ctx.fillRect(x-18,y-18,20,10);
+    // cooling towers (two cylinders)
+    ctx.fillStyle='#6a7080';ctx.fillRect(x-10,y-28,9,20);ctx.fillRect(x+2,y-28,9,20);
+    ctx.fillStyle='#58636e';ctx.fillRect(x-10,y-28,9,5);ctx.fillRect(x+2,y-28,9,5);
+    // steam puffs
+    const pf=0.5+0.3*Math.sin(t*2.5);const pf2=0.5+0.3*Math.sin(t*2.5+1.2);
+    ctx.fillStyle='rgba(210,220,230,'+pf+')';ctx.beginPath();ctx.arc(x-6,y-30,5,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(210,220,230,'+pf2+')';ctx.beginPath();ctx.arc(x+7,y-30,5,0,6.28);ctx.fill();
+    // warm water discharge glow
+    ctx.fillStyle='rgba(80,180,160,.18)';ctx.beginPath();ctx.ellipse(x,y+18,22,8,0,0,6.28);ctx.fill();
+    if(dark>0.3){ctx.fillStyle='rgba(255,200,80,'+(dark*.5)+')';ctx.fillRect(x-8,y-6,5,5);ctx.fillRect(x+3,y-6,5,5);}
   }else if(s.kind==='bluhole'){
     const bg_=ctx.createRadialGradient(x,y,3,x,y,40);bg_.addColorStop(0,'rgba(0,20,100,.9)');bg_.addColorStop(.55,'rgba(0,10,55,.65)');bg_.addColorStop(1,'rgba(0,8,30,0)');
     ctx.fillStyle=bg_;ctx.beginPath();ctx.arc(x,y,40,0,6.28);ctx.fill();
@@ -1749,7 +1958,7 @@ function updateClockHUD(h,sky){
 // ===================== RIG / CAST / CATCH =====================
 let phase='idle',bobber={x:0,y:0,active:false,struct:null},hookedFish=null,hookW=0;
 let biteTimeout=null,escapeTimeout=null,catchAnim=null;
-let zoneSel={left:35,width:30},marker={pos:0,dir:1,speed:1.3};
+let zoneSel={left:35,width:30,dir:1,speed:1.3},marker={pos:50,dir:1,speed:0.39};
 
 function ensureRig(){
   const zm=METHODS.filter(m=>m.zones.includes(S.zone));
@@ -1786,9 +1995,9 @@ function cast(x,y){
   ripples.push({x,y,r:3,life:1},{x,y,r:8,life:.7});
   phase='waiting';S.totalCasts++;queueSave();updateRigBar();
   const st=bobber.struct;
-  setStatus(st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
+  setStatus(st&&st.kind==='crab_trap'?'Checking the crab trap...':st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
   const {strength}=poolNow();
-  const wait=biteWait(strength,st);
+  const wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength,st);
   biteTimeout=setTimeout(()=>triggerBite(),wait);
 }
 
@@ -1842,8 +2051,21 @@ function biteWait(strength,st){
   return Math.max(700,Math.min(9000,base/freq));
 }
 
+function triggerCrabTrap(){
+  phase='done';bobber.active=false;
+  const type=Math.random()<0.5?'crab':'blue_crab';
+  const qty=1+Math.floor(Math.random()*5);
+  const name=type==='blue_crab'?'Blue Crab':'Fiddler Crab';
+  S.baitInv[type]=(S.baitInv[type]||0)+qty;
+  updateRigBar();queueSave();
+  setStatus('Pulled up '+qty+' '+name+(qty>1?'s':'')+' from the crab trap! Added to bait.');
+  toast('🦀 +'+qty+' '+name+(qty>1?'s':''),'#2aa890');
+  setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Cast again to fish or check the trap again.');}},2200);
+}
+
 function triggerBite(){
   if(phase!=='waiting')return;
+  if(bobber.struct&&bobber.struct.kind==='crab_trap'){triggerCrabTrap();return;}
   const {out,strength}=poolNow();
   if(out.length===0||strength<=0){
     phase='done';bobber.active=false;
@@ -1860,37 +2082,71 @@ function triggerBite(){
 
 function rollWeight(f){const[a,b]=f.size;return +(a+(b-a)*Math.pow(Math.random(),1.7)).toFixed(2);}
 
+const BULLSEYE_FRAC=0.25; // yellow bar is 25% of green zone width
 function setupMiniGame(){
   document.getElementById('catch-game').style.display='block';
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
-  marker.pos=0;marker.dir=1;marker.speed=1.1+ri*0.28+Math.random()*0.4;
-  const zEl=document.getElementById('catch-zone');zEl.style.left=zoneSel.left+'%';zEl.style.width=zoneSel.width+'%';
-  document.getElementById('catch-hint').textContent=ri>=3?'A big one! Time it perfectly!':'Stop the marker in the green!';
-  animateMarker();
+  zoneSel.dir=Math.random()<0.5?1:-1;
+  zoneSel.speed=1.1+ri*0.28+Math.random()*0.4;
+  marker.pos=Math.random()*100;
+  marker.dir=Math.random()<0.5?1:-1;
+  marker.speed=zoneSel.speed*0.3;
+  updateMiniGameDOM();
+  document.getElementById('catch-hint').textContent=ri>=3?'Hit the 🟡 yellow for DOUBLE COINS!':'Stop the marker in the green — yellow = double!';
+  animateMiniGame();
 }
-function animateMarker(){marker.pos+=marker.dir*marker.speed;if(marker.pos>=100){marker.pos=100;marker.dir=-1;}if(marker.pos<=0){marker.pos=0;marker.dir=1;}document.getElementById('catch-ind').style.left=marker.pos+'%';if(phase==='biting')catchAnim=requestAnimationFrame(animateMarker);}
+function updateMiniGameDOM(){
+  const zEl=document.getElementById('catch-zone');
+  zEl.style.left=zoneSel.left+'%';zEl.style.width=zoneSel.width+'%';
+  const bLeft=zoneSel.left+zoneSel.width*(0.5-BULLSEYE_FRAC/2);
+  const bWidth=zoneSel.width*BULLSEYE_FRAC;
+  const bEl=document.getElementById('catch-bullseye');
+  bEl.style.left=bLeft+'%';bEl.style.width=bWidth+'%';
+  document.getElementById('catch-ind').style.left=marker.pos+'%';
+}
+function animateMiniGame(){
+  // move green zone
+  zoneSel.left+=zoneSel.dir*zoneSel.speed;
+  if(zoneSel.left<=0){zoneSel.left=0;zoneSel.dir=1;}
+  if(zoneSel.left>=100-zoneSel.width){zoneSel.left=100-zoneSel.width;zoneSel.dir=-1;}
+  // move marker at 30% of zone speed
+  marker.pos+=marker.dir*marker.speed;
+  if(marker.pos>=100){marker.pos=100;marker.dir=-1;}
+  if(marker.pos<=0){marker.pos=0;marker.dir=1;}
+  updateMiniGameDOM();
+  if(phase==='biting')catchAnim=requestAnimationFrame(animateMiniGame);
+}
 function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';}
+function inBullseye(){
+  const bLeft=zoneSel.left+zoneSel.width*(0.5-BULLSEYE_FRAC/2);
+  const bRight=bLeft+zoneSel.width*BULLSEYE_FRAC;
+  return marker.pos>=bLeft&&marker.pos<=bRight;
+}
 
 document.getElementById('reel-btn').addEventListener('click',()=>{
-  if(phase!=='biting')return;endMiniGame();
-  const center=zoneSel.left+zoneSel.width/2,dd=Math.abs(marker.pos-center);
-  const inZone=marker.pos>=zoneSel.left&&marker.pos<=zoneSel.left+zoneSel.width;
+  if(phase!=='biting')return;
+  const snapZone={left:zoneSel.left,width:zoneSel.width};
+  const snapMarker=marker.pos;
+  const bullseye=inBullseye();
+  endMiniGame();
+  const center=snapZone.left+snapZone.width/2,dd=Math.abs(snapMarker-center);
+  const inZone=snapMarker>=snapZone.left&&snapMarker<=snapZone.left+snapZone.width;
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
-  const f=hookedFish,w=hookW,perfect=dd<zoneSel.width*0.2;
+  const f=hookedFish,w=hookW,perfect=dd<snapZone.width*0.2;
   // wire cutoff
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<0.72){return snap(f,w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
   // line break
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(0.9,(ratio-1)*0.6+0.12);if(Math.random()<sc){return snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off! Spool up heavier.');}}
-  land(f,w,perfect);
+  land(f,w,perfect,bullseye);
 });
 
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
 function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
 function fail(msg){phase='done';bobber.active=false;S.misses++;setStatus(msg);queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
-function land(f,w,perfect){
+function land(f,w,perfect,bullseye){
   phase='caught';bobber.active=false;
   // consume bait
   if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
@@ -1903,12 +2159,15 @@ function land(f,w,perfect){
   let gold=Math.round(f.gold*(0.8+sizeFrac*0.6));
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
+  if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
+  const assassin=assassinSetActive()&&phaseOf(hourNow())==='night';
+  if(assassin)gold=Math.round(gold*1.5);
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
-  showCatch(f,w,{isNew,perfect,trophy,pb:pb&&!isNew,xp,gold});
+  showCatch(f,w,{isNew,perfect,bullseye,assassin,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
 }
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
@@ -1919,6 +2178,8 @@ function showCatch(f,w,o){
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
+  if(o.bullseye)badges.push(['\ud83d\udfe1 BULLSEYE! 2\u00d7 COINS','#b8a000']);
+  if(o.assassin)badges.push(['\ud83e\udd77 NIGHT STALKER +50% GOLD','#1a1a2e']);
   document.getElementById('catch-card').innerHTML=
     '<div class="catch-badges">'+badges.map(b=>'<span class="cbadge" style="background:'+b[1]+'">'+b[0]+'</span>').join('')+'</div>'+
     '<div style="display:flex;justify-content:center;margin:4px 0 6px;">'+buildFishArt(f.id,210)+'</div>'+
@@ -2015,6 +2276,20 @@ document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=
 }));
 
 let shopTab='boats';
+function assassinSetActive(){
+  return S.cosmetic.hat==='assassin_hood'&&S.cosmetic.shirt==='assassin_suit'&&S.cosmetic.shades==='assassin_mask';
+}
+function updateCosmeticHUD(){
+  const el=document.getElementById('cosmetic-pill');
+  if(!el)return;
+  if(assassinSetActive()){el.textContent='🥷';return;}
+  const hat=COSMETICS.hats.find(x=>x.id===S.cosmetic.hat);
+  const shirt=COSMETICS.shirts.find(x=>x.id===S.cosmetic.shirt);
+  const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
+  const icons=[hat,shirt,shades].filter(x=>x&&x.id!=='none').map(x=>x.icon).join('');
+  if(!icons&&S.gender&&S.skinTone){el.textContent=anglerEmoji(S.gender,S.skinTone);return;}
+  el.textContent=icons||'👤';
+}
 function refreshMenu(){renderLogbook();renderShop();renderStats();renderTournamentPanel();}
 
 function renderLogbook(){
@@ -2043,8 +2318,9 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
   return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+(extra||'')+'</div></div>'+action+'</div>';
 }
 
+let cosmeticSubTab='hats';
 function renderShop(){
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['cosmetics','\ud83d\udc57 Fits']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(b=>shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,' <i>('+b.perkName+')</i>',false)).join('');
@@ -2054,8 +2330,33 @@ function renderShop(){
   else if(shopTab==='leaders')html=LEADERS.map(l=>shopRow(l,'leader',S.ownedLeaders.includes(l.id),S.leader===l.id,'',false)).join('');
   else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;const meth=METHODS.find(m=>m.cat===t.cat);
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:t.cat)+' \u00b7 durability '+t.dur+(own?' \u00b7 own x'+inv.qty:''),false);}).join('');
-  else if(shopTab==='bait')html=BAIT.map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
+  else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
+  else if(shopTab==='cosmetics'){
+    const subLabels=[['hats','\ud83e\udde2 Hats'],['shirts','\ud83d\udc55 Shirts'],['shades','\ud83d\udd76\ufe0f Shades']];
+    html='<div style="display:flex;gap:6px;margin-bottom:11px;">'+subLabels.map(([k,l])=>'<div class="shop-tab '+(cosmeticSubTab===k?'active':'')+'" style="font-size:12px;" data-csub="'+k+'">'+l+'</div>').join('')+'</div>';
+    const slot={hats:'hat',shirts:'shirt',shades:'shades'}[cosmeticSubTab];
+    html+=COSMETICS[cosmeticSubTab].map(item=>{
+      const owned=item.cost===0||S.ownedCosmetics.includes(item.id);
+      const equipped=S.cosmetic[slot]===item.id;
+      const canAfford=S.gold>=item.cost;
+      const meetsLvl=S.level>=item.lvl;
+      let action;
+      if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
+      else if(owned) action='<span class="shop-action equip">Equip</span>';
+      else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
+      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+item.cost+'</span>';
+      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
+        +'<div class="shop-icon" style="font-size:22px;">'+item.icon+'</div>'
+        +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
+        +action+'</div>';
+    }).join('');
+  }
   document.getElementById('shop-list').innerHTML=html;
+  if(shopTab==='cosmetics'){
+    document.getElementById('shop-list').querySelectorAll('[data-csub]').forEach(el=>{
+      el.addEventListener('click',()=>{cosmeticSubTab=el.dataset.csub;renderShop();});
+    });
+  }
 }
 
 document.getElementById('shop-tabs').addEventListener('click',e=>{const t=e.target.closest('.shop-tab');if(!t)return;shopTab=t.dataset.stab;renderShop();});
@@ -2064,6 +2365,18 @@ document.getElementById('shop-list').addEventListener('click',e=>{
   const kind=item.dataset.kind,id=item.dataset.id;
   if(kind==='tackle'){const t=tackleById(id);if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack,dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
   else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(S.gold<bt.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=bt.cost;S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();}
+  else if(kind==='cosmetic'){
+    const slot=item.dataset.slot;
+    const allItems=[...COSMETICS.hats,...COSMETICS.shirts,...COSMETICS.shades];
+    const obj=allItems.find(x=>x.id===id);
+    if(!obj)return;
+    if(!S.ownedCosmetics.includes(id)&&obj.cost>0){
+      if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}
+      if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}
+      S.gold-=obj.cost;S.ownedCosmetics.push(id);toast('Got '+obj.name+'!','#2aa890');
+    }
+    S.cosmetic[slot]=id;updateCosmeticHUD();
+  }
   else{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
     const[list,owned,key]=map[kind];const obj=list.find(x=>x.id===id);
@@ -2117,7 +2430,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   if(!confirm('Reset all progress? This cannot be undone.'))return;
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
   try{if(window.storage&&window.storage.delete)window.storage.delete(SAVE_KEY);}catch(e){}
-  S={xp:0,level:1,gold:0,clock:360,caught:{},best:{},ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},baitInv:{shrimp:20},zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:''};
+  S={xp:0,level:1,gold:0,clock:360,caught:{},best:{},ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},baitInv:{shrimp:20},zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:''};
   ensureRig();initSwimmers();updateRigBar();refreshMenu();saveGame();toast('Fresh start!','#8b5a2b');setStatus('Set your rig below, then tap the water to cast.');
 });
 
@@ -2125,7 +2438,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
 (async function(){
   await loadGame();
   if(S.zone>maxZone())S.zone=maxZone();
-  ensureRig();updateRigBar();refreshMenu();
+  ensureRig();updateRigBar();refreshMenu();updateCosmeticHUD();
   requestAnimationFrame(()=>{resizeCanvas();requestAnimationFrame(render);});
 })();
 </script>
