@@ -295,6 +295,13 @@
 .friend-lvl{font-size:11px;color:var(--text-soft);}
 .friend-rm{font-size:11px;color:#b3402a;cursor:pointer;background:none;border:none;padding:0;}
 .friend-msg{font-size:12px;color:#b3402a;margin-top:4px;min-height:16px;}
+.friend-req-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#e8f4f0;border:1.5px solid var(--grass);margin-bottom:7px;}
+.friend-req-name{font-size:13.5px;font-weight:800;color:var(--ink);}
+.friend-req-sub{font-size:11px;color:var(--text-soft);}
+.friend-req-btns{display:flex;gap:6px;flex-shrink:0;}
+.friend-req-accept{padding:6px 12px;border-radius:7px;border:none;background:var(--grass);color:#fff;font-size:12px;font-weight:800;cursor:pointer;}
+.friend-req-decline{padding:6px 10px;border-radius:7px;border:1.5px solid #d2b886;background:transparent;color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
+.friend-req-section-head{font-size:11px;font-weight:900;color:var(--grass-dark);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;display:flex;align-items:center;gap:5px;}
 /* LEADERBOARD */
 .lb-tabs{display:flex;gap:6px;margin-bottom:10px;}
 .lb-tab{flex:1;padding:7px;border-radius:8px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
@@ -416,7 +423,7 @@
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
     <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
-    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friends-list"></div></div>
+    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
   </div>
 </div>
 
@@ -729,47 +736,105 @@ async function renderLeaderboard(){
 // ─────────────────────────────────────────────────────────────
 // FRIENDS
 // ─────────────────────────────────────────────────────────────
+let fbFriendRequests=[]; // incoming pending requests: [{senderUid,senderUsername,sentAt}]
+
 function loadFriends(){
   if(!fbUser||!fbDb)return;
+  // Load accepted friends
   fbDb.collection("friends").doc(fbUser.uid).get().then(function(doc){
     fbFriends=((doc.data()||{}).list)||[];
     renderFriendsPanel();
   }).catch(function(){});
+  // Load incoming friend requests
+  loadFriendRequests();
 }
+
+function loadFriendRequests(){
+  if(!fbUser||!fbDb)return;
+  fbDb.collection("friendRequests").doc(fbUser.uid).get().then(function(doc){
+    fbFriendRequests=((doc.data()||{}).pending)||[];
+    renderFriendRequests();
+  }).catch(function(){});
+}
+
 async function searchFriend(){
   const errEl=document.getElementById("friend-err");
   const input=document.getElementById("friend-search");
   const uname=input.value.trim().toLowerCase();
   errEl.textContent="";
-  if(!fbUser){errEl.textContent="Sign in to add friends.";return;}
+  if(!fbUser){errEl.textContent="Sign in to send requests.";return;}
   if(!uname){errEl.textContent="Enter a username.";return;}
-  if(uname===fbUsername.toLowerCase()){errEl.textContent="That is you!";return;}
+  if(uname===fbUsername.toLowerCase()){errEl.textContent="That's you!";return;}
   try{
     const snap=await fbDb.collection("usernames").doc(uname).get();
     if(!snap.exists){errEl.textContent="Username not found.";return;}
-    const uid=snap.data().uid;
-    if(fbFriends.indexOf(uid)>=0){errEl.textContent="Already friends!";return;}
-    fbFriends.push(uid);
-    await fbDb.collection("friends").doc(fbUser.uid).set({list:fbFriends},{merge:true});
+    const targetUid=snap.data().uid;
+    if(fbFriends.indexOf(targetUid)>=0){errEl.textContent="Already friends!";return;}
+    // Send friend request to their requests doc
+    await fbDb.collection("friendRequests").doc(targetUid).set({
+      pending:firebase.firestore.FieldValue.arrayUnion({senderUid:fbUser.uid,senderUsername:fbUsername,sentAt:Date.now()})
+    },{merge:true});
     input.value="";
-    renderFriendsPanel();
-    toast("Friend added!","#2aa890");
-  }catch(e){errEl.textContent="Error adding friend.";}
+    errEl.style.color="var(--grass)";
+    errEl.textContent="Friend request sent to "+uname+"!";
+    setTimeout(function(){errEl.textContent="";errEl.style.color="";},3000);
+  }catch(e){errEl.textContent="Error sending request.";}
 }
+
+async function acceptFriendRequest(senderUid,senderUsername){
+  if(!fbUser||!fbDb)return;
+  try{
+    // Add each other as friends
+    await fbDb.collection("friends").doc(fbUser.uid).set({list:firebase.firestore.FieldValue.arrayUnion(senderUid)},{merge:true});
+    await fbDb.collection("friends").doc(senderUid).set({list:firebase.firestore.FieldValue.arrayUnion(fbUser.uid)},{merge:true});
+    // Remove from pending requests
+    fbFriendRequests=fbFriendRequests.filter(function(r){return r.senderUid!==senderUid;});
+    await fbDb.collection("friendRequests").doc(fbUser.uid).set({pending:fbFriendRequests},{merge:false});
+    // Update local friends list
+    if(!fbFriends.includes(senderUid))fbFriends.push(senderUid);
+    toast("You and "+senderUsername+" are now friends!","#2aa890");
+    renderFriendRequests();
+    renderFriendsPanel();
+  }catch(e){toast("Could not accept request.","#b3402a");}
+}
+
+async function declineFriendRequest(senderUid){
+  if(!fbUser||!fbDb)return;
+  fbFriendRequests=fbFriendRequests.filter(function(r){return r.senderUid!==senderUid;});
+  await fbDb.collection("friendRequests").doc(fbUser.uid).set({pending:fbFriendRequests},{merge:false}).catch(function(){});
+  renderFriendRequests();
+}
+
 function removeFriend(uid){
   fbFriends=fbFriends.filter(function(f){return f!==uid;});
   if(fbUser&&fbDb){fbDb.collection("friends").doc(fbUser.uid).set({list:fbFriends},{merge:true}).catch(function(){});}
   renderFriendsPanel();
 }
+
+function renderFriendRequests(){
+  const el=document.getElementById("friend-requests-section");
+  if(!el)return;
+  if(!fbFriendRequests.length){el.innerHTML="";return;}
+  el.innerHTML="<div class=\"friend-req-section-head\">🎣 Friend Requests ("+fbFriendRequests.length+")</div>"
+    +fbFriendRequests.map(function(r){
+      return "<div class=\"friend-req-card\">"
+        +"<div><div class=\"friend-req-name\">"+r.senderUsername+"</div><div class=\"friend-req-sub\">wants to fish with you</div></div>"
+        +"<div class=\"friend-req-btns\">"
+        +"<button class=\"friend-req-accept\" onclick=\"acceptFriendRequest('"+r.senderUid+"','"+r.senderUsername+"')\">✓ Accept</button>"
+        +"<button class=\"friend-req-decline\" onclick=\"declineFriendRequest('"+r.senderUid+"')\">✕</button>"
+        +"</div></div>";
+    }).join("");
+}
+
 function renderFriendsPanel(){
   const el=document.getElementById("friends-list");
   if(!el)return;
+  if(!fbDb){el.innerHTML="<div class=\"lb-empty\">Sign in to manage friends.</div>";return;}
   if(!fbFriends.length){el.innerHTML="<div class=\"lb-empty\">No friends yet. Search by username above.</div>";return;}
-  if(!fbDb){el.innerHTML="<div class=\"lb-empty\">Sign in to view friends.</div>";return;}
   Promise.all(fbFriends.slice(0,10).map(function(uid){return fbDb.collection("users").doc(uid).get();})).then(function(snaps){
     el.innerHTML=snaps.map(function(s){
       const d=s.data()||{};
-      return "<div class=\"friend-card\"><div><div class=\"friend-name\">"+d.username+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+"</div></div><button class=\"friend-rm\" onclick=\"removeFriend('"+s.id+"')\">Remove</button></div>";
+      return "<div class=\"friend-card\"><div><div class=\"friend-name\">"+(d.username||"Angler")+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+"</div></div><button class=\"friend-rm\" onclick=\"removeFriend('"+s.id+"')\">Remove</button></div>";
     }).join("");
   }).catch(function(){el.innerHTML="<div class=\"lb-empty\">Could not load friends.</div>";});
 }
@@ -2146,6 +2211,7 @@ function rollWeight(f){const[a,b]=f.size;return +(a+(b-a)*Math.pow(Math.random()
 const BULLSEYE_FRAC=0.25; // yellow bar is 25% of green zone width
 function setupMiniGame(){
   document.getElementById('catch-game').style.display='block';
+  document.getElementById('rig-bar').style.pointerEvents='none';
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
@@ -2179,7 +2245,7 @@ function animateMiniGame(){
   updateMiniGameDOM();
   if(phase==='biting')catchAnim=requestAnimationFrame(animateMiniGame);
 }
-function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';}
+function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';document.getElementById('rig-bar').style.pointerEvents='';}
 
 // ─────────────────────────────────────────────────────────────
 // LEGENDARY ALERT + STARDEW MINI-GAME
@@ -2212,6 +2278,7 @@ function showLegendaryAlert(fish){
 
 function startSdewGame(fish){
   sdewActive=true;sdewHolding=false;
+  document.getElementById('rig-bar').style.pointerEvents='none';
   sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
   sdewBarVel=0;
   sdewFishCy=SDEW_TRACK_H/2;
@@ -2263,6 +2330,7 @@ function endSdewGame(success){
   cancelAnimationFrame(sdewAnimId);
   clearTimeout(sdewAlertTimer);
   document.getElementById('sdew-overlay').classList.remove('show');
+  document.getElementById('rig-bar').style.pointerEvents='';
   if(!success){fail('The legendary fish got away! So close...');return;}
   const f=hookedFish,w=hookW;
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
@@ -2428,6 +2496,7 @@ document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
     if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
+    if(t.dataset.mtab==='friends'){loadFriendRequests();}
   document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('mp-'+t.dataset.mtab).classList.add('active');
