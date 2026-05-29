@@ -1085,27 +1085,110 @@ function endTournament(){
 // ─────────────────────────────────────────────────────────────
 // STRUCTURES GUIDE
 // ─────────────────────────────────────────────────────────────
+// ── SVG Icon Library ─────────────────────────────────────────
+const ICONS={
+// hats
+'hat-none':'<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>',
+'hat-bucket':'<path d="M5 16Q4 11 6 8Q9 5 12 5Q15 5 18 8Q20 11 19 16"/><ellipse cx="12" cy="16.5" rx="8" ry="2.5"/><ellipse cx="12" cy="5" rx="4" ry="1.5"/>',
+'hat-baseball':'<path d="M4 16Q5 10 12 9Q19 10 20 16"/><path d="M4 16Q8 17 12 17Q16 17 20 16"/><path d="M20 16L22.5 16.5Q23 18 21 17.5L20 17"/>',
+'hat-cowboy':'<path d="M1.5 15Q7 14 12 13.5Q17 14 22.5 15"/><path d="M7 15Q7.5 10 12 9Q16.5 10 17 15"/><path d="M1.5 15Q3 17 7 16"/><path d="M22.5 15Q21 17 17 16"/>',
+'hat-visor':'<path d="M3 14Q7.5 12 12 12Q16.5 12 21 14"/><path d="M3 14Q3 17 21 17Q21 14"/>',
+'hat-beanie':'<path d="M5 18Q4 10 12 7Q20 10 19 18"/><path d="M5 18Q5 20 19 20Q19 18"/><circle cx="12" cy="7" r="1.5"/>',
+'hat-captain':'<path d="M4 16Q4 12 12 11Q20 12 20 16"/><rect x="3" y="16" width="18" height="3" rx="1"/><path d="M8 16Q8 13 12 12Q16 13 16 16"/><path d="M9 19Q12 21 15 19" stroke-width="1.2"/>',
+'hat-straw':'<ellipse cx="12" cy="16" rx="10" ry="2.5"/><path d="M6 16Q6 11 12 10Q18 11 18 16"/><ellipse cx="12" cy="10" rx="5" ry="2"/>',
+'hat-hood':'<path d="M6 20Q5 12 12 8Q19 12 18 20"/><path d="M6 20Q9 22 12 22Q15 22 18 20"/><path d="M8 18Q8 15 12 14Q16 15 16 18"/>',
+// shirts
+'shirt-none':'<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>',
+'shirt-tee':'<path d="M2 9L7 5L9.5 8Q12 7 14.5 8L17 5L22 9L19 13L17 11V21H7V11L5 13Z"/>',
+'shirt-performance':'<path d="M2 9L7 5L9.5 8Q12 7 14.5 8L17 5L22 9L19 13L17 11V21H7V11L5 13Z"/><line x1="9" y1="9" x2="9" y2="13"/><line x1="15" y1="9" x2="15" y2="13"/>',
+'shirt-flannel':'<path d="M2 9L7 5L9.5 8Q12 7 14.5 8L17 5L22 9L19 13L17 11V21H7V11L5 13Z"/><line x1="12" y1="9" x2="12" y2="21" stroke-width="1"/>',
+'shirt-vest':'<path d="M5 5V21H10.5L12 17L13.5 21H19V5"/><path d="M5 5Q8 3 10 5Q12 6.5 14 5Q16 3 19 5"/><line x1="7" y1="10" x2="10" y2="10"/><line x1="7" y1="13" x2="10" y2="13"/><line x1="14" y1="10" x2="17" y2="10"/><line x1="14" y1="13" x2="17" y2="13"/>',
+'shirt-hoodie':'<path d="M2 9L7 5Q10 4 10 7V10Q12 11.5 14 10V7Q14 4 17 5L22 9L19 13L17 11V21H7V11L5 13Z"/><path d="M10 7Q12 9 14 7"/>',
+'shirt-jersey':'<path d="M2 9L7 5L9.5 8V21H14.5V8L17 5L22 9L20 13L17.5 11"/><path d="M6.5 11L4 13"/><path d="M9.5 5Q12 7 14.5 5"/><line x1="11" y1="13" x2="13" y2="13"/>',
+'shirt-waders':'<path d="M8 4V21Q8 22 6 22H4V15L8 4"/><path d="M16 4V21Q16 22 18 22H20V15L16 4"/><path d="M8 4Q12 2 16 4"/><path d="M8 11Q12 12.5 16 11"/>',
+'shirt-ninja':'<path d="M3 9L8 5L10 8L10 21H14V8L16 5L21 9L18 13L16 11"/><path d="M10 5Q12 4 14 5"/><line x1="10" y1="13" x2="14" y2="13"/>',
+// shades
+'shades-none':'<line x1="5" y1="5" x2="19" y2="19"/><line x1="19" y1="5" x2="5" y2="19"/>',
+'shades-polarized':'<rect x="2" y="9" width="8" height="6" rx="3"/><rect x="14" y="9" width="8" height="6" rx="3"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="2" y1="12" x2="0.5" y2="11"/><line x1="22" y1="12" x2="23.5" y2="11"/>',
+'shades-wrap':'<path d="M1 12Q2 8 6 8H10Q12 8 12 11Q12 14 10 14H6Q2 14 1 12Z"/><path d="M23 12Q22 8 18 8H14Q12 8 12 11Q12 14 14 14H18Q22 14 23 12Z"/>',
+'shades-clip':'<rect x="2" y="10" width="8" height="5" rx="2"/><rect x="14" y="10" width="8" height="5" rx="2"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="6" y1="8" x2="18" y2="8" stroke-dasharray="2 2" stroke-width="1.2"/>',
+'shades-mirror':'<rect x="2" y="9" width="8" height="6" rx="3"/><rect x="14" y="9" width="8" height="6" rx="3"/><line x1="10" y1="12" x2="14" y2="12"/><line x1="4" y1="10" x2="8" y2="14" stroke-width="1" opacity="0.5"/><line x1="16" y1="10" x2="20" y2="14" stroke-width="1" opacity="0.5"/>',
+'shades-sport':'<path d="M1 12Q2 8 6 8H10Q12 9 12 12Q12 15 10 15H6Q2 16 1 12Z"/><path d="M12 12Q12 9 14 8H18Q22 8 23 12Q22 16 18 15H14Q12 15 12 12Z"/>',
+'shades-mask':'<ellipse cx="12" cy="13" rx="9" ry="9.5"/><ellipse cx="8.5" cy="11" rx="2.5" ry="1.5"/><ellipse cx="15.5" cy="11" rx="2.5" ry="1.5"/><path d="M5 17Q12 21 19 17"/><line x1="4" y1="5" x2="20" y2="21" stroke="#cc1a1a" stroke-width="2"/>',
+// bait
+'bait-shrimp':'<path d="M8 5Q4 8 5 13Q6 17 11 18Q16 19 19 15Q21 12 18 8Q15 4 10 5Z"/><path d="M11 18Q10 20 8 21M12 18Q12 21 11 22"/><path d="M12 5L14 3M14 6L16 4"/>',
+'bait-crab':'<ellipse cx="12" cy="13" rx="6" ry="4"/><path d="M6 13L3 11M6 13L2 13M6 13L3 15"/><path d="M18 13L21 11M18 13L22 13M18 13L21 15"/><path d="M8 9L7 6M11 8.5L10 5M13 8.5L14 5M16 9L17 6"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>',
+'bait-fish':'<path d="M4 12Q5 8 9 7Q15 6 19 12Q15 18 9 17Q5 16 4 12Z"/><path d="M19 12L23 9L23 15Z"/><circle cx="9" cy="11" r="1"/>',
+'bait-fish-long':'<path d="M2 12Q3 9 6 8Q14 7 20 12Q14 17 6 16Q3 15 2 12Z"/><path d="M20 12L23 10L23 14Z"/><circle cx="7" cy="11" r="1"/>',
+'bait-squid':'<path d="M9 4Q12 3 15 4Q16 9 12 11Q8 9 9 4Z"/><path d="M9 4L7 3M9 4L8 2M15 4L17 3M15 4L16 2"/><path d="M9 11L7 18L8 21M10.5 11L9.5 18M12 11L11 19M13.5 11L14.5 18M15 11L17 18L16 21"/>',
+'bait-cutbait':'<rect x="4" y="8" width="16" height="8" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="8" x2="8" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/>',
+// tackle
+'tackle-cork':'<circle cx="12" cy="9" r="5"/><line x1="12" y1="14" x2="12" y2="22"/><path d="M9 20Q12 22.5 15 20"/>',
+'tackle-jig':'<circle cx="12" cy="7" r="3.5"/><path d="M12 10.5V18Q12 22 8 22Q4 22 4 18Q4 16 6 16"/>',
+'tackle-hook':'<line x1="11" y1="3" x2="13" y2="3"/><path d="M12 3V17Q12 22 8 22Q4 22 4 18Q4 16 6 16"/>',
+'tackle-circle':'<path d="M14 6Q19 6 19 12Q19 18 13 18Q7 18 7 12V8"/><path d="M7 8L5 6M7 8L9 6"/>',
+'tackle-weight':'<line x1="12" y1="2" x2="12" y2="8"/><ellipse cx="12" cy="12" rx="5" ry="4"/><path d="M9 16Q12 19 15 16"/><line x1="12" y1="16" x2="12" y2="22"/>',
+'tackle-lure':'<path d="M2 12L8 8L14 12L8 16Z"/><line x1="14" y1="12" x2="20" y2="12"/><path d="M18 10Q22 10 22 14Q22 18 18 16"/>',
+'tackle-anchor':'<circle cx="12" cy="7" r="3"/><line x1="12" y1="10" x2="12" y2="20"/><path d="M5 14Q12 22 19 14"/><line x1="5" y1="10" x2="19" y2="10"/>',
+'tackle-deep':'<line x1="12" y1="2" x2="12" y2="16"/><path d="M8 7Q12 9 16 7"/><path d="M9 11Q12 13 15 11"/><ellipse cx="12" cy="19" rx="4" ry="2.5"/>',
+// boats
+'boat-kayak':'<path d="M2 14Q12 9 22 14Q12 19 2 14Z"/><line x1="12" y1="9" x2="12" y2="6"/><ellipse cx="12" cy="14" rx="3" ry="1.8"/>',
+'boat-jon':'<path d="M3 14L5 9H19L21 14Q21 19 12 19Q3 19 3 14Z"/><line x1="5" y1="9" x2="5" y2="6"/><line x1="19" y1="9" x2="19" y2="6"/><line x1="5" y1="6" x2="19" y2="6"/>',
+'boat-bay':'<path d="M2 16Q3 11 12 10Q21 11 22 16Q20 20 12 20Q4 20 2 16Z"/><path d="M8 10V7H16V10"/><path d="M10 7V5H14V7"/>',
+'boat-console':'<path d="M2 17Q3 12 12 11Q21 12 22 17Q20 21 12 21Q4 21 2 17Z"/><rect x="9" y="7" width="6" height="6" rx="1"/><line x1="8" y1="10" x2="5" y2="10"/><line x1="16" y1="10" x2="19" y2="10"/>',
+'boat-walk':'<path d="M2 17Q3 12 12 11Q21 12 22 17Q20 21 12 21Q4 21 2 17Z"/><rect x="7" y="6" width="10" height="7" rx="1"/><path d="M7 10H4L3 14M17 10H20L21 14"/>',
+'boat-sport':'<path d="M2 17Q3 12 12 11Q21 12 22 17Q20 21 12 21Q4 21 2 17Z"/><rect x="7" y="5" width="10" height="8" rx="1"/><path d="M12 5V2M10 5L9 2M14 5L15 2"/>',
+// structures
+'struct-dock':'<line x1="3" y1="8" x2="21" y2="8"/><line x1="6" y1="8" x2="6" y2="20"/><line x1="12" y1="8" x2="12" y2="20"/><line x1="18" y1="8" x2="18" y2="20"/><path d="M3 8L3 5Q12 3 21 5L21 8"/>',
+'struct-grass':'<line x1="12" y1="20" x2="12" y2="10"/><path d="M12 14Q9 10 6 12"/><path d="M12 17Q15 13 18 15"/><line x1="7" y1="20" x2="7" y2="13"/><line x1="17" y1="20" x2="17" y2="13"/><path d="M7 16Q5 12 3 14"/><path d="M17 16Q19 12 21 14"/>',
+'struct-oyster':'<ellipse cx="12" cy="15" rx="8" ry="4"/><ellipse cx="12" cy="12" rx="6" ry="3"/><path d="M8 12Q12 10 16 12"/>',
+'struct-sand':'<path d="M3 15Q7 12 12 14Q17 16 21 13"/><path d="M3 18Q7 15 12 17Q17 19 21 16" stroke-width="1.2"/>',
+'struct-crabtrap':'<rect x="7" y="8" width="10" height="9" rx="2"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="12" y1="8" x2="12" y2="17"/><line x1="12" y1="8" x2="12" y2="4"/><circle cx="12" cy="3.5" r="1.5"/>',
+'struct-mangrove':'<line x1="12" y1="22" x2="12" y2="12"/><path d="M12 16Q8 12 4 14"/><path d="M12 13Q16 9 20 11"/><path d="M4 14Q3 17 5 19"/><path d="M20 11Q22 14 20 17"/>',
+'struct-bridge':'<line x1="2" y1="17" x2="22" y2="17"/><path d="M5 17Q5 11 10 11Q12 8 14 11Q19 11 19 17"/><line x1="2" y1="17" x2="2" y2="21"/><line x1="22" y1="17" x2="22" y2="21"/>',
+'struct-pass':'<path d="M4 12Q8 9 12 12Q16 15 20 12"/><path d="M4 8Q8 5 12 8Q16 11 20 8" stroke-width="1.2"/>',
+'struct-channel':'<line x1="5" y1="6" x2="5" y2="18"/><line x1="19" y1="6" x2="19" y2="18"/><path d="M5 12Q9 10 12 12Q15 14 19 12"/>',
+'struct-reef':'<path d="M5 18Q5 14 7 12Q9 10 12 10Q15 10 17 12Q19 14 19 18"/><circle cx="8" cy="15" r="1.5"/><circle cx="16" cy="15" r="1.5"/><circle cx="12" cy="12" r="1"/>',
+'struct-wreck':'<path d="M2 18L4 10L8 8H16L20 10L22 18Z"/><line x1="2" y1="18" x2="22" y2="18"/><line x1="11" y1="8" x2="11" y2="4"/><line x1="13" y1="8" x2="13" y2="4"/>',
+'struct-ledge':'<path d="M2 14H14Q16 14 18 17L22 21"/><line x1="2" y1="14" x2="2" y2="21"/>',
+'struct-rip':'<path d="M2 14Q6 10 10 14Q14 18 18 14Q20 12 22 13"/><path d="M4 18Q7 15 10 18Q13 21 16 18" stroke-width="1.2"/>',
+'struct-baitball':'<circle cx="12" cy="12" r="7" stroke-dasharray="2 3"/><circle cx="9" cy="10" r="1"/><circle cx="13" cy="9" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="11" cy="14" r="1"/><circle cx="8" cy="14" r="1"/>',
+'struct-open':'<path d="M2 14Q6 10 10 14Q14 18 18 14Q21 12 22 13"/><path d="M2 18Q6 14 10 18Q14 22 18 18"/>',
+'struct-weedline':'<path d="M4 18V12Q6 8 8 12V18"/><path d="M10 18V11Q12 7 14 11V18"/><path d="M16 18V13Q18 9 20 13V18"/>',
+'struct-deep':'<path d="M2 18Q6 12 12 10Q18 12 22 18"/><path d="M5 18Q8 13 12 12Q16 13 19 18" stroke-width="1.2"/>',
+'struct-oilrig':'<rect x="4" y="12" width="16" height="8" rx="1"/><path d="M6 12V7H18V12"/><path d="M10 7V4H14V7"/><line x1="17" y1="7" x2="17" y2="3"/><circle cx="17" cy="3" r="1.5"/>',
+'struct-powerplant':'<rect x="5" y="14" width="14" height="6"/><rect x="7" y="10" width="4" height="5"/><rect x="13" y="10" width="4" height="5"/><path d="M9 10Q9 7 10 6M15 10Q15 7 14 6" stroke-dasharray="1.5 2" stroke-width="1.4"/>',
+'struct-bluhole':'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/>',
+};
+function svgIcon(id,sz){
+  sz=sz||22;
+  var p=ICONS[id];
+  if(!p)return'';
+  return'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">'+p+'</svg>';
+}
+// ── end SVG icons ─────────────────────────────────────────────
+
 const STRUCT_META={
-  dock:{icon:"🪵",label:"Dock Pilings",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
-  grass:{icon:"🌿",label:"Grass Flat",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
-  oyster:{icon:"🦪",label:"Oyster Bar",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
-  sand:{icon:"🏖",label:"Sandy Bottom",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
-  crab_trap:{icon:"🦀",label:"Crab Trap",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
-  mangrove:{icon:"🌳",label:"Mangrove Edge",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
-  bridge:{icon:"🌉",label:"Bridge Pilings",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
-  pass:{icon:"🌊",label:"Tidal Pass",zone:"Inshore",depth:"Deep",depthColor:"#8060c8"},
-  channel:{icon:"⚓",label:"Channel Edge",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
-  reef:{icon:"🪸",label:"Artificial Reef",zone:"Nearshore",depth:"Near",depthColor:"#2aa890"},
-  wreck:{icon:"⛵",label:"Shipwreck",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
-  ledge:{icon:"📉",label:"Ledge / Drop-off",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
-  rip:{icon:"💨",label:"Rip Current",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
-  baitball:{icon:"🐟",label:"Bait Ball",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
-  open:{icon:"🌊",label:"Open Water",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
-  weedline:{icon:"🌾",label:"Weedline",zone:"Offshore",depth:"Near",depthColor:"#2aa890"},
-  deep:{icon:"🔵",label:"Deep Water",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
-  oil_rig:{icon:"🛢",label:"Oil Rig",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
-  power_plant:{icon:"🏭",label:"Power Plant",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8"},
-  bluhole:{icon:"🔵",label:"Blue Hole",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  dock:{icon:"struct-dock",label:"Dock Pilings",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  grass:{icon:"struct-grass",label:"Grass Flat",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  oyster:{icon:"struct-oyster",label:"Oyster Bar",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  sand:{icon:"struct-sand",label:"Sandy Bottom",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
+  crab_trap:{icon:"struct-crabtrap",label:"Crab Trap",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  mangrove:{icon:"struct-mangrove",label:"Mangrove Edge",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  bridge:{icon:"struct-bridge",label:"Bridge Pilings",zone:"Inshore",depth:"Mid",depthColor:"#4a9fd4"},
+  pass:{icon:"struct-pass",label:"Tidal Pass",zone:"Inshore",depth:"Deep",depthColor:"#8060c8"},
+  channel:{icon:"struct-channel",label:"Channel Edge",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  reef:{icon:"struct-reef",label:"Artificial Reef",zone:"Nearshore",depth:"Near",depthColor:"#2aa890"},
+  wreck:{icon:"struct-wreck",label:"Shipwreck",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  ledge:{icon:"struct-ledge",label:"Ledge / Drop-off",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  rip:{icon:"struct-rip",label:"Rip Current",zone:"Nearshore",depth:"Mid",depthColor:"#4a9fd4"},
+  baitball:{icon:"struct-baitball",label:"Bait Ball",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  open:{icon:"struct-open",label:"Open Water",zone:"Any",depth:"Deep",depthColor:"#8060c8"},
+  weedline:{icon:"struct-weedline",label:"Weedline",zone:"Offshore",depth:"Near",depthColor:"#2aa890"},
+  deep:{icon:"struct-deep",label:"Deep Water",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  oil_rig:{icon:"struct-oilrig",label:"Oil Rig",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  power_plant:{icon:"struct-powerplant",label:"Power Plant",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8"},
+  bluhole:{icon:"struct-bluhole",label:"Blue Hole",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
 };
 function renderStructuresGuide(){
   const el=document.getElementById("structs-guide");
@@ -1122,7 +1205,7 @@ function renderStructuresGuide(){
     const pills=caught.map(function(f){
       return "<span class=\"struct-fish-pill\" style=\"background:"+RARITY_COLORS[f.rarity]+"22;color:"+RARITY_COLORS[f.rarity]+";\">"+f.name+"</span>";
     }).join("")+(unknown>0?"<span class=\"struct-fish-pill\" style=\"background:rgba(0,0,0,.06);color:var(--text-soft);\">+"+unknown+" unknown</span>":"");
-    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+info.icon+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
+    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+svgIcon(info.icon,20)+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
   }).join("");
 }
 
@@ -1168,34 +1251,34 @@ const METHODS=[
 ];
 
 const TACKLE=[
-  {id:'cork_b', cat:'cork', name:'Foam Cork Rig', icon:'\uD83C\uDFA3', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Basic popping cork.'},
-  {id:'cork_p', cat:'cork', name:'Pro Rattle Cork', icon:'\uD83C\uDFA3', cost:150, pack:4, dur:16, rare:1.25, lvl:3, desc:'Louder, tougher, draws more fish.'},
-  {id:'jig_b',  cat:'jig', name:'Lead Jig Head', icon:'\uD83E\uDE9D', cost:35, pack:4, dur:7, rare:1, lvl:1, desc:'Simple jig & plastic.'},
-  {id:'jig_p',  cat:'jig', name:'Tungsten Jig', icon:'\uD83E\uDE9D', cost:140, pack:4, dur:16, rare:1.25, lvl:3, desc:'Sleeker fall, more durable.'},
-  {id:'fin_b',  cat:'finesse', name:'Light Wire Hook', icon:'\uD83E\uDE9D', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Small hooks for structure bait.'},
-  {id:'fin_p',  cat:'finesse', name:'Sheepshead Rig', icon:'\uD83E\uDE9D', cost:150, pack:4, dur:16, rare:1.25, lvl:3, desc:'Built for bar & piling fish.'},
-  {id:'lh_b',   cat:'livehook', name:'Circle Hook', icon:'\u3030\uFE0F', cost:45, pack:4, dur:8, rare:1, lvl:1, desc:'Free-line live baits.'},
-  {id:'lh_p',   cat:'livehook', name:'Live-Bait Rig', icon:'\u3030\uFE0F', cost:160, pack:4, dur:18, rare:1.25, lvl:3, desc:'Heavy-duty live-bait setup.'},
-  {id:'br_b',   cat:'bottomrig', name:'Knocker Rig', icon:'\u2699\uFE0F', cost:60, pack:4, dur:6, rare:1, lvl:2, desc:'Cut bait on the bottom.'},
-  {id:'br_p',   cat:'bottomrig', name:'Chicken Rig', icon:'\u2699\uFE0F', cost:220, pack:4, dur:14, rare:1.3, lvl:5, desc:'Double-drop reef rig.'},
-  {id:'tl_b',   cat:'trolllure', name:'Trolling Spread', icon:'\uD83C\uDF00', cost:120, pack:3, dur:8, rare:1, lvl:3, desc:'Spoons & plugs for pelagics.'},
-  {id:'tl_p',   cat:'trolllure', name:'Skirted Spread', icon:'\uD83C\uDF00', cost:420, pack:3, dur:18, rare:1.35, lvl:6, desc:'Bluewater skirts & teasers.'},
-  {id:'ch_b',   cat:'chunkrig', name:'Chunk Rig', icon:'\uD83E\uDDFA', cost:90, pack:4, dur:6, rare:1, lvl:4, desc:'Drift cut chunks in a slick.'},
-  {id:'ch_p',   cat:'chunkrig', name:'Chum Setup', icon:'\uD83E\uDDFA', cost:300, pack:4, dur:14, rare:1.3, lvl:6, desc:'Heavy chum & flat lines.'},
-  {id:'dd_b',   cat:'deeprig', name:'Deep-Drop Rig', icon:'\u2693', cost:150, pack:3, dur:5, rare:1, lvl:7, desc:'Weighted rig for the depths.'},
-  {id:'dd_p',   cat:'deeprig', name:'Electric Deep Rig', icon:'\u2693', cost:520, pack:3, dur:12, rare:1.35, lvl:9, desc:'Lighted bait, 1,500 ft+.'},
+  {id:'cork_b', cat:'cork', name:'Foam Cork Rig', icon:'tackle-cork', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Basic popping cork.'},
+  {id:'cork_p', cat:'cork', name:'Pro Rattle Cork', icon:'tackle-cork', cost:150, pack:4, dur:16, rare:1.25, lvl:3, desc:'Louder, tougher, draws more fish.'},
+  {id:'jig_b',  cat:'jig', name:'Lead Jig Head', icon:'tackle-jig', cost:35, pack:4, dur:7, rare:1, lvl:1, desc:'Simple jig & plastic.'},
+  {id:'jig_p',  cat:'jig', name:'Tungsten Jig', icon:'tackle-jig', cost:140, pack:4, dur:16, rare:1.25, lvl:3, desc:'Sleeker fall, more durable.'},
+  {id:'fin_b',  cat:'finesse', name:'Light Wire Hook', icon:'tackle-hook', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Small hooks for structure bait.'},
+  {id:'fin_p',  cat:'finesse', name:'Sheepshead Rig', icon:'tackle-hook', cost:150, pack:4, dur:16, rare:1.25, lvl:3, desc:'Built for bar & piling fish.'},
+  {id:'lh_b',   cat:'livehook', name:'Circle Hook', icon:'tackle-circle', cost:45, pack:4, dur:8, rare:1, lvl:1, desc:'Free-line live baits.'},
+  {id:'lh_p',   cat:'livehook', name:'Live-Bait Rig', icon:'tackle-circle', cost:160, pack:4, dur:18, rare:1.25, lvl:3, desc:'Heavy-duty live-bait setup.'},
+  {id:'br_b',   cat:'bottomrig', name:'Knocker Rig', icon:'tackle-weight', cost:60, pack:4, dur:6, rare:1, lvl:2, desc:'Cut bait on the bottom.'},
+  {id:'br_p',   cat:'bottomrig', name:'Chicken Rig', icon:'tackle-weight', cost:220, pack:4, dur:14, rare:1.3, lvl:5, desc:'Double-drop reef rig.'},
+  {id:'tl_b',   cat:'trolllure', name:'Trolling Spread', icon:'tackle-lure', cost:120, pack:3, dur:8, rare:1, lvl:3, desc:'Spoons & plugs for pelagics.'},
+  {id:'tl_p',   cat:'trolllure', name:'Skirted Spread', icon:'tackle-lure', cost:420, pack:3, dur:18, rare:1.35, lvl:6, desc:'Bluewater skirts & teasers.'},
+  {id:'ch_b',   cat:'chunkrig', name:'Chunk Rig', icon:'bait-cutbait', cost:90, pack:4, dur:6, rare:1, lvl:4, desc:'Drift cut chunks in a slick.'},
+  {id:'ch_p',   cat:'chunkrig', name:'Chum Setup', icon:'bait-cutbait', cost:300, pack:4, dur:14, rare:1.3, lvl:6, desc:'Heavy chum & flat lines.'},
+  {id:'dd_b',   cat:'deeprig', name:'Deep-Drop Rig', icon:'tackle-deep', cost:150, pack:3, dur:5, rare:1, lvl:7, desc:'Weighted rig for the depths.'},
+  {id:'dd_p',   cat:'deeprig', name:'Electric Deep Rig', icon:'tackle-anchor', cost:520, pack:3, dur:12, rare:1.35, lvl:9, desc:'Lighted bait, 1,500 ft+.'},
 ];
 
 const BAIT=[
-  {id:'shrimp',  name:'Live Shrimp', icon:'\uD83E\uDD90', cost:30, pack:15, lvl:1, desc:'The all-around inshore favorite.'},
-  {id:'crab',    name:'Fiddler Crab', icon:'\uD83E\uDD80', cost:40, pack:12, lvl:1, desc:'Sheepshead & black drum candy.'},
-  {id:'blue_crab',name:'Blue Crab',   icon:'\uD83E\uDD80', cost:0,  pack:0,  lvl:1, desc:'Pulled from a crab trap. Premium bait for drum, sheepshead & tarpon.'},
-  {id:'pinfish', name:'Live Pinfish', icon:'\uD83D\uDC1F', cost:45, pack:12, lvl:2, desc:'Big-predator bait: snook, grouper, cobia.'},
-  {id:'pilchard',name:'Pilchards', icon:'\uD83D\uDC1F', cost:50, pack:12, lvl:2, desc:'Lively whitebait for snook, tarpon, mahi.'},
-  {id:'squid',   name:'Squid Strips', icon:'\uD83E\uDD91', cost:35, pack:15, lvl:1, desc:'Tough bottom bait for reef fish.'},
-  {id:'cutbait', name:'Cut Bait', icon:'\uD83C\uDF63', cost:40, pack:12, lvl:2, desc:'Bloody chunks for kings, sharks, reds.'},
-  {id:'ballyhoo',name:'Rigged Ballyhoo', icon:'\uD83D\uDC1F', cost:90, pack:8, lvl:3, desc:'The classic offshore trolling bait.'},
-  {id:'menhaden',name:'Menhaden', icon:'\uD83D\uDC1F', cost:60, pack:12, lvl:4, desc:'Oily chunk bait for the chum slick.'},
+  {id:'shrimp',  name:'Live Shrimp', icon:'bait-shrimp', cost:30, pack:15, lvl:1, desc:'The all-around inshore favorite.'},
+  {id:'crab',    name:'Fiddler Crab', icon:'bait-crab', cost:40, pack:12, lvl:1, desc:'Sheepshead & black drum candy.'},
+  {id:'blue_crab',name:'Blue Crab',   icon:'bait-crab', cost:0,  pack:0,  lvl:1, desc:'Pulled from a crab trap. Premium bait for drum, sheepshead & tarpon.'},
+  {id:'pinfish', name:'Live Pinfish', icon:'bait-fish', cost:45, pack:12, lvl:2, desc:'Big-predator bait: snook, grouper, cobia.'},
+  {id:'pilchard',name:'Pilchards', icon:'bait-fish', cost:50, pack:12, lvl:2, desc:'Lively whitebait for snook, tarpon, mahi.'},
+  {id:'squid',   name:'Squid Strips', icon:'bait-squid', cost:35, pack:15, lvl:1, desc:'Tough bottom bait for reef fish.'},
+  {id:'cutbait', name:'Cut Bait', icon:'bait-cutbait', cost:40, pack:12, lvl:2, desc:'Bloody chunks for kings, sharks, reds.'},
+  {id:'ballyhoo',name:'Rigged Ballyhoo', icon:'bait-fish-long', cost:90, pack:8, lvl:3, desc:'The classic offshore trolling bait.'},
+  {id:'menhaden',name:'Menhaden', icon:'bait-fish', cost:60, pack:12, lvl:4, desc:'Oily chunk bait for the chum slick.'},
 ];
 
 const LEADERS=[
@@ -1207,35 +1290,35 @@ const LEADERS=[
 // ── COSMETICS ─────────────────────────────────────────────────
 const COSMETICS={
   hats:[
-    {id:'none',      slot:'hat', name:'No Hat',           icon:'🚫', cost:0,   lvl:1, desc:'Just vibes.'},
-    {id:'bucket',    slot:'hat', name:'Bucket Hat',        icon:'🪣', cost:120, lvl:1, desc:'Classic sun protection for the flats angler.'},
-    {id:'baseball',  slot:'hat', name:'Baseball Cap',      icon:'🧢', cost:150, lvl:1, desc:'Keep the glare off and look sharp.'},
-    {id:'cowboy',    slot:'hat', name:'Cowboy Hat',        icon:'🤠', cost:280, lvl:3, desc:'Gulf Coast swagger. Brim wide enough for tarpon weather.'},
-    {id:'visor',     slot:'hat', name:'Sun Visor',         icon:'🎽', cost:200, lvl:2, desc:'Minimalist. You trust the sunscreen.'},
-    {id:'beanie',    slot:'hat', name:'Beanie',            icon:'🧶', cost:160, lvl:1, desc:'For those cold January flounder trips.'},
-    {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'⛵', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
-    {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'👒', cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
-    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'🥷', cost:10000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'none',      slot:'hat', name:'No Hat',           icon:'hat-none',    cost:0,   lvl:1, desc:'Just vibes.'},
+    {id:'bucket',    slot:'hat', name:'Bucket Hat',        icon:'hat-bucket',  cost:120, lvl:1, desc:'Classic sun protection for the flats angler.'},
+    {id:'baseball',  slot:'hat', name:'Baseball Cap',      icon:'hat-baseball',cost:150, lvl:1, desc:'Keep the glare off and look sharp.'},
+    {id:'cowboy',    slot:'hat', name:'Cowboy Hat',        icon:'hat-cowboy',  cost:280, lvl:3, desc:'Gulf Coast swagger. Brim wide enough for tarpon weather.'},
+    {id:'visor',     slot:'hat', name:'Sun Visor',         icon:'hat-visor',   cost:200, lvl:2, desc:'Minimalist. You trust the sunscreen.'},
+    {id:'beanie',    slot:'hat', name:'Beanie',            icon:'hat-beanie',  cost:160, lvl:1, desc:'For those cold January flounder trips.'},
+    {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'hat-captain', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
+    {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'hat-straw',   cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
+    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:10000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
   ],
   shirts:[
-    {id:'none',      slot:'shirt', name:'No Shirt',        icon:'🚫', cost:0,     lvl:1, desc:'Living free.'},
-    {id:'fishing_tee',slot:'shirt',name:'Fishing Tee',     icon:'👕', cost:130,   lvl:1, desc:'Faded logo, salt-stiff collar. A classic.'},
-    {id:'performance',slot:'shirt',name:'Performance Shirt',icon:'🏃', cost:250,  lvl:2, desc:'UPF 50+. Wicks sweat in August heat.'},
-    {id:'flannel',   slot:'shirt', name:'Flannel Shirt',   icon:'🔲', cost:200,   lvl:1, desc:'Winter runs call for flannel.'},
-    {id:'vest',      slot:'shirt', name:'Fishing Vest',    icon:'🦺', cost:380,   lvl:4, desc:'Twelve pockets. You are the tackle box.'},
-    {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'🧥', cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
-    {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'🎽',cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
-    {id:'overalls',  slot:'shirt', name:'Waders',          icon:'🩱', cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
-    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'🖤', cost:12000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
+    {id:'fishing_tee',slot:'shirt',name:'Fishing Tee',     icon:'shirt-tee',        cost:130,   lvl:1, desc:'Faded logo, salt-stiff collar. A classic.'},
+    {id:'performance',slot:'shirt',name:'Performance Shirt',icon:'shirt-performance',cost:250,  lvl:2, desc:'UPF 50+. Wicks sweat in August heat.'},
+    {id:'flannel',   slot:'shirt', name:'Flannel Shirt',   icon:'shirt-flannel',    cost:200,   lvl:1, desc:'Winter runs call for flannel.'},
+    {id:'vest',      slot:'shirt', name:'Fishing Vest',    icon:'shirt-vest',       cost:380,   lvl:4, desc:'Twelve pockets. You are the tackle box.'},
+    {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'shirt-hoodie',     cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
+    {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'shirt-jersey',    cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
+    {id:'overalls',  slot:'shirt', name:'Waders',          icon:'shirt-waders',     cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
+    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:12000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
   ],
   shades:[
-    {id:'none',      slot:'shades', name:'No Shades',      icon:'🚫', cost:0,     lvl:1, desc:'Squinting into the sun.'},
-    {id:'polarized', slot:'shades', name:'Polarized',       icon:'🕶️', cost:180,  lvl:1, desc:'Cut the glare. See the fish below the surface.'},
-    {id:'wrap',      slot:'shades', name:'Wrap-Arounds',    icon:'😎', cost:240,  lvl:2, desc:'Max coverage. Zero fish escapes your gaze.'},
-    {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'🥽', cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
-    {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'🪞', cost:350, lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
-    {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'🏅', cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
-    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'🎭', cost:3000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
+    {id:'polarized', slot:'shades', name:'Polarized',       icon:'shades-polarized', cost:180,  lvl:1, desc:'Cut the glare. See the fish below the surface.'},
+    {id:'wrap',      slot:'shades', name:'Wrap-Arounds',    icon:'shades-wrap',      cost:240,  lvl:2, desc:'Max coverage. Zero fish escapes your gaze.'},
+    {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'shades-clip',      cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
+    {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'shades-mirror',    cost:350,  lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
+    {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'shades-sport',     cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
+    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:3000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
   ],
 };
 
@@ -1255,12 +1338,12 @@ function anglerEmoji(gender,skinId){
 
 // boats: maxZone gates water; perk applied in logic
 const BOATS=[
-  {id:'kayak',  name:'Kayak',        icon:'\uD83D\uDEF6', cost:0,    lvl:1,  maxZone:0, range:0,  perk:'stealth',   perkName:'Stealth: +10% inshore bites'},
-  {id:'jon',    name:'Jon Boat',     icon:'\uD83D\uDEA3', cost:250,  lvl:2,  maxZone:0, range:0,  perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
-  {id:'bay',    name:'Bay Boat',     icon:'\u26F5', cost:700,  lvl:3,  maxZone:1, range:0,  perk:'fastbite',  perkName:'Fast Bites: bites come 15% sooner'},
-  {id:'console',name:'Center Console',icon:'\uD83D\uDEA4', cost:1800, lvl:5,  maxZone:2, range:0,  perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
-  {id:'walk',   name:'Walkaround',   icon:'\uD83D\uDEA4', cost:3600, lvl:7,  maxZone:2, range:30, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
-  {id:'sport',  name:'Sportfisher',  icon:'\uD83D\uDEE5\uFE0F', cost:7000, lvl:10, maxZone:2, range:70, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
+  {id:'kayak',  name:'Kayak',        icon:'boat-kayak',   cost:0,    lvl:1,  maxZone:0, range:0,  perk:'stealth',   perkName:'Stealth: +10% inshore bites'},
+  {id:'jon',    name:'Jon Boat',     icon:'boat-jon',     cost:250,  lvl:2,  maxZone:0, range:0,  perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
+  {id:'bay',    name:'Bay Boat',     icon:'boat-bay',     cost:700,  lvl:3,  maxZone:1, range:0,  perk:'fastbite',  perkName:'Fast Bites: bites come 15% sooner'},
+  {id:'console',name:'Center Console',icon:'boat-console',cost:1800, lvl:5,  maxZone:2, range:0,  perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
+  {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
+  {id:'sport',  name:'Sportfisher',  icon:'boat-sport',   cost:7000, lvl:10, maxZone:2, range:70, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
 ];
 
 const RODS=[
@@ -2567,12 +2650,12 @@ function openChooser(type){
     const cat=curMethod().cat;
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
     TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
-      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+t.icon+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+svgIcon(t.icon,20)+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
   } else if(type==='bait'){
     if(!curMethod().bait){html='<h3>Bait</h3><div class="sub">This is an artificial method. No bait needed.</div>';}
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
       BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const good=FISH.filter(f=>f.zone===S.zone&&f.baits.includes(bt.id)).map(f=>f.name).slice(0,3).join(', ');
-        html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+bt.icon+'</div><div class="oinfo"><div class="on">'+bt.name+'</div><div class="od">'+(good?'Here: '+good:bt.desc)+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
+        html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div><div class="od">'+(good?'Here: '+good:bt.desc)+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs; mono is the all-rounder.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
@@ -2619,13 +2702,14 @@ function assassinSetActive(){
 function updateCosmeticHUD(){
   const el=document.getElementById('cosmetic-pill');
   if(!el)return;
-  if(assassinSetActive()){el.textContent='🥷';return;}
+  if(assassinSetActive()){el.innerHTML=svgIcon('shades-mask',18);return;}
   const hat=COSMETICS.hats.find(x=>x.id===S.cosmetic.hat);
   const shirt=COSMETICS.shirts.find(x=>x.id===S.cosmetic.shirt);
   const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
-  const icons=[hat,shirt,shades].filter(x=>x&&x.id!=='none').map(x=>x.icon).join('');
-  if(!icons&&S.gender&&S.skinTone){el.textContent=anglerEmoji(S.gender,S.skinTone);return;}
-  el.textContent=icons||'👤';
+  const equipped=[hat,shirt,shades].filter(x=>x&&x.id!=='none');
+  if(equipped.length>0){el.innerHTML=svgIcon(equipped[0].icon,18);return;}
+  if(S.gender&&S.skinTone){el.textContent=anglerEmoji(S.gender,S.skinTone);return;}
+  el.innerHTML=svgIcon('shirt-tee',18)||'👤';
 }
 function refreshMenu(){renderLogbook();renderShop();renderStats();renderTournamentPanel();}
 
@@ -2651,8 +2735,8 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
   else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
   else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\uD83E\uDE99 '+item.cost+'</span>';
   const locked=!owned&&(!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
-  const icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+(item.icon||'')+'</div>';
-  return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+(extra||'')+'</div></div>'+action+'</div>';
+  const icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
+  return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+(item.desc||'')+(extra||'')+'</div></div>'+action+'</div>';
 }
 
 let cosmeticSubTab='hats';
@@ -2669,7 +2753,7 @@ function renderShop(){
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:t.cat)+' \u00b7 durability '+t.dur+(own?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(shopTab==='cosmetics'){
-    const subLabels=[['hats','\ud83e\udde2 Hats'],['shirts','\ud83d\udc55 Shirts'],['shades','\ud83d\udd76\ufe0f Shades']];
+    const subLabels=[['hats',svgIcon('hat-bucket',14)+' Hats'],['shirts',svgIcon('shirt-tee',14)+' Shirts'],['shades',svgIcon('shades-polarized',14)+' Shades']];
     html='<div style="display:flex;gap:6px;margin-bottom:11px;">'+subLabels.map(([k,l])=>'<div class="shop-tab '+(cosmeticSubTab===k?'active':'')+'" style="font-size:12px;" data-csub="'+k+'">'+l+'</div>').join('')+'</div>';
     const slot={hats:'hat',shirts:'shirt',shades:'shades'}[cosmeticSubTab];
     html+=COSMETICS[cosmeticSubTab].map(item=>{
@@ -2683,7 +2767,7 @@ function renderShop(){
       else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
       else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+item.cost+'</span>';
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
-        +'<div class="shop-icon" style="font-size:22px;">'+item.icon+'</div>'
+        +'<div class="shop-icon">'+svgIcon(item.icon)+'</div>'
         +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
         +action+'</div>';
     }).join('');
@@ -2728,7 +2812,7 @@ function renderStats(){
   document.getElementById('m-lvl').textContent='Lv '+S.level;
   const need=levelNeed();document.getElementById('m-xp').style.width=Math.min(100,(S.xp/need)*100)+'%';
   document.getElementById('m-xptext').textContent=S.xp+' / '+need+' XP';
-  document.getElementById('m-gear').innerHTML=curBoat().icon+' '+curRod().name.split(' ')[0]+' \u00b7 '+curBraid().line+'lb';
+  document.getElementById('m-gear').innerHTML=svgIcon(curBoat().icon,16)+' '+curRod().name.split(' ')[0]+' \u00b7 '+curBraid().line+'lb';
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
   const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet']];
   document.getElementById('stats-list').innerHTML=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
