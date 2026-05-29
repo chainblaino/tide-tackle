@@ -2012,6 +2012,8 @@ function poolNow(){
     if(f.zone!==S.zone)continue;
     if(!f.methods.includes(m.id))continue;
     let w=f.weight;
+    // rarity spawn penalty — epic and legendary are genuinely rare
+    w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
     // season
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
     // time
