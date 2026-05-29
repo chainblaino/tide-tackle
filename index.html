@@ -528,8 +528,8 @@ async function afterAuth(user,isNew){
   try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
     const tutDone=(doc.data()||{}).tutorialDone;
     document.getElementById("auth-overlay").style.display="none";
-    document.getElementById("user-pill-btn").style.display="flex";
-    document.getElementById("user-avatar").textContent=fbUsername[0].toUpperCase();
+    const pillBtn=document.getElementById("user-pill-btn");if(pillBtn)pillBtn.style.display="flex";
+    const avatar=document.getElementById("user-avatar");if(avatar)avatar.textContent=fbUsername[0].toUpperCase();
     loadFriends();
     if(isNew){showGenderSelect();}
     else if(tutDone===false){showTutorial();}
