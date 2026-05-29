@@ -366,8 +366,8 @@
     <div class="top-bar">
       <div class="hud tl">
       <div class="pill click menu-btn" id="menu-open">&#9776;</div>
-      <div class="pill click" id="zone-pill">&#128205; <span id="zone-name">Inshore</span></div>
-      <div class="pill" id="time-pill"><span id="time-icon">&#9728;&#65039;</span> <span class="sub" id="time-season">Spring</span></div>
+      <div class="pill click" id="zone-pill"><span id="zone-icon" style="display:inline-flex;align-items:center;"></span> <span id="zone-name">Inshore</span></div>
+      <div class="pill" id="time-pill"><span id="time-icon" style="display:inline-flex;align-items:center;"></span> <span class="sub" id="time-season">Spring</span></div>
     </div>
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
@@ -1166,6 +1166,18 @@ function svgIcon(id,sz){
   if(!p)return'';
   return'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">'+p+'</svg>';
 }
+// weather / time / zone / season / shop
+'weather-day':'<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/>',
+'weather-night':'<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>',
+'weather-dawn':'<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><path d="M12 8a4 4 0 0 1 0 8" stroke-dasharray="2 2"/><path d="M12 8a4 4 0 0 0 0 8"/>',
+'weather-dusk':'<path d="M12 2v4M4.93 4.93l2.83 2.83M2 12h4"/><circle cx="12" cy="12" r="4"/><path d="M19.07 4.93l-2.83 2.83M22 12h-4M12 18v4M4.93 19.07l2.83-2.83M19.07 19.07l-2.83-2.83"/>',
+'season-spring':'<path d="M12 22V12"/><path d="M12 12C12 8 9 5 5 5"/><path d="M12 12C12 8 15 5 19 5"/><path d="M12 17C12 14 9 12 6 13"/><path d="M12 17C12 14 15 12 18 13"/>',
+'season-summer':'<circle cx="12" cy="12" r="5"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="5.64" y1="5.64" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="18.36" y2="18.36"/><line x1="5.64" y1="18.36" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="18.36" y2="5.64"/>',
+'season-fall':'<path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M9.5 7.5C8 8 7 13 7 16"/><path d="M17 8c1 2 1.5 4 1.5 6.5C18.5 19 15 22 12 22"/>',
+'season-winter':'<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><circle cx="12" cy="12" r="2"/>',
+'zone-pin':'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+'fits':'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+};
 // ── end SVG icons ─────────────────────────────────────────────
 
 const STRUCT_META={
@@ -1231,7 +1243,7 @@ setInterval(function(){
 
 // ===================== DATA =====================
 const SEASONS=['spring','summer','fall','winter'];
-const SEASON_ICON={spring:'\uD83C\uDF31',summer:'\u2600\uFE0F',fall:'\uD83C\uDF42',winter:'\u2744\uFE0F'};
+const SEASON_ICON={spring:'season-spring',summer:'season-summer',fall:'season-fall',winter:'season-winter'};
 const SEASON_LABEL={spring:'Spring',summer:'Summer',fall:'Fall',winter:'Winter'};
 const RARITY_COLORS={common:'#9aa39b',uncommon:'#5fae6a',rare:'#4a9fd4',epic:'#a872d8',legendary:'#e0a93c'};
 const RARITY_ORDER=['common','uncommon','rare','epic','legendary'];
@@ -1702,10 +1714,10 @@ function seasonNow(){return SEASONS[Math.floor(S.clock/(1440*10))%4];}
 function dayNum(){return Math.floor(S.clock/1440)+1;}
 function phaseOf(h){if(h<5||h>=19)return 'night';if(h<7)return 'dawn';if(h<17)return 'day';return 'dusk';}
 function skyState(h){
-  if(h<5||h>=19)return {darkness:1,warm:0,phase:'night',icon:'\uD83C\uDF19'};
-  if(h<7){const t=(h-5)/2;return {darkness:1-t,warm:Math.sin(t*Math.PI),phase:'dawn',icon:'\uD83C\uDF05'};}
-  if(h<17)return {darkness:0,warm:0,phase:'day',icon:'\u2600\uFE0F'};
-  const t=(h-17)/2;return {darkness:t,warm:Math.sin(t*Math.PI),phase:'dusk',icon:'\uD83C\uDF06'};
+  if(h<5||h>=19)return {darkness:1,warm:0,phase:'night',icon:'weather-night'};
+  if(h<7){const t=(h-5)/2;return {darkness:1-t,warm:Math.sin(t*Math.PI),phase:'dawn',icon:'weather-dawn'};}
+  if(h<17)return {darkness:0,warm:0,phase:'day',icon:'weather-day'};
+  const t=(h-17)/2;return {darkness:t,warm:Math.sin(t*Math.PI),phase:'dusk',icon:'weather-dusk'};
 }
 
 // ===================== CANVAS =====================
@@ -2261,9 +2273,9 @@ function render(ts){
   requestAnimationFrame(render);
 }
 function updateClockHUD(h,sky){
-  document.getElementById('time-icon').innerHTML=sky.icon;
+  document.getElementById('time-icon').innerHTML=svgIcon(sky.icon,15);
   const se=seasonNow();
-  document.getElementById('time-season').innerHTML=SEASON_ICON[se]+' '+SEASON_LABEL[se];
+  document.getElementById('time-season').innerHTML=svgIcon(SEASON_ICON[se],13)+' '+SEASON_LABEL[se];
 }
 
 // ===================== RIG / CAST / CATCH =====================
@@ -2633,6 +2645,7 @@ function updateRigBar(){
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
   document.getElementById('gold-pill').textContent=S.gold;
   document.getElementById('zone-name').textContent=curZone().name;
+  const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
 }
 
 // choosers
@@ -2641,7 +2654,7 @@ function openChooser(type){
   if(type==='zone'){
     html='<h3>Run to...</h3><div class="sub">Your boat decides how far out you can fish.</div>';
     ZONES.forEach((z,i)=>{const locked=i>maxZone();const reqBoat=BOATS.find(b=>b.maxZone>=i);
-      html+='<div class="opt '+(i===S.zone?'sel':'')+' '+(locked?'disabled':'')+'" data-pick="zone:'+i+'"><div class="oi">\uD83D\uDCCD</div><div class="oinfo"><div class="on">'+z.name+'</div><div class="od">'+z.sub+' \u00b7 '+z.depth+(locked?', needs '+reqBoat.name:'')+'</div></div></div>';});
+      html+='<div class="opt '+(i===S.zone?'sel':'')+' '+(locked?'disabled':'')+'" data-pick="zone:'+i+'"><div class="oi">'+svgIcon('zone-pin',20)+'</div><div class="oinfo"><div class="on">'+z.name+'</div><div class="od">'+z.sub+' \u00b7 '+z.depth+(locked?', needs '+reqBoat.name:'')+'</div></div></div>';});
   } else if(type==='method'){
     html='<h3>Fishing method</h3><div class="sub">The technique gates which fish are possible.</div>';
     METHODS.filter(m=>m.zones.includes(S.zone)).forEach(m=>{
@@ -2741,7 +2754,7 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
 
 let cosmeticSubTab='hats';
 function renderShop(){
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['cosmetics','\ud83d\udc57 Fits']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['cosmetics',svgIcon('fits',13)+' Fits']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(b=>shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,' <i>('+b.perkName+')</i>',false)).join('');
