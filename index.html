@@ -321,6 +321,31 @@
 .uavatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
 /* TOURNAMENT BANNER */
 .tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.9);color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:20px;pointer-events:none;display:none;}
+/* LEGENDARY ALERT */
+.leg-alert-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;flex-direction:column;}
+.leg-alert-overlay.show{display:flex;}
+.leg-alert-box{text-align:center;animation:legBoxIn .4s cubic-bezier(.2,1.4,.4,1);}
+@keyframes legBoxIn{from{transform:scale(.4);opacity:0;}to{transform:scale(1);opacity:1;}}
+.leg-exclaim{font-size:52px;display:block;animation:legSpin .5s ease-out;}
+@keyframes legSpin{from{transform:rotate(-20deg) scale(0);}to{transform:rotate(0) scale(1);}}
+.leg-label{font-family:'Fredoka';font-size:54px;font-weight:700;color:#e0a93c;letter-spacing:5px;animation:legGlow .7s ease-in-out infinite alternate;}
+@keyframes legGlow{from{text-shadow:0 0 20px #e0a93c,0 0 40px #c46f28;}to{text-shadow:0 0 50px #ffe080,0 0 90px #e0a93c,0 0 130px #ffaa00;}}
+.leg-fishname{font-family:'Fredoka';font-size:30px;color:#fff;margin-top:10px;}
+.leg-sub{font-size:12px;color:rgba(255,255,255,.45);margin-top:10px;letter-spacing:1.5px;text-transform:uppercase;}
+/* STARDEW MINI-GAME */
+.sdew-overlay{position:fixed;inset:0;z-index:450;background:rgba(5,12,22,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+.sdew-overlay.show{display:flex;}
+.sdew-title{font-family:'Fredoka';font-size:22px;color:#e0a93c;font-weight:600;text-align:center;letter-spacing:.5px;}
+.sdew-arena{display:flex;gap:12px;align-items:stretch;}
+.sdew-track{position:relative;width:64px;height:280px;background:linear-gradient(180deg,#071628,#0d2540);border:2px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;}
+.sdew-bar{position:absolute;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(60,210,160,.95),rgba(30,160,120,.85));border-radius:6px;box-shadow:0 0 14px rgba(50,200,140,.5);}
+.sdew-fish-icon{position:absolute;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;pointer-events:none;filter:drop-shadow(0 0 6px rgba(255,255,255,.6));}
+.sdew-meter-wrap{width:24px;height:280px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;position:relative;}
+.sdew-meter-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,#2aa890,#e0a93c 70%);border-radius:10px;transition:height .04s;}
+.sdew-meter-fill.danger{background:linear-gradient(0deg,#c03030,#e05050);}
+.sdew-hint{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;text-align:center;text-transform:uppercase;}
+.sdew-btn{padding:18px 48px;border-radius:14px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:20px;font-weight:900;font-family:'Fredoka';cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;box-shadow:0 5px 0 var(--accent-dark);}
+.sdew-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-dark);}
 
 </style>
 
@@ -441,6 +466,26 @@
     </div>
     <button class="auth-btn" id="gender-confirm-btn" onclick="confirmGender()" style="opacity:.4;pointer-events:none;">Continue</button>
   </div>
+</div>
+<div class="leg-alert-overlay" id="leg-alert">
+  <div class="leg-alert-box">
+    <span class="leg-exclaim">⚡</span>
+    <div class="leg-label">LEGENDARY</div>
+    <div class="leg-fishname" id="leg-fishname">Tarpon</div>
+    <div class="leg-sub">Get ready...</div>
+  </div>
+</div>
+<div class="sdew-overlay" id="sdew-overlay">
+  <div class="sdew-title" id="sdew-title">Tarpon</div>
+  <div class="sdew-arena">
+    <div class="sdew-track" id="sdew-track">
+      <div class="sdew-bar" id="sdew-bar"></div>
+      <div class="sdew-fish-icon" id="sdew-fish-icon">🐟</div>
+    </div>
+    <div class="sdew-meter-wrap"><div class="sdew-meter-fill" id="sdew-meter-fill" style="height:30%"></div></div>
+  </div>
+  <div class="sdew-hint">Hold to rise &nbsp;·&nbsp; Release to sink</div>
+  <button class="sdew-btn" id="sdew-btn">HOLD TO REEL</button>
 </div>
 <div class="auth-overlay" id="skin-overlay" style="display:none">
   <div class="auth-box" style="text-align:center;max-width:400px;">
@@ -2078,7 +2123,13 @@ function triggerBite(){
   let r=Math.random()*strength,pick=out[out.length-1].f;
   for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
   hookedFish=pick;hookW=rollWeight(pick);
-  phase='biting';setStatus('Fish on! Set the hook!');setupMiniGame();
+  phase='biting';
+  if(pick.rarity==='legendary'){
+    setStatus('⚡ LEGENDARY FISH ON THE LINE!');
+    showLegendaryAlert(pick);
+    return;
+  }
+  setStatus('Fish on! Set the hook!');setupMiniGame();
   escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
 }
 
@@ -2121,6 +2172,102 @@ function animateMiniGame(){
   if(phase==='biting')catchAnim=requestAnimationFrame(animateMiniGame);
 }
 function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';}
+
+// ─────────────────────────────────────────────────────────────
+// LEGENDARY ALERT + STARDEW MINI-GAME
+// ─────────────────────────────────────────────────────────────
+const SDEW_TRACK_H=280,SDEW_BAR_H=70,SDEW_FISH_R=13;
+const SDEW_BEHAVIORS={
+  tarpon:    {dartChance:.08,dartForce:6,  erratic:.15,maxVel:5.5},
+  cobia:     {dartChance:.05,dartForce:4,  erratic:.10,maxVel:4.0},
+  yellowfin: {dartChance:.06,dartForce:6,  erratic:.09,maxVel:5.5},
+  swordfish: {dartChance:.04,dartForce:8,  erratic:.07,maxVel:4.5},
+  bluefin:   {dartChance:.06,dartForce:7,  erratic:.11,maxVel:6.0},
+  permit:    {dartChance:.09,dartForce:5,  erratic:.16,maxVel:5.0},
+};
+const SDEW_DEFAULT_BEH={dartChance:.06,dartForce:5,erratic:.12,maxVel:4.5};
+const SDEW_FISH_EMOJI={tarpon:'🐠',swordfish:'🐡',yellowfin:'🐟',cobia:'🐟',bluefin:'🐟',permit:'🐠'};
+
+let sdewActive=false,sdewHolding=false;
+let sdewBarTop=105,sdewBarVel=0;
+let sdewFishCy=140,sdewFishVel=0;
+let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
+
+function showLegendaryAlert(fish){
+  document.getElementById('leg-fishname').textContent=fish.name;
+  document.getElementById('leg-alert').classList.add('show');
+  sdewAlertTimer=setTimeout(function(){
+    document.getElementById('leg-alert').classList.remove('show');
+    startSdewGame(fish);
+  },2500);
+}
+
+function startSdewGame(fish){
+  sdewActive=true;sdewHolding=false;
+  sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
+  sdewBarVel=0;
+  sdewFishCy=SDEW_TRACK_H/2;
+  sdewFishVel=(Math.random()-.5)*3;
+  sdewMeter=30;
+  document.getElementById('sdew-fish-icon').textContent=SDEW_FISH_EMOJI[fish.id]||'🐟';
+  document.getElementById('sdew-title').textContent='⚡ '+fish.name;
+  document.getElementById('sdew-overlay').classList.add('show');
+  updateSdewDOM();
+  sdewAnimId=requestAnimationFrame(sdewLoop);
+  setStatus('Keep the fish in the green bar! Hold REEL to rise, release to sink.');
+}
+
+function sdewLoop(){
+  if(!sdewActive)return;
+  const beh=SDEW_BEHAVIORS[hookedFish.id]||SDEW_DEFAULT_BEH;
+  // Bar physics
+  if(sdewHolding)sdewBarVel-=2.0; else sdewBarVel+=1.5;
+  sdewBarVel=Math.max(-6,Math.min(6,sdewBarVel));
+  sdewBarTop+=sdewBarVel;
+  if(sdewBarTop<=0){sdewBarTop=0;sdewBarVel=Math.abs(sdewBarVel)*.3;}
+  if(sdewBarTop>=SDEW_TRACK_H-SDEW_BAR_H){sdewBarTop=SDEW_TRACK_H-SDEW_BAR_H;sdewBarVel=-Math.abs(sdewBarVel)*.3;}
+  // Fish physics
+  sdewFishVel+=(Math.random()-.5)*beh.erratic;
+  if(Math.random()<beh.dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce;
+  sdewFishVel=Math.max(-beh.maxVel,Math.min(beh.maxVel,sdewFishVel));
+  sdewFishCy+=sdewFishVel;
+  if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
+  if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
+  // Meter
+  const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
+  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?.5:-.7)));
+  updateSdewDOM();
+  if(sdewMeter>=100){endSdewGame(true);return;}
+  if(sdewMeter<=0){endSdewGame(false);return;}
+  sdewAnimId=requestAnimationFrame(sdewLoop);
+}
+
+function updateSdewDOM(){
+  document.getElementById('sdew-bar').style.top=Math.round(sdewBarTop)+'px';
+  document.getElementById('sdew-fish-icon').style.top=Math.round(sdewFishCy-SDEW_FISH_R)+'px';
+  const mEl=document.getElementById('sdew-meter-fill');
+  mEl.style.height=sdewMeter+'%';
+  mEl.className='sdew-meter-fill'+(sdewMeter<25?' danger':'');
+}
+
+function endSdewGame(success){
+  sdewActive=false;
+  cancelAnimationFrame(sdewAnimId);
+  clearTimeout(sdewAlertTimer);
+  document.getElementById('sdew-overlay').classList.remove('show');
+  if(!success){fail('The legendary fish got away! So close...');return;}
+  const f=hookedFish,w=hookW;
+  if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
+  if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line — it broke you off!');return;}}
+  land(f,w,true,false);
+}
+
+// Controls
+const sdewBtn=document.getElementById('sdew-btn');
+sdewBtn.addEventListener('mousedown',function(){sdewHolding=true;});
+sdewBtn.addEventListener('touchstart',function(e){e.preventDefault();sdewHolding=true;},{passive:false});
+window.addEventListener('mouseup',function(){sdewHolding=false;});
+window.addEventListener('touchend',function(){sdewHolding=false;});
 function inBullseye(){
   const bLeft=zoneSel.left+zoneSel.width*(0.5-BULLSEYE_FRAC/2);
   const bRight=bLeft+zoneSel.width*BULLSEYE_FRAC;
