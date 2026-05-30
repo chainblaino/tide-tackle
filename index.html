@@ -2936,6 +2936,8 @@ let sdewActive=false,sdewHolding=false;
 let sdewBarTop=105,sdewBarVel=0;
 let sdewFishCy=140,sdewFishVel=0;
 let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
+let sdewStartTime=0;
+const SDEW_GRACE_MS=2000; // first 2s: fish moves very slowly, meter fills at half speed
 
 function showLegendaryAlert(fish){
   document.getElementById('leg-fishname').textContent=fish.name;
@@ -2948,6 +2950,7 @@ function showLegendaryAlert(fish){
 
 function startSdewGame(fish){
   sdewActive=true;sdewHolding=false;
+  sdewStartTime=performance.now?performance.now():Date.now();
   document.getElementById('rig-bar').style.pointerEvents='none';
   sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
   sdewBarVel=0;
@@ -2965,22 +2968,29 @@ function startSdewGame(fish){
 function sdewLoop(){
   if(!sdewActive)return;
   const beh=SDEW_BEHAVIORS[hookedFish.id]||SDEW_DEFAULT_BEH;
-  // Bar physics
+  // First 2 seconds: grace window. Fish barely moves, meter fills half as fast.
+  const now=performance.now?performance.now():Date.now();
+  const grace=(now-sdewStartTime)<SDEW_GRACE_MS;
+  // Bar physics (player control is normal even during grace)
   if(sdewHolding)sdewBarVel-=2.0; else sdewBarVel+=1.5;
   sdewBarVel=Math.max(-6,Math.min(6,sdewBarVel));
   sdewBarTop+=sdewBarVel;
   if(sdewBarTop<=0){sdewBarTop=0;sdewBarVel=Math.abs(sdewBarVel)*.3;}
   if(sdewBarTop>=SDEW_TRACK_H-SDEW_BAR_H){sdewBarTop=SDEW_TRACK_H-SDEW_BAR_H;sdewBarVel=-Math.abs(sdewBarVel)*.3;}
-  // Fish physics
-  sdewFishVel+=(Math.random()-.5)*beh.erratic;
-  if(Math.random()<beh.dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce;
-  sdewFishVel=Math.max(-beh.maxVel,Math.min(beh.maxVel,sdewFishVel));
+  // Fish physics — during grace the fish drifts very slowly with no dart attempts
+  const erratic=grace?beh.erratic*0.15:beh.erratic;
+  const dartChance=grace?0:beh.dartChance;
+  const maxVel=grace?beh.maxVel*0.18:beh.maxVel;
+  sdewFishVel+=(Math.random()-.5)*erratic;
+  if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce;
+  sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
   sdewFishCy+=sdewFishVel;
   if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
   if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
-  // Meter
+  // Meter — gain rate is halved during grace so the player has time to settle in
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
-  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?.5:-.7)));
+  const gain=grace?0.25:0.5;
+  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.7)));
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
   if(sdewMeter<=0){endSdewGame(false);return;}
