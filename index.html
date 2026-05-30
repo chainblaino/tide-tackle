@@ -652,6 +652,15 @@ async function afterAuth(user,isNew){
       fbDb.collection("usernames").doc(fbUsername.toLowerCase()).set({uid:user.uid,email:user.email},{merge:true}).catch(function(){});
     }
     loadFriends();
+    // Pull this account's cloud save and refresh the world so progress
+    // follows the player even on a fresh device or browser.
+    if(!isNew){
+      const restored=await loadCloudSave(user.uid);
+      if(restored){
+        ensureRig();initStructures();clearSightFish();initWorld('center',true);
+        updateRigBar();updateDriveUI();updateCosmeticHUD();updateZonePill();refreshMenu();
+      }
+    }
     if(isNew){showGenderSelect();}
     else if(tutDone===false){showTutorial();}
   }catch(e){document.getElementById("auth-overlay").style.display="none";}
@@ -1776,12 +1785,15 @@ function buildFishArt(id,px,mono){
     eye=[s.sword?102:104,29,s.bigeye?5:3.6];gillX=s.sword?92:94;
     tailRays=[[29,30,9,30-bd-1],[29,30,17,30],[29,30,9,30+bd+1]];
   }else if(s.shape==='flatfish'){
-    bodyD='M16,30 C16,16 40,12 66,14 C92,16 108,22 110,30 C108,38 92,44 66,46 C40,48 16,44 16,30 Z';
-    tailD='M110,30 L120,22 L118,30 L120,38 Z';
-    finsB=[['M20,18 Q60,8 104,20 L104,22 Q60,11 20,21 Z',0.85],['M20,42 Q60,52 104,40 L104,38 Q60,49 20,39 Z',0.85]];
-    pect='';
-    eye=[94,24,3.2];gillX=0;
-    tailRays=[];
+    // Flounder: tail on the left, rounded head on the right, two eyes near the head
+    bodyD='M30,30 C30,16 50,12 72,14 C92,16 104,20 112,30 C104,40 92,44 72,46 C50,48 30,44 30,30 Z';
+    tailD='M30,30 L12,18 L18,30 L12,42 Z';
+    finsB=[['M34,18 Q68,8 108,22 L108,24 Q68,11 34,21 Z',0.85],['M34,42 Q68,52 108,38 L108,36 Q68,49 34,39 Z',0.85]];
+    pect='M88,33 L100,40 L86,42 Z';
+    // Primary eye drawn by the normal pipeline; second eye added via extras
+    eye=[96,24,3,'#15202a'];gillX=0;
+    extras=_eye(104,28,2.8,'#15202a');
+    tailRays=[[29,30,12,18],[29,30,18,30],[29,30,12,42]];
   }
 
   // colors / strokes
@@ -1846,12 +1858,33 @@ async function saveGame(){
   try{if(window.storage&&window.storage.set){await window.storage.set(SAVE_KEY,data);ok=true;}}catch(e){}
   if(!ok){try{localStorage.setItem(SAVE_KEY,data);ok=true;}catch(e){}}
   if(ok)flashSave();
+  // Cloud save for signed in players so progress follows them across devices.
+  if(fbUser&&fbDb){
+    try{fbDb.collection("saves").doc(fbUser.uid).set({data:data,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
+  }
 }
 function queueSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,400);}
 async function loadGame(){
   let loaded=false;
   try{if(window.storage&&window.storage.get){const r=await window.storage.get(SAVE_KEY);if(r&&r.value){S=Object.assign(S,JSON.parse(r.value));loaded=true;}}}catch(e){}
   if(!loaded){try{const s=localStorage.getItem(SAVE_KEY);if(s)S=Object.assign(S,JSON.parse(s));}catch(e){}}
+}
+// Pull the player's cloud save and merge it into the live state. Called after
+// a successful sign in so progress follows the account, not the device.
+async function loadCloudSave(uid){
+  if(!fbDb||!uid)return false;
+  try{
+    const doc=await fbDb.collection("saves").doc(uid).get();
+    if(!doc.exists)return false;
+    const d=doc.data()||{};
+    if(!d.data)return false;
+    const cloud=JSON.parse(d.data);
+    S=Object.assign(S,cloud);
+    if(S.zone>maxZone())S.zone=maxZone();
+    // also mirror to local so the next reload starts from cloud
+    try{localStorage.setItem(SAVE_KEY,d.data);}catch(e){}
+    return true;
+  }catch(e){return false;}
 }
 function flashSave(){const d=document.getElementById('save-dot');d.classList.add('show');setTimeout(()=>d.classList.remove('show'),900);}
 
@@ -1928,8 +1961,6 @@ function spawnSightFish(species){
     fadeStart:now+lifetime,
     phase:Math.random()*6.28,alpha:1,
   });
-  const color=RARITY_COLORS[species.rarity]||'#fff';
-  toast(species.name+' spotted!',color);
 }
 function updateSightFish(now){
   for(let i=sightFish.length-1;i>=0;i--){
