@@ -2605,6 +2605,8 @@ function poolNow(){
     if(st&&f.structure.includes(structKindAlias(st.kind)))w*=2.8;
     else if(f.structure.includes('open'))w*=1;
     else w*=0.12;
+    // hidden: power plant warm-water discharge draws extra cobia
+    if(st&&st.kind==='power_plant'&&f.id==='cobia')w*=1.15;
     // leader
     if(f.leader==='fluoro')w*=(leader==='fluoro'?1.8:leader==='wire'?0.4:1);
     else if(f.leader==='wire')w*=1; // bite ok; cutoff at landing
@@ -2745,8 +2747,8 @@ function startSdewGame(fish){
   document.getElementById('rig-bar').style.pointerEvents='none';
   sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
   sdewBarVel=0;
-  sdewFishCy=SDEW_TRACK_H/2;
-  sdewFishVel=(Math.random()-.5)*3;
+  sdewFishCy=sdewBarTop+SDEW_BAR_H/2; // fish starts centered on the green bar
+  sdewFishVel=0;
   sdewMeter=30;
   document.getElementById('sdew-fish-icon').textContent=SDEW_FISH_EMOJI[fish.id]||'🐟';
   document.getElementById('sdew-title').textContent='⚡ '+fish.name;
