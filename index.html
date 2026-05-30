@@ -1498,6 +1498,36 @@ const LEADERS=[
   {id:'wire',  name:'Wire Leader', cost:90, lvl:2, desc:'Bite-proof for toothy fish; spooks the wary.'},
 ];
 
+// ===================== LURES =====================
+// Lures are one time purchases that pair with a tackle component to form a
+// rig. Each category targets certain methods. Players build their own setup.
+const LURES=[
+  // Soft Plastics & Jigs
+  {id:'paddletail',     cat:'softplastic', name:'Paddletail',         icon:'reel',    cost:160, lvl:2,  methods:['jig','cork'],          baits:['pilchard'],desc:'Kicking tail mimics fleeing baitfish. Trout, snook, redfish.'},
+  {id:'fluke',          cat:'softplastic', name:'Jerkbait (Fluke)',   icon:'reel',    cost:180, lvl:2,  methods:['jig','cork'],          baits:['pilchard'],desc:'Darts erratically when twitched. Weightless over grass.'},
+  {id:'softshrimp',     cat:'softplastic', name:'Scented Shrimp',     icon:'crab',    cost:140, lvl:1,  methods:['jig','bottom','cork'], baits:['shrimp'],  desc:'Scented soft plastic, fish it on the bottom for drum and reds.'},
+  {id:'bucktail',       cat:'softplastic', name:'Bucktail Jig',       icon:'reel',    cost:260, lvl:3,  methods:['jig','bottom'],        baits:['pinfish'], desc:'Hair pulses in the water. Flounder, tarpon, cobia killer.'},
+  // Topwater
+  {id:'popper',         cat:'topwater',    name:'Popper',             icon:'fish',    cost:220, lvl:3,  methods:['cork','jig'],          baits:['pilchard'],desc:'Concave face spits and splashes. Explosive surface strikes.'},
+  {id:'walkdog',        cat:'topwater',    name:'Walk-the-Dog Plug',  icon:'fish',    cost:280, lvl:4,  methods:['cork','jig'],          baits:['pilchard'],desc:'Zig-zags across the surface with rhythmic twitches.'},
+  // Plugs (twitchbaits & crankbaits)
+  {id:'twitchbait',     cat:'plug',        name:'Suspending Twitchbait',icon:'fish',  cost:300, lvl:3,  methods:['jig','troll'],         baits:['pilchard'],desc:'Slow sinking plug that darts and pauses. Inshore flats.'},
+  {id:'divingplug',     cat:'plug',        name:'Diving Plug',        icon:'fish',    cost:380, lvl:4,  methods:['troll','jig'],         baits:['cutbait'], desc:'Bib up front pulls it to a target depth. Mangroves, offshore.'},
+  // Spoons
+  {id:'castspoon',      cat:'spoon',       name:'Casting Spoon',      icon:'reel',    cost:220, lvl:2,  methods:['cork','jig','troll'],  baits:['pilchard'],desc:'Wobbling flash mimics a wounded baitfish.'},
+  {id:'trollspoon',     cat:'spoon',       name:'Trolling Spoon',     icon:'reel',    cost:420, lvl:5,  methods:['troll'],               baits:['cutbait'], desc:'Runs deep, covers water. Spanish, kingfish, wahoo.'},
+  // Metal Jigs
+  {id:'castmetal',      cat:'metaljig',    name:'Casting Metal Jig',  icon:'anchor',  cost:480, lvl:5,  methods:['jig'],                 baits:['pilchard'],desc:'Long-distance casts to breaking fish on the surface.'},
+  {id:'verticaljig',    cat:'metaljig',    name:'Vertical Jig',       icon:'anchor',  cost:720, lvl:7,  methods:['jig','bottom'],        baits:['squid'],   desc:'Drop straight down on wrecks and reefs for snapper, grouper, tuna.'},
+];
+const LURE_CATS=[
+  {id:'softplastic',name:'Soft Plastics & Jigs'},
+  {id:'topwater',   name:'Topwater'},
+  {id:'plug',       name:'Plugs'},
+  {id:'spoon',      name:'Spoons'},
+  {id:'metaljig',   name:'Metal Jigs'},
+];
+
 // ── COSMETICS ─────────────────────────────────────────────────
 const COSMETICS={
   hats:[
@@ -1692,6 +1722,7 @@ let S={
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
+  ownedLures:[],lureSel:'',
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
@@ -2919,6 +2950,11 @@ function cast(x,y){
   const tid=currentTackleId();
   if(!tid){setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
   if(m.bait){if(!S.baitSel||!(S.baitInv[S.baitSel]>0)){setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
+  // Artificial methods now require a lure tied on
+  if(!m.bait){
+    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
+    if(!lure||!(S.ownedLures||[]).includes(S.lureSel)||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
+  }
   // consume tackle durability (unless tacklesaver perk)
   if(!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
     const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
@@ -2942,7 +2978,13 @@ function cast(x,y){
 function structLabel(k){return {dock:'dock pilings',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'bridge',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot'}[k]||k;}
 
 function poolNow(){
-  const m=curMethod(),bait=S.baitSel,leader=S.leader,st=bobber.struct;
+  const m=curMethod(),leader=S.leader,st=bobber.struct;
+  // Artificial methods derive their bait preferences from the equipped lure
+  let bait=S.baitSel;
+  if(!m.bait){
+    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
+    if(lure&&lure.baits&&lure.baits.length)bait=lure.baits[0];
+  }
   const season=seasonNow(),ph=phaseOf(hourNow());
   const tk=tackleById(currentTackleId());const finder=curBoat().perk==='finder';
   const out=[];
@@ -3280,9 +3322,18 @@ function updateRigBar(){
   if(tid){const tk=tackleById(tid),inv=S.tackleInv[tid];tEl.textContent=tk.name;tq.textContent='dur '+inv.dur+' \u00b7 x'+inv.qty;tslot.classList.remove('empty');}
   else{tEl.textContent='none';tq.textContent='buy in shop';tslot.classList.add('empty');}
   const bEl=document.getElementById('rig-bait'),bq=document.getElementById('rig-bait-q'),bslot=document.querySelector('.rig-slot[data-rig="bait"]');
-  if(!m.bait){bEl.textContent='none needed';bq.textContent='';bslot.classList.remove('empty');}
-  else if(S.baitSel&&S.baitInv[S.baitSel]>0){bEl.textContent=BAIT.find(x=>x.id===S.baitSel).name;bq.textContent='x'+S.baitInv[S.baitSel];bslot.classList.remove('empty');}
-  else{bEl.textContent='out of bait';bq.textContent='buy in shop';bslot.classList.add('empty');}
+  const baitLabel=bslot.querySelector('.rl');
+  if(!m.bait){
+    // Artificial method: this slot becomes the lure slot
+    if(baitLabel)baitLabel.textContent='Lure';
+    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
+    if(lure&&(S.ownedLures||[]).includes(lure.id)){bEl.textContent=lure.name;bq.textContent='tied on';bslot.classList.remove('empty');}
+    else{bEl.textContent='no lure';bq.textContent='buy a lure';bslot.classList.add('empty');}
+  } else {
+    if(baitLabel)baitLabel.textContent='Bait';
+    if(S.baitSel&&S.baitInv[S.baitSel]>0){bEl.textContent=BAIT.find(x=>x.id===S.baitSel).name;bq.textContent='x'+S.baitInv[S.baitSel];bslot.classList.remove('empty');}
+    else{bEl.textContent='out of bait';bq.textContent='buy in shop';bslot.classList.add('empty');}
+  }
   document.getElementById('rig-leader').textContent=curLeader().name.replace(' Leader','');
   // HUD
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
@@ -3308,7 +3359,15 @@ function openChooser(type){
     TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
       html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+svgIcon(t.icon,20)+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
   } else if(type==='bait'){
-    if(!curMethod().bait){html='<h3>Bait</h3><div class="sub">This is an artificial method. No bait needed.</div>';}
+    if(!curMethod().bait){
+      // Artificial method: this chooser becomes a Lure picker
+      html='<h3>Tie on a lure</h3><div class="sub">Pick a lure that suits the method. Buy more in the Lures shop tab.</div>';
+      const myLures=LURES.filter(l=>(S.ownedLures||[]).includes(l.id)&&l.methods.includes(curMethod().id));
+      if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No lures for this method yet. Open the Lures shop tab to buy one.</div>';}
+      myLures.forEach(function(l){
+        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">tie on</div></div>';
+      });
+    }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
       BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const good=FISH.filter(f=>f.zone===S.zone&&f.baits.includes(bt.id)).map(f=>f.name).slice(0,3).join(', ');
         html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div><div class="od">'+(good?'Here: '+good:bt.desc)+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
@@ -3330,6 +3389,7 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   else if(type==='method'){S.method=val;ensureRig();}
   else if(type==='tackle'){S.tackleSel[curMethod().cat]=val;}
   else if(type==='bait'){S.baitSel=val;}
+  else if(type==='lure'){S.lureSel=val;}
   else if(type==='leader'){S.leader=val;}
   updateRigBar();queueSave();closeChooser();
 });
@@ -3415,8 +3475,9 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
 }
 
 let cosmeticSubTab='hats';
+let lureSubTab='softplastic';
 function renderShop(){
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['cosmetics',svgIcon('fits',13)+' Fits']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['cosmetics',svgIcon('fits',13)+' Fits']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(b=>shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,' <i>('+b.perkName+')</i>',false)).join('');
@@ -3427,6 +3488,20 @@ function renderShop(){
   else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;const meth=METHODS.find(m=>m.cat===t.cat);
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:t.cat)+' \u00b7 durability '+t.dur+(own?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
+  else if(shopTab==='lures'){
+    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>';
+    html+=LURES.filter(function(l){return l.cat===lureSubTab;}).map(function(l){
+      const owned=(S.ownedLures||[]).includes(l.id);
+      const equipped=S.lureSel===l.id;
+      const canAfford=S.gold>=l.cost,meetsLvl=S.level>=l.lvl;
+      let action;
+      if(equipped)action='<span class="shop-action equipped-tag">Tied On</span>';
+      else if(owned)action='<span class="shop-action equip">Tie On</span>';
+      else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
+      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+l.cost+'</span>';
+      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+l.desc+'</div></div>'+action+'</div>';
+    }).join('');
+  }
   else if(shopTab==='cosmetics'){
     const subLabels=[['hats',svgIcon('hat-bucket',14)+' Hats'],['shirts',svgIcon('shirt-tee',14)+' Shirts'],['shades',svgIcon('shades-polarized',14)+' Shades'],['crowns',svgIcon('crown',14)+' Crowns']];
     html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+subLabels.map(([k,l])=>'<div class="shop-tab '+(cosmeticSubTab===k?'active':'')+'" style="font-size:12px;" data-csub="'+k+'">'+l+'</div>').join('')+'</div>';
@@ -3473,6 +3548,11 @@ function renderShop(){
       el.addEventListener('click',()=>{cosmeticSubTab=el.dataset.csub;renderShop();});
     });
   }
+  if(shopTab==='lures'){
+    document.getElementById('shop-list').querySelectorAll('[data-lcat]').forEach(el=>{
+      el.addEventListener('click',()=>{lureSubTab=el.dataset.lcat;renderShop();});
+    });
+  }
 }
 
 document.getElementById('shop-tabs').addEventListener('click',e=>{const t=e.target.closest('.shop-tab');if(!t)return;shopTab=t.dataset.stab;renderShop();});
@@ -3497,6 +3577,16 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     if(!S.ownedCrowns)S.ownedCrowns=[];
     if(id!=='none'&&!S.ownedCrowns.includes(id)){toast('Crown locked. Earn a GOAT achievement to unlock.','#b58b53');return;}
     S.cosmetic.crown=id;updateCosmeticHUD();
+  }
+  else if(kind==='lure'){
+    const l=LURES.find(x=>x.id===id);if(!l)return;
+    if(!S.ownedLures)S.ownedLures=[];
+    if(!S.ownedLures.includes(id)){
+      if(S.level<l.lvl){toast('Reach Level '+l.lvl+' first.','#b58b53');return;}
+      if(S.gold<l.cost){toast('Not enough gold.','#b3402a');return;}
+      S.gold-=l.cost;S.ownedLures.push(id);toast('Bought '+l.name+'!','#2aa890');
+    }
+    S.lureSel=id;
   }
   else{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
