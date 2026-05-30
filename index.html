@@ -1373,7 +1373,7 @@ const COSMETICS={
     {id:'beanie',    slot:'hat', name:'Beanie',            icon:'hat-beanie',  cost:160, lvl:1, desc:'For those cold January flounder trips.'},
     {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'hat-captain', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
     {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'hat-straw',   cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
-    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:10000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:35000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
   shirts:[
     {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
@@ -1384,7 +1384,7 @@ const COSMETICS={
     {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'shirt-hoodie',     cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
     {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'shirt-jersey',    cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
     {id:'overalls',  slot:'shirt', name:'Waders',          icon:'shirt-waders',     cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
-    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:12000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:30000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
   shades:[
     {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
@@ -1393,7 +1393,7 @@ const COSMETICS={
     {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'shades-clip',      cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
     {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'shades-mirror',    cost:350,  lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
     {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'shades-sport',     cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
-    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:3000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% gold at night.', set:'assassin'},
+    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:10000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
 };
 
@@ -2630,6 +2630,8 @@ function biteWait(strength,st){
   let boatFreq=1;const perk=curBoat().perk;
   if(perk==='stealth'&&S.zone===0)boatFreq*=1.1;
   if(perk==='fastbite')boatFreq*=1.18;
+  // Assassin Set bonus: +50% fish spawn rate at night
+  if(ph==='night'&&assassinSetActive())boatFreq*=1.5;
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
   const freq=phaseFreq*spotFreq*boatFreq*poolMul;
   const base=2200+Math.random()*3500;
@@ -2856,14 +2858,12 @@ function land(f,w,perfect,bullseye){
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
-  const assassin=assassinSetActive()&&phaseOf(hourNow())==='night';
-  if(assassin)gold=Math.round(gold*1.5);
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   recordTournamentCatch(f.name,w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
-  showCatch(f,w,{isNew,perfect,bullseye,assassin,trophy,pb:pb&&!isNew,xp,gold});
+  showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
 }
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
@@ -2875,7 +2875,6 @@ function showCatch(f,w,o){
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
   if(o.bullseye)badges.push(['\ud83d\udfe1 BULLSEYE! 2\u00d7 COINS','#b8a000']);
-  if(o.assassin)badges.push(['\ud83e\udd77 NIGHT STALKER +50% GOLD','#1a1a2e']);
   document.getElementById('catch-card').innerHTML=
     '<div class="catch-badges">'+badges.map(b=>'<span class="cbadge" style="background:'+b[1]+'">'+b[0]+'</span>').join('')+'</div>'+
     '<div style="display:flex;justify-content:center;margin:4px 0 6px;">'+buildFishArt(f.id,210)+'</div>'+
