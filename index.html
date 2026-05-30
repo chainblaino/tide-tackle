@@ -2482,8 +2482,8 @@ function drawAnglerCrown(cx,cy,r){
   // Small floating crown above the head. Floats higher when a hat is worn.
   const t=(typeof performance!=='undefined'&&performance.now)?performance.now()/1000:Date.now()/1000;
   const bob=Math.sin(t*1.8)*r*0.06;
-  const lift=((hat&&hat!=='none')?r*1.55:r*1.20)+bob;
-  const W=r*1.05,H=r*0.55;            // smaller overall
+  const lift=((hat&&hat!=='none')?r*1.95:r*1.60)+bob;
+  const W=r*1.30,H=r*0.55;            // a touch wider, still small
   const x=cx-W/2,y=cy-lift;
   ctx.save();
   // Pulsing soft glow halo
