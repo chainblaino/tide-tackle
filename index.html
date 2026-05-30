@@ -39,8 +39,18 @@
   .menu-btn{width:38px;height:38px;justify-content:center;font-size:18px;padding:0;}
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
 
+  /* drive controls (open world) */
+  .drive-controls{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:space-between;align-items:flex-end;padding:0 16px;pointer-events:none;z-index:7;}
+  .drive-controls.anchored .joystick{opacity:0;pointer-events:none;}
+  .joystick{width:108px;height:108px;border-radius:50%;background:rgba(20,33,46,.42);border:2px solid rgba(255,255,255,.28);position:relative;pointer-events:auto;touch-action:none;backdrop-filter:blur(3px);transition:opacity .2s;}
+  .joy-knob{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f3b878,#e08a3c 70%);border:2px solid var(--accent-dark);position:absolute;left:28px;top:28px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+  .anchor-btn{pointer-events:auto;padding:11px 16px;border-radius:12px;border:2px solid var(--wood);background:var(--cream);color:var(--wood-dark);font-family:'Fredoka';font-weight:600;font-size:14.5px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.28);touch-action:manipulation;white-space:nowrap;}
+  .anchor-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.28);}
+  .anchor-btn.is-anchored{background:var(--accent);color:#fff;border-color:var(--accent-dark);box-shadow:0 4px 0 var(--accent-dark);}
+  @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:13px;padding:10px 13px;}}
+
   /* status banner */
-  .status-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:16px;z-index:6;background:rgba(20,33,46,.78);backdrop-filter:blur(4px);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 16px;color:#fff;font-weight:700;font-size:13.5px;text-align:center;max-width:86%;line-height:1.4;transition:opacity .2s;}
+  .status-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:134px;z-index:6;background:rgba(20,33,46,.78);backdrop-filter:blur(4px);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 16px;color:#fff;font-weight:700;font-size:13.5px;text-align:center;max-width:86%;line-height:1.4;transition:opacity .2s;}
 
   /* mini-game overlay */
   .catch-game{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:7;width:min(420px,86%);background:rgba(20,33,46,.9);border:2px solid var(--accent);border-radius:14px;padding:12px 14px;display:none;}
@@ -191,7 +201,7 @@
     /* top bar compact */
     .top-bar{padding:5px 8px;}
     /* status banner and catch game */
-    .status-banner{bottom:12px;font-size:11.5px;padding:4px 10px;max-width:92%;}
+    .status-banner{bottom:120px;font-size:11.5px;padding:4px 10px;max-width:92%;}
     .catch-game{bottom:10px;width:min(360px,94%);padding:9px 11px;}
     .catch-track{height:24px;}
     .reel-btn{padding:11px;font-size:15px;}
@@ -377,7 +387,12 @@
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
 
-    <div class="status-banner" id="status">Set your rig below, then tap the water to cast.</div>
+    <div class="drive-controls" id="drive-controls">
+      <div class="joystick" id="joystick"><div class="joy-knob" id="joy-knob"></div></div>
+      <button class="anchor-btn" id="anchor-btn">Drop Anchor</button>
+    </div>
+
+    <div class="status-banner" id="status">Drive with the joystick. Reach a structure, then drop anchor to fish.</div>
 
     <div class="catch-game" id="catch-game">
       <div class="hint" id="catch-hint">Stop the marker in the green!</div>
@@ -664,12 +679,13 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // TUTORIAL
 // ─────────────────────────────────────────────────────────────
 const TUT=[
-  {icon:"🎣",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Cast your line, catch fish, and become the top angler on the leaderboard."},
-  {icon:"💧",title:"Cast Your Line",desc:"Tap anywhere on the water to cast. The circle shows your casting range. Tap the water again while waiting to reel in and try a different spot."},
-  {icon:"⚡",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Too slow and the fish gets away."},
+  {icon:"🎣",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Drive your boat, find a hotspot, cast, and become the top angler on the leaderboard."},
+  {icon:"🕹️",title:"Drive Your Boat",desc:"Use the joystick (bottom-left) to drive around the open water. Cruise up to docks, grass flats, reefs and wrecks — different structures hold different fish."},
+  {icon:"⚓",title:"Drop Anchor to Fish",desc:"Tap Drop Anchor when you reach a good spot. Then tap the water to cast within your range ring. Pull Anchor to move on."},
+  {icon:"⚡",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Hit the yellow center for bonus coins."},
   {icon:"🧰",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups — match your rig to the target."},
-  {icon:"🎽",title:"Upgrade Your Gear",desc:"Open the menu to visit the Shop. Better reels cast farther, reaching deeper water where rarer fish live."},
-  {icon:"🌊",title:"Deeper Means Rarer",desc:"Structures far from your boat hold Epic and Legendary species. You need a 6000+ reel to reach them."},
+  {icon:"🎽",title:"Reels: Range & Drag",desc:"Better reels cast farther AND have a higher drag rating. If a fish is stronger than your reel's drag, the line snaps — bring the right reel for big fish."},
+  {icon:"🌊",title:"Travel Deeper",desc:"Drive to the glowing gate at a map's edge to travel between Inshore, Nearshore and Offshore. Bigger boats unlock the deeper, richer waters."},
   {icon:"🏆",title:"Compete and Connect",desc:"Daily Tournaments let you compete for prize gold. Add friends to compare catches on the Leaderboard. Good luck out there!"},
 ];
 let tutStep=0;
@@ -1371,12 +1387,20 @@ const RODS=[
   {id:'rod4',name:'Bluewater Rod', zoneBonus:17, color:'#1f2a44',cost:4200,lvl:11,desc:'Heavy stand-up power.'},
 ];
 const REELS=[
-  {id:'reel0',name:'2500 Spinning',range:170,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
-  {id:'reel1',name:'4000 Spinning',range:255,color:'#9aa0a6',cost:180, lvl:2, desc:'More line, more reach.'},
-  {id:'reel2',name:'6000 Spinning',range:350,color:'#c9a24a',cost:650, lvl:5, desc:'Reach the mid structure.'},
-  {id:'reel3',name:'8000 Conventional',range:455,color:'#5a5e64',cost:1800,lvl:8,desc:'Long bombs offshore.'},
-  {id:'reel4',name:'Big-Game Two-Speed',range:560,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
+  {id:'reel0',name:'2500 Spinning',range:170,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
+  {id:'reel1',name:'4000 Spinning',range:255,drag:18,color:'#9aa0a6',cost:180, lvl:2, desc:'More line, more reach.'},
+  {id:'reel2',name:'6000 Spinning',range:350,drag:25,color:'#c9a24a',cost:650, lvl:5, desc:'Reach the mid structure.'},
+  {id:'reel3',name:'8000 Conventional',range:455,drag:35,color:'#5a5e64',cost:1800,lvl:8,desc:'Long bombs offshore.'},
+  {id:'reel4',name:'Big-Game Two-Speed',range:560,drag:50,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
 ];
+// Fish fight strength from size + rarity. Tuned so each reel's drag rating
+// gates which fish it can land: 2500(12)->small, ... BigGame(50)->everything.
+function fightStrength(f,w){
+  const a=f.size[0],b=f.size[1];
+  const frac=Math.max(0,Math.min(1,(w-a)/Math.max(0.01,b-a)));
+  const band={common:[2,6],uncommon:[4,8],rare:[8,12],epic:[14,16],legendary:[22,26]}[f.rarity]||[6,8];
+  return band[0]+frac*band[1];
+}
 const BRAIDS=[
   {id:'braid0',name:'10 lb Mono',  line:10, color:'#f4f1e8',cost:0,   lvl:1, desc:'Starter white line.'},
   {id:'braid1',name:'20 lb Braid', line:20, color:'#3f8a4a',cost:180, lvl:2, desc:'Reds, snook & small jacks.'},
@@ -1406,7 +1430,8 @@ const ZONE_STRUCTS=[
 ];
 function initStructures(){
   ZONES.forEach((z,i)=>{
-    z.structures=ZONE_STRUCTS[i].map(d=>({kind:d.kind,x:Math.round(d.xF*CW),y:Math.round(d.yF*CH),tier:d.tier}));
+    const W=WORLD_DIMS[i][0],H=WORLD_DIMS[i][1];
+    z.structures=ZONE_STRUCTS[i].map(d=>({kind:d.kind,x:Math.round(d.xF*W),y:Math.round(d.yF*H),tier:d.tier}));
   });
 }
 function structKindAlias(k){
@@ -1749,6 +1774,60 @@ const DPR=Math.min(window.devicePixelRatio||1,2);
 let ORIGIN={x:380,y:72};
 const BOAT_FOOT={bottom:136,halfW:62};
 let swimmers=[],ripples=[];
+
+// ===================== OPEN WORLD =====================
+// Each zone is its own self-contained world larger than the viewport.
+const WORLD_DIMS=[[1500,1300],[1750,1450],[2050,1650]]; // inshore / nearshore / offshore
+function worldW(){return WORLD_DIMS[S.zone][0];}
+function worldH(){return WORLD_DIMS[S.zone][1];}
+const BOAT_SPEED={kayak:2.1,jon:2.5,bay:3.1,console:3.7,walk:4.1,sport:4.9};
+let boat={wx:750,wy:1100,heading:0,anchored:true,vx:0,vy:0};
+let camera={x:0,y:0};
+let joy={active:false,dx:0,dy:0,id:null};
+let _gateCoolUntil=0;
+function driving(){return !boat.anchored;}
+function clampCamera(){
+  camera.x=Math.max(0,Math.min(worldW()-CW,boat.wx-CW/2));
+  camera.y=Math.max(0,Math.min(worldH()-CH,boat.wy-CH/2));
+}
+function initWorld(entry,anchored){
+  const W=worldW(),H=worldH();
+  boat.wx=W/2;
+  boat.wy=entry==='top'?180:entry==='bottom'?H-180:H*0.62;
+  boat.vx=0;boat.vy=0;boat.heading=0;
+  boat.anchored=(anchored!==false);
+  _gateCoolUntil=performance.now?performance.now()+2000:Date.now()+2000;
+  clampCamera();
+  updateDriveUI();
+}
+// Transition gates: top edge -> deeper zone, bottom edge -> shallower zone
+function gatesFor(){
+  const W=worldW(),H=worldH(),g=[];
+  if(S.zone<2)g.push({dir:'deeper',tz:S.zone+1,wx:W/2,wy:55,label:ZONE_LBL[S.zone+1]});
+  if(S.zone>0)g.push({dir:'shallow',tz:S.zone-1,wx:W/2,wy:H-55,label:ZONE_LBL[S.zone-1]});
+  return g;
+}
+function enterWorld(tz,arriveDir){
+  S.zone=tz;
+  initWorld(arriveDir,false);
+  ensureRig();initStructures();initSwimmers();updateRigBar();updateZonePill();refreshMenu();queueSave();
+  toast('Entered '+ZONES[tz].name,'#2aa890');
+  setStatus('Now in the '+ZONES[tz].name.toLowerCase()+'. Drive to a structure, then drop anchor to fish.');
+}
+function tryGate(g){
+  const now=performance.now?performance.now():Date.now();
+  if(now<_gateCoolUntil)return;
+  if(g.tz>maxZone()){
+    const need=BOATS.find(b=>b.maxZone>=g.tz);
+    toast('Need the '+(need?need.name:'a bigger boat')+' for '+ZONE_LBL[g.tz],'#b3402a');
+    _gateCoolUntil=now+2500;
+    // nudge boat back inward
+    boat.wy+=g.dir==='deeper'?60:-60;
+    return;
+  }
+  // deeper -> arrive at bottom of new map; shallower -> arrive at top
+  enterWorld(g.tz,g.dir==='deeper'?'bottom':'top');
+}
 let WHITECAPS=[];
 let STARS=[];
 
@@ -1915,7 +1994,7 @@ function resizeCanvas(){
   ctx.setTransform(DPR,0,0,DPR,0,0);
   ORIGIN.x=Math.round(CW*.5);ORIGIN.y=72;
   lineRig.tipX=ORIGIN.x+8;lineRig.tipY=ORIGIN.y+30;
-  fillParticles();initStructures();initSwimmers();
+  fillParticles();initStructures();initSwimmers();clampCamera();
 }
 window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(resizeCanvas,80);});
 
@@ -2021,7 +2100,20 @@ function drawAnglerHatAndExtras(cx,cy,r){
 // ── end angler helpers ──────────────────────────────────────────
 
 function drawBoat(dark){
-  ctx.save();ctx.translate(ORIGIN.x,40);
+  ctx.save();
+  if(driving()){
+    // wake trail behind the moving boat
+    const sp=Math.hypot(boat.vx,boat.vy);
+    if(sp>0.4){
+      ctx.save();ctx.translate(ORIGIN.x,ORIGIN.y);ctx.rotate(boat.heading);
+      ctx.fillStyle='rgba(255,255,255,'+Math.min(0.3,sp*0.06)+')';
+      ctx.beginPath();ctx.moveTo(-9,18);ctx.lineTo(-20,18+sp*7);ctx.lineTo(0,18);ctx.lineTo(20,18+sp*7);ctx.lineTo(9,18);ctx.closePath();ctx.fill();
+      ctx.restore();
+    }
+    ctx.translate(ORIGIN.x,ORIGIN.y-8);ctx.rotate(boat.heading);ctx.translate(0,-24);
+  }else{
+    ctx.translate(ORIGIN.x,ORIGIN.y-32);
+  }
   const b=S.boat;
   if(b==='kayak')drawKayak(dark);
   else if(b==='jon')drawJonBoat(dark);
@@ -2030,7 +2122,7 @@ function drawBoat(dark){
   else if(b==='walk')drawWalkaround(dark);
   else if(b==='sport')drawSportfisher(dark);
   ctx.restore();
-  drawRodAndReel(dark);
+  if(boat.anchored)drawRodAndReel(dark);
 }
 
 function drawKayak(dark){
@@ -2247,6 +2339,22 @@ function render(ts){
   S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
   const h=hourNow(),sky=skyState(h),t=ts/1000;
 
+  // ---- boat physics + camera (open world) ----
+  if(driving()){
+    const spd=BOAT_SPEED[S.boat]||3;
+    boat.vx+=(joy.dx*spd-boat.vx)*0.12;
+    boat.vy+=(joy.dy*spd-boat.vy)*0.12;
+    boat.wx+=boat.vx;boat.wy+=boat.vy;
+    boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
+    boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
+    const sp=Math.hypot(boat.vx,boat.vy);
+    if(sp>0.25)boat.heading=Math.atan2(boat.vy,boat.vx)+Math.PI/2;
+    clampCamera();
+    // gate proximity
+    for(const gt of gatesFor()){if(dist(boat.wx,boat.wy,gt.wx,gt.wy)<85){tryGate(gt);break;}}
+  }
+  ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
+
   ctx.clearRect(0,0,CW,CH);
   const z=curZone();
   const g=ctx.createLinearGradient(0,0,0,CH);g.addColorStop(0,z.baseWater[0]);g.addColorStop(.3,z.baseWater[1]);g.addColorStop(.65,z.baseWater[2]);g.addColorStop(1,'#020810');
@@ -2264,10 +2372,23 @@ function render(ts){
   for(const w of WHITECAPS){const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx,wy,w.r,w.r*.38,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
 
-  for(const s of z.structures)drawStructure(s,t,sky.darkness);
+  // structures in world space, offset by camera, culled to viewport
+  for(const s of z.structures){
+    const sx=s.x-camera.x,sy=s.y-camera.y;
+    if(sx<-90||sx>CW+90||sy<-90||sy>CH+90)continue;
+    drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier},t,sky.darkness);
+  }
+  // transition gates
+  for(const gt of gatesFor()){
+    const gx=gt.wx-camera.x,gy=gt.wy-camera.y;
+    if(gx<-60||gx>CW+60||gy<-120||gy>CH+120)continue;
+    drawGate(gx,gy,gt,t);
+  }
 
-  // range ring
-  const rng=castRange();ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1.5;ctx.setLineDash([6,7]);ctx.beginPath();ctx.arc(ORIGIN.x,ORIGIN.y,rng,0,6.28);ctx.stroke();ctx.setLineDash([]);
+  // range ring — only while anchored & fishing
+  if(boat.anchored){
+    const rng=castRange();ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1.5;ctx.setLineDash([6,7]);ctx.beginPath();ctx.arc(ORIGIN.x,ORIGIN.y,rng,0,6.28);ctx.stroke();ctx.setLineDash([]);
+  }
 
   // swimmers
   const b={x0:26,x1:CW-26,y0:100,y1:CH-30};
@@ -2280,7 +2401,7 @@ function render(ts){
 
   drawBoat(sky.darkness);
 
-  if(bobber.active){
+  if(bobber.active&&boat.anchored){
     ctx.strokeStyle=curBraid().color;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(lineRig.tipX,lineRig.tipY);ctx.lineTo(bobber.x,bobber.y);ctx.stroke();
     const bob=phase==='biting'?Math.sin(t*16)*4:Math.sin(t*2)*1.3;
     ctx.fillStyle=phase==='biting'?'#e0492c':'#e85d3c';ctx.beginPath();ctx.arc(bobber.x,bobber.y+bob,6,0,6.28);ctx.fill();
@@ -2297,6 +2418,36 @@ function updateClockHUD(h,sky){
   const se=seasonNow();
   document.getElementById('time-season').innerHTML=svgIcon(SEASON_ICON[se],13)+' '+SEASON_LABEL[se];
 }
+function drawGate(gx,gy,gt,t){
+  const locked=gt.tz>maxZone();
+  const up=gt.dir==='deeper';
+  const pulse=0.5+0.5*Math.sin(t*2.2);
+  ctx.save();
+  // glowing portal band across the edge
+  const grad=ctx.createRadialGradient(gx,gy,4,gx,gy,90);
+  const col=locked?'120,130,140':'90,200,255';
+  grad.addColorStop(0,'rgba('+col+','+(0.35+pulse*0.25)+')');
+  grad.addColorStop(1,'rgba('+col+',0)');
+  ctx.fillStyle=grad;ctx.beginPath();ctx.ellipse(gx,gy,120,46,0,0,6.28);ctx.fill();
+  // chevrons pointing outward
+  ctx.strokeStyle=locked?'rgba(180,190,200,.6)':'rgba(235,250,255,'+(0.5+pulse*0.5)+')';
+  ctx.lineWidth=4;ctx.lineCap='round';
+  for(let i=0;i<3;i++){
+    const o=(up?-1:1)*(i*12+8+pulse*4);
+    ctx.beginPath();
+    ctx.moveTo(gx-16,gy+o+(up?8:-8));
+    ctx.lineTo(gx,gy+o);
+    ctx.lineTo(gx+16,gy+o+(up?8:-8));
+    ctx.stroke();
+  }
+  // label
+  ctx.fillStyle=locked?'rgba(200,205,210,.85)':'#eafaff';
+  ctx.font='700 15px Nunito, sans-serif';ctx.textAlign='center';
+  ctx.fillText((locked?'🔒 ':'')+gt.label+(up?' ▲':' ▼'),gx,gy+(up?34:-26));
+  ctx.font='600 10px Nunito, sans-serif';ctx.fillStyle='rgba(220,235,245,.7)';
+  ctx.fillText(locked?'bigger boat needed':'drive through to travel',gx,gy+(up?48:-12));
+  ctx.restore();
+}
 
 // ===================== RIG / CAST / CATCH =====================
 let phase='idle',bobber={x:0,y:0,active:false,struct:null},hookedFish=null,hookW=0;
@@ -2311,18 +2462,58 @@ function ensureRig(){
   if(!S.baitInv[S.baitSel]||S.baitInv[S.baitSel]<=0){const b=Object.keys(S.baitInv).find(k=>S.baitInv[k]>0);S.baitSel=b||S.baitSel;}
 }
 
-function nearestStruct(x,y){let best=null,bd=1e9;for(const s of curZone().structures){const d=dist(x,y,s.x,s.y);if(d<bd){bd=d;best=s;}}return bd<62?best:null;}
+function nearestStruct(x,y){let best=null,bd=1e9;for(const s of curZone().structures){const d=dist(x,y,s.x-camera.x,s.y-camera.y);if(d<bd){bd=d;best=s;}}return bd<62?best:null;}
 
 canvas.addEventListener('click',e=>{
+  if(driving()){setStatus('Drop anchor before you cast.');return;}
   if(phase==='waiting'){clearTimeout(biteTimeout);phase='idle';bobber.active=false;setStatus('Reeled in. Cast again.');return;}
   if(phase!=='idle')return;
   const rect=canvas.getBoundingClientRect();
   const x=(e.clientX-rect.left)*(CW/rect.width);
   const y=(e.clientY-rect.top)*(CH/rect.height);
-  if(y<BOAT_FOOT.bottom&&Math.abs(x-ORIGIN.x)<BOAT_FOOT.halfW){setStatus('Cast clear of the boat, out into the water.');return;}
+  if(dist(x,y,ORIGIN.x,ORIGIN.y)<34){setStatus('Cast clear of the boat, out into the water.');return;}
   if(x<8||x>CW-8||y<8||y>CH-8){setStatus('Aim for the water.');return;}
   if(dist(x,y,ORIGIN.x,ORIGIN.y)>castRange()){setStatus('Out of casting range. A better reel will reach that far.');return;}
   cast(x,y);
+});
+
+// ===================== OPEN WORLD INPUT =====================
+function updateDriveUI(){
+  const dc=document.getElementById('drive-controls');
+  const ab=document.getElementById('anchor-btn');
+  if(!dc||!ab)return;
+  dc.classList.toggle('anchored',boat.anchored);
+  ab.textContent=boat.anchored?'Pull Anchor':'Drop Anchor';
+  ab.classList.toggle('is-anchored',boat.anchored);
+}
+(function setupJoystick(){
+  const j=document.getElementById('joystick'),k=document.getElementById('joy-knob');
+  if(!j)return;
+  const R=30;
+  function setKnob(dx,dy){k.style.left=(28+dx)+'px';k.style.top=(28+dy)+'px';}
+  function move(cx,cy){
+    const r=j.getBoundingClientRect();
+    let dx=cx-(r.left+r.width/2),dy=cy-(r.top+r.height/2);
+    const d=Math.hypot(dx,dy);if(d>R){dx=dx/d*R;dy=dy/d*R;}
+    setKnob(dx,dy);joy.dx=dx/R;joy.dy=dy/R;
+  }
+  function end(){joy.active=false;joy.dx=0;joy.dy=0;joy.id=null;setKnob(0,0);}
+  j.addEventListener('pointerdown',e=>{if(boat.anchored)return;joy.active=true;joy.id=e.pointerId;try{j.setPointerCapture(e.pointerId);}catch(_){}move(e.clientX,e.clientY);e.preventDefault();});
+  j.addEventListener('pointermove',e=>{if(!joy.active||(joy.id!==null&&e.pointerId!==joy.id))return;move(e.clientX,e.clientY);e.preventDefault();});
+  j.addEventListener('pointerup',end);j.addEventListener('pointercancel',end);
+  window.addEventListener('pointerup',()=>{if(joy.active)end();});
+})();
+document.getElementById('anchor-btn').addEventListener('click',()=>{
+  if(boat.anchored){
+    if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
+    boat.anchored=false;phase='idle';bobber.active=false;
+    setStatus('Anchor up — drive to a new spot with the joystick.');
+  }else{
+    boat.anchored=true;joy.dx=0;joy.dy=0;boat.vx=0;boat.vy=0;clampCamera();
+    const near=nearestStruct(ORIGIN.x,ORIGIN.y);
+    setStatus(near?'Anchored by the '+structLabel(near.kind)+'. Tap the water to cast.':'Anchored over open water. Tap the water to cast.');
+  }
+  updateDriveUI();
 });
 
 function cast(x,y){
@@ -2437,6 +2628,7 @@ const BULLSEYE_FRAC=0.25; // yellow bar is 25% of green zone width
 function setupMiniGame(){
   document.getElementById('catch-game').style.display='block';
   document.getElementById('rig-bar').style.pointerEvents='none';
+  document.getElementById('drive-controls').style.visibility='hidden';
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
@@ -2470,7 +2662,7 @@ function animateMiniGame(){
   updateMiniGameDOM();
   if(phase==='biting')catchAnim=requestAnimationFrame(animateMiniGame);
 }
-function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';document.getElementById('rig-bar').style.pointerEvents='';}
+function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';document.getElementById('rig-bar').style.pointerEvents='';document.getElementById('drive-controls').style.visibility='';}
 
 // ─────────────────────────────────────────────────────────────
 // LEGENDARY ALERT + STARDEW MINI-GAME
@@ -2558,6 +2750,8 @@ function endSdewGame(success){
   document.getElementById('rig-bar').style.pointerEvents='';
   if(!success){fail('The legendary fish got away! So close...');return;}
   const f=hookedFish,w=hookW;
+  // drag ceiling — even a perfect fight loses if the reel is underpowered
+  if(fightStrength(f,w)>curReel().drag){snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line — it broke you off!');return;}}
   land(f,w,true,false);
@@ -2585,6 +2779,8 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   const inZone=snapMarker>=snapZone.left&&snapMarker<=snapZone.left+snapZone.width;
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish,w=hookW,perfect=dd<snapZone.width*0.2;
+  // drag ceiling — fish stronger than the reel's drag rating snaps automatically
+  if(fightStrength(f,w)>curReel().drag){return snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<0.72){return snap(f,w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
   // line break
@@ -2711,7 +2907,11 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   updateRigBar();queueSave();closeChooser();
 });
 document.getElementById('rig-bar').addEventListener('click',e=>{const slot=e.target.closest('.rig-slot');if(slot)openChooser(slot.dataset.rig);});
-document.getElementById('zone-pill').addEventListener('click',()=>openChooser('zone'));
+document.getElementById('zone-pill').addEventListener('click',()=>{
+  const g=gatesFor();
+  const hint=g.map(x=>(x.tz>maxZone()?'🔒 ':'')+x.label+(x.dir==='deeper'?' (drive north)':' (drive south)')).join(' · ');
+  toast('Travel by driving to the edge gates: '+(hint||'none here'),'#1c6a9e');
+});
 
 // menu
 function openMenu(){document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();}
@@ -2779,7 +2979,7 @@ function renderShop(){
   let html='';
   if(shopTab==='boats')html=BOATS.map(b=>shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,' <i>('+b.perkName+')</i>',false)).join('');
   else if(shopTab==='rods')html=RODS.map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),S.rod===r.id,'',true)).join('');
-  else if(shopTab==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,'',true)).join('');
+  else if(shopTab==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
   else if(shopTab==='braid')html=BRAIDS.map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),S.braid===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
   else if(shopTab==='leaders')html=LEADERS.map(l=>shopRow(l,'leader',S.ownedLeaders.includes(l.id),S.leader===l.id,'',false)).join('');
   else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;const meth=METHODS.find(m=>m.cat===t.cat);
@@ -2836,7 +3036,7 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     const[list,owned,key]=map[kind];const obj=list.find(x=>x.id===id);
     if(!owned.includes(id)){if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=obj.cost;owned.push(id);toast('Bought '+obj.name+'!','#2aa890');}
     S[key]=id;
-    if(kind==='boat'&&S.zone>obj.maxZone){S.zone=obj.maxZone;ensureRig();initSwimmers();}
+    if(kind==='boat'&&S.zone>obj.maxZone){S.zone=obj.maxZone;ensureRig();initStructures();initSwimmers();initWorld('center',true);updateDriveUI();}
   }
   updateRigBar();renderShop();queueSave();
 });
@@ -2885,7 +3085,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
   try{if(window.storage&&window.storage.delete)window.storage.delete(SAVE_KEY);}catch(e){}
   S={xp:0,level:1,gold:0,clock:360,caught:{},best:{},ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},baitInv:{shrimp:20},zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:''};
-  ensureRig();initSwimmers();updateRigBar();refreshMenu();saveGame();toast('Fresh start!','#8b5a2b');setStatus('Set your rig below, then tap the water to cast.');
+  ensureRig();initStructures();initSwimmers();initWorld('center',true);updateDriveUI();updateRigBar();refreshMenu();saveGame();toast('Fresh start!','#8b5a2b');setStatus('Drive with the joystick, then drop anchor to fish.');
 });
 
 // ===================== BOOT =====================
@@ -2898,7 +3098,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
     const tp=document.getElementById('mp-tournament');
     if(tp&&tp.classList.contains('active'))renderTournamentPanel();
   },60000);
-  requestAnimationFrame(()=>{resizeCanvas();requestAnimationFrame(render);});
+  requestAnimationFrame(()=>{resizeCanvas();initWorld('center',true);updateDriveUI();requestAnimationFrame(render);});
 })();
 </script>
 </body>
