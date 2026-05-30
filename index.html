@@ -2479,36 +2479,55 @@ function drawAnglerCrown(cx,cy,r){
   const crown=CROWNS.find(function(c){return c.id===cid;});
   if(!crown)return;
   const hat=S.cosmetic?S.cosmetic.hat:'none';
-  // Sit a bit above the head, higher if a hat is equipped
-  const lift=(hat&&hat!=='none')?r*2.0:r*1.55;
-  const W=r*1.95,H=r*0.95;
+  // Small floating crown above the head. Floats higher when a hat is worn.
+  const t=(typeof performance!=='undefined'&&performance.now)?performance.now()/1000:Date.now()/1000;
+  const bob=Math.sin(t*1.8)*r*0.06;
+  const lift=((hat&&hat!=='none')?r*1.55:r*1.20)+bob;
+  const W=r*1.05,H=r*0.55;            // smaller overall
   const x=cx-W/2,y=cy-lift;
   ctx.save();
-  // Soft golden glow
-  const g=ctx.createRadialGradient(cx,y+H*0.4,1,cx,y+H*0.4,W*0.9);
-  g.addColorStop(0,'rgba(255,225,140,0.5)');
+  // Pulsing soft glow halo
+  const pulse=0.55+0.25*Math.sin(t*2.2);
+  const g=ctx.createRadialGradient(cx,y+H*0.5,1,cx,y+H*0.5,W*1.25);
+  g.addColorStop(0,'rgba(255,225,140,'+(0.55*pulse)+')');
+  g.addColorStop(0.6,'rgba(255,210,120,'+(0.22*pulse)+')');
   g.addColorStop(1,'rgba(255,225,140,0)');
-  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,y+H*0.4,W*0.9,0,6.28);ctx.fill();
-  // Band
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,y+H*0.5,W*1.25,0,6.28);ctx.fill();
+  // Crown silhouette: 5 pointed peaks on a band (classic shape)
+  const baseY=y+H;          // bottom of the band
+  const peakY=y;            // tip of the tallest peaks
+  const midY=y+H*0.18;      // small peaks rise to here
+  const px=[x, x+W*0.15, x+W*0.30, x+W*0.42, x+W*0.50, x+W*0.58, x+W*0.70, x+W*0.85, x+W];
   ctx.fillStyle=crown.band;
   ctx.beginPath();
-  ctx.moveTo(x,y+H);ctx.lineTo(x+W,y+H);ctx.lineTo(x+W,y+H*0.55);
-  ctx.lineTo(x+W*0.82,y);
-  ctx.lineTo(x+W*0.5,y+H*0.4);
-  ctx.lineTo(x+W*0.18,y);
-  ctx.lineTo(x,y+H*0.55);
+  ctx.moveTo(px[0],baseY);
+  ctx.lineTo(px[0],y+H*0.55);
+  ctx.lineTo(px[1],peakY);                  // tall outer peak
+  ctx.quadraticCurveTo(px[2],midY+H*0.05,px[3],midY); // dip to short peak
+  ctx.lineTo(px[4],peakY+H*0.08);           // center peak (slightly taller dip)
+  // mirror right side
+  ctx.lineTo(px[5],midY);
+  ctx.quadraticCurveTo(px[6],midY+H*0.05,px[7],peakY);
+  ctx.lineTo(px[8],y+H*0.55);
+  ctx.lineTo(px[8],baseY);
   ctx.closePath();ctx.fill();
   // Outline
-  ctx.strokeStyle='rgba(0,0,0,0.45)';ctx.lineWidth=Math.max(0.6,r*0.05);ctx.stroke();
-  // Three jewels at the spike tips
-  const jr=r*0.18;
-  ctx.fillStyle=crown.gem;
-  ctx.beginPath();ctx.arc(x+W*0.5,y+H*0.4-jr*0.2,jr,0,6.28);ctx.fill();
-  ctx.beginPath();ctx.arc(x+W*0.18,y+jr*0.4,jr*0.78,0,6.28);ctx.fill();
-  ctx.beginPath();ctx.arc(x+W*0.82,y+jr*0.4,jr*0.78,0,6.28);ctx.fill();
-  // jewel highlights
-  ctx.fillStyle=crown.jewel;
-  ctx.beginPath();ctx.arc(x+W*0.5-jr*0.3,y+H*0.4-jr*0.45,jr*0.36,0,6.28);ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.55)';ctx.lineWidth=Math.max(0.7,r*0.06);ctx.stroke();
+  // Band highlight stripe
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.fillRect(x+r*0.04,y+H*0.65,W-r*0.08,r*0.07);
+  // Jeweled tips on the 5 peaks
+  const jr=r*0.14;
+  const peakTips=[[px[1],peakY],[px[3],midY],[px[4],peakY+H*0.08],[px[5],midY],[px[7],peakY]];
+  for(let i=0;i<peakTips.length;i++){
+    const p=peakTips[i];
+    ctx.fillStyle=crown.gem;
+    ctx.beginPath();ctx.arc(p[0],p[1]-jr*0.1,jr*(i===2?1:0.85),0,6.28);ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.5)';ctx.lineWidth=Math.max(0.4,r*0.035);ctx.stroke();
+    // highlight dot
+    ctx.fillStyle=crown.jewel;
+    ctx.beginPath();ctx.arc(p[0]-jr*0.25,p[1]-jr*0.3,jr*0.3,0,6.28);ctx.fill();
+  }
   ctx.restore();
 }
 // ── end angler helpers ──────────────────────────────────────────
