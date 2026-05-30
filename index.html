@@ -263,7 +263,7 @@
 .tut-dots{display:flex;gap:5px;justify-content:center;margin-bottom:14px;}
 .tut-dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.2);}
 .tut-dot.active{background:var(--accent);}
-.tut-icon{font-size:32px;text-align:center;margin-bottom:8px;}
+.tut-icon{text-align:center;margin-bottom:8px;color:var(--accent);line-height:0;}
 .tut-title{font-size:17px;font-weight:900;color:#fff;text-align:center;margin-bottom:6px;}
 .tut-desc{font-size:13.5px;color:var(--text-soft);text-align:center;line-height:1.6;margin-bottom:16px;}
 .tut-btns{display:flex;gap:8px;}
@@ -359,7 +359,7 @@
 .sdew-arena{display:flex;gap:12px;align-items:stretch;}
 .sdew-track{position:relative;width:64px;height:280px;background:linear-gradient(180deg,#071628,#0d2540);border:2px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;}
 .sdew-bar{position:absolute;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(60,210,160,.95),rgba(30,160,120,.85));border-radius:6px;box-shadow:0 0 14px rgba(50,200,140,.5);}
-.sdew-fish-icon{position:absolute;left:50%;transform:translateX(-50%);font-size:26px;line-height:1;pointer-events:none;filter:drop-shadow(0 0 6px rgba(255,255,255,.6));}
+.sdew-fish-icon{position:absolute;left:50%;transform:translateX(-50%);line-height:0;pointer-events:none;color:#ffd27a;filter:drop-shadow(0 0 6px rgba(255,255,255,.6));}
 .sdew-meter-wrap{width:24px;height:280px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;position:relative;}
 .sdew-meter-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,#2aa890,#e0a93c 70%);border-radius:10px;transition:height .04s;}
 .sdew-meter-fill.danger{background:linear-gradient(0deg,#c03030,#e05050);}
@@ -385,7 +385,7 @@
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
-      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics">👤</div>
+      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -481,11 +481,11 @@
     <div class="auth-sub" style="margin-bottom:24px;">How do you identify?</div>
     <div style="display:flex;gap:16px;justify-content:center;margin-bottom:20px;">
       <div id="gender-male" onclick="selectGender('male')" style="flex:1;max-width:130px;cursor:pointer;border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:20px 10px;transition:border-color .15s;">
-        <div style="font-size:52px;margin-bottom:8px;">🧑‍🎣</div>
+        <div id="gender-male-icon" style="margin-bottom:8px;height:56px;display:flex;align-items:center;justify-content:center;"></div>
         <div style="color:#fff;font-size:15px;font-weight:800;">Male</div>
       </div>
       <div id="gender-female" onclick="selectGender('female')" style="flex:1;max-width:130px;cursor:pointer;border:2px solid rgba(255,255,255,.15);border-radius:14px;padding:20px 10px;transition:border-color .15s;">
-        <div style="font-size:52px;margin-bottom:8px;">👩‍🎣</div>
+        <div id="gender-female-icon" style="margin-bottom:8px;height:56px;display:flex;align-items:center;justify-content:center;"></div>
         <div style="color:#fff;font-size:15px;font-weight:800;">Female</div>
       </div>
     </div>
@@ -494,7 +494,7 @@
 </div>
 <div class="leg-alert-overlay" id="leg-alert">
   <div class="leg-alert-box">
-    <span class="leg-exclaim">⚡</span>
+    <span class="leg-exclaim"><svg width="52" height="52" viewBox="0 0 24 24" fill="#e0a93c" stroke="#c46f28" stroke-width="1.2" stroke-linejoin="round" style="display:inline-block;"><path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/></svg></span>
     <div class="leg-label">LEGENDARY</div>
     <div class="leg-fishname" id="leg-fishname">Tarpon</div>
     <div class="leg-sub">Get ready...</div>
@@ -505,7 +505,7 @@
   <div class="sdew-arena">
     <div class="sdew-track" id="sdew-track">
       <div class="sdew-bar" id="sdew-bar"></div>
-      <div class="sdew-fish-icon" id="sdew-fish-icon">🐟</div>
+      <div class="sdew-fish-icon" id="sdew-fish-icon"></div>
     </div>
     <div class="sdew-meter-wrap"><div class="sdew-meter-fill" id="sdew-meter-fill" style="height:30%"></div></div>
   </div>
@@ -610,6 +610,8 @@ let _selectedGender='';
 function showGenderSelect(){
   _selectedGender='';
   document.getElementById('gender-overlay').style.display='flex';
+  document.getElementById('gender-male-icon').innerHTML=anglerIconSVG('male','#E8B88A',52);
+  document.getElementById('gender-female-icon').innerHTML=anglerIconSVG('female','#E8B88A',52);
   document.getElementById('gender-male').style.borderColor='rgba(255,255,255,.15)';
   document.getElementById('gender-female').style.borderColor='rgba(255,255,255,.15)';
   document.getElementById('gender-confirm-btn').style.opacity='.4';
@@ -636,7 +638,7 @@ function showSkinSelect(){
   const gender=S.gender||'male';
   document.getElementById('skin-options').innerHTML=SKIN_TONES.map(function(t){
     return '<div id="skin-opt-'+t.id+'" onclick="selectSkin(\''+t.id+'\')" style="cursor:pointer;border:3px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 8px;min-width:64px;transition:border-color .15s;box-sizing:border-box;">'
-      +'<div style="font-size:38px;line-height:1;margin-bottom:8px;">'+anglerEmoji(gender,t.id)+'</div>'
+      +'<div style="line-height:1;margin-bottom:8px;">'+anglerIconSVG(gender,t.color,42)+'</div>'
       +'<div style="width:18px;height:18px;border-radius:50%;background:'+t.color+';margin:0 auto;border:2px solid rgba(0,0,0,.2);"></div>'
       +'</div>';
   }).join('');
@@ -683,14 +685,14 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // TUTORIAL
 // ─────────────────────────────────────────────────────────────
 const TUT=[
-  {icon:"🎣",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Drive your boat, find a hotspot, cast, and become the top angler on the leaderboard."},
-  {icon:"🕹️",title:"Drive Your Boat",desc:"Use the joystick (bottom-left) to drive around the open water. Cruise up to docks, grass flats, reefs and wrecks — different structures hold different fish."},
-  {icon:"⚓",title:"Drop Anchor to Fish",desc:"Tap Drop Anchor when you reach a good spot. Then tap the water to cast within your range ring. Pull Anchor to move on."},
-  {icon:"⚡",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Hit the yellow center for bonus coins."},
-  {icon:"🧰",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups — match your rig to the target."},
-  {icon:"🎽",title:"Reels: Range & Drag",desc:"Better reels cast farther AND have a higher drag rating. If a fish is stronger than your reel's drag, the line snaps — bring the right reel for big fish."},
-  {icon:"🌊",title:"Travel Deeper",desc:"Drive to the glowing gate at a map's edge to travel between Inshore, Nearshore and Offshore. Bigger boats unlock the deeper, richer waters."},
-  {icon:"🏆",title:"Compete and Connect",desc:"Daily Tournaments let you compete for prize gold. Add friends to compare catches on the Leaderboard. Good luck out there!"},
+  {icon:"fishing",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Drive your boat, find a hotspot, cast, and become the top angler on the leaderboard."},
+  {icon:"joystick",title:"Drive Your Boat",desc:"Use the joystick (bottom-left) to drive around the open water. Cruise up to docks, grass flats, reefs and wrecks — different structures hold different fish."},
+  {icon:"anchor",title:"Drop Anchor to Fish",desc:"Tap Drop Anchor when you reach a good spot. Then tap the water to cast within your range ring. Pull Anchor to move on."},
+  {icon:"bolt",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Hit the yellow center for bonus coins."},
+  {icon:"toolbox",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups — match your rig to the target."},
+  {icon:"reel",title:"Reels: Range & Drag",desc:"Better reels cast farther AND have a higher drag rating. If a fish is stronger than your reel's drag, the line snaps — bring the right reel for big fish."},
+  {icon:"wave",title:"Travel Deeper",desc:"Drive to the glowing gate at a map's edge to travel between Inshore, Nearshore and Offshore. Bigger boats unlock the deeper, richer waters."},
+  {icon:"trophy",title:"Compete and Connect",desc:"Daily Tournaments let you compete for prize gold. Add friends to compare catches on the Leaderboard. Good luck out there!"},
 ];
 let tutStep=0;
 function showTutorial(){
@@ -700,7 +702,7 @@ function showTutorial(){
 function renderTutStep(){
   const s=TUT[tutStep];
   document.getElementById("tut-dots").innerHTML=TUT.map(function(_,i){return "<div class=\"tut-dot"+(i===tutStep?" active":"")+"\">&nbsp;</div>";}).join("");
-  document.getElementById("tut-icon").textContent=s.icon;
+  document.getElementById("tut-icon").innerHTML=svgIcon(s.icon,34);
   document.getElementById("tut-title").textContent=s.title;
   document.getElementById("tut-desc").textContent=s.desc;
   document.getElementById("tut-next-btn").textContent=tutStep===TUT.length-1?"Start Fishing!":"Next";
@@ -748,7 +750,7 @@ async function renderLeaderboard(){
     el.innerHTML=snap.docs.map(function(doc,i){
       const d=doc.data();
       const me=fbUser&&doc.id===fbUser.uid;
-      return "<div class=\"lb-row\"><div class=\"lb-rank\">"+(medals[i]||(i+1))+"</div><div class=\"lb-uname\">"+(me?"★ ":"")+d.username+"</div><div class=\"lb-stat\">"+(d.biggestName||"—")+" "+(d.biggestWeight?d.biggestWeight.toFixed(1)+"lb":"")+"</div></div>";
+      return "<div class=\"lb-row\"><div class=\"lb-rank\">"+(medals[i]||(i+1))+"</div><div class=\"lb-uname\">"+(me?"<span style=\"color:var(--accent);\">"+svgIcon('star',11)+"</span> ":"")+d.username+"</div><div class=\"lb-stat\">"+(d.biggestName||"-")+" "+(d.biggestWeight?d.biggestWeight.toFixed(1)+"lb":"")+"</div></div>";
     }).join("");
   }catch(e){el.innerHTML="<div class=\"lb-empty\">Could not load leaderboard.</div>";}
 }
@@ -837,13 +839,13 @@ function renderFriendRequests(){
   const el=document.getElementById("friend-requests-section");
   if(!el)return;
   if(!fbFriendRequests.length){el.innerHTML="";return;}
-  el.innerHTML="<div class=\"friend-req-section-head\">🎣 Friend Requests ("+fbFriendRequests.length+")</div>"
+  el.innerHTML="<div class=\"friend-req-section-head\">"+svgIcon('fishing',13)+" Friend Requests ("+fbFriendRequests.length+")</div>"
     +fbFriendRequests.map(function(r){
       return "<div class=\"friend-req-card\">"
         +"<div><div class=\"friend-req-name\">"+r.senderUsername+"</div><div class=\"friend-req-sub\">wants to fish with you</div></div>"
         +"<div class=\"friend-req-btns\">"
-        +"<button class=\"friend-req-accept\" onclick=\"acceptFriendRequest('"+r.senderUid+"','"+r.senderUsername+"')\">✓ Accept</button>"
-        +"<button class=\"friend-req-decline\" onclick=\"declineFriendRequest('"+r.senderUid+"')\">✕</button>"
+        +"<button class=\"friend-req-accept\" onclick=\"acceptFriendRequest('"+r.senderUid+"','"+r.senderUsername+"')\">"+svgIcon('check',12)+" Accept</button>"
+        +"<button class=\"friend-req-decline\" onclick=\"declineFriendRequest('"+r.senderUid+"')\">"+svgIcon('close',12)+"</button>"
         +"</div></div>";
     }).join("");
 }
@@ -1072,7 +1074,7 @@ function loadTournamentInvites(){
     const list=((d.data()||{}).pending)||[];
     if(list.length){
       const last=list[list.length-1];
-      toast("🎣 "+last.from+" invited you to "+(last.name||"a tournament")+"! Check the Tourn. tab.","#1c6a9e");
+      toast(last.from+" invited you to "+(last.name||"a tournament")+"! Check the Tourn. tab.","#1c6a9e");
       fbDb.collection("tournamentInvites").doc(fbUser.uid).set({pending:[]},{merge:true}).catch(function(){});
     }
   }).catch(function(){});
@@ -1234,6 +1236,22 @@ const ICONS={
 'season-winter':'<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><circle cx="12" cy="12" r="2"/>',
 'zone-pin':'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
 'fits':'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
+// misc UI icons (replacing emojis)
+'person':'<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/>',
+'fish':'<path d="M3 12c3-5 9-7 14-5 2 .8 3.5 2.4 4 5-.5 2.6-2 4.2-4 5-5 2-11 0-14-5z"/><path d="M17 9.5h.01"/><path d="M3 12c-1-.5-1.6-1.4-2-2.5.4 2 .4 3 0 5 .4-1.1 1-2 2-2.5z"/>',
+'bolt':'<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>',
+'anchor':'<circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="21"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/>',
+'joystick':'<rect x="6" y="14" width="12" height="6" rx="2"/><line x1="12" y1="14" x2="12" y2="7"/><circle cx="12" cy="5" r="2.5"/>',
+'toolbox':'<rect x="3" y="8" width="18" height="11" rx="1.5"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="12" x2="21" y2="12"/><rect x="10" y="10.5" width="4" height="3" rx="0.5"/>',
+'reel':'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2"/><line x1="12" y1="4" x2="12" y2="7"/><line x1="20" y1="12" x2="17" y2="12"/><line x1="12" y1="20" x2="12" y2="17"/><path d="M19 5l-2.5 2.5"/>',
+'wave':'<path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
+'trophy':'<path d="M7 4h10v5a5 5 0 0 1-10 0V4z"/><path d="M7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/><line x1="12" y1="14" x2="12" y2="18"/><path d="M8 21h8M9 21a3 3 0 0 1 6 0"/>',
+'crab':'<ellipse cx="12" cy="13" rx="5" ry="3.5"/><circle cx="10" cy="12" r="0.8"/><circle cx="14" cy="12" r="0.8"/><path d="M7 13c-2 0-3-1-4-2M17 13c2 0 3-1 4-2"/><path d="M8 16l-3 3M16 16l3 3M10 16l-1 4M14 16l1 4"/><path d="M9 10l-2-3M15 10l2-3"/>',
+'lock':'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
+'check':'<polyline points="4 12 9 18 20 5"/>',
+'close':'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
+'star':'<polygon points="12 3 14.6 9.3 21 9.7 16 14 17.5 20.3 12 16.8 6.5 20.3 8 14 3 9.7 9.4 9.3"/>',
+'fishing':'<line x1="4" y1="3" x2="18" y2="14"/><path d="M18 14v3a3 3 0 0 1-6 0"/><circle cx="4" cy="3" r="1"/>',
 };
 // ── end SVG icons ─────────────────────────────────────────────
 function svgIcon(id,sz){
@@ -1398,17 +1416,26 @@ const COSMETICS={
 };
 
 const SKIN_TONES=[
-  {id:'light',   mod:'🏻', color:'#FDDBB4', label:'Light'},
-  {id:'medlight',mod:'🏼', color:'#E8B88A', label:'Medium-Light'},
-  {id:'medium',  mod:'🏽', color:'#C68642', label:'Medium'},
-  {id:'meddark', mod:'🏾', color:'#8D5524', label:'Medium-Dark'},
-  {id:'dark',    mod:'🏿', color:'#4A2912', label:'Dark'},
+  {id:'light',   color:'#FDDBB4', label:'Light'},
+  {id:'medlight',color:'#E8B88A', label:'Medium-Light'},
+  {id:'medium',  color:'#C68642', label:'Medium'},
+  {id:'meddark', color:'#8D5524', label:'Medium-Dark'},
+  {id:'dark',    color:'#4A2912', label:'Dark'},
 ];
-function anglerEmoji(gender,skinId){
-  const tone=SKIN_TONES.find(t=>t.id===skinId);
-  const mod=tone?tone.mod:'';
-  const base=gender==='female'?'👩':'🧑';
-  return base+mod+'‍🎣';
+function skinColorOf(id){const t=SKIN_TONES.find(t=>t.id===id);return t?t.color:'#E8B88A';}
+// SVG angler portrait — head/shoulders with skin color + gendered hair (replaces emoji)
+function anglerIconSVG(gender,skinColor,size){
+  size=size||32;
+  const hair='#3a2614',shirt='#2f6e83';
+  const side=gender==='female'
+    ? '<path d="M6.4 9c-.6 3.2-.5 6.3.2 9.4h2.3c-.9-3.1-1-6.2-.45-9.4zM17.6 9c.6 3.2.5 6.3-.2 9.4h-2.3c.9-3.1 1-6.2 .45-9.4z" fill="'+hair+'"/>'
+    : '';
+  return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" style="display:inline-block;vertical-align:middle;">'
+    +side
+    +'<path d="M3.5 22c0-4.4 3.9-6.8 8.5-6.8s8.5 2.4 8.5 6.8z" fill="'+shirt+'"/>'
+    +'<circle cx="12" cy="10" r="5" fill="'+skinColor+'"/>'
+    +'<path d="M6.8 9.6C6.8 5.8 9 4 12 4s5.2 1.8 5.2 5.6c0 0-1.5-2.1-5.2-2.1S6.8 9.6 6.8 9.6z" fill="'+hair+'"/>'
+    +'</svg>';
 }
 
 // boats: maxZone gates water; perk applied in logic
@@ -2487,7 +2514,7 @@ function drawGate(gx,gy,gt,t){
   // label
   ctx.fillStyle=locked?'rgba(200,205,210,.85)':'#eafaff';
   ctx.font='700 15px Nunito, sans-serif';ctx.textAlign='center';
-  ctx.fillText((locked?'🔒 ':'')+gt.label+(up?' ▲':' ▼'),gx,gy+(up?34:-26));
+  ctx.fillText((locked?'Locked · ':'')+gt.label+(up?' (N)':' (S)'),gx,gy+(up?34:-26));
   ctx.font='600 10px Nunito, sans-serif';ctx.fillStyle='rgba(220,235,245,.7)';
   ctx.fillText(locked?'bigger boat needed':'drive through to travel',gx,gy+(up?48:-12));
   ctx.restore();
@@ -2646,7 +2673,7 @@ function triggerCrabTrap(){
   S.baitInv[type]=(S.baitInv[type]||0)+qty;
   updateRigBar();queueSave();
   setStatus('Pulled up '+qty+' '+name+(qty>1?'s':'')+' from the crab trap! Added to bait.');
-  toast('🦀 +'+qty+' '+name+(qty>1?'s':''),'#2aa890');
+  toast('+'+qty+' '+name+(qty>1?'s':'')+' added to bait','#2aa890');
   setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Cast again to fish or check the trap again.');}},2200);
 }
 
@@ -2665,7 +2692,7 @@ function triggerBite(){
   hookedFish=pick;hookW=rollWeight(pick);
   phase='biting';
   if(pick.rarity==='legendary'){
-    setStatus('⚡ LEGENDARY FISH ON THE LINE!');
+    setStatus('LEGENDARY FISH ON THE LINE!');
     showLegendaryAlert(pick);
     return;
   }
@@ -2689,7 +2716,7 @@ function setupMiniGame(){
   marker.dir=Math.random()<0.5?1:-1;
   marker.speed=zoneSel.speed*0.3;
   updateMiniGameDOM();
-  document.getElementById('catch-hint').textContent=ri>=3?'Hit the 🟡 yellow for DOUBLE COINS!':'Stop the marker in the green — yellow = double!';
+  document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green — yellow = double!';
   animateMiniGame();
 }
 function updateMiniGameDOM(){
@@ -2728,7 +2755,6 @@ const SDEW_BEHAVIORS={
   permit:    {dartChance:.09,dartForce:5,  erratic:.16,maxVel:5.0},
 };
 const SDEW_DEFAULT_BEH={dartChance:.06,dartForce:5,erratic:.12,maxVel:4.5};
-const SDEW_FISH_EMOJI={tarpon:'🐠',swordfish:'🐡',yellowfin:'🐟',cobia:'🐟',bluefin:'🐟',permit:'🐠'};
 
 let sdewActive=false,sdewHolding=false;
 let sdewBarTop=105,sdewBarVel=0;
@@ -2752,8 +2778,8 @@ function startSdewGame(fish){
   sdewFishCy=sdewBarTop+SDEW_BAR_H/2; // fish starts centered on the green bar
   sdewFishVel=0;
   sdewMeter=30;
-  document.getElementById('sdew-fish-icon').textContent=SDEW_FISH_EMOJI[fish.id]||'🐟';
-  document.getElementById('sdew-title').textContent='⚡ '+fish.name;
+  document.getElementById('sdew-fish-icon').innerHTML=svgIcon('fish',26);
+  document.getElementById('sdew-title').textContent=fish.name;
   document.getElementById('sdew-overlay').classList.add('show');
   updateSdewDOM();
   sdewAnimId=requestAnimationFrame(sdewLoop);
@@ -2957,7 +2983,7 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
 document.getElementById('rig-bar').addEventListener('click',e=>{const slot=e.target.closest('.rig-slot');if(slot)openChooser(slot.dataset.rig);});
 document.getElementById('zone-pill').addEventListener('click',()=>{
   const g=gatesFor();
-  const hint=g.map(x=>(x.tz>maxZone()?'🔒 ':'')+x.label+(x.dir==='deeper'?' (drive north)':' (drive south)')).join(' · ');
+  const hint=g.map(x=>(x.tz>maxZone()?'Locked: ':'')+x.label+(x.dir==='deeper'?' (drive north)':' (drive south)')).join(' · ');
   toast('Travel by driving to the edge gates: '+(hint||'none here'),'#1c6a9e');
 });
 
@@ -2990,8 +3016,8 @@ function updateCosmeticHUD(){
   const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
   const equipped=[hat,shirt,shades].filter(x=>x&&x.id!=='none');
   if(equipped.length>0){el.innerHTML=svgIcon(equipped[0].icon,18);return;}
-  if(S.gender&&S.skinTone){el.textContent=anglerEmoji(S.gender,S.skinTone);return;}
-  el.innerHTML=svgIcon('shirt-tee',18)||'👤';
+  if(S.gender&&S.skinTone){el.innerHTML=anglerIconSVG(S.gender,skinColorOf(S.skinTone),20);return;}
+  el.innerHTML=svgIcon('person',18);
 }
 function refreshMenu(){renderLogbook();renderShop();renderStats();renderTournamentPanel();}
 
