@@ -1165,13 +1165,6 @@ const ICONS={
 'struct-oilrig':'<rect x="4" y="12" width="16" height="8" rx="1"/><path d="M6 12V7H18V12"/><path d="M10 7V4H14V7"/><line x1="17" y1="7" x2="17" y2="3"/><circle cx="17" cy="3" r="1.5"/>',
 'struct-powerplant':'<rect x="5" y="14" width="14" height="6"/><rect x="7" y="10" width="4" height="5"/><rect x="13" y="10" width="4" height="5"/><path d="M9 10Q9 7 10 6M15 10Q15 7 14 6" stroke-dasharray="1.5 2" stroke-width="1.4"/>',
 'struct-bluhole':'<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="3"/>',
-};
-function svgIcon(id,sz){
-  sz=sz||22;
-  var p=ICONS[id];
-  if(!p)return'';
-  return'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">'+p+'</svg>';
-}
 // weather / time / zone / season / shop
 'weather-day':'<circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="19.07" y2="19.07"/><line x1="4.93" y1="19.07" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="19.07" y2="4.93"/>',
 'weather-night':'<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>',
@@ -1185,6 +1178,12 @@ function svgIcon(id,sz){
 'fits':'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
 };
 // ── end SVG icons ─────────────────────────────────────────────
+function svgIcon(id,sz){
+  sz=sz||22;
+  var p=ICONS[id];
+  if(!p)return'';
+  return'<svg width="'+sz+'" height="'+sz+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;">'+p+'</svg>';
+}
 
 const STRUCT_META={
   dock:{icon:"struct-dock",label:"Dock Pilings",zone:"Inshore",depth:"Near",depthColor:"#2aa890"},
