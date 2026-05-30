@@ -339,6 +339,25 @@
 /* USER PILL */
 .user-pill{display:flex;align-items:center;gap:4px;cursor:pointer;}
 .uavatar{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-size:11px;font-weight:900;display:flex;align-items:center;justify-content:center;}
+/* ACHIEVEMENTS */
+.ach-box{background:var(--cream);border:3px solid var(--wood);border-radius:18px;box-shadow:0 12px 36px rgba(0,0,0,.5);max-width:380px;width:100%;padding:22px 22px 18px;text-align:center;animation:pop .28s cubic-bezier(.2,1.2,.4,1);}
+.ach-tier{display:inline-block;font-size:11px;font-weight:900;letter-spacing:1px;text-transform:uppercase;border:2px solid;border-radius:20px;padding:3px 12px;margin-bottom:10px;}
+.ach-title{font-family:'Fredoka';font-size:24px;font-weight:600;color:var(--wood-dark);}
+.ach-desc{font-size:13px;color:var(--text-soft);margin:6px 0 12px;line-height:1.4;}
+.ach-reward{font-size:16px;font-weight:900;color:var(--accent-dark);margin-bottom:6px;}
+.ach-crown-note{font-size:12px;font-weight:800;color:var(--grass-dark);background:#e2f3ef;border:1.5px dashed var(--grass);border-radius:8px;padding:6px 10px;margin:10px 0 4px;}
+.ach-ok{margin-top:13px;width:100%;padding:11px;font-family:'Fredoka';font-size:16px;font-weight:600;color:#fff;background:var(--grass);border:2px solid var(--grass-dark);border-radius:12px;box-shadow:0 4px 0 var(--grass-dark);cursor:pointer;}
+.ach-ok:active{transform:translateY(3px);box-shadow:0 1px 0 var(--grass-dark);}
+.ach-section{margin-top:14px;}
+.ach-section-head{display:flex;align-items:center;justify-content:space-between;font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px;padding-bottom:5px;border-bottom:1.5px dashed #d2b886;}
+.ach-row{display:flex;align-items:center;gap:10px;background:var(--parchment);border:1.5px solid #d2b886;border-radius:11px;padding:8px 10px;margin-bottom:6px;}
+.ach-row.earned{background:#e2f3ef;border-color:var(--grass);}
+.ach-row.locked{opacity:.65;}
+.ach-row-info{flex:1;min-width:0;}
+.ach-row-name{font-size:13.5px;font-weight:800;color:var(--ink);}
+.ach-row-desc{font-size:11px;color:var(--text-soft);line-height:1.35;}
+.ach-row-status{font-size:11px;font-weight:800;padding:4px 9px;border-radius:8px;color:#fff;white-space:nowrap;}
+.ach-row-status.locked{background:#cbb48c;}
 /* TOURNAMENT BANNER */
 .tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.9);color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:20px;pointer-events:none;display:none;}
 /* LEGENDARY ALERT */
@@ -449,6 +468,7 @@
 <div class="save-dot" id="save-dot">saved</div>
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 <div class="modal-bg" id="catch-bg"><div class="catch-card" id="catch-card"></div></div>
+<div class="modal-bg" id="ach-card"><div class="ach-box" id="ach-inner"></div></div>
 
 
 <div class="auth-overlay" id="auth-overlay">
@@ -1191,6 +1211,7 @@ function endTournament(){
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   let winnings=rank>=0&&rank<3?prizes[rank]:0;
   if(winnings>0){S.gold+=winnings;updatePills();queueSave();}
+  if(rank===0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
   const medals=["1st","2nd","3rd"];
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
@@ -1311,6 +1332,8 @@ const ICONS={
 'close':'<line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/>',
 'star':'<polygon points="12 3 14.6 9.3 21 9.7 16 14 17.5 20.3 12 16.8 6.5 20.3 8 14 3 9.7 9.4 9.3"/>',
 'fishing':'<line x1="4" y1="3" x2="18" y2="14"/><path d="M18 14v3a3 3 0 0 1-6 0"/><circle cx="4" cy="3" r="1"/>',
+'crown':'<path d="M3 18h18l-2-9-4 4-4-7-4 7-4-4z"/><line x1="3" y1="21" x2="21" y2="21"/>',
+'medal':'<circle cx="12" cy="15" r="6"/><path d="M8 4l4 7 4-7"/><polygon points="12 12 13.4 14.4 16 15 14 17 14.5 19.5 12 18.3 9.5 19.5 10 17 8 15 10.6 14.4" stroke-width="0.6"/>',
 };
 // ── end SVG icons ─────────────────────────────────────────────
 function svgIcon(id,sz){
@@ -1627,7 +1650,9 @@ let S={
   xp:0,level:1,gold:0,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],
-  ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',
+  ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
+  ownedCrowns:[],achievements:{},
+  bullseyeStreak:0,bullseyeBest:0,bullseyeTotal:0,tournamentWins:0,fishedStructures:[],
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
@@ -1898,6 +1923,60 @@ function curZone(){return ZONES[S.zone];}
 function curMethod(){return METHODS.find(m=>m.id===S.method);}
 function maxZone(){return curBoat().maxZone;}
 function levelNeed(){return XP_CURVE[Math.min(S.level,XP_CURVE.length-1)];}
+
+// ===================== ACHIEVEMENTS =====================
+const TIER_INFO={
+  impressive:{color:'#4a9fd4',label:'Impressive',gold:1000},
+  extraordinary:{color:'#a872d8',label:'Extraordinary',gold:2500},
+  goat:{color:'#e0a93c',label:'GOAT Status',gold:5000},
+};
+const CROWNS=[
+  {id:'crown_gold',name:'Golden Crown',band:'#e0a93c',gem:'#c93030',jewel:'#fff8b4'},
+  {id:'crown_emerald',name:'Emerald Crown',band:'#3a3530',gem:'#2aa890',jewel:'#a8e4c8'},
+  {id:'crown_ruby',name:'Ruby Crown',band:'#1c1a18',gem:'#c93030',jewel:'#ffb0a0'},
+];
+const ACHIEVEMENTS=[
+  {id:'silverking',tier:'impressive',name:'Silver King',desc:'Catch 50 tarpon.',check:()=>(S.caught.tarpon||0)>=50},
+  {id:'lockedin',tier:'impressive',name:'Locked In',desc:'Hit the bonus section 15 times in a row.',check:()=>(S.bullseyeBest||0)>=15},
+  {id:'materialistic',tier:'extraordinary',name:'Materialistic',desc:'Own every boat, rod, and reel.',check:()=>BOATS.every(b=>S.ownedBoats.includes(b.id))&&RODS.every(r=>S.ownedRods.includes(r.id))&&REELS.every(r=>S.ownedReels.includes(r.id))},
+  {id:'explorer',tier:'extraordinary',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k))},
+  {id:'bigwinner',tier:'extraordinary',name:'Big Winner',desc:'Win 1st in a daily tournament.',check:()=>(S.tournamentWins||0)>=1},
+  {id:'perfecttiming',tier:'extraordinary',name:'Perfect Timing',desc:'Hit the bonus section 500 times total.',check:()=>(S.bullseyeTotal||0)>=500},
+  {id:'legendaryangler',tier:'goat',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',crownId:'crown_gold',check:()=>FISH.filter(f=>f.rarity==='legendary').every(f=>(S.caught[f.id]||0)>0)},
+  {id:'truefisherman',tier:'goat',name:'True Fisherman',desc:'Catch 3,000 fish.',crownId:'crown_emerald',check:()=>(S.totalCatches||0)>=3000},
+  {id:'champion',tier:'goat',name:'Champion',desc:'Win 1st place in 10 tournaments.',crownId:'crown_ruby',check:()=>(S.tournamentWins||0)>=10},
+];
+function checkAchievements(){
+  if(!S.achievements)S.achievements={};
+  if(!S.ownedCrowns)S.ownedCrowns=[];
+  let any=false;
+  for(const a of ACHIEVEMENTS){
+    if(S.achievements[a.id])continue;
+    try{if(!a.check())continue;}catch(e){continue;}
+    S.achievements[a.id]=Date.now();
+    const tier=TIER_INFO[a.tier];
+    S.gold=(S.gold||0)+tier.gold;
+    S.goldEarned=(S.goldEarned||0)+tier.gold;
+    if(a.crownId&&!S.ownedCrowns.includes(a.crownId))S.ownedCrowns.push(a.crownId);
+    showAchievementCard(a,tier);
+    any=true;
+  }
+  if(any){queueSave();updateRigBar();}
+}
+function showAchievementCard(a,tier){
+  const card=document.getElementById('ach-card');
+  const inner=document.getElementById('ach-inner');
+  if(!card||!inner){toast(a.name+' unlocked! +'+tier.gold+'g',tier.color);return;}
+  const crown=a.crownId?CROWNS.find(c=>c.id===a.crownId):null;
+  inner.innerHTML='<div class="ach-tier" style="color:'+tier.color+';border-color:'+tier.color+'">'+tier.label+'</div>'
+    +'<div class="ach-title">'+a.name+'</div>'
+    +'<div class="ach-desc">'+a.desc+'</div>'
+    +'<div class="ach-reward">+'+tier.gold+' gold</div>'
+    +(crown?'<div class="ach-crown-note">Unlocked: '+crown.name+'</div>':'')
+    +'<button class="ach-ok" onclick="document.getElementById(\'ach-card\').classList.remove(\'show\');">Awesome</button>';
+  card.classList.add('show');
+}
+function achievementsEarnedCount(map){map=map||S.achievements||{};return Object.keys(map).filter(k=>map[k]).length;}
 function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by);}
 function fmtLb(w){return w>=10?Math.round(w):w.toFixed(1);}
 function castRange(){return curReel().range + curBoat().range;}
@@ -2770,7 +2849,13 @@ function cast(x,y){
   }
   bobber={x,y,active:true,struct:nearestStruct(x,y)};
   ripples.push({x,y,r:3,life:1},{x,y,r:8,life:.7});
-  phase='waiting';S.totalCasts++;queueSave();updateRigBar();
+  phase='waiting';S.totalCasts++;
+  // Track which structure kinds the player has fished for the Explorer achievement
+  if(bobber.struct){
+    if(!S.fishedStructures)S.fishedStructures=[];
+    if(!S.fishedStructures.includes(bobber.struct.kind))S.fishedStructures.push(bobber.struct.kind);
+  }
+  queueSave();updateRigBar();
   const st=bobber.struct;
   setStatus(st&&st.kind==='crab_trap'?'Checking the crab trap...':st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
   const {strength}=poolNow();
@@ -3037,6 +3122,14 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   endMiniGame();
   const center=snapZone.left+snapZone.width/2,dd=Math.abs(snapMarker-center);
   const inZone=snapMarker>=snapZone.left&&snapMarker<=snapZone.left+snapZone.width;
+  // Track bullseye streak / total even if the fish gets away later
+  if(inZone&&bullseye){
+    S.bullseyeTotal=(S.bullseyeTotal||0)+1;
+    S.bullseyeStreak=(S.bullseyeStreak||0)+1;
+    if(S.bullseyeStreak>(S.bullseyeBest||0))S.bullseyeBest=S.bullseyeStreak;
+  }else if(inZone){
+    S.bullseyeStreak=0;
+  }
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish,w=hookW,perfect=dd<snapZone.width*0.2;
   // drag ceiling: fish stronger than the reel's drag rating snaps automatically
@@ -3074,6 +3167,7 @@ function land(f,w,perfect,bullseye){
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
+  checkAchievements();
 }
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
 
@@ -3297,6 +3391,7 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     if(kind==='boat'&&S.zone>obj.maxZone){S.zone=obj.maxZone;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
   }
   updateRigBar();renderShop();queueSave();
+  checkAchievements();
 });
 
 function renderStats(){
@@ -3305,8 +3400,29 @@ function renderStats(){
   document.getElementById('m-xptext').textContent=S.xp+' / '+need+' XP';
   document.getElementById('m-gear').innerHTML=svgIcon(curBoat().icon,16)+' '+curRod().name.split(' ')[0]+' \u00b7 '+curBraid().line+'lb';
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
-  const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet']];
-  document.getElementById('stats-list').innerHTML=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
+  const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
+  let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
+  // Achievements section
+  html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{})+'</div>';
+  document.getElementById('stats-list').innerHTML=html;
+}
+function renderAchievementSections(map){
+  const tiers=['impressive','extraordinary','goat'];
+  return tiers.map(function(t){
+    const info=TIER_INFO[t];
+    const list=ACHIEVEMENTS.filter(a=>a.tier===t);
+    const earnedCount=list.filter(a=>map[a.id]).length;
+    let body='';
+    for(const a of list){
+      const earned=!!map[a.id];
+      const crown=a.crownId?CROWNS.find(c=>c.id===a.crownId):null;
+      body+='<div class="ach-row '+(earned?'earned':'locked')+'">'
+        +'<div class="ach-row-info"><div class="ach-row-name">'+a.name+(crown?' '+svgIcon('crown',12):'')+'</div><div class="ach-row-desc">'+a.desc+'</div></div>'
+        +(earned?'<span class="ach-row-status" style="background:'+info.color+';">Earned</span>':'<span class="ach-row-status locked">+'+info.gold+'g</span>')
+        +'</div>';
+    }
+    return '<div class="ach-section-head"><span style="color:'+info.color+';">'+info.label+'</span><span style="color:var(--text-soft);">'+earnedCount+' / '+list.length+'</span></div>'+body;
+  }).join('');
 }
 
 // fish detail modal
