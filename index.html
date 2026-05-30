@@ -807,7 +807,13 @@ function setLbTab(mode){
 }
 function pushLeaderboard(){
   if(!fbUser||!fbDb)return;
-  fbDb.collection("leaderboard").doc(fbUser.uid).set({username:fbUsername,totalCatches:S.totalCatches,biggestWeight:S.biggest||0,biggestName:S.biggestName||"",goldEarned:S.goldEarned||0,level:S.level,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});
+  fbDb.collection("leaderboard").doc(fbUser.uid).set({
+    username:fbUsername,totalCatches:S.totalCatches,biggestWeight:S.biggest||0,biggestName:S.biggestName||"",
+    goldEarned:S.goldEarned||0,level:S.level,
+    achievements:S.achievements||{},tournamentWins:S.tournamentWins||0,
+    species:Object.keys(S.caught||{}).length,
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).catch(function(){});
 }
 async function renderLeaderboard(){
   const el=document.getElementById("lb-list");
@@ -937,9 +943,39 @@ function renderFriendsPanel(){
   Promise.all(fbFriends.slice(0,10).map(function(uid){return fbDb.collection("users").doc(uid).get();})).then(function(snaps){
     el.innerHTML=snaps.map(function(s){
       const d=s.data()||{};
-      return "<div class=\"friend-card\"><div><div class=\"friend-name\">"+(d.username||"Angler")+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+"</div></div><button class=\"friend-rm\" onclick=\"removeFriend('"+s.id+"')\">Remove</button></div>";
+      const uname=(d.username||"Angler").replace(/'/g,"&#39;");
+      return "<div class=\"friend-card\" style=\"cursor:pointer;\" onclick=\"openFriendProfile('"+s.id+"','"+uname+"')\"><div><div class=\"friend-name\">"+(d.username||"Angler")+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+" · tap to view</div></div><button class=\"friend-rm\" onclick=\"event.stopPropagation();removeFriend('"+s.id+"')\">Remove</button></div>";
     }).join("");
   }).catch(function(){el.innerHTML="<div class=\"lb-empty\">Could not load friends.</div>";});
+}
+
+// Friend profile: show their stats and achievement badges pulled from the
+// leaderboard doc (which pushLeaderboard keeps up to date).
+async function openFriendProfile(uid,username){
+  const modal=document.getElementById('modal');
+  const bg=document.getElementById('modal-bg');
+  modal.innerHTML='<div class="mname" style="margin-bottom:6px;">'+username+'</div><div class="mrow"><span class="ml">Loading</span><span class="mv">...</span></div>';
+  bg.classList.add('show');
+  let lb={},user={};
+  try{const ds=await fbDb.collection('leaderboard').doc(uid).get();lb=ds.data()||{};}catch(e){}
+  try{const us=await fbDb.collection('users').doc(uid).get();user=us.data()||{};}catch(e){}
+  const ach=lb.achievements||{};
+  const earnedCount=Object.keys(ach).filter(k=>ach[k]).length;
+  const stats=[
+    ['Level',user.level||lb.level||1],
+    ['Fish landed',lb.totalCatches||0],
+    ['Biggest catch',lb.biggestWeight?lb.biggestWeight.toFixed(1)+' lb '+(lb.biggestName||''):'none yet'],
+    ['Species discovered',(lb.species||0)+' / '+FISH.length],
+    ['Gold earned',lb.goldEarned||0],
+    ['Tournament wins',lb.tournamentWins||0],
+    ['Achievements',earnedCount+' / '+ACHIEVEMENTS.length],
+  ];
+  let html='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:4px;">'+username+'</div>'
+    +'<div style="font-size:11px;color:var(--text-soft);margin-bottom:10px;">Angler profile</div>'
+    +stats.map(function(r){return '<div class="mrow"><span class="ml">'+r[0]+'</span><span class="mv">'+r[1]+'</span></div>';}).join('')
+    +'<div class="ach-section" style="margin-top:14px;">'+renderAchievementSections(ach)+'</div>';
+  modal.innerHTML=html;
 }
 
 // ─────────────────────────────────────────────────────────────
