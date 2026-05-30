@@ -1450,7 +1450,7 @@ const FISH=[
   // ---------- OFFSHORE ----------
   {id:'vermilion',name:'Vermilion Snapper',zone:2,rarity:'common',size:[0.5,2.5],line:40,methods:['bottom'],baits:['squid'],leader:'fluoro',structure:['wreck'],season:['all'],time:['day'],xp:30,gold:18,weight:50,fact:'Bright red \u201Cbeeliners\u201D swarm deep hard bottom; small hooks, fast steady bites.'},
   {id:'almaco',name:'Almaco Jack',zone:2,rarity:'common',size:[5,25],line:40,methods:['jig','bottom'],baits:['squid','pinfish'],leader:'any',structure:['wreck'],season:['all'],time:['day'],xp:46,gold:27,weight:44,fact:'An amberjack cousin that hammers vertical jigs near deep structure.'},
-  {id:'blackfin',name:'Blackfin Tuna',zone:2,rarity:'uncommon',size:[5,35],line:40,methods:['troll','jig','chunk'],baits:['ballyhoo','cutbait'],leader:'fluoro',structure:['open','rip'],season:['all'],time:['dawn','day','dusk'],xp:80,gold:50,weight:30,fact:'The smallest tuna, but warm-blooded and rocket-fast, a blast on light jigging tackle.'},
+  {id:'blackfin',name:'Blackfin Tuna',zone:2,rarity:'epic',size:[2,40],line:50,methods:['troll','chunk','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:140,gold:165,weight:4,fact:'Among the best fighters relative to size. Can be chummed with live pilchards. World record 45 lbs.'},
   {id:'redsnapper',name:'Red Snapper',zone:2,rarity:'uncommon',size:[5,25],line:40,methods:['bottom','livebait'],baits:['squid','pinfish','cutbait'],leader:'fluoro',structure:['wreck'],season:['summer'],time:['day'],xp:95,gold:62,weight:26,fact:'Famous short federal seasons; a descending device helps them survive release from depth.'},
   {id:'mahi',name:'Mahi-Mahi',zone:2,rarity:'rare',size:[5,40],line:40,methods:['troll','livebait'],baits:['ballyhoo','pilchard'],leader:'fluoro',structure:['weedline','rip'],season:['summer','spring'],time:['day'],xp:122,gold:82,weight:9,fact:'Among the fastest-growing fish; its neon color fades within minutes out of the water.'},
   {id:'amberjack',name:'Greater Amberjack',zone:2,rarity:'rare',size:[20,90],line:80,methods:['jig','livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['wreck'],season:['all'],time:['day'],xp:150,gold:100,weight:8,fact:'The \u201Creef donkey\u201D: pound for pound one of the most punishing fights in the ocean.'},
@@ -1461,7 +1461,6 @@ const FISH=[
   {id:'marlin',name:'Blue Marlin',zone:2,rarity:'legendary',size:[100,600],line:130,methods:['troll'],baits:['ballyhoo'],leader:'any',structure:['open','rip'],season:['summer'],time:['day'],xp:800,gold:600,weight:0.5,fact:'The ultimate trophy; females dwarf males and the biggest break 1,000 lb. Greyhounds, then released.'},
   // ── new fish ──────────────────────────────────────────────────
   {id:'bluefin',name:'Bluefin Tuna',zone:2,rarity:'legendary',size:[80,400],line:130,methods:['troll','chunk','deepdrop'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:280,gold:320,weight:0.8,fact:'World record 1,496 lbs. Rated the toughest of all fish to fight and land.'},
-  {id:'blackfin',name:'Blackfin Tuna',zone:2,rarity:'epic',size:[2,40],line:50,methods:['troll','chunk','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:140,gold:165,weight:4,fact:'Among the best fighters relative to size. Can be chummed with live pilchards. World record 45 lbs.'},
   {id:'pompano',name:'Florida Pompano',zone:0,rarity:'rare',size:[0.5,7],line:12,methods:['cork','jig','bottom'],baits:['shrimp','crab'],leader:'mono',structure:['sand','pass','grass','bridge'],season:['fall','winter','spring'],time:['day','dawn','dusk'],xp:85,gold:100,weight:14,fact:'Ranks among the best food fish. Patrols sandbars and grassflats in bays and channels. World record 8 lbs 1 oz.'},
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow-water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'mono',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
@@ -1518,6 +1517,13 @@ const FISH_ART={
   yellowfin:{shape:'torpedo',back:'#243f5a',body:'#4a6a88',belly:'#cdd6de',marks:['yellowfins'],mark:'#e0b020',finlets:true,longfin:true},
   swordfish:{shape:'billfish',back:'#4a3f5e',body:'#6c5b9e',belly:'#cdc8dc',marks:[],mark:'#2c2640',sword:true,bill:true,bigeye:true},
   marlin:{shape:'billfish',back:'#1f3f8a',body:'#2956c4',belly:'#cdd6ea',marks:['bars-cobalt'],mark:'#5a8ad8',bill:true,dorsal:true},
+  bluefin:{shape:'torpedo',back:'#1c3850',body:'#3a5a78',belly:'#c8d2dc',marks:['finlets-dk'],mark:'#e0c040',finlets:true},
+  pompano:{shape:'panfish',back:'#9aa0a0',body:'#cdd2cc',belly:'#f2e8c0',marks:[],mark:'#c0a850'},
+  permit:{shape:'panfish',back:'#7a8088',body:'#c4cad0',belly:'#eef2f4',marks:['shoulderspot'],mark:'#2a2a2a'},
+  jack:{shape:'panfish',back:'#7a7a4a',body:'#c4c06a',belly:'#eee8c0',marks:['sidespot'],mark:'#2a2a2a'},
+  bluefish:{shape:'torpedo',back:'#3a6a7a',body:'#7aa0aa',belly:'#dde8ea',marks:[],mark:'#2a4a54',beak:true},
+  barracuda:{shape:'torpedo',back:'#5a6068',body:'#9aa0a8',belly:'#e0e4e8',marks:['bars-faint'],mark:'#2a2e34',beak:true},
+  tripletail:{shape:'panfish',back:'#3a3228',body:'#6a5e48',belly:'#a89878',marks:['mottle'],mark:'#2a2218'},
 };
 
 function _hx(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
