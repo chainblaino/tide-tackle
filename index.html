@@ -102,6 +102,7 @@
   .menu-tabs{display:flex;border-bottom:3px solid var(--wood);}
   .menu-tab{flex:1;padding:11px 4px;font-family:'Fredoka';font-size:14px;font-weight:500;color:var(--text-soft);background:var(--parchment);border:none;cursor:pointer;}
   .menu-tab.active{background:var(--cream);color:var(--wood-dark);}
+  body.tourn-active [data-mtab="shop"]{display:none;}
   .menu-body{flex:1;overflow-y:auto;padding:14px 16px;}
   .mpanel{display:none;}
   .mpanel.active{display:block;}
@@ -384,7 +385,7 @@
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
-      <div class="pill click" id="cosmetic-pill" onclick="openMenu('shop');setTimeout(()=>{shopTab='cosmetics';renderShop();},80);" title="Cosmetics">👤</div>
+      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics">👤</div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -537,6 +538,7 @@
     <div class="lobby-sub" id="lobby-sub"></div>
     <div class="lobby-timer" id="lobby-timer">2:00</div>
     <ul class="lobby-players" id="lobby-players"></ul>
+    <button class="lobby-shop-btn" onclick="inviteFriendsToLobby()">Invite Friends</button>
     <button class="lobby-shop-btn" onclick="openShopFromLobby()">Open Shop</button>
     <button class="lobby-cancel-btn" onclick="cancelLobby()">Cancel and Refund</button>
   </div>
@@ -765,6 +767,8 @@ function loadFriends(){
   }).catch(function(){});
   // Load incoming friend requests
   loadFriendRequests();
+  // Surface any tournament invites
+  loadTournamentInvites();
 }
 
 function loadFriendRequests(){
@@ -1048,11 +1052,46 @@ function openShopFromLobby(){
   document.getElementById("menu-bg").classList.add("show");
   renderShop();
 }
+async function inviteFriendsToLobby(){
+  if(!activeLobby){return;}
+  if(!fbUser||!fbDb){toast("Sign in to invite friends.","#b58b53");return;}
+  if(!fbFriends.length){toast("Add friends first in the Friends tab.","#b58b53");return;}
+  const def=activeLobby.def;
+  try{
+    await Promise.all(fbFriends.slice(0,20).map(function(uid){
+      return fbDb.collection("tournamentInvites").doc(uid).set({
+        pending:firebase.firestore.FieldValue.arrayUnion({from:fbUsername,defId:def.id,name:def.name,zone:def.zone,sentAt:Date.now()})
+      },{merge:true});
+    }));
+    toast("Invited "+fbFriends.length+" friend"+(fbFriends.length>1?"s":"")+"!","#2aa890");
+  }catch(e){toast("Could not send invites.","#b3402a");}
+}
+function loadTournamentInvites(){
+  if(!fbUser||!fbDb)return;
+  fbDb.collection("tournamentInvites").doc(fbUser.uid).get().then(function(d){
+    const list=((d.data()||{}).pending)||[];
+    if(list.length){
+      const last=list[list.length-1];
+      toast("🎣 "+last.from+" invited you to "+(last.name||"a tournament")+"! Check the Tourn. tab.","#1c6a9e");
+      fbDb.collection("tournamentInvites").doc(fbUser.uid).set({pending:[]},{merge:true}).catch(function(){});
+    }
+  }).catch(function(){});
+}
 function startTournamentMode(def){
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[]};
-  S.zone=def.zone;updateZonePill();
+  S.zone=def.zone;ensureRig();initStructures();initSwimmers();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
+  // Shop is locked during the tournament — close menu & hide the Shop tab
+  document.body.classList.add('tourn-active');
+  closeMenu();
+  const shopTabBtn=document.querySelector("[data-mtab='shop']");
+  if(shopTabBtn&&shopTabBtn.classList.contains('active')){
+    document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
+    document.querySelector("[data-mtab='logbook']").classList.add('active');
+    document.getElementById('mp-logbook').classList.add('active');
+  }
   document.getElementById("tourn-banner").style.display="block";
-  toast("Tournament started! 5 minutes to fish!","#e0a93c");
+  toast("Tournament started! 5 minutes to fish! Shop is locked.","#e0a93c");
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
@@ -1075,6 +1114,7 @@ function recordTournamentCatch(fishName,weight){
 }
 function endTournament(){
   if(!activeTournament)return;
+  document.body.classList.remove('tourn-active'); // shop unlocked again
   document.getElementById("tourn-banner").style.display="none";
   const def=activeTournament.def;
   const entries=[{username:fbUsername,weight:activeTournament.biggestWeight,name:activeTournament.biggestName,isPlayer:true}];
@@ -2927,6 +2967,7 @@ document.getElementById('menu-open').addEventListener('click',openMenu);
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
+    if(t.dataset.mtab==='shop'&&activeTournament){toast('Shop is locked during the tournament.','#b58b53');return;}
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
     if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
     if(t.dataset.mtab==='friends'){loadFriendRequests();}
