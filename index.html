@@ -3352,14 +3352,28 @@ function renderLogbook(){
   document.getElementById('species-total').textContent=FISH.length;
 }
 
+// Boats, rods and reels must be purchased in order. Returns the name of the
+// previous required tier if the current one is gated by progression, else null.
+function prereqLocked(kind,item){
+  const map={boat:[BOATS,S.ownedBoats],rod:[RODS,S.ownedRods],reel:[REELS,S.ownedReels]};
+  const entry=map[kind];if(!entry)return null;
+  const arr=entry[0],owned=entry[1];
+  const idx=arr.indexOf(item);
+  if(idx<=0)return null;
+  const prev=arr[idx-1];
+  if(owned.includes(prev.id))return null;
+  return prev.name;
+}
 function shopRow(item,kind,owned,equipped,extra,swatch){
   const canAfford=S.gold>=item.cost,meetsLvl=S.level>=item.lvl;
+  const needPrev=!owned?prereqLocked(kind,item):null;
   let action;
   if(equipped)action='<span class="shop-action equipped-tag">Equipped</span>';
   else if(owned&&kind!=='tackle'&&kind!=='bait')action='<span class="shop-action equip">Equip</span>';
+  else if(needPrev)action='<span class="shop-action lvl">Need '+needPrev+'</span>';
   else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
   else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\uD83E\uDE99 '+item.cost+'</span>';
-  const locked=!owned&&(!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
+  const locked=!owned&&(!!needPrev||!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
   const icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
   return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+(item.desc||'')+(extra||'')+'</div></div>'+action+'</div>';
 }
@@ -3451,7 +3465,13 @@ document.getElementById('shop-list').addEventListener('click',e=>{
   else{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
     const[list,owned,key]=map[kind];const obj=list.find(x=>x.id===id);
-    if(!owned.includes(id)){if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=obj.cost;owned.push(id);toast('Bought '+obj.name+'!','#2aa890');}
+    if(!owned.includes(id)){
+      const need=prereqLocked(kind,obj);
+      if(need){toast('Buy the '+need+' first.','#b58b53');return;}
+      if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}
+      if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}
+      S.gold-=obj.cost;owned.push(id);toast('Bought '+obj.name+'!','#2aa890');
+    }
     S[key]=id;
     if(kind==='boat'&&S.zone>obj.maxZone){S.zone=obj.maxZone;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
   }
