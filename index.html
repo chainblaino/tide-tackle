@@ -460,10 +460,18 @@
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
     </div>
     <div id="auth-login">
-      <input class="auth-field" id="li-email" type="email" placeholder="Email">
-      <input class="auth-field" id="li-pass" type="password" placeholder="Password">
+      <input class="auth-field" id="li-id" type="text" placeholder="Username or Email" autocomplete="username">
+      <input class="auth-field" id="li-pass" type="password" placeholder="Password" autocomplete="current-password">
       <button class="auth-btn" onclick="doLogin()">Log In</button>
       <div class="auth-err" id="li-err"></div>
+      <a class="auth-guest" id="forgot-link" onclick="showForgotPassword()">Forgot password?</a>
+    </div>
+    <div id="auth-forgot" style="display:none">
+      <div class="auth-sub" style="margin-bottom:14px;color:var(--text-soft);font-size:12.5px;">Enter your account email and we will send you a reset link.</div>
+      <input class="auth-field" id="fp-email" type="email" placeholder="Email" autocomplete="email">
+      <button class="auth-btn" onclick="doForgotPassword()">Send Reset Email</button>
+      <div class="auth-err" id="fp-err"></div>
+      <a class="auth-guest" onclick="showAuthTab('login')">Back to log in</a>
     </div>
     <div id="auth-signup" style="display:none">
       <input class="auth-field" id="su-user" type="text" placeholder="Username (3-16 chars)" maxlength="16">
@@ -559,21 +567,59 @@ try{fbApp=firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.fi
 function showAuthTab(tab){
   document.getElementById("auth-login").style.display=tab==="login"?"":"none";
   document.getElementById("auth-signup").style.display=tab==="signup"?"":"none";
-  document.getElementById("tab-login").classList.toggle("active",tab==="login");
+  document.getElementById("auth-forgot").style.display=tab==="forgot"?"":"none";
+  document.getElementById("tab-login").classList.toggle("active",tab==="login"||tab==="forgot");
   document.getElementById("tab-signup").classList.toggle("active",tab==="signup");
 }
+function showForgotPassword(){
+  const id=document.getElementById("li-id").value.trim();
+  // Prefill if it looks like an email
+  if(id&&id.indexOf("@")>=0){document.getElementById("fp-email").value=id;}
+  document.getElementById("fp-err").textContent="";
+  showAuthTab("forgot");
+}
 function fbErr(code){
-  const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account with that email.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect email or password."};
+  const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account found.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect login or password."};
   return map[code]||"Something went wrong. Try again.";
 }
+// Resolve a username (or pass through an email) to the account email
+async function resolveLoginEmail(id){
+  if(id.indexOf("@")>=0)return id;
+  const uname=id.toLowerCase().replace(/[^a-zA-Z0-9_]/g,"");
+  if(!uname)return null;
+  try{
+    const snap=await fbDb.collection("usernames").doc(uname).get();
+    if(!snap.exists)return null;
+    return (snap.data()||{}).email||null;
+  }catch(e){return null;}
+}
 async function doLogin(){
-  const email=document.getElementById("li-email").value.trim();
+  const id=document.getElementById("li-id").value.trim();
   const pass=document.getElementById("li-pass").value;
   const err=document.getElementById("li-err");
   err.textContent="";
-  if(!email||!pass){err.textContent="Please fill in all fields.";return;}
+  if(!id||!pass){err.textContent="Please fill in all fields.";return;}
+  let email=id;
+  if(id.indexOf("@")<0){
+    const resolved=await resolveLoginEmail(id);
+    if(!resolved){err.textContent="No account with that username.";return;}
+    email=resolved;
+  }
   try{const c=await fbAuth.signInWithEmailAndPassword(email,pass);await afterAuth(c.user,false);}
   catch(e){err.textContent=fbErr(e.code);}
+}
+async function doForgotPassword(){
+  const email=document.getElementById("fp-email").value.trim();
+  const err=document.getElementById("fp-err");
+  err.textContent="";
+  if(!email){err.textContent="Enter the email on your account.";return;}
+  if(!fbAuth){err.textContent="Auth unavailable.";return;}
+  try{
+    await fbAuth.sendPasswordResetEmail(email);
+    err.style.color="var(--grass)";
+    err.textContent="Reset email sent. Check your inbox.";
+    setTimeout(function(){err.style.color="";},6000);
+  }catch(e){err.style.color="";err.textContent=fbErr(e.code);}
 }
 async function doSignup(){
   const uname=document.getElementById("su-user").value.trim().replace(/[^a-zA-Z0-9_]/g,"");
@@ -588,7 +634,7 @@ async function doSignup(){
     const taken=await fbDb.collection("usernames").doc(uname.toLowerCase()).get();
     if(taken.exists){err.textContent="That username is taken. Try another.";return;}
     const c=await fbAuth.createUserWithEmailAndPassword(email,pass);
-    await fbDb.collection("usernames").doc(uname.toLowerCase()).set({uid:c.user.uid});
+    await fbDb.collection("usernames").doc(uname.toLowerCase()).set({uid:c.user.uid,email:email});
     await fbDb.collection("users").doc(c.user.uid).set({username:uname,email:email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false,totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
     await afterAuth(c.user,true);
   }catch(e){err.textContent=fbErr(e.code);}
@@ -601,6 +647,10 @@ async function afterAuth(user,isNew){
     document.getElementById("auth-overlay").style.display="none";
     const pillBtn=document.getElementById("user-pill-btn");if(pillBtn)pillBtn.style.display="flex";
     const avatar=document.getElementById("user-avatar");if(avatar)avatar.textContent=fbUsername[0].toUpperCase();
+    // Backfill email on the usernames doc so username login works for older accounts
+    if(user.email&&fbUsername&&fbUsername!=="Angler"){
+      fbDb.collection("usernames").doc(fbUsername.toLowerCase()).set({uid:user.uid,email:user.email},{merge:true}).catch(function(){});
+    }
     loadFriends();
     if(isNew){showGenderSelect();}
     else if(tutDone===false){showTutorial();}
@@ -686,11 +736,11 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // ─────────────────────────────────────────────────────────────
 const TUT=[
   {icon:"fishing",title:"Welcome to Tide & Tackle!",desc:"You're fishing the Gulf Coast. Drive your boat, find a hotspot, cast, and become the top angler on the leaderboard."},
-  {icon:"joystick",title:"Drive Your Boat",desc:"Use the joystick (bottom-left) to drive around the open water. Cruise up to docks, grass flats, reefs and wrecks — different structures hold different fish."},
+  {icon:"joystick",title:"Drive Your Boat",desc:"Use the joystick (bottom-left) to drive around the open water. Cruise up to docks, grass flats, reefs and wrecks. Different structures hold different fish."},
   {icon:"anchor",title:"Drop Anchor to Fish",desc:"Tap Drop Anchor when you reach a good spot. Then tap the water to cast within your range ring. Pull Anchor to move on."},
   {icon:"bolt",title:"Set the Hook!",desc:"When a fish bites, a mini-game appears. Keep the marker in the green zone by pressing REEL. Hit the yellow center for bonus coins."},
-  {icon:"toolbox",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups — match your rig to the target."},
-  {icon:"reel",title:"Reels: Range & Drag",desc:"Better reels cast farther AND have a higher drag rating. If a fish is stronger than your reel's drag, the line snaps — bring the right reel for big fish."},
+  {icon:"toolbox",title:"Your Rig Matters",desc:"The bottom bar controls Method, Tackle, Bait, and Leader. Different fish prefer different setups, so match your rig to the target."},
+  {icon:"reel",title:"Reels: Range & Drag",desc:"Better reels cast farther AND have a higher drag rating. If a fish is stronger than your reel's drag, the line snaps. Bring the right reel for big fish."},
   {icon:"wave",title:"Travel Deeper",desc:"Drive to the glowing gate at a map's edge to travel between Inshore, Nearshore and Offshore. Bigger boats unlock the deeper, richer waters."},
   {icon:"trophy",title:"Compete and Connect",desc:"Daily Tournaments let you compete for prize gold. Add friends to compare catches on the Leaderboard. Good luck out there!"},
 ];
@@ -954,7 +1004,7 @@ function renderTournCard(def){
       +"<div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"always-live\">LIVE 24/7</span></div>"
       +"<div class=\"tourn-row\"><span>"+ZONE_LBL[def.zone]+" &middot; Target: "+fishLabel+"</span></div>"
       +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; Resets daily</span></div>"
-      +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up — "+def.fee+"g entry</button>"
+      +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up:"+def.fee+"g entry</button>"
       +"</div>";
   }
   const st=tStatus(def);
@@ -964,7 +1014,7 @@ function renderTournCard(def){
       ?"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>"
       :"<span class=\"tourn-status closed\">Closed</span>";
   const btn=st==="open"
-    ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up — "+def.fee+"g entry</button>"
+    ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up:"+def.fee+"g entry</button>"
     :"";
   return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
     +"<div class=\"tourn-row\"><span>Target: "+fishLabel+"</span>"+statusHtml+"</div>"
@@ -1082,7 +1132,7 @@ function loadTournamentInvites(){
 function startTournamentMode(def){
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[]};
   S.zone=def.zone;ensureRig();initStructures();initSwimmers();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
-  // Shop is locked during the tournament — close menu & hide the Shop tab
+  // Shop is locked during the tournament: close menu and hide the Shop tab
   document.body.classList.add('tourn-active');
   closeMenu();
   const shopTabBtn=document.querySelector("[data-mtab='shop']");
@@ -1097,7 +1147,7 @@ function startTournamentMode(def){
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
-      const delay=5000+Math.random()*220000; // 5s–3m40s so most bots catch within 5min
+      const delay=5000+Math.random()*220000; // 5s to 3m40s so most bots catch within 5min
       setTimeout(function(){
         if(!activeTournament)return;
         const pool=def.targetFish?[def.targetFish]:FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
@@ -1391,7 +1441,7 @@ const COSMETICS={
     {id:'beanie',    slot:'hat', name:'Beanie',            icon:'hat-beanie',  cost:160, lvl:1, desc:'For those cold January flounder trips.'},
     {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'hat-captain', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
     {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'hat-straw',   cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
-    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:35000, lvl:8, desc:'All-black hood. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:35000, lvl:8, desc:'All-black hood. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
   shirts:[
     {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
@@ -1402,7 +1452,7 @@ const COSMETICS={
     {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'shirt-hoodie',     cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
     {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'shirt-jersey',    cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
     {id:'overalls',  slot:'shirt', name:'Waders',          icon:'shirt-waders',     cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
-    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:30000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:30000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
   shades:[
     {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
@@ -1411,7 +1461,7 @@ const COSMETICS={
     {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'shades-clip',      cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
     {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'shades-mirror',    cost:350,  lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
     {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'shades-sport',     cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
-    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:10000, lvl:8, desc:'All-black face mask. Part of the Assassin Set — wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:10000, lvl:8, desc:'All-black face mask. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
   ],
 };
 
@@ -1423,7 +1473,7 @@ const SKIN_TONES=[
   {id:'dark',    color:'#4A2912', label:'Dark'},
 ];
 function skinColorOf(id){const t=SKIN_TONES.find(t=>t.id===id);return t?t.color:'#E8B88A';}
-// SVG angler portrait — head/shoulders with skin color + gendered hair (replaces emoji)
+// SVG angler portrait: head and shoulders with skin color and gendered hair (replaces emoji)
 function anglerIconSVG(gender,skinColor,size){
   size=size||32;
   const hair='#3a2614',shirt='#2f6e83';
@@ -1559,7 +1609,7 @@ const FISH=[
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow-water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'mono',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
   {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball','channel'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
-  {id:'barracuda',name:'Great Barracuda',zone:1,rarity:'epic',size:[5,60],line:40,methods:['troll','jig','livebait'],baits:['pilchard','cutbait'],leader:'wire',structure:['reef','wreck','open','ledge'],season:['all'],time:['day','dawn','dusk'],xp:130,gold:150,weight:4,fact:'Ranks among the most spectacular fighters. Wire leader essential — razor-sharp teeth.'},
+  {id:'barracuda',name:'Great Barracuda',zone:1,rarity:'epic',size:[5,60],line:40,methods:['troll','jig','livebait'],baits:['pilchard','cutbait'],leader:'wire',structure:['reef','wreck','open','ledge'],season:['all'],time:['day','dawn','dusk'],xp:130,gold:150,weight:4,fact:'Ranks among the most spectacular fighters. Wire leader essential. Razor sharp teeth.'},
   {id:'tripletail',name:'Tripletail',zone:1,rarity:'epic',size:[2,25],line:30,methods:['cork','livebait','jig'],baits:['shrimp','pilchard'],leader:'mono',structure:['channel','open','weedline','baitball'],season:['spring','summer','fall'],time:['day','dawn'],xp:130,gold:145,weight:5,fact:'Drifts with currents and hides near floating debris and channel markers, resembling a floating leaf.'},
 ];
 
@@ -2098,12 +2148,12 @@ function drawAnglerHatAndExtras(cx,cy,r){
   if(hat&&hat!=='none'){
     ctx.save();
     if(hat==='assassin_hood'){
-      // Red scarf — sits at the base of the hood at neck level
+      // Red scarf sits at the base of the hood at neck level
       ctx.fillStyle='#b81818';
       ctx.beginPath();ctx.ellipse(cx,cy+r*0.88,r*1.06,r*0.28,0,0,6.28);ctx.fill();
       ctx.fillStyle='#d42020';
       ctx.beginPath();ctx.ellipse(cx-r*0.22,cy+r*0.83,r*0.32,r*0.11,-0.2,0,6.28);ctx.fill();
-      // Hood — snug outline that ends right at the scarf, not below
+      // Hood: snug outline that ends right at the scarf, not below
       ctx.fillStyle='#0f0f0f';
       ctx.beginPath();ctx.ellipse(cx,cy,r*1.06,r*0.88,0,0,6.28);ctx.fill();
     } else {
@@ -2140,7 +2190,7 @@ function drawAnglerHatAndExtras(cx,cy,r){
   if(sh&&sh!=='none'){
     ctx.save();
     if(sh==='assassin_mask'){
-      // White mask — covers the entire face
+      // White mask covers the entire face
       ctx.fillStyle='#f0f0f0';
       ctx.beginPath();ctx.arc(cx,cy,r*0.98,0,6.28);ctx.fill();
       // Subtle contour shading
@@ -2456,7 +2506,7 @@ function render(ts){
     drawGate(gx,gy,gt,t);
   }
 
-  // range ring — only while anchored & fishing
+  // range ring shown only while anchored and fishing
   if(boat.anchored){
     const rng=castRange();ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=1.5;ctx.setLineDash([6,7]);ctx.beginPath();ctx.arc(ORIGIN.x,ORIGIN.y,rng,0,6.28);ctx.stroke();ctx.setLineDash([]);
   }
@@ -2533,7 +2583,7 @@ function ensureRig(){
   if(!S.baitInv[S.baitSel]||S.baitInv[S.baitSel]<=0){const b=Object.keys(S.baitInv).find(k=>S.baitInv[k]>0);S.baitSel=b||S.baitSel;}
 }
 
-// Hard-to-find structures need a tighter anchor radius — you must be right on top of them
+// Hard to find structures need a tighter anchor radius, you must be right on top of them
 const FIND_RADIUS={power_plant:36,wreck:40};
 function nearestStruct(x,y){let best=null,bd=1e9;for(const s of curZone().structures){const d=dist(x,y,s.x-camera.x,s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
 
@@ -2581,7 +2631,7 @@ document.getElementById('anchor-btn').addEventListener('click',()=>{
   if(boat.anchored){
     if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
     boat.anchored=false;phase='idle';bobber.active=false;
-    setStatus('Anchor up — drive to a new spot with the joystick.');
+    setStatus('Anchor up. Drive to a new spot with the joystick.');
   }else{
     boat.anchored=true;joy.dx=0;joy.dy=0;boat.vx=0;boat.vy=0;clampCamera();
     const near=nearestStruct(ORIGIN.x,ORIGIN.y);
@@ -2620,7 +2670,7 @@ function poolNow(){
     if(f.zone!==S.zone)continue;
     if(!f.methods.includes(m.id))continue;
     let w=f.weight;
-    // rarity spawn penalty — epic and legendary are genuinely rare
+    // rarity spawn penalty so epic and legendary are genuinely rare
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
     // season
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
@@ -2716,7 +2766,7 @@ function setupMiniGame(){
   marker.dir=Math.random()<0.5?1:-1;
   marker.speed=zoneSel.speed*0.3;
   updateMiniGameDOM();
-  document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green — yellow = double!';
+  document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
 }
 function updateMiniGameDOM(){
@@ -2827,10 +2877,10 @@ function endSdewGame(success){
   document.getElementById('rig-bar').style.pointerEvents='';
   if(!success){fail('The legendary fish got away! So close...');return;}
   const f=hookedFish,w=hookW;
-  // drag ceiling — even a perfect fight loses if the reel is underpowered
+  // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f,w)>curReel().drag){snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
-  if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line — it broke you off!');return;}}
+  if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off!');return;}}
   land(f,w,true,false);
 }
 
@@ -2856,7 +2906,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   const inZone=snapMarker>=snapZone.left&&snapMarker<=snapZone.left+snapZone.width;
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish,w=hookW,perfect=dd<snapZone.width*0.2;
-  // drag ceiling — fish stronger than the reel's drag rating snaps automatically
+  // drag ceiling: fish stronger than the reel's drag rating snaps automatically
   if(fightStrength(f,w)>curReel().drag){return snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<0.72){return snap(f,w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
