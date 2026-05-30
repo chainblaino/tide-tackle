@@ -724,7 +724,7 @@ async function renderLeaderboard(){
       snap=await fbDb.collection("leaderboard").orderBy("biggestWeight","desc").limit(20).get();
     }
     if(snap.empty){el.innerHTML="<div class=\"lb-empty\">No entries yet. Be the first!</div>";return;}
-    const medals=["🥇","🥈","🥉"];
+    const medals=["1st","2nd","3rd"];
     el.innerHTML=snap.docs.map(function(doc,i){
       const d=doc.data();
       const me=fbUser&&doc.id===fbUser.uid;
@@ -863,6 +863,12 @@ const ALWAYS_TOURN_NAMES=["Open Gulf Challenge","Gulf Coast Showdown","All-Water
 const ZONE_LBL=["Inshore","Nearshore","Offshore"];
 const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary"};
 let activeLobby=null,lobbyInt=null,activeTournament=null;
+// Aliases used throughout tournament code
+function updatePills(){updateRigBar();}
+function updateZonePill(){
+  document.getElementById('zone-name').textContent=curZone().name;
+  const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
+}
 
 function getAlwaysTournament(){
   const seed=parseInt(etDateSeed());
@@ -1032,7 +1038,7 @@ function startTournamentMode(def){
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
-      const delay=20000+Math.random()*250000;
+      const delay=5000+Math.random()*220000; // 5s–3m40s so most bots catch within 5min
       setTimeout(function(){
         if(!activeTournament)return;
         const pool=def.targetFish?[def.targetFish]:FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
@@ -1066,7 +1072,7 @@ function endTournament(){
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   let winnings=rank>=0&&rank<3?prizes[rank]:0;
   if(winnings>0){S.gold+=winnings;updatePills();queueSave();}
-  const medals=["🥇","🥈","🥉"];
+  const medals=["1st","2nd","3rd"];
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
