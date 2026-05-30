@@ -1486,7 +1486,7 @@ const FISH=[
   {id:'marlin',name:'Blue Marlin',zone:2,rarity:'legendary',size:[100,600],line:130,methods:['troll'],baits:['ballyhoo'],leader:'any',structure:['open','rip'],season:['summer'],time:['day'],xp:800,gold:600,weight:0.5,fact:'The ultimate trophy; females dwarf males and the biggest break 1,000 lb. Greyhounds, then released.'},
   // ── new fish ──────────────────────────────────────────────────
   {id:'bluefin',name:'Bluefin Tuna',zone:2,rarity:'legendary',size:[80,400],line:130,methods:['troll','chunk','deepdrop'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:280,gold:320,weight:0.8,fact:'World record 1,496 lbs. Rated the toughest of all fish to fight and land.'},
-  {id:'pompano',name:'Florida Pompano',zone:0,rarity:'rare',size:[0.5,7],line:12,methods:['cork','jig','bottom'],baits:['shrimp','crab'],leader:'mono',structure:['sand','pass','grass','bridge'],season:['fall','winter','spring'],time:['day','dawn','dusk'],xp:85,gold:100,weight:14,fact:'Ranks among the best food fish. Patrols sandbars and grassflats in bays and channels. World record 8 lbs 1 oz.'},
+  {id:'pompano',name:'Florida Pompano',zone:0,rarity:'rare',size:[0.5,7],line:12,methods:['cork','jig','bottom'],baits:['shrimp','crab'],leader:'mono',structure:['sand','pass','grass','bridge'],season:['fall','winter','spring'],time:['day','dawn','dusk'],xp:85,gold:50,weight:14,fact:'Ranks among the best food fish. Patrols sandbars and grassflats in bays and channels. World record 8 lbs 1 oz.'},
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow-water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'mono',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
   {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball','channel'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
@@ -2802,7 +2802,7 @@ function land(f,w,perfect,bullseye){
   if(w>S.biggest){S.biggest=w;S.biggestName=f.name;}
   const[a,b]=f.size;const sizeFrac=(w-a)/Math.max(0.01,(b-a));
   let xp=Math.round(f.xp*(0.8+sizeFrac*0.5));
-  let gold=Math.round(f.gold*(0.8+sizeFrac*0.6));
+  let gold=Math.round(f.gold*(0.8+sizeFrac*0.6)*0.85); // global 15% coin reduction
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
