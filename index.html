@@ -2403,6 +2403,46 @@ function drawAnglerHatAndExtras(cx,cy,r){
     }
     ctx.restore();
   }
+  // Crown floats above the head if one is equipped
+  drawAnglerCrown(cx,cy,r);
+}
+function drawAnglerCrown(cx,cy,r){
+  const cid=S.cosmetic&&S.cosmetic.crown;
+  if(!cid||cid==='none')return;
+  const crown=CROWNS.find(function(c){return c.id===cid;});
+  if(!crown)return;
+  const hat=S.cosmetic?S.cosmetic.hat:'none';
+  // Sit a bit above the head, higher if a hat is equipped
+  const lift=(hat&&hat!=='none')?r*2.0:r*1.55;
+  const W=r*1.95,H=r*0.95;
+  const x=cx-W/2,y=cy-lift;
+  ctx.save();
+  // Soft golden glow
+  const g=ctx.createRadialGradient(cx,y+H*0.4,1,cx,y+H*0.4,W*0.9);
+  g.addColorStop(0,'rgba(255,225,140,0.5)');
+  g.addColorStop(1,'rgba(255,225,140,0)');
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,y+H*0.4,W*0.9,0,6.28);ctx.fill();
+  // Band
+  ctx.fillStyle=crown.band;
+  ctx.beginPath();
+  ctx.moveTo(x,y+H);ctx.lineTo(x+W,y+H);ctx.lineTo(x+W,y+H*0.55);
+  ctx.lineTo(x+W*0.82,y);
+  ctx.lineTo(x+W*0.5,y+H*0.4);
+  ctx.lineTo(x+W*0.18,y);
+  ctx.lineTo(x,y+H*0.55);
+  ctx.closePath();ctx.fill();
+  // Outline
+  ctx.strokeStyle='rgba(0,0,0,0.45)';ctx.lineWidth=Math.max(0.6,r*0.05);ctx.stroke();
+  // Three jewels at the spike tips
+  const jr=r*0.18;
+  ctx.fillStyle=crown.gem;
+  ctx.beginPath();ctx.arc(x+W*0.5,y+H*0.4-jr*0.2,jr,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.arc(x+W*0.18,y+jr*0.4,jr*0.78,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.arc(x+W*0.82,y+jr*0.4,jr*0.78,0,6.28);ctx.fill();
+  // jewel highlights
+  ctx.fillStyle=crown.jewel;
+  ctx.beginPath();ctx.arc(x+W*0.5-jr*0.3,y+H*0.4-jr*0.45,jr*0.36,0,6.28);ctx.fill();
+  ctx.restore();
 }
 // ── end angler helpers ──────────────────────────────────────────
 
@@ -3338,24 +3378,44 @@ function renderShop(){
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:t.cat)+' \u00b7 durability '+t.dur+(own?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(shopTab==='cosmetics'){
-    const subLabels=[['hats',svgIcon('hat-bucket',14)+' Hats'],['shirts',svgIcon('shirt-tee',14)+' Shirts'],['shades',svgIcon('shades-polarized',14)+' Shades']];
-    html='<div style="display:flex;gap:6px;margin-bottom:11px;">'+subLabels.map(([k,l])=>'<div class="shop-tab '+(cosmeticSubTab===k?'active':'')+'" style="font-size:12px;" data-csub="'+k+'">'+l+'</div>').join('')+'</div>';
-    const slot={hats:'hat',shirts:'shirt',shades:'shades'}[cosmeticSubTab];
-    html+=COSMETICS[cosmeticSubTab].map(item=>{
-      const owned=item.cost===0||S.ownedCosmetics.includes(item.id);
-      const equipped=S.cosmetic[slot]===item.id;
-      const canAfford=S.gold>=item.cost;
-      const meetsLvl=S.level>=item.lvl;
-      let action;
-      if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
-      else if(owned) action='<span class="shop-action equip">Equip</span>';
-      else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
-      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+item.cost+'</span>';
-      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
-        +'<div class="shop-icon">'+svgIcon(item.icon)+'</div>'
-        +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
-        +action+'</div>';
-    }).join('');
+    const subLabels=[['hats',svgIcon('hat-bucket',14)+' Hats'],['shirts',svgIcon('shirt-tee',14)+' Shirts'],['shades',svgIcon('shades-polarized',14)+' Shades'],['crowns',svgIcon('crown',14)+' Crowns']];
+    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+subLabels.map(([k,l])=>'<div class="shop-tab '+(cosmeticSubTab===k?'active':'')+'" style="font-size:12px;" data-csub="'+k+'">'+l+'</div>').join('')+'</div>';
+    if(cosmeticSubTab==='crowns'){
+      // Crowns unlock by earning GOAT achievements; cannot be bought.
+      if(!S.ownedCrowns)S.ownedCrowns=[];
+      const items=[{id:'none',name:'No Crown',desc:'Bare head.'}].concat(CROWNS.map(function(c){
+        const ach=ACHIEVEMENTS.find(function(a){return a.crownId===c.id;});
+        return {id:c.id,name:c.name,desc:ach?'Unlocked by: '+ach.name:'GOAT crown',band:c.band,gem:c.gem};
+      }));
+      html+=items.map(function(item){
+        const equipped=(S.cosmetic.crown||'none')===item.id;
+        const owned=item.id==='none'||S.ownedCrowns.includes(item.id);
+        let action;
+        if(equipped)action='<span class="shop-action equipped-tag">Wearing</span>';
+        else if(owned)action='<span class="shop-action equip">Equip</span>';
+        else action='<span class="shop-action lvl">Locked</span>';
+        const swatch=item.band?'<span class="shop-swatch" style="background:linear-gradient(135deg,'+item.band+' 60%,'+item.gem+');"></span>':'<div class="shop-icon">'+svgIcon('crown')+'</div>';
+        return '<div class="shop-item '+(equipped?'equipped':'')+' '+(owned?'':'locked')+'" data-kind="crown" data-id="'+item.id+'">'
+          +swatch+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'+action+'</div>';
+      }).join('');
+    } else {
+      const slot={hats:'hat',shirts:'shirt',shades:'shades'}[cosmeticSubTab];
+      html+=COSMETICS[cosmeticSubTab].map(item=>{
+        const owned=item.cost===0||S.ownedCosmetics.includes(item.id);
+        const equipped=S.cosmetic[slot]===item.id;
+        const canAfford=S.gold>=item.cost;
+        const meetsLvl=S.level>=item.lvl;
+        let action;
+        if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
+        else if(owned) action='<span class="shop-action equip">Equip</span>';
+        else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
+        else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+item.cost+'</span>';
+        return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
+          +'<div class="shop-icon">'+svgIcon(item.icon)+'</div>'
+          +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
+          +action+'</div>';
+      }).join('');
+    }
   }
   document.getElementById('shop-list').innerHTML=html;
   if(shopTab==='cosmetics'){
@@ -3382,6 +3442,11 @@ document.getElementById('shop-list').addEventListener('click',e=>{
       S.gold-=obj.cost;S.ownedCosmetics.push(id);toast('Got '+obj.name+'!','#2aa890');
     }
     S.cosmetic[slot]=id;updateCosmeticHUD();
+  }
+  else if(kind==='crown'){
+    if(!S.ownedCrowns)S.ownedCrowns=[];
+    if(id!=='none'&&!S.ownedCrowns.includes(id)){toast('Crown locked. Earn a GOAT achievement to unlock.','#b58b53');return;}
+    S.cosmetic.crown=id;updateCosmeticHUD();
   }
   else{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
