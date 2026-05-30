@@ -1912,14 +1912,10 @@ function trySightFishSpawn(){
   spawnSightFish(pick);
 }
 function spawnSightFish(species){
-  let wx,wy,tries=0;
-  do{
-    wx=camera.x+80+Math.random()*(CW-160);
-    wy=camera.y+110+Math.random()*(CH-220);
-    tries++;
-  }while(dist(wx,wy,boat.wx,boat.wy)<100&&tries<10);
-  wx=Math.max(50,Math.min(worldW()-50,wx));
-  wy=Math.max(50,Math.min(worldH()-50,wy));
+  // Spawn anywhere on the map, with a small margin from the edges.
+  const W=worldW(),H=worldH();
+  const wx=60+Math.random()*(W-120);
+  const wy=60+Math.random()*(H-120);
   const now=performance.now?performance.now():Date.now();
   const lifetime=10000+Math.random()*5000;
   sightFish.push({
@@ -1957,37 +1953,10 @@ function drawSightFish(now,t,darkness){
     const sx=sf.wx-camera.x,sy=sf.wy-camera.y;
     if(sx<-60||sx>CW+60||sy<-60||sy>CH+60)continue;
     const art=FISH_ART[sf.species.id]||{body:'#9aa'};
-    const a=sf.alpha;
-    const pulse=0.4+0.6*(0.5+0.5*Math.sin(t*3+sf.phase));
-    const ringColor=RARITY_COLORS[sf.species.rarity]||'#ffffff';
     ctx.save();
-    // glowing ring
-    ctx.globalAlpha=a*pulse*0.7;
-    ctx.strokeStyle=ringColor;ctx.lineWidth=2.4;
-    ctx.beginPath();ctx.arc(sx,sy,sf.size+6+pulse*4,0,6.28);ctx.stroke();
-    // soft inner glow
-    ctx.globalAlpha=a*0.35;
-    const glow=ctx.createRadialGradient(sx,sy,0,sx,sy,sf.size+18);
-    glow.addColorStop(0,ringColor);
-    glow.addColorStop(1,ringColor+'00');
-    ctx.fillStyle=glow;
-    ctx.beginPath();ctx.arc(sx,sy,sf.size+18,0,6.28);ctx.fill();
-    ctx.globalAlpha=1;
-    ctx.restore();
-    // fish body
-    ctx.save();
-    ctx.globalAlpha=a;
+    ctx.globalAlpha=sf.alpha;
     ctx.translate(sx,sy);ctx.rotate(sf.heading);
     drawSightFishBody(sf.size,art.body,sf.phase+t*5);
-    ctx.restore();
-    // name label
-    ctx.save();
-    ctx.globalAlpha=a;
-    ctx.strokeStyle='rgba(0,0,0,.75)';ctx.lineWidth=3;
-    ctx.fillStyle='#fff';
-    ctx.font='700 12px Nunito, sans-serif';ctx.textAlign='center';
-    ctx.strokeText(sf.species.name,sx,sy-sf.size-12);
-    ctx.fillText(sf.species.name,sx,sy-sf.size-12);
     ctx.restore();
   }
 }
@@ -1997,9 +1966,6 @@ function drawSightFishBody(size,color,t){
   ctx.beginPath();ctx.moveTo(-size*.88,0);ctx.lineTo(-size*1.55,-size*.55+tw*size);ctx.lineTo(-size*1.55,size*.55+tw*size);ctx.closePath();ctx.fill();
   // top fin
   ctx.beginPath();ctx.moveTo(-size*.1,-size*.4);ctx.lineTo(size*.15,-size*.85);ctx.lineTo(size*.3,-size*.4);ctx.closePath();ctx.fill();
-  // eye
-  ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(size*.55,-size*.12,size*.12,0,6.28);ctx.fill();
-  ctx.fillStyle='#000';ctx.beginPath();ctx.arc(size*.6,-size*.12,size*.06,0,6.28);ctx.fill();
 }
 function sightFishHitAt(sx,sy){
   for(let i=0;i<sightFish.length;i++){
