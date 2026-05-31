@@ -1197,7 +1197,11 @@ function loadTournamentInvites(){
 }
 function startTournamentMode(def){
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[]};
-  S.zone=def.zone;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
+  S.zone=def.zone;
+  // Build the big tournament world with scattered structures and other players
+  initTournamentWorld(def);
+  initTournamentGhosts();
+  ensureRig();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
   // Shop is locked during the tournament: close menu and hide the Shop tab
   document.body.classList.add('tourn-active');
   closeMenu();
@@ -1233,6 +1237,9 @@ function recordTournamentCatch(fishName,weight){
 function endTournament(){
   if(!activeTournament)return;
   document.body.classList.remove('tourn-active'); // shop unlocked again
+  // Tear down the tournament world and return to the normal open world
+  tourn.active=false;tourn.ghosts=[];tourn.structs=[];
+  initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
   document.getElementById("tourn-banner").style.display="none";
   const def=activeTournament.def;
   const entries=[{username:fbUsername,weight:activeTournament.biggestWeight,name:activeTournament.biggestName,isPlayer:true}];
@@ -2260,8 +2267,12 @@ function sightFishHitAt(sx,sy){
 // ===================== OPEN WORLD =====================
 // Each zone is its own self-contained world larger than the viewport.
 const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200]]; // inshore / nearshore / offshore
-function worldW(){return WORLD_DIMS[S.zone][0];}
-function worldH(){return WORLD_DIMS[S.zone][1];}
+// Tournament world: a single big, vast map with randomly scattered structures
+// and other players (ghosts) roaming around. Set up in startTournamentMode.
+let tourn={active:false,W:0,H:0,structs:[],ghosts:[]};
+function worldW(){return tourn.active?tourn.W:WORLD_DIMS[S.zone][0];}
+function worldH(){return tourn.active?tourn.H:WORLD_DIMS[S.zone][1];}
+function activeStructures(){return tourn.active?tourn.structs:curZone().structures;}
 const BOAT_SPEED={kayak:2.1,jon:2.5,bay:3.1,console:3.7,walk:4.1,sport:4.9};
 let boat={wx:750,wy:1100,heading:0,anchored:true,vx:0,vy:0};
 let camera={x:0,y:0};
@@ -2283,11 +2294,98 @@ function initWorld(entry,anchored){
   updateDriveUI();
 }
 // Transition gates: top edge -> deeper zone, bottom edge -> shallower zone
+// No gates during a tournament: you stay in the tournament world.
 function gatesFor(){
+  if(tourn.active)return [];
   const W=worldW(),H=worldH(),g=[];
   if(S.zone<2)g.push({dir:'deeper',tz:S.zone+1,wx:W/2,wy:55,label:ZONE_LBL[S.zone+1]});
   if(S.zone>0)g.push({dir:'shallow',tz:S.zone-1,wx:W/2,wy:H-55,label:ZONE_LBL[S.zone-1]});
   return g;
+}
+// Build a big tournament world with structures scattered at random so players
+// have to search the water to find good spots.
+function initTournamentWorld(def){
+  const base=WORLD_DIMS[def.zone];
+  tourn.W=Math.round(base[0]*1.85);
+  tourn.H=Math.round(base[1]*1.85);
+  const defs=ZONE_STRUCTS[def.zone];
+  tourn.structs=[];
+  for(const d of defs){
+    let x,y,tries=0,ok;
+    do{
+      x=140+Math.random()*(tourn.W-280);
+      y=140+Math.random()*(tourn.H-280);
+      ok=true;
+      for(const s of tourn.structs){if(dist(x,y,s.x,s.y)<300){ok=false;break;}}
+      tries++;
+    }while(!ok&&tries<50);
+    tourn.structs.push({kind:d.kind,x:Math.round(x),y:Math.round(y),tier:d.tier});
+  }
+  tourn.active=true;
+}
+// Other players roaming the tournament world (bots + real entrants from the lobby).
+const GHOST_BOATS=['kayak','jon','bay','console'];
+function initTournamentGhosts(){
+  tourn.ghosts=[];
+  if(!activeLobby)return;
+  const myUid=fbUser?fbUser.uid:'guest';
+  activeLobby.players.forEach(function(p){
+    if(p.uid===myUid)return; // don't draw yourself
+    tourn.ghosts.push({
+      name:p.username||'Angler',isBot:!!p.isBot,
+      wx:160+Math.random()*(tourn.W-320),
+      wy:160+Math.random()*(tourn.H-320),
+      heading:Math.random()*6.28,targetAng:Math.random()*6.28,turnTimer:0,
+      speed:0.9+Math.random()*1.7,
+      boat:GHOST_BOATS[Math.floor(Math.random()*GHOST_BOATS.length)],
+      pause:0,
+    });
+  });
+}
+function updateGhosts(){
+  if(!tourn.active||!tourn.ghosts.length)return;
+  for(const g of tourn.ghosts){
+    if(g.pause>0){g.pause--;continue;} // anchored, "fishing"
+    g.turnTimer--;
+    if(g.turnTimer<=0){
+      g.targetAng=Math.random()*6.28;g.turnTimer=80+Math.random()*220;
+      if(Math.random()<0.25)g.pause=120+Math.random()*240; // occasionally stop to fish
+    }
+    let d=g.targetAng-g.heading;
+    while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
+    g.heading+=d*0.02;
+    g.wx+=Math.cos(g.heading)*g.speed;
+    g.wy+=Math.sin(g.heading)*g.speed*0.7;
+    if(g.wx<70){g.wx=70;g.targetAng=Math.random()*Math.PI-Math.PI/2;}
+    if(g.wx>tourn.W-70){g.wx=tourn.W-70;g.targetAng=Math.random()*Math.PI+Math.PI/2;}
+    if(g.wy<70){g.wy=70;g.targetAng=Math.random()*Math.PI;}
+    if(g.wy>tourn.H-70){g.wy=tourn.H-70;g.targetAng=-Math.random()*Math.PI;}
+  }
+}
+function drawGhosts(t){
+  if(!tourn.active||!tourn.ghosts.length)return;
+  for(const g of tourn.ghosts){
+    const sx=g.wx-camera.x,sy=g.wy-camera.y;
+    if(sx<-60||sx>CW+60||sy<-60||sy>CH+60)continue;
+    ctx.save();
+    ctx.translate(sx,sy);ctx.rotate(g.heading+Math.PI/2);
+    // simple boat hull
+    ctx.fillStyle='rgba(0,30,45,.22)';
+    ctx.beginPath();ctx.moveTo(0,-15);ctx.quadraticCurveTo(8,2,6,17);ctx.quadraticCurveTo(0,23,-6,17);ctx.quadraticCurveTo(-8,2,0,-15);ctx.closePath();ctx.fill();
+    ctx.fillStyle=g.isBot?'#b9772f':'#2f7a6a';
+    ctx.beginPath();ctx.moveTo(0,-14);ctx.quadraticCurveTo(7,2,5,15);ctx.quadraticCurveTo(0,20,-5,15);ctx.quadraticCurveTo(-7,2,0,-14);ctx.closePath();ctx.fill();
+    // angler dot
+    ctx.fillStyle='#f0c89a';ctx.beginPath();ctx.arc(0,3,3,0,6.28);ctx.fill();
+    ctx.restore();
+    // name label
+    ctx.save();
+    ctx.font='700 11px Nunito, sans-serif';ctx.textAlign='center';
+    ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';
+    ctx.strokeText(g.name,sx,sy-22);
+    ctx.fillStyle=g.isBot?'#dfe6ee':'#8fe6b6';
+    ctx.fillText(g.name,sx,sy-22);
+    ctx.restore();
+  }
 }
 function enterWorld(tz,arriveDir){
   S.zone=tz;
@@ -2959,11 +3057,13 @@ function render(ts){
   ctx.globalAlpha=1;
 
   // structures in world space, offset by camera, culled to viewport
-  for(const s of z.structures){
+  for(const s of activeStructures()){
     const sx=s.x-camera.x,sy=s.y-camera.y;
     if(sx<-90||sx>CW+90||sy<-90||sy>CH+90)continue;
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
+  // other players roaming the tournament world
+  updateGhosts();drawGhosts(t);
   // transition gates
   for(const gt of gatesFor()){
     const gx=gt.wx-camera.x,gy=gt.wy-camera.y;
@@ -3081,7 +3181,7 @@ function ensureRig(){
 
 // Hard to find structures need a tighter anchor radius, you must be right on top of them
 const FIND_RADIUS={power_plant:36,wreck:40};
-function nearestStruct(x,y){let best=null,bd=1e9;for(const s of curZone().structures){const d=dist(x,y,s.x-camera.x,s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
+function nearestStruct(x,y){let best=null,bd=1e9;for(const s of activeStructures()){const d=dist(x,y,s.x-camera.x,s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
 
 canvas.addEventListener('click',e=>{
   if(driving()){setStatus('Drop anchor before you cast.');return;}
