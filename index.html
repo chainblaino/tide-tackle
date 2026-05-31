@@ -1238,6 +1238,7 @@ function endTournament(){
   if(!activeTournament)return;
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Tear down the tournament world and return to the normal open world
+  stopTournamentSync();
   tourn.active=false;tourn.ghosts=[];tourn.structs=[];
   initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
   document.getElementById("tourn-banner").style.display="none";
@@ -2325,31 +2326,48 @@ function initTournamentWorld(def){
 }
 // Other players roaming the tournament world (bots + real entrants from the lobby).
 const GHOST_BOATS=['kayak','jon','bay','console'];
+function myTournUid(){return fbUser?fbUser.uid:'guest';}
 function initTournamentGhosts(){
   tourn.ghosts=[];
   if(!activeLobby)return;
-  const myUid=fbUser?fbUser.uid:'guest';
+  const myUid=myTournUid();
   activeLobby.players.forEach(function(p){
     if(p.uid===myUid)return; // don't draw yourself
+    const wx=160+Math.random()*(tourn.W-320),wy=160+Math.random()*(tourn.H-320);
     tourn.ghosts.push({
-      name:p.username||'Angler',isBot:!!p.isBot,
-      wx:160+Math.random()*(tourn.W-320),
-      wy:160+Math.random()*(tourn.H-320),
+      uid:p.uid,name:p.username||'Angler',isBot:!!p.isBot,real:!p.isBot,
+      wx:wx,wy:wy,
       heading:Math.random()*6.28,targetAng:Math.random()*6.28,turnTimer:0,
       speed:0.9+Math.random()*1.7,
       boat:GHOST_BOATS[Math.floor(Math.random()*GHOST_BOATS.length)],
       pause:0,
+      // real players: interpolate toward the position they broadcast over Firestore
+      tx:wx,ty:wy,th:0,hasReal:false,
     });
   });
+  // Start syncing real positions for signed in players
+  startTournamentSync();
 }
+function ghostByUid(uid){for(const g of tourn.ghosts)if(g.uid===uid)return g;return null;}
 function updateGhosts(){
   if(!tourn.active||!tourn.ghosts.length)return;
   for(const g of tourn.ghosts){
-    if(g.pause>0){g.pause--;continue;} // anchored, "fishing"
+    if(g.real&&g.hasReal){
+      // Smoothly chase the real broadcast position from Firestore
+      g.wx+=(g.tx-g.wx)*0.12;
+      g.wy+=(g.ty-g.wy)*0.12;
+      let dh=g.th-g.heading;
+      while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
+      g.heading+=dh*0.15;
+      continue;
+    }
+    if(g.real&&!g.hasReal)continue; // real player who hasn't broadcast yet: hold still
+    // Bots: simulated wandering
+    if(g.pause>0){g.pause--;continue;}
     g.turnTimer--;
     if(g.turnTimer<=0){
       g.targetAng=Math.random()*6.28;g.turnTimer=80+Math.random()*220;
-      if(Math.random()<0.25)g.pause=120+Math.random()*240; // occasionally stop to fish
+      if(Math.random()<0.25)g.pause=120+Math.random()*240;
     }
     let d=g.targetAng-g.heading;
     while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
@@ -2361,6 +2379,65 @@ function updateGhosts(){
     if(g.wy<70){g.wy=70;g.targetAng=Math.random()*Math.PI;}
     if(g.wy>tourn.H-70){g.wy=tourn.H-70;g.targetAng=-Math.random()*Math.PI;}
   }
+}
+
+// ----- Real-time multiplayer position sync over Firestore -----
+function startTournamentSync(){
+  stopTournamentSync();
+  if(!fbUser||!fbDb||!activeTournament)return;
+  const today=new Date().toISOString().slice(0,10);
+  tourn.posKey=activeTournament.def.id+'_'+today;
+  const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);
+  // Publish my position a few times a second
+  publishMyPosition(ref);
+  tourn.posInterval=setInterval(function(){publishMyPosition(ref);},1200);
+  // Listen for everyone else's position
+  tourn.posUnsub=ref.onSnapshot(function(snap){
+    const data=(snap.data()||{}).players||{};
+    const nowMs=Date.now();
+    Object.keys(data).forEach(function(uid){
+      if(uid===myTournUid())return;
+      const p=data[uid];
+      if(!p||(p.t&&nowMs-p.t>20000))return; // ignore stale (disconnected) players
+      let g=ghostByUid(uid);
+      if(!g){
+        // A real player we didn't have in the lobby snapshot: add them
+        g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
+           wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
+           tx:p.wx,ty:p.wy,th:p.heading||0,hasReal:true};
+        tourn.ghosts.push(g);
+        return;
+      }
+      g.real=true;g.isBot=false;g.hasReal=true;
+      g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
+      if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
+    });
+  },function(){});
+}
+function publishMyPosition(ref){
+  if(!ref||!fbUser)return;
+  const upd={};
+  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,t:Date.now()};
+  ref.set({players:{}},{merge:true}).then(function(){
+    return ref.update(upd);
+  }).catch(function(){
+    // fallback: merge-set the whole nested map
+    const players={};players[fbUser.uid]=upd['players.'+fbUser.uid];
+    ref.set({players:players},{merge:true}).catch(function(){});
+  });
+}
+function stopTournamentSync(){
+  if(tourn.posInterval){clearInterval(tourn.posInterval);tourn.posInterval=null;}
+  if(tourn.posUnsub){try{tourn.posUnsub();}catch(e){}tourn.posUnsub=null;}
+  // Best effort: remove my position entry so I vanish for others
+  if(fbUser&&fbDb&&tourn.posKey){
+    try{
+      const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);
+      const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
+      ref.update(upd).catch(function(){});
+    }catch(e){}
+  }
+  tourn.posKey=null;
 }
 function drawGhosts(t){
   if(!tourn.active||!tourn.ghosts.length)return;
