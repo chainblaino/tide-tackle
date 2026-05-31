@@ -400,6 +400,7 @@
       <div class="pill click menu-btn" id="menu-open">&#9776;</div>
       <div class="pill click" id="zone-pill"><span id="zone-icon" style="display:inline-flex;align-items:center;"></span> <span id="zone-name">Inshore</span></div>
       <div class="pill" id="time-pill"><span id="time-icon" style="display:inline-flex;align-items:center;"></span> <span class="sub" id="time-season">Spring</span></div>
+      <div class="pill click" id="env-pill" onclick="openEnvDetails()" title="Conditions"><span id="env-icons" style="display:inline-flex;align-items:center;gap:3px;"></span></div>
     </div>
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
@@ -1370,6 +1371,22 @@ const ICONS={
 'fishing':'<line x1="4" y1="3" x2="18" y2="14"/><path d="M18 14v3a3 3 0 0 1-6 0"/><circle cx="4" cy="3" r="1"/>',
 'crown':'<path d="M3 18h18l-2-9-4 4-4-7-4 7-4-4z"/><line x1="3" y1="21" x2="21" y2="21"/>',
 'medal':'<circle cx="12" cy="15" r="6"/><path d="M8 4l4 7 4-7"/><polygon points="12 12 13.4 14.4 16 15 14 17 14.5 19.5 12 18.3 9.5 19.5 10 17 8 15 10.6 14.4" stroke-width="0.6"/>',
+// Moon phases: outline circle + shaded inner shape
+'moon-new':'<circle cx="12" cy="12" r="8"/>',
+'moon-waxcrescent':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16 5 8 0 0 0 0-16z" fill="currentColor" stroke="none"/>',
+'moon-firstq':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/>',
+'moon-waxgibbous':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16 5 8 0 0 0 0-16z" fill="currentColor" stroke="none" transform="matrix(-1 0 0 1 24 0)"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
+'moon-full':'<circle cx="12" cy="12" r="8" fill="currentColor"/>',
+'moon-wangibbous':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16 5 8 0 0 1 0-16z" fill="currentColor" stroke="none"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor" stroke="none"/>',
+'moon-lastq':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" stroke="none"/>',
+'moon-wancrescent':'<circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16 5 8 0 0 1 0-16z" fill="currentColor" stroke="none"/>',
+// Weather extras
+'weather-partly':'<circle cx="8" cy="9" r="3.5"/><path d="M8 4v1M3.5 9H4M11.5 9h.5M5 6l.5.5M10.5 6L11 6.5"/><path d="M9 17a4 4 0 0 1 4-4 4 4 0 0 1 3.7 2.5 3 3 0 1 1-.7 5.5h-7a3 3 0 0 1 0-4z"/>',
+'weather-overcast':'<path d="M5 18a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A4 4 0 0 1 19 14a4 4 0 0 1 0 4z"/>',
+'weather-rain':'<path d="M5 14a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A4 4 0 0 1 19 10a4 4 0 0 1 0 4z"/><line x1="8" y1="17" x2="7" y2="20"/><line x1="12" y1="17" x2="11" y2="20"/><line x1="16" y1="17" x2="15" y2="20"/>',
+'weather-storm':'<path d="M5 12a4 4 0 0 1 0-8 5 5 0 0 1 9.6-1.4A4 4 0 0 1 19 8a4 4 0 0 1 0 4z"/><path d="M11 14l-3 5h3l-2 4 5-6h-3l2-3z" fill="currentColor"/>',
+'wind':'<path d="M3 10h12a3 3 0 1 0-3-3"/><path d="M3 14h17a3 3 0 1 1-3 3"/><path d="M3 18h6"/>',
+'tide':'<path d="M2 14c3-3 6-3 10 0s7 3 10 0"/><path d="M2 10c3-3 6-3 10 0s7 3 10 0"/><line x1="2" y1="18" x2="22" y2="18"/>',
 };
 // ── end SVG icons ─────────────────────────────────────────────
 function svgIcon(id,sz){
@@ -2065,6 +2082,89 @@ function skyState(h){
   if(h<7){const t=(h-5)/2;return {darkness:1-t,warm:Math.sin(t*Math.PI),phase:'dawn',icon:'weather-dawn'};}
   if(h<17)return {darkness:0,warm:0,phase:'day',icon:'weather-day'};
   const t=(h-17)/2;return {darkness:t,warm:Math.sin(t*Math.PI),phase:'dusk',icon:'weather-dusk'};
+}
+
+// ===================== MOON, TIDES, WEATHER, WIND =====================
+// 8 day lunar cycle. Multiplier only applies at night.
+const MOON_PHASES=[
+  {id:'new',         name:'New Moon',          icon:'moon-new',          mul:0.82},
+  {id:'waxcrescent', name:'Waxing Crescent',   icon:'moon-waxcrescent',  mul:0.92},
+  {id:'firstq',      name:'First Quarter',     icon:'moon-firstq',       mul:1.00},
+  {id:'waxgibbous',  name:'Waxing Gibbous',    icon:'moon-waxgibbous',   mul:1.15},
+  {id:'full',        name:'Full Moon',         icon:'moon-full',         mul:1.25},
+  {id:'wangibbous',  name:'Waning Gibbous',    icon:'moon-wangibbous',   mul:1.15},
+  {id:'lastq',       name:'Last Quarter',      icon:'moon-lastq',        mul:1.00},
+  {id:'wancrescent', name:'Waning Crescent',   icon:'moon-wancrescent',  mul:0.92},
+];
+function currentMoonPhase(){
+  // 8 game day lunar cycle, advancing across the year.
+  const dayInCycle=((S.clock||0)/1440)%8;
+  return MOON_PHASES[Math.floor(dayInCycle)];
+}
+// Tides: semi-diurnal. Two highs and two lows per ~12.4 game hours. Moon
+// shifts the tide timing (lunar pull) and scales amplitude (spring vs neap).
+function currentTide(){
+  const phaseIdx=MOON_PHASES.indexOf(currentMoonPhase());
+  const lunarShift=phaseIdx*30; // each new phase shifts peak times ~30 min
+  const t=(S.clock||0)+lunarShift;
+  const cyc=12.42*60; // game minutes per tide cycle
+  const x=(t%cyc)/cyc; // 0..1 through the tide cycle
+  // Spring tides at full/new moon (phaseIdx 0 and 4), neap at quarters
+  const distToSpring=Math.min(Math.abs(phaseIdx-0),Math.abs(phaseIdx-4),Math.abs(phaseIdx-8));
+  const amp=0.6+0.4*(1-distToSpring/4); // 0.6..1.0
+  const level=Math.sin(x*Math.PI*2)*amp; // -amp..+amp
+  // direction: rising while sin' > 0 (cos > 0)
+  const slope=Math.cos(x*Math.PI*2);
+  let dir,label;
+  const slack=Math.abs(slope)<0.18;
+  if(slack){dir='slack';label=(level>0?'High Slack':'Low Slack');}
+  else if(slope>0){dir='rising';label='Incoming';}
+  else{dir='falling';label='Outgoing';}
+  return {level:level,dir:dir,label:label,strength:Math.abs(slope)};
+}
+// Weather: deterministic per game-hour block of ~6h so it doesn't flicker.
+const WEATHER=[
+  {id:'clear',       name:'Clear',         icon:'weather-day',    mul:1.00,w:30},
+  {id:'partly',      name:'Partly Cloudy', icon:'weather-partly', mul:1.05,w:25},
+  {id:'overcast',    name:'Overcast',      icon:'weather-overcast',mul:1.15,w:18},
+  {id:'rain',        name:'Light Rain',    icon:'weather-rain',   mul:1.20,w:12},
+  {id:'storm',       name:'Thunderstorm',  icon:'weather-storm',  mul:0.55,w:5},
+];
+function _envRand(seed){const v=Math.sin(seed*97331+13.37)*43758.5453;return v-Math.floor(v);}
+function currentWeather(){
+  const block=Math.floor((S.clock||0)/360); // 6 game hour blocks
+  const r=_envRand(block*7+1);
+  let total=0;WEATHER.forEach(w=>total+=w.w);
+  let x=r*total;
+  for(const w of WEATHER){x-=w.w;if(x<=0)return w;}
+  return WEATHER[0];
+}
+const WIND=[
+  {id:'calm',    name:'Calm',     mph:'0-3 mph',    mul:1.00,castMul:1.00,w:18},
+  {id:'light',   name:'Light',    mph:'4-9 mph',    mul:1.08,castMul:1.00,w:30},
+  {id:'breezy',  name:'Breezy',   mph:'10-14 mph',  mul:1.00,castMul:0.97,w:25},
+  {id:'windy',   name:'Windy',    mph:'15-22 mph',  mul:0.88,castMul:0.92,w:18},
+  {id:'gale',    name:'Gale',     mph:'23+ mph',    mul:0.70,castMul:0.85,w:9},
+];
+function currentWind(){
+  const block=Math.floor((S.clock||0)/720); // 12 game hour blocks
+  const r=_envRand(block*11+5);
+  let total=0;WIND.forEach(w=>total+=w.w);
+  let x=r*total;
+  for(const w of WIND){x-=w.w;if(x<=0)return w;}
+  return WIND[0];
+}
+// All-in-one factor applied to bite frequency. Higher = bites come faster.
+function environmentBiteFactor(){
+  let mul=1;
+  const ph=phaseOf(hourNow());
+  if(ph==='night')mul*=currentMoonPhase().mul;
+  // Tide: stronger current = better bite, slack = worse
+  const tide=currentTide();
+  mul*=(tide.dir==='slack')?0.82:(1+tide.strength*0.20);
+  mul*=currentWeather().mul;
+  mul*=currentWind().mul;
+  return mul;
 }
 
 // ===================== CANVAS =====================
@@ -2855,6 +2955,33 @@ function updateClockHUD(h,sky){
   document.getElementById('time-icon').innerHTML=svgIcon(sky.icon,15);
   const se=seasonNow();
   document.getElementById('time-season').innerHTML=svgIcon(SEASON_ICON[se],13)+' '+SEASON_LABEL[se];
+  // Conditions pill (moon at night, weather, wind, tide direction)
+  const env=document.getElementById('env-icons');
+  if(env){
+    const ph=phaseOf(h);
+    const moon=currentMoonPhase(),weather=currentWeather(),wind=currentWind(),tide=currentTide();
+    let html='';
+    if(ph==='night')html+=svgIcon(moon.icon,14);
+    html+=svgIcon(weather.icon,14);
+    const tdir=tide.dir==='rising'?'↑':tide.dir==='falling'?'↓':'·';
+    html+='<span style="font-size:10px;font-weight:800;color:#cdd9e6;">'+tdir+'</span>';
+    html+='<span style="font-size:10px;font-weight:700;color:#cdd9e6;text-transform:uppercase;letter-spacing:.5px;">'+wind.name[0]+'</span>';
+    env.innerHTML=html;
+  }
+}
+function openEnvDetails(){
+  const moon=currentMoonPhase(),weather=currentWeather(),wind=currentWind(),tide=currentTide();
+  const ph=phaseOf(hourNow());
+  const factor=environmentBiteFactor();
+  const modal=document.getElementById('modal');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:8px;">Conditions</div>'
+    +'<div class="mrow"><span class="ml">'+svgIcon(moon.icon,14)+' Moon</span><span class="mv">'+moon.name+' ('+(ph==='night'?(moon.mul>=1?'+':'')+(Math.round((moon.mul-1)*100))+'% night bite':'no effect during day')+')</span></div>'
+    +'<div class="mrow"><span class="ml">'+svgIcon('tide',14)+' Tide</span><span class="mv">'+tide.label+' ('+(tide.dir==='slack'?'-18%':'+'+Math.round(tide.strength*20)+'%')+' bite)</span></div>'
+    +'<div class="mrow"><span class="ml">'+svgIcon(weather.icon,14)+' Weather</span><span class="mv">'+weather.name+' ('+((weather.mul>=1?'+':'')+Math.round((weather.mul-1)*100))+'% bite)</span></div>'
+    +'<div class="mrow"><span class="ml">'+svgIcon('wind',14)+' Wind</span><span class="mv">'+wind.name+' '+wind.mph+' ('+((wind.mul>=1?'+':'')+Math.round((wind.mul-1)*100))+'% bite)</span></div>'
+    +'<div class="mfact">Total bite rate factor: <b>×'+factor.toFixed(2)+'</b></div>';
+  document.getElementById('modal-bg').classList.add('show');
 }
 function drawGate(gx,gy,gt,t){
   const locked=gt.tz>maxZone();
@@ -3055,7 +3182,8 @@ function biteWait(strength,st){
   // Assassin Set bonus: +50% fish spawn rate at night
   if(ph==='night'&&assassinSetActive())boatFreq*=1.5;
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
-  const freq=phaseFreq*spotFreq*boatFreq*poolMul;
+  const envMul=environmentBiteFactor();
+  const freq=phaseFreq*spotFreq*boatFreq*poolMul*envMul;
   const base=2200+Math.random()*3500;
   return Math.max(700,Math.min(9000,base/freq));
 }
