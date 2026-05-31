@@ -2001,17 +2001,21 @@ const CROWNS=[
   {id:'crown_gold',name:'Golden Crown',band:'#e0a93c',gem:'#c93030',jewel:'#fff8b4'},
   {id:'crown_emerald',name:'Emerald Crown',band:'#3a3530',gem:'#2aa890',jewel:'#a8e4c8'},
   {id:'crown_ruby',name:'Ruby Crown',band:'#1c1a18',gem:'#c93030',jewel:'#ffb0a0'},
+  {id:'crown_sapphire',name:'Sapphire Crown',band:'#1a2440',gem:'#2f6fb0',jewel:'#bcd8f4'},
 ];
 const ACHIEVEMENTS=[
-  {id:'silverking',tier:'impressive',name:'Silver King',desc:'Catch 50 tarpon.',check:()=>(S.caught.tarpon||0)>=50},
+  // Impressive
+  {id:'materialistic',tier:'impressive',name:'Materialistic',desc:'Own every boat, rod, and reel.',check:()=>BOATS.every(b=>S.ownedBoats.includes(b.id))&&RODS.every(r=>S.ownedRods.includes(r.id))&&REELS.every(r=>S.ownedReels.includes(r.id))},
+  {id:'explorer',tier:'impressive',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k))},
   {id:'lockedin',tier:'impressive',name:'Locked In',desc:'Hit the bonus section 15 times in a row.',check:()=>(S.bullseyeBest||0)>=15},
-  {id:'materialistic',tier:'extraordinary',name:'Materialistic',desc:'Own every boat, rod, and reel.',check:()=>BOATS.every(b=>S.ownedBoats.includes(b.id))&&RODS.every(r=>S.ownedRods.includes(r.id))&&REELS.every(r=>S.ownedReels.includes(r.id))},
-  {id:'explorer',tier:'extraordinary',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k))},
-  {id:'bigwinner',tier:'extraordinary',name:'Big Winner',desc:'Win 1st in a daily tournament.',check:()=>(S.tournamentWins||0)>=1},
+  // Extraordinary
+  {id:'legendaryangler',tier:'extraordinary',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',check:()=>FISH.filter(f=>f.rarity==='legendary').every(f=>(S.caught[f.id]||0)>0)},
   {id:'perfecttiming',tier:'extraordinary',name:'Perfect Timing',desc:'Hit the bonus section 500 times total.',check:()=>(S.bullseyeTotal||0)>=500},
-  {id:'legendaryangler',tier:'goat',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',crownId:'crown_gold',check:()=>FISH.filter(f=>f.rarity==='legendary').every(f=>(S.caught[f.id]||0)>0)},
-  {id:'truefisherman',tier:'goat',name:'True Fisherman',desc:'Catch 3,000 fish.',crownId:'crown_emerald',check:()=>(S.totalCatches||0)>=3000},
-  {id:'champion',tier:'goat',name:'Champion',desc:'Win 1st place in 10 tournaments.',crownId:'crown_ruby',check:()=>(S.tournamentWins||0)>=10},
+  // GOAT Status
+  {id:'bigwinner',tier:'goat',name:'Big Winner',desc:'Win 1st in a daily tournament.',crownId:'crown_gold',check:()=>(S.tournamentWins||0)>=1},
+  {id:'silverking',tier:'goat',name:'Silver King',desc:'Catch 50 tarpon.',crownId:'crown_emerald',check:()=>(S.caught.tarpon||0)>=50},
+  {id:'truefisherman',tier:'goat',name:'True Fisherman',desc:'Catch 3,000 fish.',crownId:'crown_ruby',check:()=>(S.totalCatches||0)>=3000},
+  {id:'champion',tier:'goat',name:'Champion',desc:'Win 1st place in 10 tournaments.',crownId:'crown_sapphire',check:()=>(S.tournamentWins||0)>=10},
 ];
 function checkAchievements(){
   if(!S.achievements)S.achievements={};
