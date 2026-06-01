@@ -292,7 +292,10 @@
 /* TOURNAMENT */
 .tourn-card{background:var(--parchment);border:1.5px solid #d2b886;border-radius:12px;padding:13px 14px;margin-bottom:10px;}
 .tourn-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.tourn-name-row{display:flex;align-items:center;gap:6px;min-width:0;}
 .tourn-name{font-size:13.5px;font-weight:800;color:var(--wood-dark);}
+.tourn-info-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:var(--wood-dark);color:#ffe9c4;font-size:12px;font-weight:900;font-style:italic;font-family:Georgia,'Times New Roman',serif;cursor:pointer;border:none;flex-shrink:0;line-height:1;padding:0;}
+.medal-badge{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;color:#fff;font-weight:900;font-size:12px;border:1.5px solid rgba(0,0,0,.25);flex-shrink:0;}
 .tourn-zone-badge{font-size:10px;font-weight:700;padding:3px 7px;border-radius:20px;background:#e2d4b8;color:var(--text-soft);}
 .tourn-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text-soft);margin-bottom:4px;}
 .tourn-status{font-size:12px;font-weight:700;padding:3px 8px;border-radius:6px;}
@@ -397,7 +400,7 @@
 .sdew-title{font-family:'Fredoka';font-size:22px;color:#e0a93c;font-weight:600;text-align:center;letter-spacing:.5px;}
 .sdew-arena{display:flex;gap:12px;align-items:stretch;}
 .sdew-track{position:relative;width:64px;height:280px;background:linear-gradient(180deg,#071628,#0d2540);border:2px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;}
-.sdew-bar{position:absolute;left:0;right:0;height:70px;background:linear-gradient(180deg,rgba(60,210,160,.95),rgba(30,160,120,.85));border-radius:6px;box-shadow:0 0 14px rgba(50,200,140,.5);}
+.sdew-bar{position:absolute;left:0;right:0;height:88px;background:linear-gradient(180deg,rgba(60,210,160,.95),rgba(30,160,120,.85));border-radius:6px;box-shadow:0 0 14px rgba(50,200,140,.5);}
 .sdew-fish-icon{position:absolute;left:50%;transform:translateX(-50%);line-height:0;pointer-events:none;color:#ffd27a;filter:drop-shadow(0 0 6px rgba(255,255,255,.6));}
 .sdew-meter-wrap{width:24px;height:280px;background:rgba(255,255,255,.06);border:1.5px solid rgba(255,255,255,.12);border-radius:12px;overflow:hidden;position:relative;}
 .sdew-meter-fill{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(0deg,#2aa890,#e0a93c 70%);border-radius:10px;transition:height .04s;}
@@ -1099,6 +1102,33 @@ function tClosesIn(def){
   const pos=cycleNowMin();
   return _fmtMin(Math.max(0,w.end-pos));
 }
+// Placement prizes (in rubies) for a tournament of the given target rarity.
+function tournPrizes(rarity){
+  const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
+  return [Math.round(40*rarMult),Math.round(18*rarMult),Math.round(8*rarMult)];
+}
+// Small numbered medal badge for 1st/2nd/3rd (gold/silver/bronze).
+function medalBadge(i){
+  const c=['#e0a93c','#b8bdc6','#cd7f32'][i]||'#9a8a6a';
+  return '<span class="medal-badge" style="background:'+c+';">'+(i+1)+'</span>';
+}
+// Info popup: shows the potential ruby winnings for a tournament.
+function showTournInfo(rarity){
+  const p=tournPrizes(rarity);
+  const rows=[0,1,2].map(function(i){
+    return '<div style="display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:6px;">'
+      +medalBadge(i)
+      +'<span style="flex:1;font-size:13px;font-weight:800;color:var(--ink);">'+['1st place','2nd place','3rd place'][i]+'</span>'
+      +'<span style="font-size:14px;font-weight:900;color:#d61f3a;"><span class="gem-s"></span> +'+p[i]+'</span></div>';
+  }).join('');
+  const body=document.getElementById('modal');
+  body.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div style="font-size:16px;font-weight:900;color:#d61f3a;text-align:center;margin-bottom:4px;">Potential Winnings</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);text-align:center;margin-bottom:13px;">Placement prizes for this tournament, paid in rubies.</div>'
+    +rows
+    +'<button onclick="closeModal()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Got it</button>';
+  document.getElementById('modal-bg').classList.add('show');
+}
 function renderTournCard(def){
   const rc=RARITY_COLORS[def.rarity];
   const canAfford=S.gold>=def.fee;
@@ -1107,7 +1137,7 @@ function renderTournCard(def){
     :"<b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish";
   if(def.alwaysOn){
     return "<div class=\"tourn-card always-on\">"
-      +"<div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"always-live\">LIVE 24/7</span></div>"
+      +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"')\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
       +"<div class=\"tourn-row\"><span>"+ZONE_LBL[def.zone]+" &middot; Target: "+fishLabel+"</span></div>"
       +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; Resets daily</span></div>"
       +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up:"+def.fee+"g entry</button>"
@@ -1120,7 +1150,7 @@ function renderTournCard(def){
   const btn=st==="open"
     ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up:"+def.fee+"g entry</button>"
     :"";
-  return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
+  return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"')\">i</button></span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
     +"<div class=\"tourn-row\"><span>Target: "+fishLabel+"</span>"+statusHtml+"</div>"
     +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>Window: "+_fmtMin(tournDurMin(def))+"</span></div>"
     +btn+"</div>";
@@ -1309,22 +1339,24 @@ function endTournament(){
   entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
   // Prizes are paid in RUBIES (gold is no longer won). Harder target rarities
   // pay more. Scaled so a set (assassin 500) takes a healthy run of top finishes.
-  const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[def.rarity]||1;
-  const prizes=[Math.round(40*rarMult),Math.round(18*rarMult),Math.round(8*rarMult)];
+  const prizes=tournPrizes(def.rarity);
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Prize only if the player genuinely placed top 3 with a real catch.
   let winnings=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0)?prizes[rank]:0;
   if(winnings>0){S.rubies=(S.rubies||0)+winnings;updatePills();queueSave();}
   if(rank===0&&(activeTournament.biggestWeight||0)>0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
-  const medals=["1st","2nd","3rd"];
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
     +entries.slice(0,10).map(function(e,i){
+      // Top 3 with a real catch get a medal badge and the rubies they won.
+      const placeIcon=(i<3)?medalBadge(i):"<span style=\"font-size:13px;width:22px;text-align:center;font-weight:800;color:var(--text-soft);\">"+(i+1)+"</span>";
+      const prizeTag=(i<3&&e.weight>0)?"<span style=\"font-size:12.5px;font-weight:900;color:#d61f3a;white-space:nowrap;margin-left:6px;\"><span class=\"gem-s\"></span> +"+prizes[i]+"</span>":"";
       return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#d2b886")+";margin-bottom:5px;\">"
-        +"<span style=\"font-size:16px;width:24px;text-align:center;\">"+(medals[i]||(i+1))+"</span>"
-        +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);\">"+e.username+"</span>"
-        +"<span style=\"font-size:12px;color:var(--text-soft);\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span></div>";
+        +placeIcon
+        +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);min-width:0;\">"+e.username+"</span>"
+        +"<span style=\"font-size:12px;color:var(--text-soft);white-space:nowrap;\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span>"
+        +prizeTag+"</div>";
     }).join("")
     +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#d61f3a;margin-top:10px;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</div>":"")
     +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
@@ -3941,7 +3973,7 @@ function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeou
 // ─────────────────────────────────────────────────────────────
 // LEGENDARY ALERT + STARDEW MINI-GAME
 // ─────────────────────────────────────────────────────────────
-const SDEW_TRACK_H=280,SDEW_BAR_H=70,SDEW_FISH_R=13;
+const SDEW_TRACK_H=280,SDEW_BAR_H=88,SDEW_FISH_R=13;
 const SDEW_BEHAVIORS={
   tarpon:    {dartChance:.08,dartForce:6,  erratic:.15,maxVel:5.5},
   cobia:     {dartChance:.05,dartForce:4,  erratic:.10,maxVel:4.0},
@@ -4006,19 +4038,21 @@ function sdewLoop(){
   if(sdewBarTop>=SDEW_TRACK_H-SDEW_BAR_H){sdewBarTop=SDEW_TRACK_H-SDEW_BAR_H;sdewBarVel=-Math.abs(sdewBarVel)*.3;}
   // Fish physics — during grace the fish drifts very slowly with no dart attempts.
   // sdewDiff scales the challenge by the target's rarity (tournament targets).
-  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff;
-  const dartChance=grace?0:beh.dartChance*sdewDiff;
-  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff;
+  // SDEW_EASE keeps the fish slower & more readable: challenging but enjoyable.
+  const ease=0.6;
+  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease;
+  const dartChance=grace?0:beh.dartChance*sdewDiff*ease;
+  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease;
   sdewFishVel+=(Math.random()-.5)*erratic;
-  if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce;
+  if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease;
   sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
   sdewFishCy+=sdewFishVel;
   if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
   if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
   // Meter — gain rate is halved during grace so the player has time to settle in
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
-  const gain=grace?0.25:0.5;
-  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.7)));
+  const gain=grace?0.3:0.6;
+  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)));
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
   if(sdewMeter<=0){endSdewGame(false);return;}
