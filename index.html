@@ -484,6 +484,7 @@
       <div class="xp-track"><div class="xp-fill" id="m-xp"></div></div>
       <div class="xp-text"><span id="m-xptext">0 / 50 XP</span><span id="m-gear"></span></div>
       <div style="margin-top:14px;" id="stats-list"></div>
+      <button class="reset-btn" id="recover-btn" style="border-color:#4a9fd4;color:#2a7fb4;margin-bottom:0;" onclick="openRecovery()">Recover lost progress</button>
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
     <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
@@ -701,15 +702,15 @@ async function afterAuth(user,isNew){
     }
     loadFriends();
     // Pull this account's cloud save and refresh the world so progress
-    // follows the player even on a fresh device or browser.
+    // follows the player even on a fresh device or browser. Retry a few times
+    // so a transient network hiccup never strands the player on a blank save.
     if(!isNew){
-      const restored=await loadCloudSave(user.uid);
-      if(restored){
-        ensureRig();initStructures();clearSightFish();initWorld('center',true);
-        updateRigBar();updateDriveUI();updateCosmeticHUD();updateZonePill();refreshMenu();
-      }
+      let ok=false;
+      for(let i=0;i<4&&!ok;i++){ok=await loadCloudSave(user.uid);if(!ok)await new Promise(function(r){setTimeout(r,700);});}
+      ensureRig();initStructures();clearSightFish();initWorld('center',true);
+      updateRigBar();updateDriveUI();updateCosmeticHUD();updateZonePill();refreshMenu();
     }
-    if(isNew){showGenderSelect();}
+    if(isNew){cloudReady=true;cloudBaseScore=progressScore(S);showGenderSelect();}
     else if(tutDone===false){showTutorial();}
   }catch(e){document.getElementById("auth-overlay").style.display="none";}
 }
@@ -2106,9 +2107,246 @@ function buildFishArt(id,px,mono){
   return '<svg width="'+px+'" height="'+Math.round(px*0.5)+'" viewBox="0 0 120 60" xmlns="http://www.w3.org/2000/svg">'+inner+'</svg>';
 }
 
+// ───────────────────────────────────────────────────────────────
+// REWORKED FISH ART — flat vector / Vic Dunaway field-guide style.
+// Config-driven (FISH_R). viewBox 0 0 240 120 (2:1), head right / tail left.
+// Bold flat color regions, crisp markings, simple flat fins, clean eye.
+// ───────────────────────────────────────────────────────────────
+function _rh(n){const v=Math.sin(n*12.9898+78.233)*43758.5453;return v-Math.floor(v);}
+function _spots(x0,x1,y0,y1,n,color,seed,rmin,rmax,op){let s='';for(let i=0;i<n;i++){const x=x0+_rh(seed+i*1.7)*(x1-x0);const y=y0+_rh(seed+i*2.3)*(y1-y0);const r=(rmin||1.1)+_rh(seed+i*3.1)*((rmax||2.2)-(rmin||1.1));s+='<circle cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="'+r.toFixed(2)+'" fill="'+color+'" opacity="'+(op||0.85)+'"/>';}return s;}
+function _bars(xs,y,h,w,color,op){let s='';for(const x of xs){s+='<rect x="'+(x-w/2)+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="'+(w*0.3)+'" fill="'+color+'" opacity="'+(op||0.9)+'"/>';}return s;}
+
+const FISH_R={
+  redfish:{
+    body:'M216,60 C214,49 207,40 194,36 C173,30 150,28 126,30 C99,33 73,41 50,51 C46,54 44,57 44,60 C44,63 46,66 50,69 C73,79 99,87 126,87 C150,87 173,80 194,72 C206,68 214,66 216,60 Z',
+    back:'M50,51 C73,41 99,33 126,30 C150,28 173,30 194,36 C207,40 214,49 216,60 C210,56 198,53 182,52 C140,49 96,49 56,55 C53,53 51,52 50,51 Z',
+    backC:'#bd7a30', belly:'#f2e6cc',
+    tail:'M50,51 C39,47 25,42 14,37 C12,37 11,39 12,42 C18,51 18,69 12,78 C11,81 12,83 14,83 C25,78 39,73 50,69 C47,63 47,57 50,51 Z',
+    tailRay:{x:50,cy:60,tx:15,y0:42,dy:5,n:7},
+    fins:['M181,66 C170,78 156,83 148,80 C158,71 169,66 178,63 Z','M150,30 L147,18 L143,29 L139,17 L135,29 L131,18 L127,30 L123,19 L119,31 L116,31 C126,29 138,29 150,30 Z','M108,33 C97,20 80,19 68,45 C82,40 95,37 108,33 Z','M152,86 C150,95 143,97 137,93 L142,86 Z','M86,84 C82,94 72,96 64,91 C62,87 63,82 67,79 C74,81 80,82 86,84 Z'],
+    fin:'#cf8330', finEdge:'#9c5f22', outline:'#6e4518',
+    eye:[189,52,3.2],
+    marksTop:'<circle cx="62" cy="52" r="6.4" fill="#15100a"/><circle cx="62" cy="52" r="7.1" fill="none" stroke="#f6ead0" stroke-width="1" opacity="0.55"/><path d="M197,38 C189,50 189,61 194,72" fill="none" stroke="#9c5f22" stroke-width="1.2" opacity="0.5"/>',
+    mouth:'M215,62 L201,64'
+  },
+  trout:{
+    body:'M222,60 C220,51 212,44 198,41 C176,36 150,34 122,36 C95,39 69,46 47,55 C44,57 43,58 43,60 C43,62 44,64 47,66 C69,76 95,84 122,86 C150,88 176,84 198,79 C212,76 220,69 222,60 Z',
+    back:'M47,55 C69,46 95,38 122,36 C150,34 176,36 198,41 C212,44 220,51 222,60 C214,55 200,52 182,51 C140,48 92,49 54,57 C51,55 49,56 47,55 Z',
+    backC:'#767a4e', belly:'#eef0e4',
+    tail:'M47,55 C36,51 23,47 13,43 C11,43 10,45 11,48 C17,54 17,66 11,72 C10,75 11,77 13,77 C23,73 36,69 47,66 C44,62 44,58 47,55 Z',
+    tailRay:{x:47,cy:60,tx:14,y0:45,dy:4.5,n:7},
+    fins:['M188,66 C178,77 164,82 155,79 C164,70 175,65 184,63 Z','M160,36 L156,22 L151,35 L146,23 L141,35 C148,33 154,34 160,36 Z','M128,36 C120,25 104,24 92,38 C104,35 116,35 128,36 Z','M150,85 C148,93 141,95 136,91 L141,84 Z','M92,84 C88,93 79,95 72,91 C70,88 71,84 74,82 C80,83 86,83 92,84 Z'],
+    fin:'#c7bd84', finEdge:'#8a8454', outline:'#4a4a30',
+    eye:[196,53,3],
+    marks:_spots(60,196,37,58,24,'#22221a',7,1.1,2.0),
+    marksTop:_spots(18,46,52,68,5,'#22221a',31,0.9,1.5)+_spots(142,160,22,34,4,'#22221a',41,0.8,1.3),
+    mouth:'M222,61 L205,63'
+  },
+  snook:{
+    body:'M224,58 C221,48 212,42 198,41 C175,37 150,36 124,38 C98,41 72,48 48,56 C45,57 43,59 43,60 C43,62 45,64 48,66 C72,76 98,83 124,85 C150,87 175,82 196,76 C210,72 220,67 224,58 Z',
+    back:'M48,56 C72,48 98,41 124,38 C150,36 175,37 198,41 C212,42 221,48 224,58 C214,53 198,51 180,50 C138,48 92,49 54,57 C51,55 49,56 48,56 Z',
+    backC:'#9a9a82', belly:'#eceadd',
+    tail:'M48,56 C37,52 24,48 14,44 C12,44 11,46 12,49 C18,54 18,66 12,71 C11,74 12,76 14,76 C24,72 37,68 48,66 C45,62 45,60 48,56 Z',
+    tailRay:{x:48,cy:60,tx:14,y0:46,dy:4,n:7},
+    fins:['M188,66 C178,77 164,82 155,79 C164,70 175,65 184,63 Z','M168,40 L164,25 L158,39 L152,26 L147,40 C154,38 161,38 168,40 Z','M134,40 C126,29 110,28 98,42 C110,39 122,39 134,40 Z','M150,85 C148,93 141,95 136,91 L141,84 Z','M96,84 C92,93 83,95 76,91 C74,88 75,84 78,82 C84,83 90,83 96,84 Z'],
+    fin:'#d8c87a', finEdge:'#a89a48', outline:'#3a3a30',
+    eye:[202,52,3],
+    marks:'<path d="M198,52 C150,50 100,52 48,59" fill="none" stroke="#16160f" stroke-width="2.4" stroke-linecap="round" opacity="0.95"/>',
+    mouth:'M224,59 L209,62'
+  },
+  sheepshead:{
+    body:'M202,60 C201,43 187,32 162,30 C134,27 104,32 80,43 C62,51 50,57 46,60 C50,63 62,69 80,77 C104,88 134,93 162,90 C187,88 201,77 202,60 Z',
+    back:'M46,60 C66,48 104,33 162,30 C187,32 201,43 202,60 C188,56 162,55 130,55 C98,55 68,57 46,60 Z',
+    backC:'#9c978a', belly:'#e9e5d8',
+    tail:'M46,60 C36,55 24,49 16,44 C18,53 18,67 16,76 C24,71 36,65 46,60 Z',
+    tailRay:{x:46,cy:60,tx:17,y0:46,dy:4.5,n:7},
+    fins:['M188,64 C178,76 162,82 152,78 C162,69 174,64 184,61 Z','M170,30 L166,16 L160,29 L154,15 L148,29 L142,16 L136,30 L130,17 L124,31 C140,28 156,28 170,30 Z','M150,90 C148,99 140,101 134,97 L140,88 Z','M96,89 C92,98 82,100 74,96 C72,93 73,88 77,86 C84,87 90,88 96,89 Z'],
+    fin:'#8f897a', finEdge:'#5e594c', outline:'#3e3a30',
+    eye:[176,44,3],
+    marks:_bars([170,150,128,106,84,62],18,84,8,'#2a2820',0.82),
+    marksTop:'<path d="M202,62 L190,64" fill="none" stroke="#3e3a30" stroke-width="1.2" stroke-linecap="round"/>',
+    mouth:''
+  },
+  pompano:{
+    body:'M194,60 C194,47 184,39 169,38 C146,36 118,42 92,53 C70,61 54,62 46,60 C54,68 70,80 92,88 C118,96 146,90 169,82 C184,79 194,73 194,60 Z',
+    back:'M46,60 C54,57 70,52 92,46 C118,38 146,33 169,38 C184,40 194,47 194,60 C180,56 154,55 122,56 C92,57 66,58 46,60 Z',
+    backC:'#8a9882', belly:'#ecd95a',
+    tail:'M46,60 C37,54 26,46 18,40 C22,52 22,68 18,80 C26,74 37,66 46,60 Z',
+    tailRay:{x:46,cy:60,tx:19,y0:42,dy:5,n:7},
+    fins:['M176,66 C168,78 154,84 145,80 C154,71 164,66 173,63 Z','M150,40 C140,30 120,30 104,40 C122,36 140,36 150,40 Z','M150,80 C140,90 120,90 104,80 C122,84 140,84 150,80 Z'],
+    fin:'#c8c45e', finEdge:'#8a8a3c', outline:'#4a5240',
+    eye:[182,57,3],
+    marksTop:'',
+    mouth:'M194,61 L184,62'
+  },
+  tarpon:{
+    body:'M214,58 C212,45 203,35 187,31 C165,26 140,25 116,28 C90,32 64,42 45,54 C42,56 41,58 42,60 C42,62 44,64 47,66 C66,77 92,86 118,88 C144,90 168,84 188,75 C203,69 212,68 214,58 Z',
+    back:'M45,54 C64,42 90,32 116,28 C140,25 165,26 187,31 C203,35 212,45 214,58 C208,53 196,50 180,49 C140,46 92,47 50,55 C48,53 46,54 45,54 Z',
+    backC:'#74838f', belly:'#e9eff3',
+    tail:'M45,54 C35,49 22,42 12,35 C10,35 9,37 11,40 C18,50 18,70 11,80 C9,83 10,85 12,85 C22,78 35,71 45,66 C42,62 42,58 45,54 Z',
+    tailRay:{x:45,cy:60,tx:12,y0:38,dy:5.5,n:8},
+    fins:['M186,64 C175,77 159,84 149,80 C160,70 172,64 182,61 Z','M128,30 C120,20 104,19 92,33 C104,30 116,30 128,30 Z','M150,86 C148,94 141,96 135,92 L141,85 Z','M92,86 C88,95 78,97 70,93 C68,90 69,85 73,83 C80,84 86,85 92,86 Z'],
+    fin:'#aebac4', finEdge:'#7e8a96', outline:'#46525c',
+    eye:[192,49,4.6],
+    marksTop:'<path d="M92,30 C86,42 87,61 91,74" fill="none" stroke="#7e8a96" stroke-width="2" stroke-linecap="round" opacity="0.9"/>',
+    mouth:'M214,61 L197,55'
+  },
+  mahi:{
+    body:'M204,42 C206,31 197,23 182,22 C164,21 148,26 132,35 C106,49 76,59 50,67 C47,68 46,70 47,72 C50,74 56,74 62,73 C90,72 120,66 148,57 C172,50 192,47 202,49 C206,49 205,46 204,42 Z',
+    back:'M50,67 C76,59 106,49 132,35 C148,26 164,21 182,22 C197,23 206,31 204,42 C205,46 206,49 202,49 C190,46 172,48 150,53 C120,60 86,67 56,72 C53,70 51,68 50,67 Z',
+    backC:'#2f86ac', belly:'#cfc850',
+    tail:'M50,67 C39,61 25,53 16,46 C14,46 13,48 15,51 C22,60 22,76 15,85 C13,88 14,90 16,90 C25,84 39,76 50,72 C47,70 47,69 50,67 Z',
+    fins:['M180,48 C172,60 160,66 151,63 C160,54 170,49 178,46 Z','M202,44 C168,21 116,19 64,42 C108,33 158,33 200,46 Z','M150,58 C122,73 88,77 62,73 C88,67 118,63 148,55 Z'],
+    fin:'#2f86ac', finEdge:'#1f6f9a', outline:'#194a5a',
+    eye:[186,40,4],
+    marks:_spots(60,190,30,64,26,'#1f6f9a',12,1.0,2.0,0.55),
+    mouth:'M204,46 L190,48'
+  },
+  gag:{
+    body:'M208,60 C206,42 192,31 168,30 C142,29 116,34 94,44 C72,52 54,58 46,60 C54,66 72,76 94,84 C116,92 142,93 168,88 C192,85 206,78 208,60 Z',
+    back:'M46,60 C54,58 72,52 94,44 C116,34 142,29 168,30 C192,31 206,42 208,60 C194,56 168,55 134,55 C100,55 70,57 46,60 Z',
+    backC:'#67614f', belly:'#a39a82',
+    tail:'M46,60 C37,53 28,49 22,47 C20,53 20,67 22,73 C28,71 37,67 46,60 Z',
+    tailRay:{x:46,cy:60,tx:23,y0:49,dy:3.5,n:7},
+    fins:['M188,64 C176,78 158,86 146,81 C158,71 172,65 184,61 Z','M168,30 L164,18 L158,29 L152,17 L146,29 L140,18 L134,30 C148,27 160,27 168,30 Z','M150,90 C148,98 140,100 134,96 L140,88 Z','M98,88 C94,97 84,99 76,95 C74,92 75,87 79,85 C86,86 92,87 98,88 Z'],
+    fin:'#5e5848', finEdge:'#3e3a2e', outline:'#33301f',
+    eye:[180,44,3.4],
+    marks:_spots(50,200,38,82,22,'#3a3526',9,3,6,0.32),
+    mouth:'M208,62 L188,66'
+  },
+  sailfish:{
+    body:'M158,59 C156,53 148,49 132,47 C100,43 64,49 40,57 C37,58 36,59 37,60 C37,61 39,62 42,64 C66,71 100,76 132,72 C148,70 156,65 158,61 Z',
+    back:'M40,57 C64,49 100,43 132,47 C148,49 156,53 158,59 C152,55 140,52 124,51 C96,49 64,53 39,58 C38,57 39,57 40,57 Z',
+    backC:'#2f5f9a', belly:'#e3eaf0',
+    tail:'M40,57 C31,52 22,44 15,38 C19,48 19,68 15,78 C23,71 33,63 42,67 C39,63 38,61 40,57 Z',
+    tailRay:{x:42,cy:60,tx:16,y0:42,dy:5,n:7},
+    fins:['M120,57 L142,86 L150,60 Z','M134,57 L150,80 L156,59 Z','M52,49 C76,8 124,8 144,50 C122,30 80,30 56,49 Z'],
+    fin:'#2f5f9a', finEdge:'#1f4f8a', outline:'#1f3f6a',
+    eye:[150,53,3],
+    marksTop:'<path d="M158,58 L236,57 L238,59.5 L158,61 Z" fill="#243a54"/>'+_spots(58,138,14,44,18,'#bcd0e8',21,1.0,1.8,0.55),
+    mouth:'M158,60 L146,61'
+  },
+  blacktip:{
+    body:'M218,48 C206,44 180,42 150,43 C116,44 82,48 50,54 C47,55 46,56 47,57 C50,59 56,60 64,61 C90,65 120,66 150,63 C178,60 202,55 218,48 Z',
+    back:'M47,57 C70,50 100,46 132,46 C162,46 192,49 218,48 C200,52 170,53 138,54 C104,55 72,56 47,57 Z',
+    backC:'#7a818b', belly:'#eef1f4',
+    tail:'M47,57 C38,50 26,38 18,28 C24,42 24,56 20,64 C26,62 38,60 47,62 C44,60 44,58 47,57 Z',
+    fins:['M118,46 L132,22 L150,47 Z','M150,60 L172,84 L182,60 Z','M86,60 L96,74 L104,60 Z','M70,47 L80,35 L88,48 Z'],
+    fin:'#7a818b', finEdge:'#5a616b', outline:'#46505a',
+    eye:[202,50,2.4],
+    marksTop:'<path d="M131,24 L137,32 L126,31 Z" fill="#1c1c1c"/><path d="M170,82 L180,72 L182,76 L174,84 Z" fill="#1c1c1c"/><g fill="none" stroke="#5a616b" stroke-width="0.9" opacity="0.55"><path d="M196,46 C194,52 194,56 196,60"/><path d="M201,46 C199,52 199,56 201,60"/><path d="M206,46 C204,52 204,56 206,60"/></g>',
+    mouth:'M218,50 C212,54 206,55 200,54'
+  }
+};
+
+function buildFishArtR(id,px){
+  px=px||240;
+  const f=FISH_R[id];
+  if(!f)return null;
+  const cid='fr'+(__cid++);
+  const out=f.outline, ow=f.ow||1.5, finFill=f.fin, finEdge=f.finEdge||'#6a655a';
+  function finP(d){return '<path d="'+d+'" fill="'+finFill+'" stroke="'+finEdge+'" stroke-width="1" stroke-linejoin="round"/>';}
+  // fins behind the body
+  let finsB='';
+  if(f.tail)finsB+=finP(f.tail);
+  if(f.tailRay){const t=f.tailRay;for(let i=0;i<(t.n||7);i++){const ty=t.y0+i*t.dy;finsB+='<path d="M'+t.x+','+t.cy+' L'+t.tx+','+ty+'" stroke="'+finEdge+'" stroke-width="0.8" opacity="0.55"/>';}}
+  (f.fins||[]).forEach(d=>{finsB+=finP(d);});
+  // body base = belly color
+  const bodyEl='<path d="'+f.body+'" fill="'+f.belly+'" stroke="'+out+'" stroke-width="'+ow+'" stroke-linejoin="round"/>';
+  // clipped interior: flat back region + markings
+  const clip='<clipPath id="cl'+cid+'"><path d="'+f.body+'"/></clipPath>';
+  let inside='';
+  if(f.back)inside+='<path d="'+f.back+'" fill="'+f.backC+'"/>';
+  if(f.marks)inside+=f.marks;
+  const insideEl='<g clip-path="url(#cl'+cid+')">'+inside+'</g>';
+  // crisp body outline re-stroked over the clipped fills
+  const bodyStroke='<path d="'+f.body+'" fill="none" stroke="'+out+'" stroke-width="'+ow+'" stroke-linejoin="round"/>';
+  // top layer: markings, mouth, eye(s)
+  let top=f.marksTop||'';
+  if(f.mouth)top+='<path d="'+f.mouth+'" fill="none" stroke="'+out+'" stroke-width="'+(f.mouthW||1.3)+'" stroke-linecap="round"/>';
+  (f.eyes||(f.eye?[f.eye]:[])).forEach(e=>{const x=e[0],y=e[1],r=e[2];
+    top+='<circle cx="'+x+'" cy="'+y+'" r="'+(r+1.3).toFixed(1)+'" fill="#fbf4e2"/><circle cx="'+x+'" cy="'+y+'" r="'+r+'" fill="#1c140c"/><circle cx="'+(x+r*0.32).toFixed(1)+'" cy="'+(y-r*0.34).toFixed(1)+'" r="'+(r*0.34).toFixed(1)+'" fill="#ffffff" opacity="0.85"/>';});
+  return '<svg width="'+px+'" height="'+Math.round(px*0.5)+'" viewBox="0 0 240 120" xmlns="http://www.w3.org/2000/svg"><defs>'+clip+'</defs>'+finsB+bodyEl+insideEl+bodyStroke+top+'</svg>';
+}
+// back-compat alias used by the mockup tooling
+function buildFishArtRealistic(id,px){return buildFishArtR(id,px)||buildFishArt(id,px);}
+
+// MOCKUP: hogfish in a bold ink-line + colored wash style (Vecteezy-inspired).
+function buildHogfishMock(px){
+  px=px||440;
+  const ink='#1a1512';
+  const body='#dd8064', back='#ab5340', belly='#f4ddcf', wash='#7a4a3e', filg='#d8c2b8', lip='#cf6f55';
+  const S='stroke="'+ink+'" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"';
+  const T='stroke="'+ink+'" stroke-width="1.3" fill="none" stroke-linecap="round"';
+  // deeper, elegant hogfish body: steep forehead, long pointed "hog" snout, deep belly tapering to a narrow peduncle
+  const bodyP='M255,90 C252,86 248,84 243,84 C246,77 242,68 233,60 C224,53 214,47 205,45 C198,43 193,43 189,45 C156,50 120,56 90,66 C78,69 70,74 66,81 C64,87 64,92 67,97 C78,107 94,114 112,118 C136,123 160,124 182,119 C198,115 209,109 219,102 C231,95 240,91 246,90 C250,89 254,90 255,90 Z';
+  return '<svg width="'+px+'" height="'+Math.round(px*150/260)+'" viewBox="0 0 260 150" xmlns="http://www.w3.org/2000/svg">'
+  // tail (deeply forked)
+  +'<path d="M68,78 C50,70 30,58 9,49 C17,66 26,81 40,88 C26,94 17,108 9,125 C30,115 50,106 68,99 C64,91 64,86 68,78 Z" fill="'+body+'" '+S+'/>'
+  +'<g '+T+' opacity="0.55"><path d="M64,84 L22,58"/><path d="M62,88 L29,74"/><path d="M62,92 L24,107"/><path d="M64,96 L34,113"/></g>'
+  // soft dorsal (swept back)
+  +'<path d="M150,53 C131,36 109,28 90,28 C103,43 119,51 134,56 Z" fill="'+body+'" '+S+'/>'
+  +'<g '+T+' opacity="0.5"><path d="M141,51 L101,32"/><path d="M136,54 L112,38"/></g>'
+  // anal (swept back)
+  +'<path d="M158,112 C138,130 119,140 105,142 C117,124 132,116 148,110 Z" fill="'+body+'" '+S+'/>'
+  +'<g '+T+' opacity="0.5"><path d="M150,114 L112,136"/><path d="M144,116 L122,132"/></g>'
+  // pelvic
+  +'<path d="M176,116 C170,130 162,136 155,134 C159,123 166,117 174,113 Z" fill="'+body+'" '+S+'/>'
+  // dorsal spine filaments (signature) — long, curving back, from just behind the head
+  +'<path d="M204,46 C195,28 182,12 171,3 C178,18 189,35 198,49 Z" fill="'+filg+'" '+S+'/>'
+  +'<path d="M197,47 C188,30 177,16 168,9 C175,22 186,39 192,50 Z" fill="'+filg+'" '+S+'/>'
+  +'<path d="M190,49 C183,35 174,25 166,20 C173,31 181,43 186,51 Z" fill="'+filg+'" '+S+'/>'
+  // body
+  +'<path d="'+bodyP+'" fill="'+body+'" '+S+'/>'
+  +'<clipPath id="hcm"><path d="'+bodyP+'"/></clipPath>'
+  +'<g clip-path="url(#hcm)">'
+    +'<path d="M67,80 C100,60 150,50 198,46 C212,45 226,49 236,58 C220,53 196,53 168,57 C128,63 92,72 69,83 Z" fill="'+back+'" opacity="0.82"/>'
+    +'<path d="M69,97 C100,116 150,124 200,113 C216,109 230,100 240,91 C224,100 198,108 170,110 C130,113 96,108 69,101 Z" fill="'+belly+'" opacity="0.92"/>'
+    +'<ellipse cx="200" cy="80" rx="22" ry="12" fill="'+wash+'" opacity="0.18" transform="rotate(-14 200 80)"/>'
+    +'<ellipse cx="116" cy="94" rx="30" ry="10" fill="'+wash+'" opacity="0.15"/>'
+    +'<ellipse cx="150" cy="60" rx="22" ry="9" fill="'+back+'" opacity="0.35"/>'
+  +'</g>'
+  +'<path d="'+bodyP+'" fill="none" '+S+'/>'
+  // pectoral (over body, mid-flank)
+  +'<path d="M196,86 C186,98 170,104 158,101 C167,89 181,84 193,83 Z" fill="'+body+'" '+S+'/>'
+  +'<g '+T+' opacity="0.5"><path d="M190,87 L163,100"/><path d="M188,90 L166,101"/></g>'
+  // interior ink detail
+  +'<path d="M212,48 C203,64 203,86 213,101" '+T+' opacity="0.8"/>' // gill cover
+  +'<path d="M218,72 C227,74 235,71 241,66" '+T+' opacity="0.5"/>'  // cheek
+  +'<path d="M150,114 C172,118 194,116 212,107" '+T+' opacity="0.38"/>' // belly contour
+  +'<path d="M92,69 C124,63 156,59 188,57" '+T+' opacity="0.36"/>' // back contour
+  +'<path d="M236,62 C242,70 246,78 248,84" '+T+' opacity="0.7"/>' // snout/face line
+  // hog lips at the snout tip
+  +'<path d="M255,90 C250,90 245,90 241,89" '+S+' fill="none"/>'
+  +'<path d="M243,84 C247,86 248,90 246,94 C243,93 240,91 240,88 Z" fill="'+lip+'" '+S+'/>'
+  // eye (large, high on the head)
+  +'<circle cx="222" cy="62" r="7.4" fill="#fff" '+S+'/>'
+  +'<circle cx="222" cy="62" r="3.6" fill="'+ink+'"/>'
+  +'<circle cx="223.7" cy="60" r="1.3" fill="#fff"/>'
+  +'</svg>';
+}
+
 // ===================== PERSISTENCE =====================
 const SAVE_KEY='tide-tackle-v2';
 let saveTimer=null;
+// ── Cloud-save safety: never let a fresh/empty state clobber real progress ──
+// cloudReady: we've reconciled with the cloud at least once this session.
+// cloudBaseScore: the progress level already stored in the cloud — a guarded
+// write is only allowed to keep or raise it. forceCloudWrite bypasses the guard
+// for deliberate resets / recovery.
+let cloudReady=false, cloudBaseScore=-1, forceCloudWrite=false;
+// Monotonic-ish measure of how much progress a save represents. Used to decide
+// which of two saves is "further along" and to block regressions to the cloud.
+function progressScore(s){
+  s=s||S;
+  return (s.totalCatches||0)*4
+    + Math.floor((s.goldEarned||0)/50)
+    + (s.level||1)*8
+    + Object.keys(s.caught||{}).length*6
+    + (s.rubies||0)*2
+    + (s.totalCasts||0)
+    + (s.tournamentWins||0)*5;
+}
 async function saveGame(){
   const data=JSON.stringify(S);
   let ok=false;
@@ -2117,7 +2355,15 @@ async function saveGame(){
   if(ok)flashSave();
   // Cloud save for signed in players so progress follows them across devices.
   if(fbUser&&fbDb){
-    try{fbDb.collection("saves").doc(fbUser.uid).set({data:data,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
+    // Don't touch the cloud until we've reconciled with it this session — this
+    // is what prevents a default/empty boot state from wiping real progress.
+    if(!cloudReady&&!forceCloudWrite)return;
+    const sc=progressScore(S);
+    // Block writes that would REDUCE cloud progress (a sign of a bad state),
+    // unless the player explicitly forced it (reset / recovery).
+    if(sc<cloudBaseScore&&!forceCloudWrite)return;
+    cloudBaseScore=Math.max(cloudBaseScore,sc);
+    try{fbDb.collection("saves").doc(fbUser.uid).set({data:data,score:sc,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
   }
 }
 function queueSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,400);}
@@ -2146,19 +2392,83 @@ async function loadCloudSave(uid){
   if(!fbDb||!uid)return false;
   try{
     const doc=await fbDb.collection("saves").doc(uid).get();
-    if(!doc.exists)return false;
-    const d=doc.data()||{};
-    if(!d.data)return false;
+    const d=doc.exists?(doc.data()||{}):{};
+    // No cloud save yet: the current (local) state becomes the cloud baseline.
+    if(!d.data){cloudReady=true;cloudBaseScore=progressScore(S);return true;}
     const cloud=JSON.parse(d.data);
-    S=Object.assign(S,cloud);
-    normalizeState();
-    if(S.zone>maxZone())S.zone=maxZone();
-    // also mirror to local so the next reload starts from cloud
-    try{localStorage.setItem(SAVE_KEY,d.data);}catch(e){}
+    const localScore=progressScore(S), cloudScore=progressScore(cloud);
+    if(cloudScore>=localScore){
+      // Cloud is further along (the normal cross-device case): adopt it.
+      S=Object.assign(S,cloud);
+      normalizeState();
+      if(S.zone>maxZone())S.zone=maxZone();
+      try{localStorage.setItem(SAVE_KEY,d.data);}catch(e){}
+      cloudBaseScore=cloudScore;cloudReady=true;
+    }else{
+      // THIS DEVICE has more progress than the cloud — the cloud was likely
+      // clobbered. Keep local and push it back up to the cloud (auto-recovery).
+      cloudReady=true;cloudBaseScore=cloudScore;
+      saveGame();
+    }
     return true;
   }catch(e){return false;}
 }
 function flashSave(){const d=document.getElementById('save-dot');d.classList.add('show');setTimeout(()=>d.classList.remove('show'),900);}
+
+// ── Progress recovery ─────────────────────────────────────────
+// Lets a signed-in player inspect every place their progress could survive
+// (cloud save, this device, and the leaderboard stats snapshot) and restore
+// from whichever is best — so a clobbered cloud save isn't the end of the road.
+let _recovery={cloud:null,local:null,lb:null};
+async function openRecovery(){
+  if(!fbUser||!fbDb){toast('Log in to recover cloud progress.','#b58b53');return;}
+  const body=document.getElementById('modal');
+  body.innerHTML='<div style="text-align:center;padding:18px;font-weight:800;color:var(--text-soft);">Checking your saves…</div>';
+  document.getElementById('modal-bg').classList.add('show');
+  let cloud=null,local=null,lb=null;
+  try{const d=await fbDb.collection('saves').doc(fbUser.uid).get();if(d.exists&&d.data().data)cloud=JSON.parse(d.data().data);}catch(e){}
+  try{const s=localStorage.getItem(SAVE_KEY);if(s)local=JSON.parse(s);}catch(e){}
+  try{const d=await fbDb.collection('leaderboard').doc(fbUser.uid).get();if(d.exists)lb=d.data();}catch(e){}
+  _recovery={cloud:cloud,local:local,lb:lb};
+  const cur=progressScore(S);
+  function line(label,score,sub,act){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:9px;border-radius:9px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:7px;">'
+      +'<div style="flex:1;"><div style="font-size:13px;font-weight:800;color:var(--ink);">'+label+'</div><div style="font-size:11px;color:var(--text-soft);">'+sub+'</div></div>'+act+'</div>';
+  }
+  function btn(key,disabled){return '<button '+(disabled?'disabled style="opacity:.4;"':'')+' onclick="applyRecovery(\''+key+'\')" style="padding:8px 12px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-weight:800;font-size:12px;cursor:pointer;white-space:nowrap;">Restore</button>';}
+  function sub(s){if(!s)return 'not found';return 'Lv '+(s.level||1)+' · '+(s.totalCatches||0)+' catches · '+Object.keys(s.caught||{}).length+' species · '+(s.goldEarned||0)+'g earned';}
+  let html='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div style="font-size:16px;font-weight:900;color:#2a7fb4;text-align:center;margin-bottom:3px;">Recover Progress</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);text-align:center;margin-bottom:12px;">Current game: Lv '+(S.level||1)+' · '+(S.totalCatches||0)+' catches (score '+cur+'). Pick the save to restore.</div>';
+  html+=line('☁️ Cloud save',cloud?progressScore(cloud):-1,sub(cloud),cloud?btn('cloud'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+=line('📱 This device',local?progressScore(local):-1,sub(local),local?btn('local'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+=line('🏆 Stats snapshot',-1,lb?('Lv '+(lb.level||1)+' · '+(lb.totalCatches||0)+' catches · '+(lb.goldEarned||0)+'g (partial — gear not included)'):'not found',lb?btn('stats'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+='<div style="font-size:10.5px;color:var(--text-soft);text-align:center;margin-top:6px;line-height:1.4;">Restoring keeps the highest-progress data and re-saves it to the cloud. The stats snapshot only restores level, gold &amp; catch totals.</div>'
+    +'<button onclick="closeModal()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;background:#9a8a6a;color:#fff;font-weight:800;cursor:pointer;">Cancel</button>';
+  body.innerHTML=html;
+}
+function applyRecovery(key){
+  const r=_recovery;
+  if(key==='cloud'&&r.cloud){S=Object.assign(S,r.cloud);}
+  else if(key==='local'&&r.local){S=Object.assign(S,r.local);}
+  else if(key==='stats'&&r.lb){
+    const lb=r.lb;
+    S.level=Math.max(S.level||1,lb.level||1);
+    S.goldEarned=Math.max(S.goldEarned||0,lb.goldEarned||0);
+    if((lb.goldEarned||0)>(S.gold||0))S.gold=lb.goldEarned;
+    S.totalCatches=Math.max(S.totalCatches||0,lb.totalCatches||0);
+    if((lb.biggestWeight||0)>(S.biggest||0)){S.biggest=lb.biggestWeight;S.biggestName=lb.biggestName||S.biggestName;}
+    S.tournamentWins=Math.max(S.tournamentWins||0,lb.tournamentWins||0);
+    if(lb.achievements)S.achievements=Object.assign(S.achievements||{},lb.achievements);
+  }else{return;}
+  normalizeState();
+  if(S.zone>maxZone())S.zone=maxZone();
+  // Force this restored state up to the cloud and local immediately.
+  forceCloudWrite=true;cloudReady=true;cloudBaseScore=-1;saveGame();forceCloudWrite=false;cloudBaseScore=progressScore(S);
+  ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateCosmeticHUD();updateZonePill();refreshMenu();
+  closeModal();
+  toast('Progress restored! Lv '+S.level+' · '+S.totalCatches+' catches.','#2aa890');
+}
 
 // ===================== HELPERS =====================
 function curBoat(){return BOATS.find(b=>b.id===S.boat);}
@@ -4610,7 +4920,10 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
   try{if(window.storage&&window.storage.delete)window.storage.delete(SAVE_KEY);}catch(e){}
   S={xp:0,level:1,gold:0,clock:360,caught:{},best:{},ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},baitInv:{shrimp:20},zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:''};
-  ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();refreshMenu();saveGame();toast('Fresh start!','#8b5a2b');setStatus('Drive with the joystick, then drop anchor to fish.');
+  normalizeState();
+  // Deliberate reset: force the (empty) state to the cloud too, bypassing the guard.
+  forceCloudWrite=true;cloudBaseScore=-1;saveGame();forceCloudWrite=false;
+  ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();refreshMenu();toast('Fresh start!','#8b5a2b');setStatus('Drive with the joystick, then drop anchor to fish.');
 });
 
 // ===================== BOOT =====================
