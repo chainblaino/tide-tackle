@@ -3466,17 +3466,14 @@ function setupMiniGame(){
   document.getElementById('rig-bar').style.pointerEvents='none';
   document.getElementById('drive-controls').style.visibility='hidden';
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
-  const [smin,smax]=hookedFish.size;
-  const sizeFrac=Math.max(0,Math.min(1,(hookW-smin)/Math.max(0.01,smax-smin)));
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
   zoneSel.dir=Math.random()<0.5?1:-1;
-  // Standard mini-game covers common..epic (legendary uses the Stardew game,
-  // so ri maxes at 3 here). Faster and more demanding the rarer/bigger the fish.
-  zoneSel.speed=1.55+ri*0.52+sizeFrac*0.60+Math.random()*0.18;
+  // Original tuning: green bar scales with rarity, marker at 30% of bar speed.
+  zoneSel.speed=1.1+ri*0.28+Math.random()*0.4;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=zoneSel.speed*0.48; // 25% more marker time than 0.6
+  marker.speed=zoneSel.speed*0.3;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
