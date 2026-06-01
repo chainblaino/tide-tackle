@@ -1042,10 +1042,9 @@ function getAlwaysTournament(){
   const zone=Math.floor(seededRnd(seed*3)*3);
   const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed*7+1)*3)];
   const fee=tournFee(zone,rarity);
-  const name=ALWAYS_TOURN_NAMES[Math.floor(seededRnd(seed*17+5)*ALWAYS_TOURN_NAMES.length)];
   const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&f.rarity===rarity;}):[];
   const targetFish=pool.length?pool[Math.floor(seededRnd(seed*11+2)*pool.length)]:null;
-  return {id:"always",zone:zone,name:name,maxP:100,rarity:rarity,fee:fee,targetFish:targetFish,alwaysOn:true};
+  return {id:"always",zone:zone,name:"The Big Cast",maxP:50,rarity:rarity,fee:fee,targetFish:targetFish,alwaysOn:true};
 }
 function etDateSeed(){
   const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
@@ -1103,9 +1102,11 @@ function tClosesIn(def){
   return _fmtMin(Math.max(0,w.end-pos));
 }
 // Placement prizes (in rubies) for a tournament of the given target rarity.
-function tournPrizes(rarity){
+// boost scales the whole payout (the Big Cast pays 1.5x).
+function tournPrizes(rarity,boost){
+  boost=boost||1;
   const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
-  return [Math.round(40*rarMult),Math.round(18*rarMult),Math.round(8*rarMult)];
+  return [Math.round(40*rarMult*boost),Math.round(18*rarMult*boost),Math.round(8*rarMult*boost)];
 }
 // Small numbered medal badge for 1st/2nd/3rd (gold/silver/bronze).
 function medalBadge(i){
@@ -1113,8 +1114,8 @@ function medalBadge(i){
   return '<span class="medal-badge" style="background:'+c+';">'+(i+1)+'</span>';
 }
 // Info popup: shows the potential ruby winnings for a tournament.
-function showTournInfo(rarity){
-  const p=tournPrizes(rarity);
+function showTournInfo(rarity,boost){
+  const p=tournPrizes(rarity,boost);
   const rows=[0,1,2].map(function(i){
     return '<div style="display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:6px;">'
       +medalBadge(i)
@@ -1137,7 +1138,7 @@ function renderTournCard(def){
     :"<b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish";
   if(def.alwaysOn){
     return "<div class=\"tourn-card always-on\">"
-      +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"')\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
+      +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"',1.5)\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
       +"<div class=\"tourn-row\"><span>"+ZONE_LBL[def.zone]+" &middot; Target: "+fishLabel+"</span></div>"
       +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; Resets daily</span></div>"
       +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up:"+def.fee+"g entry</button>"
@@ -1267,7 +1268,7 @@ function startTournamentMode(def){
   // The whole tournament is held during one randomly chosen season.
   const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
-    abilityUsesLeft:3,stolenTargets:[],smokeClouds:[]};
+    abilityReadyAt:0,stolenTargets:[],smokeClouds:[]};
   S.zone=def.zone;
   // Build the big tournament world with scattered structures and other players
   initTournamentWorld(def);
@@ -1338,13 +1339,17 @@ function endTournament(){
   // Sort by biggest catch descending; ties resolve in the player's favor.
   entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
   // Prizes are paid in RUBIES (gold is no longer won). Harder target rarities
-  // pay more. Scaled so a set (assassin 500) takes a healthy run of top finishes.
-  const prizes=tournPrizes(def.rarity);
+  // pay more. The Big Cast (always-on) pays 1.5x.
+  const prizes=tournPrizes(def.rarity,def.alwaysOn?1.5:1);
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Prize only if the player genuinely placed top 3 with a real catch.
   let winnings=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0)?prizes[rank]:0;
   if(winnings>0){S.rubies=(S.rubies||0)+winnings;updatePills();queueSave();}
-  if(rank===0&&(activeTournament.biggestWeight||0)>0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
+  if(rank===0&&(activeTournament.biggestWeight||0)>0){
+    S.tournamentWins=(S.tournamentWins||0)+1;
+    if(def.alwaysOn)S.bigCastWins=(S.bigCastWins||0)+1;
+    queueSave();checkAchievements();
+  }
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
@@ -1693,26 +1698,26 @@ const COSMETICS={
 };
 // ── OUTFIT SETS (bought with rubies; bonus is passive, ability works in tournaments) ──
 const SETS=[
-  {id:'assassin', name:'Assassin Set', cost:500, color:'#111111',
+  {id:'assassin', name:'Assassin Set', cost:500, color:'#111111', cd:45,
    pieces:{hat:'assassin_hood',shirt:'assassin_suit',shades:'assassin_mask'},
    bonus:'+50% night fish spawn rate · +20% movement speed at night',
-   ability:'Vanish', abilityDesc:'Turn invisible for 30s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10–15s. The cloud lingers 30s.'},
-  {id:'pirate', name:'Pirate Set', cost:400, color:'#c62828',
+   ability:'Vanish', abilityDesc:'Turn invisible for 30s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10–15s. The cloud lingers 30s. (45s cooldown)'},
+  {id:'pirate', name:'Pirate Set', cost:400, color:'#c62828', cd:45,
    pieces:{hat:'pirate_hat',shirt:'pirate_shirt',shades:'pirate_scar'},
    bonus:'Bad weather is 50% less harsh · +15% movement speed when wind is 10 mph or higher',
-   ability:'Plunder', abilityDesc:'Steal 20–50% of a nearby angler’s equipped bait or lures. You can’t rob the same angler twice.'},
-  {id:'princess', name:'Princess Set', cost:250, color:'#ff7ab0',
+   ability:'Plunder', abilityDesc:'Steal 20–50% of a nearby angler’s equipped bait or lures. You can’t rob the same angler twice. (45s cooldown)'},
+  {id:'princess', name:'Princess Set', cost:250, color:'#ff7ab0', cd:30,
    pieces:{hat:'princess_tiara',shirt:'princess_dress',shades:'princess_blush'},
    bonus:'Charm: +10% fish bite rate',
-   ability:'Confuse', abilityDesc:'Bewitch a nearby angler so they drift in a random direction for 15–30s.'},
-  {id:'berserker', name:'Berserker Set', cost:500, color:'#8a3a1a',
+   ability:'Confuse', abilityDesc:'Bewitch a nearby angler so they drift in a random direction for 15–30s. (30s cooldown)'},
+  {id:'berserker', name:'Berserker Set', cost:500, color:'#8a3a1a', cd:20,
    pieces:{hat:'berserker_mohawk',shirt:'berserker_vest',shades:'berserker_paint'},
    bonus:'+20% movement speed during the day · +20% in Spring & Summer (these stack)',
-   ability:'Punch', abilityDesc:'Shove a nearby angler away — harder the faster you’re moving — knocking 10–30% of their bait/lures loose.'},
-  {id:'jeremy', name:'Jeremy Set', cost:1000, color:'#9098a0',
+   ability:'Punch', abilityDesc:'Shove a nearby angler away — harder the faster you’re moving — knocking 10–30% of their bait/lures loose. (20s cooldown)'},
+  {id:'jeremy', name:'Jeremy Set', cost:1000, color:'#9098a0', cd:60,
    pieces:{hat:'jeremy_hair',shirt:'jeremy_shirt',shades:'jeremy_eyes'},
    bonus:'+50% legendary fish spawn chance',
-   ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds.'},
+   ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds. (60s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
 function equippedSetId(){
@@ -1878,7 +1883,7 @@ let S={
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],
   ownedCosmetics:[],ownedSets:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
   ownedCrowns:[],achievements:{},
-  bullseyeStreak:0,bullseyeBest:0,bullseyeTotal:0,tournamentWins:0,fishedStructures:[],
+  bullseyeStreak:0,bullseyeBest:0,bullseyeTotal:0,tournamentWins:0,bigCastWins:0,fishedStructures:[],
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
@@ -2125,6 +2130,7 @@ async function loadGame(){
 // Ensure new V6 fields exist and migrate legacy data after any load.
 function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
+  if(typeof S.bigCastWins!=='number')S.bigCastWins=0;
   if(!Array.isArray(S.ownedSets))S.ownedSets=[];
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
   // migrate legacy one-time lure purchases into consumable stacks
@@ -2186,7 +2192,7 @@ const ACHIEVEMENTS=[
   {id:'legendaryangler',tier:'extraordinary',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',check:()=>FISH.filter(f=>f.rarity==='legendary').every(f=>(S.caught[f.id]||0)>0)},
   {id:'perfecttiming',tier:'extraordinary',name:'Perfect Timing',desc:'Hit the bonus section 500 times total.',check:()=>(S.bullseyeTotal||0)>=500},
   // GOAT Status
-  {id:'bigwinner',tier:'goat',name:'Big Winner',desc:'Win 1st in a daily tournament.',crownId:'crown_gold',check:()=>(S.tournamentWins||0)>=1},
+  {id:'bigwinner',tier:'goat',name:'Big Winner',desc:'Place 1st in The Big Cast tournament.',crownId:'crown_gold',check:()=>(S.bigCastWins||0)>=1},
   {id:'silverking',tier:'goat',name:'Silver King',desc:'Catch 50 tarpon.',crownId:'crown_emerald',check:()=>(S.caught.tarpon||0)>=50},
   {id:'truefisherman',tier:'goat',name:'True Fisherman',desc:'Catch 3,000 fish.',crownId:'crown_ruby',check:()=>(S.totalCatches||0)>=3000},
   {id:'champion',tier:'goat',name:'Champion',desc:'Win 1st place in 10 tournaments.',crownId:'crown_sapphire',check:()=>(S.tournamentWins||0)>=10},
@@ -2655,7 +2661,7 @@ function stopTournamentSync(){
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex,a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
-function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#5a4632',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
+function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#c2a574',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
 function ghostHatColor(cos){if(!cos||!cos.hat||cos.hat==='none')return null;const c={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060',assassin_hood:'#0f0f0f',pirate_hat:'#cdb86a',princess_tiara:'#ffd24a',berserker_mohawk:'#c0431c',jeremy_hair:'#eef0f2'};return c[cos.hat]||'#666';}
 function drawSmokeClouds(now){
   if(!activeTournament||!activeTournament.smokeClouds)return;
@@ -2719,15 +2725,16 @@ function setupAbilityButton(){
   const setId=equippedSetId();const s=setId?setById(setId):null;
   if(activeTournament&&s){
     btn.querySelector('.ab-name').textContent=s.ability;
+    activeTournament.abilityReadyAt=0;
     updateAbilityButton();
     btn.classList.add('show');
   }else{btn.classList.remove('show');}
 }
 function updateAbilityButton(){
   const btn=document.getElementById('ability-btn');if(!btn||!activeTournament)return;
-  const left=activeTournament.abilityUsesLeft||0;
-  btn.querySelector('.ab-uses').textContent=left+' left';
-  btn.disabled=left<=0;
+  const remain=Math.max(0,(activeTournament.abilityReadyAt||0)-Date.now());
+  if(remain>0){btn.querySelector('.ab-uses').textContent=Math.ceil(remain/1000)+'s';btn.disabled=true;}
+  else{btn.querySelector('.ab-uses').textContent='Ready';btn.disabled=false;}
 }
 function nearestGhost(maxDist){
   if(!tourn.active||!tourn.ghosts.length)return null;
@@ -2743,14 +2750,14 @@ function useAbility(){
   if(!activeTournament){return;}
   const setId=equippedSetId();const s=setId?setById(setId):null;
   if(!s){toast('Equip a set with an ability first.','#b58b53');return;}
-  if((activeTournament.abilityUsesLeft||0)<=0){toast('No ability uses left this tournament.','#b58b53');return;}
+  if(Date.now()<(activeTournament.abilityReadyAt||0)){toast('Ability on cooldown.','#b58b53');return;}
   let used=false;
   if(setId==='pirate')used=abilityPlunder();
   else if(setId==='princess')used=abilityConfuse();
   else if(setId==='berserker')used=abilityPunch();
   else if(setId==='jeremy')used=abilityJeremy();
   else if(setId==='assassin')used=abilityVanish();
-  if(used){activeTournament.abilityUsesLeft--;updateAbilityButton();}
+  if(used){activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
 }
 function abilityPlunder(){
   const g=nearestGhost(340);
@@ -2852,6 +2859,8 @@ function tickAbilityEffects(){
     }
   }
   if(bo)bo.classList.toggle('show',now<blindUntil);
+  // live cooldown countdown on the ability button
+  updateAbilityButton();
 }
 function enterWorld(tz,arriveDir){
   S.zone=tz;
@@ -3099,7 +3108,7 @@ function anglerHairColor(){
 }
 function anglerShirtColor(){
   const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
-    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#5a4632',jeremy_shirt:'#9098a0'};
+    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#c2a574',jeremy_shirt:'#9098a0'};
   return(S.cosmetic&&c[S.cosmetic.shirt])||'#cf7a35';
 }
 function drawAnglerHairBack(cx,cy,r){
@@ -3113,7 +3122,27 @@ function drawAnglerHairBack(cx,cy,r){
   }
   ctx.beginPath();ctx.arc(cx,cy,r+1.3,Math.PI*0.08,Math.PI*0.92,true);ctx.fill();
 }
+// Set-specific decorations drawn on the torso (below the head). Currently the
+// Berserker's diagonal sash + shoulder spikes.
+function drawAnglerSetBody(cx,cy,r){
+  if(equippedSetId()!=='berserker')return;
+  const shY=cy+r*1.5; // shoulder line, just below the head
+  // metal shoulder spikes
+  ctx.fillStyle='#8a8f96';
+  ctx.beginPath();ctx.moveTo(cx-r*1.25,shY);ctx.lineTo(cx-r*1.55,shY-r*0.7);ctx.lineTo(cx-r*0.85,shY-r*0.15);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(cx+r*1.25,shY);ctx.lineTo(cx+r*1.55,shY-r*0.7);ctx.lineTo(cx+r*0.85,shY-r*0.15);ctx.closePath();ctx.fill();
+  // diagonal orange sash with black dots across the chest
+  ctx.save();
+  ctx.translate(cx,cy+r*2.4);
+  ctx.rotate(-0.6);
+  ctx.fillStyle='#e8862c';
+  ctx.fillRect(-r*1.7,-r*0.32,r*3.4,r*0.64);
+  ctx.fillStyle='#1a1410';
+  for(let i=-2;i<=2;i++){ctx.beginPath();ctx.arc(i*r*0.62,0,r*0.12,0,6.28);ctx.fill();}
+  ctx.restore();
+}
 function drawAnglerHatAndExtras(cx,cy,r){
+  drawAnglerSetBody(cx,cy,r);
   const hat=S.cosmetic?S.cosmetic.hat:'none';
   if(hat&&hat!=='none'){
     ctx.save();
@@ -3123,14 +3152,14 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.beginPath();ctx.ellipse(cx,cy+r*0.88,r*1.06,r*0.28,0,0,6.28);ctx.fill();
       ctx.fillStyle='#d42020';
       ctx.beginPath();ctx.ellipse(cx-r*0.22,cy+r*0.83,r*0.32,r*0.11,-0.2,0,6.28);ctx.fill();
-      // Hood: snug outline, raised slightly upward
-      ctx.fillStyle='#0f0f0f';
+      // Hood: snug outline, raised slightly upward — solid black
+      ctx.fillStyle='#000000';
       ctx.beginPath();ctx.ellipse(cx,cy-r*0.14,r*1.06,r*0.92,0,0,6.28);ctx.fill();
     } else if(hat==='pirate_hat'){
-      // straw hat with a red band
+      // straw hat with a red band — narrower brim
       ctx.fillStyle='#cdb86a';
       ctx.beginPath();ctx.arc(cx,cy-r*.5,r*.9,Math.PI,0);ctx.fill();
-      ctx.fillRect(cx-r*1.9,cy-r*.5,r*3.8,r*.4);
+      ctx.fillRect(cx-r*1.35,cy-r*.5,r*2.7,r*.4);
       ctx.fillStyle='#c62828';ctx.fillRect(cx-r*.9,cy-r*.56,r*1.8,r*.16);
     } else if(hat==='princess_tiara'){
       // little gold tiara with a pink gem
@@ -3143,19 +3172,19 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.closePath();ctx.fill();
       ctx.fillStyle='#ff5a8a';ctx.beginPath();ctx.arc(cx,cy-r*1.18,r*.13,0,6.28);ctx.fill();
     } else if(hat==='berserker_mohawk'){
-      // shaved dark sides + tall red mohawk fin
-      ctx.fillStyle='#2a2018';
-      ctx.beginPath();ctx.arc(cx,cy,r*1.02,Math.PI,0);ctx.fill();
-      ctx.fillStyle='#c0431c';
+      // tall red mohawk fin (no shaved-head base, skin shows through)
+      ctx.fillStyle='#d11f1f';
       ctx.beginPath();
-      ctx.moveTo(cx-r*.28,cy-r*.7);ctx.lineTo(cx-r*.16,cy-r*1.7);ctx.lineTo(cx,cy-r*.95);
-      ctx.lineTo(cx+r*.16,cy-r*1.7);ctx.lineTo(cx+r*.28,cy-r*.7);
+      ctx.moveTo(cx-r*.3,cy-r*.6);ctx.lineTo(cx-r*.18,cy-r*1.75);ctx.lineTo(cx,cy-r*.9);
+      ctx.lineTo(cx+r*.18,cy-r*1.75);ctx.lineTo(cx+r*.3,cy-r*.6);
       ctx.closePath();ctx.fill();
     } else if(hat==='jeremy_hair'){
-      // white buzzcut cap
+      // white buzzcut: solid cap on the top of the head only, kept above the eyes
+      ctx.save();
+      ctx.beginPath();ctx.arc(cx,cy,r,0,6.28);ctx.clip();
       ctx.fillStyle='#eef0f2';
-      ctx.beginPath();ctx.arc(cx,cy-r*.1,r*1.0,Math.PI,0);ctx.fill();
-      ctx.fillRect(cx-r,cy-r*.1,r*2,r*.18);
+      ctx.fillRect(cx-r-1,cy-r-1,(r+1)*2,r*0.85);
+      ctx.restore();
     } else {
       const hc={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060'}[hat]||'#555';
       ctx.fillStyle=hc;
@@ -3212,8 +3241,9 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.strokeStyle='#cc1a1a';ctx.lineWidth=r*0.14;ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(cx-r*0.62,cy-r*0.62);ctx.lineTo(cx+r*0.62,cy+r*0.72);ctx.stroke();
     } else if(sh==='pirate_scar'){
-      ctx.strokeStyle='#a01818';ctx.lineWidth=r*.13;ctx.lineCap='round';
-      ctx.beginPath();ctx.moveTo(cx+r*.2,cy-r*.12);ctx.lineTo(cx+r*.46,cy+r*.4);ctx.stroke();
+      // black U-shaped scar under one eye
+      ctx.strokeStyle='#111111';ctx.lineWidth=r*.12;ctx.lineCap='round';ctx.lineJoin='round';
+      ctx.beginPath();ctx.moveTo(cx+r*.18,cy-r*.06);ctx.quadraticCurveTo(cx+r*.34,cy+r*.46,cx+r*.5,cy-r*.06);ctx.stroke();
     } else if(sh==='princess_blush'){
       ctx.fillStyle='rgba(255,110,160,.55)';
       ctx.beginPath();ctx.arc(cx-r*.46,cy+r*.22,r*.2,0,6.28);ctx.fill();
