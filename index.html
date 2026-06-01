@@ -1039,25 +1039,41 @@ function getDailyTournaments(){
   });
 }
 
-function etHour(){
-  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",hour:"2-digit",hour12:false});
-  return parseInt(s);
+// Continuous tournament cycle: the timed tournaments run back to back in a
+// loop so that exactly one is always open. Each keeps its original window
+// length (closeH - openH hours), and the cycle repeats after the last one
+// (Offshore Night Bite). Driven by real elapsed time so it advances on its
+// own and is the same for everyone.
+function tournDurMin(def){return (def.closeH-def.openH)*60;}
+function tournWindows(){
+  let acc=0;const wins={};
+  for(const d of TOURN_DEFS){const dur=tournDurMin(d);wins[d.id]={start:acc,end:acc+dur};acc+=dur;}
+  return {wins:wins,total:acc};
 }
-function etHM(){
-  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",hour:"2-digit",minute:"2-digit",hour12:false});
-  const p=s.split(":");return{h:parseInt(p[0]),m:parseInt(p[1])};
+function cycleNowMin(){
+  const total=tournWindows().total;
+  const nowMin=Date.now()/60000;
+  return ((nowMin%total)+total)%total;
+}
+function _fmtMin(diff){
+  const h=Math.floor(diff/60),m=Math.floor(diff%60);
+  return h>0?(h+"h "+m+"m"):(Math.max(1,m)+"m");
 }
 function tStatus(def){
-  const h=etHour();
-  if(h>=def.openH&&h<def.closeH)return"open";
-  if(h<def.openH)return"soon";
-  return"closed";
+  const w=tournWindows().wins[def.id];if(!w)return"soon";
+  const pos=cycleNowMin();
+  return (pos>=w.start&&pos<w.end)?"open":"soon";
 }
 function tCountdown(def){
-  const t=etHM();
-  const diff=def.openH*60-(t.h*60+t.m);
-  if(diff<=0)return"";
-  return Math.floor(diff/60)+"h "+(diff%60)+"m";
+  const ws=tournWindows();const w=ws.wins[def.id];if(!w)return"";
+  const pos=cycleNowMin();
+  let diff=w.start-pos;if(diff<=0)diff+=ws.total; // minutes until it next opens
+  return _fmtMin(diff);
+}
+function tClosesIn(def){
+  const w=tournWindows().wins[def.id];if(!w)return"";
+  const pos=cycleNowMin();
+  return _fmtMin(Math.max(0,w.end-pos));
 }
 function renderTournCard(def){
   const rc=RARITY_COLORS[def.rarity];
@@ -1075,16 +1091,14 @@ function renderTournCard(def){
   }
   const st=tStatus(def);
   const statusHtml=st==="open"
-    ?"<span class=\"tourn-status open\">OPEN</span>"
-    :st==="soon"
-      ?"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>"
-      :"<span class=\"tourn-status closed\">Closed</span>";
+    ?"<span class=\"tourn-status open\">OPEN &middot; closes in "+tClosesIn(def)+"</span>"
+    :"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>";
   const btn=st==="open"
     ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up:"+def.fee+"g entry</button>"
     :"";
   return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name\">"+def.name+"</span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
     +"<div class=\"tourn-row\"><span>Target: "+fishLabel+"</span>"+statusHtml+"</div>"
-    +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>"+def.openH+":00 - "+def.closeH+":00 ET</span></div>"
+    +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>Window: "+_fmtMin(tournDurMin(def))+"</span></div>"
     +btn+"</div>";
 }
 function renderTournamentPanel(){
