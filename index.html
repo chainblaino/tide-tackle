@@ -1613,13 +1613,14 @@ function anglerIconSVG(gender,skinColor,size){
 
 // boats: maxZone gates water; perk applied in logic
 const BOATS=[
-  {id:'kayak',  name:'Kayak',        icon:'boat-kayak',   cost:0,    lvl:1,  maxZone:0, range:0,  perk:'stealth',   perkName:'Stealth: +10% inshore bites'},
-  {id:'jon',    name:'Jon Boat',     icon:'boat-jon',     cost:250,  lvl:2,  maxZone:0, range:0,  perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
-  {id:'bay',    name:'Bay Boat',     icon:'boat-bay',     cost:700,  lvl:3,  maxZone:1, range:0,  perk:'fastbite',  perkName:'Fast Bites: bites come 15% sooner'},
-  {id:'console',name:'Center Console',icon:'boat-console',cost:1800, lvl:5,  maxZone:2, range:0,  perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
-  {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
-  {id:'sport',  name:'Sportfisher',  icon:'boat-sport',   cost:7000, lvl:10, maxZone:2, range:70, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
+  {id:'kayak',  name:'Kayak',        icon:'boat-kayak',   cost:0,    lvl:1,  maxZone:0, range:0,  speed:2.1, perk:'stealth',   perkName:'Stealth: +10% inshore bites'},
+  {id:'jon',    name:'Jon Boat',     icon:'boat-jon',     cost:250,  lvl:2,  maxZone:0, range:0,  speed:2.7, perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
+  {id:'bay',    name:'Bay Boat',     icon:'boat-bay',     cost:700,  lvl:3,  maxZone:1, range:0,  speed:3.4, perk:'fastbite',  perkName:'Fast Bites: bites come 15% sooner'},
+  {id:'console',name:'Center Console',icon:'boat-console',cost:1800, lvl:5,  maxZone:2, range:0,  speed:4.2, perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
+  {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, speed:5.1, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
+  {id:'sport',  name:'Sportfisher',  icon:'boat-sport',   cost:7000, lvl:10, maxZone:2, range:70, speed:6.2, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
 ];
+function boatSpeed(id){const b=BOATS.find(x=>x.id===id);return b?b.speed:3;}
 
 const RODS=[
   {id:'rod0',name:'Glass Rod',     zoneBonus:0,  color:'#cdbb8e',cost:0,   lvl:1, desc:'Soft fiberglass, forgiving but basic.'},
@@ -2274,7 +2275,6 @@ let tourn={active:false,W:0,H:0,structs:[],ghosts:[]};
 function worldW(){return tourn.active?tourn.W:WORLD_DIMS[S.zone][0];}
 function worldH(){return tourn.active?tourn.H:WORLD_DIMS[S.zone][1];}
 function activeStructures(){return tourn.active?tourn.structs:curZone().structures;}
-const BOAT_SPEED={kayak:2.1,jon:2.5,bay:3.1,console:3.7,walk:4.1,sport:4.9};
 let boat={wx:750,wy:1100,heading:0,anchored:true,vx:0,vy:0};
 let camera={x:0,y:0};
 let joy={active:false,dx:0,dy:0,id:null};
@@ -3102,7 +3102,7 @@ function render(ts){
 
   // ---- boat physics + camera (open world) ----
   if(driving()){
-    const spd=BOAT_SPEED[S.boat]||3;
+    const spd=boatSpeed(S.boat);
     boat.vx+=(joy.dx*spd-boat.vx)*0.12;
     boat.vy+=(joy.dy*spd-boat.vy)*0.12;
     boat.wx+=boat.vx;boat.wy+=boat.vy;
@@ -3866,7 +3866,11 @@ function renderShop(){
   const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['cosmetics',svgIcon('fits',13)+' Fits']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
-  if(shopTab==='boats')html=BOATS.map(b=>shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,' <i>('+b.perkName+')</i>',false)).join('');
+  if(shopTab==='boats')html=BOATS.map(function(b,i){
+    const faster=i>0?Math.round((b.speed/BOATS[i-1].speed-1)*100):0;
+    const spd=' · Speed '+b.speed.toFixed(1)+(faster>0?' (+'+faster+'% faster)':'');
+    return shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id,spd+' <i>('+b.perkName+')</i>',false);
+  }).join('');
   else if(shopTab==='rods')html=RODS.map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),S.rod===r.id,'',true)).join('');
   else if(shopTab==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
   else if(shopTab==='braid')html=BRAIDS.map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),S.braid===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
