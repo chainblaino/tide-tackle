@@ -2838,12 +2838,18 @@ function initTournamentGhosts(){
     if(p.uid===myUid)return; // don't draw yourself
     const wx=160+Math.random()*(tourn.W-320),wy=160+Math.random()*(tourn.H-320);
     const look=randomBotLook();
+    const bi=Math.floor(Math.random()*GHOST_BOATS.length);
     tourn.ghosts.push({
       uid:p.uid,name:p.username||'Angler',isBot:!!p.isBot,real:!p.isBot,
       wx:wx,wy:wy,
       heading:Math.random()*6.28,targetAng:Math.random()*6.28,turnTimer:0,
       speed:0.9+Math.random()*1.7,
-      boat:GHOST_BOATS[Math.floor(Math.random()*GHOST_BOATS.length)],
+      boat:GHOST_BOATS[bi],
+      // give bots a rod/reel roughly matching their boat tier so the gear reads as a kit
+      rod:RODS[Math.min(RODS.length-1,Math.max(0,bi-1+Math.floor(Math.random()*2)))].id,
+      reel:REELS[Math.min(REELS.length-1,Math.max(0,bi-1+Math.floor(Math.random()*2)))].id,
+      gender:Math.random()<0.5?'male':'female',
+      skinTone:SKIN_TONES[Math.floor(Math.random()*SKIN_TONES.length)].id,
       cosmetic:look.cosmetic,set:look.set,_stash:8+Math.floor(Math.random()*15),
       pause:0,
       // real players: interpolate toward the position they broadcast over Firestore
@@ -2923,7 +2929,7 @@ function startTournamentSync(){
         // A real player we didn't have in the lobby snapshot: add them
         g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
            wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
-           cosmetic:p.cos||{},set:p.set||null,
+           cosmetic:p.cos||{},set:p.set||null,rod:p.rod||'rod0',reel:p.reel||'reel0',gender:p.gen||'male',skinTone:p.skin||'medlight',
            tx:p.wx,ty:p.wy,th:p.heading||0,hasReal:true};
         tourn.ghosts.push(g);
       }else{
@@ -2931,6 +2937,7 @@ function startTournamentSync(){
         g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
         if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
         if(p.cos)g.cosmetic=p.cos;g.set=p.set||null;
+        if(p.rod)g.rod=p.rod;if(p.reel)g.reel=p.reel;if(p.gen)g.gender=p.gen;if(p.skin)g.skinTone=p.skin;
       }
       // show their vanish state
       if(p.inv)g._invisibleUntil=nowMs+2000; else g._invisibleUntil=0;
@@ -2946,7 +2953,8 @@ function publishMyPosition(ref){
   if(!ref||!fbUser)return;
   const upd={};
   upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,
-    cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades},set:equippedSetId()||null,
+    cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades,crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
+    rod:S.rod,reel:S.reel,gen:S.gender||'male',skin:S.skinTone||'medlight',
     inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null,t:Date.now()};
   ref.set({players:{}},{merge:true}).then(function(){
     return ref.update(upd);
@@ -2992,38 +3000,48 @@ function drawAbilityFx(){
   for(let i=_abilityFx.length-1;i>=0;i--){const f=_abilityFx[i];f.r+=2.4;f.a-=0.045;if(f.a<=0){_abilityFx.splice(i,1);continue;}
     const sx=f.wx-camera.x,sy=f.wy-camera.y;ctx.save();ctx.globalAlpha=Math.max(0,f.a);ctx.strokeStyle=f.col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(sx,sy,f.r,0,6.28);ctx.stroke();ctx.restore();}
 }
-function drawGhosts(t){
+// Draw a single other player at FULL size, reusing the player's own boat /
+// angler / rod / reel pipeline by temporarily swapping the globals those
+// functions read, then restoring them.
+function drawGhostFull(g,dark){
+  const sx=Math.round(g.wx-camera.x), sy=Math.round(g.wy-camera.y);
+  const sv={boat:S.boat,cos:S.cosmetic,gen:S.gender,skin:S.skinTone,rod:S.rod,reel:S.reel,braid:S.braid,
+            anchored:boat.anchored,ox:ORIGIN.x,oy:ORIGIN.y,ltx:lineRig.tipX,lty:lineRig.tipY};
+  S.boat=g.boat||'kayak';
+  S.cosmetic=g.cosmetic||{hat:'none',shirt:'none',shades:'none',crown:'none'};
+  S.gender=g.gender||'male'; S.skinTone=g.skinTone||'medlight';
+  S.rod=g.rod||'rod0'; S.reel=g.reel||'reel0'; S.braid=g.braid||'braid0';
+  boat.anchored=true;            // anchored pose so the rod & reel are shown
+  ORIGIN.x=sx; ORIGIN.y=sy+32;   // anchored boats render at ORIGIN.y-32
+  try{drawBoat(dark);}catch(e){}
+  // restore everything
+  S.boat=sv.boat;S.cosmetic=sv.cos;S.gender=sv.gen;S.skinTone=sv.skin;S.rod=sv.rod;S.reel=sv.reel;S.braid=sv.braid;
+  boat.anchored=sv.anchored;ORIGIN.x=sv.ox;ORIGIN.y=sv.oy;lineRig.tipX=sv.ltx;lineRig.tipY=sv.lty;
+}
+function drawGhosts(t,dark){
   if(!tourn.active||!tourn.ghosts.length)return;
   const now=Date.now();
-  for(const g of tourn.ghosts){
+  // far ghosts first so nearer ones overlap them naturally
+  const list=tourn.ghosts.slice().sort(function(a,b){return a.wy-b.wy;});
+  for(const g of list){
     if(g._invisibleUntil&&now<g._invisibleUntil)continue; // vanished player
     const sx=g.wx-camera.x,sy=g.wy-camera.y;
-    if(sx<-70||sx>CW+70||sy<-70||sy>CH+70)continue;
+    if(sx<-120||sx>CW+120||sy<-120||sy>CH+120)continue;
     const setId=g.set;
     // glow ring for anglers wearing a full set (showing off)
-    if(setId){const col=setColorOf(setId);const gl=ctx.createRadialGradient(sx,sy,2,sx,sy,28);gl.addColorStop(0,hexA(col,.5));gl.addColorStop(1,hexA(col,0));ctx.fillStyle=gl;ctx.beginPath();ctx.arc(sx,sy,28,0,6.28);ctx.fill();}
+    if(setId){const col=setColorOf(setId);const gl=ctx.createRadialGradient(sx,sy,4,sx,sy,52);gl.addColorStop(0,hexA(col,.4));gl.addColorStop(1,hexA(col,0));ctx.fillStyle=gl;ctx.beginPath();ctx.arc(sx,sy,52,0,6.28);ctx.fill();}
+    // full-size boat + outfit + rod + reel
+    drawGhostFull(g,dark||0);
+    // blinded marker
+    if(g._blindUntil&&now<g._blindUntil){ctx.save();ctx.fillStyle='rgba(255,255,255,.92)';ctx.font='800 16px Nunito';ctx.textAlign='center';ctx.fillText('?',sx,sy-56);ctx.restore();}
+    // name + set label above the boat
     ctx.save();
-    ctx.translate(sx,sy);ctx.rotate(g.heading+Math.PI/2);
-    ctx.fillStyle='rgba(0,30,45,.22)';
-    ctx.beginPath();ctx.moveTo(0,-15);ctx.quadraticCurveTo(8,2,6,17);ctx.quadraticCurveTo(0,23,-6,17);ctx.quadraticCurveTo(-8,2,0,-15);ctx.closePath();ctx.fill();
-    ctx.fillStyle=GHOST_HULL[g.boat]||(g.isBot?'#b9772f':'#2f7a6a');
-    ctx.beginPath();ctx.moveTo(0,-14);ctx.quadraticCurveTo(7,2,5,15);ctx.quadraticCurveTo(0,20,-5,15);ctx.quadraticCurveTo(-7,2,0,-14);ctx.closePath();ctx.fill();
-    // angler: shirt collar + head + hat color so cosmetics are visible
-    const cos=g.cosmetic||{};
-    ctx.fillStyle=ghostShirtColor(cos);ctx.beginPath();ctx.arc(0,7,3.6,0,6.28);ctx.fill();
-    ctx.fillStyle='#f0c89a';ctx.beginPath();ctx.arc(0,3,3,0,6.28);ctx.fill();
-    const hc=ghostHatColor(cos);
-    if(hc){ctx.fillStyle=hc;ctx.beginPath();ctx.arc(0,2,3.4,Math.PI,0);ctx.fill();}
-    ctx.restore();
-    if(g._blindUntil&&now<g._blindUntil){ctx.save();ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='800 13px Nunito';ctx.textAlign='center';ctx.fillText('?',sx,sy-27);ctx.restore();}
-    // name + set label
-    ctx.save();
-    ctx.font='700 11px Nunito, sans-serif';ctx.textAlign='center';
-    ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';
-    ctx.strokeText(g.name,sx,sy-22);
-    ctx.fillStyle=g.isBot?'#dfe6ee':'#8fe6b6';
-    ctx.fillText(g.name,sx,sy-22);
-    if(setId){const sName=(setById(setId)||{}).name||'';ctx.font='800 9px Nunito, sans-serif';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.strokeText(sName,sx,sy-33);ctx.fillStyle=setColorOf(setId);ctx.fillText(sName,sx,sy-33);}
+    ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';
+    ctx.font='700 12px Nunito, sans-serif';
+    ctx.strokeText(g.name,sx,sy-48);
+    ctx.fillStyle=g.isBot?'#eaf0f6':'#8fe6b6';
+    ctx.fillText(g.name,sx,sy-48);
+    if(setId){const sName=(setById(setId)||{}).name||'';ctx.font='800 10px Nunito, sans-serif';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.strokeText(sName,sx,sy-62);ctx.fillStyle=setColorOf(setId);ctx.fillText(sName,sx,sy-62);}
     ctx.restore();
   }
 }
@@ -3925,7 +3943,7 @@ function render(ts){
   // other players roaming the tournament world + ability effects
   tickAbilityEffects();
   drawSmokeClouds(Date.now());
-  updateGhosts();drawGhosts(t);
+  updateGhosts();drawGhosts(t,sky.darkness);
   drawAbilityFx();
   // transition gates
   for(const gt of gatesFor()){
