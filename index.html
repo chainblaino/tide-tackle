@@ -202,7 +202,14 @@
     .menu-btn{width:34px;height:34px;font-size:16px;padding:0;}
     .hud.tl,.hud.tr{gap:4px;}
     /* top bar compact */
-    .top-bar{padding:5px 8px;}
+    .top-bar{padding:5px 8px;gap:4px;}
+    /* slim the top bar so the gold pill is never clipped on mobile */
+    #lvl-pill{display:none;}          /* level lives in the Stats menu */
+    #zone-name{display:none;}         /* zone pill shows just the pin icon */
+    #time-icon{display:none !important;} /* drop the sky icon, keep the season name */
+    .hud.tl{min-width:0;flex-shrink:1;overflow:hidden;}
+    .hud.tr{flex-shrink:0;}
+    .hud.tr .pill{flex-shrink:0;}     /* gold/cosmetic never shrink or clip */
     /* status banner and catch game */
     .status-banner{bottom:120px;font-size:11.5px;padding:4px 10px;max-width:92%;}
     .catch-game{bottom:10px;width:min(360px,94%);padding:9px 11px;}
@@ -1234,10 +1241,12 @@ function startTournamentMode(def){
       const delay=5000+Math.random()*220000; // 5s to 3m40s so most bots catch within 5min
       setTimeout(function(){
         if(!activeTournament)return;
-        const pool=def.targetFish?[def.targetFish]:FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
+        // Each bot independently picks any eligible species of the target rarity
+        // in this zone, so the results show a realistic mix of fish.
+        const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
         if(!pool.length)return;
         const f=pool[Math.floor(Math.random()*pool.length)];
-        const w=parseFloat((f.size[0]+(f.size[1]-f.size[0])*Math.random()).toFixed(1));
+        const w=rollWeight(f); // same biased roll as the player, for a fair fight
         activeTournament.botCatches.push({username:bot.username,fish:f.name,weight:w});
       },delay);
     });
@@ -1257,20 +1266,29 @@ function endTournament(){
   initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
   document.getElementById("tourn-banner").style.display="none";
   const def=activeTournament.def;
-  const entries=[{username:fbUsername,weight:activeTournament.biggestWeight,name:activeTournament.biggestName,isPlayer:true}];
+  // The player's own result is always in the list, even with no catch.
+  const entries=[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,name:activeTournament.biggestName||'',isPlayer:true}];
+  // Reduce each bot's catches to their single biggest.
+  const botBest={};
   activeTournament.botCatches.forEach(function(b){
-    const ex=entries.find(function(e){return e.username===b.username;});
-    if(!ex){entries.push({username:b.username,weight:b.weight,name:b.fish,isPlayer:false});}
-    else if(b.weight>ex.weight){ex.weight=b.weight;ex.name=b.fish;}
+    if(!botBest[b.username]||b.weight>botBest[b.username].weight)botBest[b.username]={weight:b.weight,name:b.fish};
   });
-  if(activeLobby){activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(p){if(!entries.find(function(e){return e.username===p.username;})){entries.push({username:p.username,weight:0,name:"No catch",isPlayer:false});}});}
-  entries.sort(function(a,b){return b.weight-a.weight;});
+  // Every bot that entered appears, weight 0 if they never landed one.
+  if(activeLobby){
+    activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(p){
+      const bb=botBest[p.username];
+      entries.push({username:p.username,weight:bb?bb.weight:0,name:bb?bb.name:'',isPlayer:false});
+    });
+  }
+  // Sort by biggest catch descending; ties resolve in the player's favor.
+  entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
   const pool=def.maxP*def.fee;
   const prizes=[Math.round(pool*.7),Math.round(pool*.2),Math.round(pool*.1)];
   const rank=entries.findIndex(function(e){return e.isPlayer;});
-  let winnings=rank>=0&&rank<3?prizes[rank]:0;
+  // Prize only if the player genuinely placed top 3 with a real catch.
+  let winnings=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0)?prizes[rank]:0;
   if(winnings>0){S.gold+=winnings;updatePills();queueSave();}
-  if(rank===0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
+  if(rank===0&&(activeTournament.biggestWeight||0)>0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
   const medals=["1st","2nd","3rd"];
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">Tournament Over!</div>"
@@ -1644,11 +1662,11 @@ const RODS=[
   {id:'rod4',name:'Bluewater Rod', zoneBonus:17, color:'#1f2a44',cost:4200,lvl:11,desc:'Heavy stand-up power.'},
 ];
 const REELS=[
-  {id:'reel0',name:'2500 Spinning',range:170,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
-  {id:'reel1',name:'4000 Spinning',range:255,drag:18,color:'#9aa0a6',cost:180, lvl:2, desc:'More line, more reach.'},
-  {id:'reel2',name:'6000 Spinning',range:350,drag:25,color:'#c9a24a',cost:650, lvl:5, desc:'Reach the mid structure.'},
-  {id:'reel3',name:'8000 Conventional',range:455,drag:35,color:'#5a5e64',cost:1800,lvl:8,desc:'Long bombs offshore.'},
-  {id:'reel4',name:'Big-Game Two-Speed',range:560,drag:50,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
+  {id:'reel0',name:'2500 Spinning',range:145,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
+  {id:'reel1',name:'4000 Spinning',range:217,drag:18,color:'#9aa0a6',cost:180, lvl:2, desc:'More line, more reach.'},
+  {id:'reel2',name:'6000 Spinning',range:298,drag:25,color:'#c9a24a',cost:650, lvl:5, desc:'Reach the mid structure.'},
+  {id:'reel3',name:'8000 Conventional',range:387,drag:35,color:'#5a5e64',cost:1800,lvl:8,desc:'Long bombs offshore.'},
+  {id:'reel4',name:'Big-Game Two-Speed',range:476,drag:50,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
 // gates which fish it can land: 2500(12)->small, ... BigGame(50)->everything.
@@ -3857,6 +3875,8 @@ function prereqLocked(kind,item){
   if(owned.includes(prev.id))return null;
   return prev.name;
 }
+// Small coin matching the HUD gold pill, for shop price buttons.
+const COIN='<span class="coin-s" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
 function shopRow(item,kind,owned,equipped,extra,swatch){
   const canAfford=S.gold>=item.cost,meetsLvl=S.level>=item.lvl;
   const needPrev=!owned?prereqLocked(kind,item):null;
@@ -3865,7 +3885,7 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
   else if(owned&&kind!=='tackle'&&kind!=='bait')action='<span class="shop-action equip">Equip</span>';
   else if(needPrev)action='<span class="shop-action lvl">Need '+needPrev+'</span>';
   else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
-  else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\uD83E\uDE99 '+item.cost+'</span>';
+  else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+item.cost+'</span>';
   const locked=!owned&&(!!needPrev||!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
   const icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
   return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+(item.desc||'')+(extra||'')+'</div></div>'+action+'</div>';
@@ -3899,7 +3919,7 @@ function renderShop(){
       if(equipped)action='<span class="shop-action equipped-tag">Tied On</span>';
       else if(owned)action='<span class="shop-action equip">Tie On</span>';
       else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
-      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+l.cost+'</span>';
+      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+l.cost+'</span>';
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+l.desc+'</div></div>'+action+'</div>';
     }).join('');
   }
@@ -3935,7 +3955,7 @@ function renderShop(){
         if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
         else if(owned) action='<span class="shop-action equip">Equip</span>';
         else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
-        else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">\ud83e\ude99 '+item.cost+'</span>';
+        else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+item.cost+'</span>';
         return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
           +'<div class="shop-icon">'+svgIcon(item.icon)+'</div>'
           +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
