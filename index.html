@@ -38,6 +38,7 @@
   .pill .sub{font-weight:700;font-size:11px;opacity:.8;}
   .menu-btn{width:38px;height:38px;justify-content:center;font-size:18px;padding:0;}
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
+  .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
 
   /* drive controls (open world) */
   .drive-controls{position:absolute;left:14px;bottom:16px;display:flex;align-items:flex-end;pointer-events:none;z-index:7;}
@@ -47,6 +48,15 @@
   .anchor-btn{position:absolute;top:52px;right:10px;z-index:8;pointer-events:auto;padding:9px 14px;border-radius:11px;border:2px solid var(--wood);background:var(--cream);color:var(--wood-dark);font-family:'Fredoka';font-weight:600;font-size:13.5px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.28);touch-action:manipulation;white-space:nowrap;}
   .anchor-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.28);}
   .anchor-btn.is-anchored{background:var(--accent);color:#fff;border-color:var(--accent-dark);box-shadow:0 4px 0 var(--accent-dark);}
+  /* tournament ability button (set abilities, 3 uses) */
+  .ability-btn{position:absolute;right:14px;bottom:152px;z-index:8;display:none;min-width:96px;padding:9px 14px;border-radius:14px;border:2px solid #ffb0bc;background:linear-gradient(135deg,#e0344e,#9c0f25);color:#fff;font-weight:900;font-family:'Fredoka';font-size:14px;cursor:pointer;box-shadow:0 4px 0 #6c0a1a;user-select:none;-webkit-user-select:none;touch-action:manipulation;text-align:center;line-height:1.1;}
+  .ability-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #6c0a1a;}
+  .ability-btn.show{display:block;}
+  .ability-btn .ab-uses{display:block;font-size:10px;font-weight:800;opacity:.92;margin-top:2px;}
+  .ability-btn:disabled{opacity:.5;filter:grayscale(.6);cursor:default;}
+  .blind-overlay{position:fixed;inset:0;z-index:460;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s;}
+  .blind-overlay.show{opacity:.94;}
+  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}}
   /* hide the rig bar while driving so the joystick has clear room */
   body.driving .rig-bar{display:none;}
   @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;top:48px;}}
@@ -128,6 +138,8 @@
   .fish-card .fcount{font-size:9px;font-weight:700;color:var(--text-soft);}
   .rarity-pip{position:absolute;top:4px;left:4px;width:8px;height:8px;border-radius:50%;border:1.5px solid rgba(0,0,0,.15);}
 
+  .shop-wallet{display:flex;justify-content:flex-end;gap:8px;margin-bottom:9px;}
+  .wallet-chip{display:inline-flex;align-items:center;gap:5px;background:var(--wood-dark);color:#ffe9c4;font-size:13px;font-weight:900;padding:4px 11px;border-radius:14px;border:1.5px solid rgba(0,0,0,.25);}
   .shop-tabs{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:11px;}
   .shop-tab{padding:5px 11px;border:2px solid #d2b886;border-radius:18px;background:var(--parchment);font-size:12px;font-weight:800;color:var(--text-soft);cursor:pointer;}
   .shop-tab.active{background:var(--sea);color:#fff;border-color:#13506f;}
@@ -205,6 +217,7 @@
     .top-bar{padding:5px 8px;gap:4px;}
     /* slim the top bar so the gold pill is never clipped on mobile */
     #lvl-pill{display:none;}          /* level lives in the Stats menu */
+    #rubies-pill{display:none;}       /* rubies always visible in the shop header */
     #zone-name{display:none;}         /* zone pill shows just the pin icon */
     #time-icon{display:none !important;} /* drop the sky icon, keep the season name */
     .hud.tl{min-width:0;flex-shrink:1;overflow:hidden;}
@@ -412,12 +425,14 @@
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
+      <div class="pill" id="rubies-pill" title="Rubies — won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
       <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
 
     <button class="anchor-btn" id="anchor-btn">Drop Anchor</button>
+    <button class="ability-btn" id="ability-btn"><span class="ab-name">Ability</span><span class="ab-uses">3 left</span></button>
     <div class="drive-controls" id="drive-controls">
       <div class="joystick" id="joystick"><div class="joy-knob" id="joy-knob"></div></div>
     </div>
@@ -451,6 +466,7 @@
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
+      <div class="shop-wallet" id="shop-wallet"><span class="wallet-chip"><span class="coin-s"></span> <span id="wallet-gold">0</span></span><span class="wallet-chip"><span class="gem-s"></span> <span id="wallet-rubies">0</span></span></div>
       <div class="shop-tabs" id="shop-tabs"></div>
       <div id="shop-list"></div>
     </div>
@@ -473,6 +489,7 @@
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="blind-overlay" id="blind-overlay"></div>
 <div class="save-dot" id="save-dot">saved</div>
 <div class="modal-bg" id="modal-bg"><div class="modal" id="modal"></div></div>
 <div class="modal-bg" id="catch-bg"><div class="catch-card" id="catch-card"></div></div>
@@ -1217,11 +1234,15 @@ function loadTournamentInvites(){
   }).catch(function(){});
 }
 function startTournamentMode(def){
-  activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[]};
+  // The whole tournament is held during one randomly chosen season.
+  const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
+  activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
+    abilityUsesLeft:3,stolenTargets:[],smokeClouds:[]};
   S.zone=def.zone;
   // Build the big tournament world with scattered structures and other players
   initTournamentWorld(def);
   initTournamentGhosts();
+  setupAbilityButton();
   ensureRig();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
   // Shop is locked during the tournament: close menu and hide the Shop tab
   document.body.classList.add('tourn-active');
@@ -1234,7 +1255,7 @@ function startTournamentMode(def){
     document.getElementById('mp-logbook').classList.add('active');
   }
   document.getElementById("tourn-banner").style.display="block";
-  toast("Tournament started! 5 minutes to fish! Shop is locked.","#e0a93c");
+  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 5 minutes to fish.","#e0a93c");
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
@@ -1260,6 +1281,10 @@ function recordTournamentCatch(fishName,weight){
 function endTournament(){
   if(!activeTournament)return;
   document.body.classList.remove('tourn-active'); // shop unlocked again
+  // Reset all ability effects and hide the ability button
+  confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
+  const bo=document.getElementById('blind-overlay');if(bo)bo.classList.remove('show');
   // Tear down the tournament world and return to the normal open world
   stopTournamentSync();
   tourn.active=false;tourn.ghosts=[];tourn.structs=[];
@@ -1282,12 +1307,14 @@ function endTournament(){
   }
   // Sort by biggest catch descending; ties resolve in the player's favor.
   entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
-  const pool=def.maxP*def.fee;
-  const prizes=[Math.round(pool*.7),Math.round(pool*.2),Math.round(pool*.1)];
+  // Prizes are paid in RUBIES (gold is no longer won). Harder target rarities
+  // pay more. Scaled so a set (assassin 500) takes a healthy run of top finishes.
+  const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[def.rarity]||1;
+  const prizes=[Math.round(40*rarMult),Math.round(18*rarMult),Math.round(8*rarMult)];
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Prize only if the player genuinely placed top 3 with a real catch.
   let winnings=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0)?prizes[rank]:0;
-  if(winnings>0){S.gold+=winnings;updatePills();queueSave();}
+  if(winnings>0){S.rubies=(S.rubies||0)+winnings;updatePills();queueSave();}
   if(rank===0&&(activeTournament.biggestWeight||0)>0){S.tournamentWins=(S.tournamentWins||0)+1;queueSave();checkAchievements();}
   const medals=["1st","2nd","3rd"];
   const body=document.getElementById("modal");
@@ -1299,7 +1326,7 @@ function endTournament(){
         +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);\">"+e.username+"</span>"
         +"<span style=\"font-size:12px;color:var(--text-soft);\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span></div>";
     }).join("")
-    +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#e0a93c;margin-top:10px;\">+"+winnings+"g prize!</div>":"")
+    +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#d61f3a;margin-top:10px;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</div>":"")
     +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
   document.getElementById("modal-bg").classList.add("show");
   activeTournament=null;activeLobby=null;
@@ -1556,8 +1583,9 @@ const LEADERS=[
 ];
 
 // ===================== LURES =====================
-// Lures are one time purchases that pair with a tackle component to form a
-// rig. Each category targets certain methods. Players build their own setup.
+// Lures are consumable, like bait: each purchase adds a pack and one is used
+// up per fish landed. Each category targets certain methods.
+const LURE_PACK=10; // lures bought per purchase
 const LURES=[
   // Soft Plastics & Jigs
   {id:'paddletail',     cat:'softplastic', name:'Paddletail',         icon:'reel',    cost:160, lvl:2,  methods:['jig','cork'],          baits:['pilchard'],desc:'Kicking tail mimics fleeing baitfish. Trout, snook, redfish.'},
@@ -1596,7 +1624,11 @@ const COSMETICS={
     {id:'beanie',    slot:'hat', name:'Beanie',            icon:'hat-beanie',  cost:160, lvl:1, desc:'For those cold January flounder trips.'},
     {id:'captainshat',slot:'hat',name:"Captain's Hat",    icon:'hat-captain', cost:500,   lvl:5, desc:'You run this bay. Everyone knows it.'},
     {id:'straw',     slot:'hat', name:'Straw Hat',         icon:'hat-straw',   cost:220,   lvl:2, desc:'Relaxed and breezy. Pure Gulf lifestyle.'},
-    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:35000, lvl:8, desc:'All-black hood. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_hood',slot:'hat',name:'Assassin Hood',   icon:'hat-hood',    cost:0, lvl:8, desc:'Part of the Assassin Set.', set:'assassin', setOnly:true},
+    {id:'pirate_hat',  slot:'hat', name:'Pirate Straw Hat', icon:'hat-straw',  cost:0, lvl:1, desc:'Part of the Pirate Set.',  set:'pirate',  setOnly:true},
+    {id:'princess_tiara',slot:'hat',name:'Princess Tiara',  icon:'crown',      cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
+    {id:'berserker_mohawk',slot:'hat',name:'Berserker Mohawk',icon:'hat-beanie',cost:0,lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
+    {id:'jeremy_hair', slot:'hat', name:'Jeremy Buzzcut',    icon:'hat-bucket', cost:0, lvl:1, desc:'Part of the Jeremy Set.',  set:'jeremy',  setOnly:true},
   ],
   shirts:[
     {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
@@ -1607,7 +1639,11 @@ const COSMETICS={
     {id:'hoodie',    slot:'shirt', name:'Sun Hoodie',      icon:'shirt-hoodie',     cost:320,   lvl:3, desc:'Full-zip protection. Neck gaiter included.'},
     {id:'tournament',slot:'shirt', name:'Tournament Jersey',icon:'shirt-jersey',    cost:600,   lvl:6, desc:'Sponsor logos on every panel. You earned it.'},
     {id:'overalls',  slot:'shirt', name:'Waders',          icon:'shirt-waders',     cost:480,   lvl:5, desc:'Chest waders for wading the grass flats.'},
-    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:30000, lvl:8, desc:'All-black tactical suit. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_suit',slot:'shirt',name:'Assassin Suit', icon:'shirt-ninja',      cost:0, lvl:8, desc:'Part of the Assassin Set.', set:'assassin', setOnly:true},
+    {id:'pirate_shirt',slot:'shirt',name:'Open Red Shirt', icon:'shirt-flannel',    cost:0, lvl:1, desc:'Part of the Pirate Set.',  set:'pirate',  setOnly:true},
+    {id:'princess_dress',slot:'shirt',name:'Pink Dress',   icon:'shirt-tee',        cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
+    {id:'berserker_vest',slot:'shirt',name:'Wasteland Vest',icon:'shirt-vest',      cost:0, lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
+    {id:'jeremy_shirt',slot:'shirt',name:'Grey Button-Down',icon:'shirt-performance',cost:0, lvl:1, desc:'Part of the Jeremy Set.', set:'jeremy',  setOnly:true},
   ],
   shades:[
     {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
@@ -1616,9 +1652,43 @@ const COSMETICS={
     {id:'clip',      slot:'shades', name:'Clip-Ons',        icon:'shades-clip',      cost:100,  lvl:1, desc:'Budget-friendly. Works over prescription glasses.'},
     {id:'mirrored',  slot:'shades', name:'Mirrored Lenses', icon:'shades-mirror',    cost:350,  lvl:3, desc:'Intimidating. The fish don\'t know what hit them.'},
     {id:'sports',    slot:'shades', name:'Sport Frames',    icon:'shades-sport',     cost:420,  lvl:4, desc:'Rubberized grip, floating lenses. Never lost.'},
-    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:10000, lvl:8, desc:'All-black face mask. Part of the Assassin Set. Wear all 3 pieces for +50% fish spawn rate at night.', set:'assassin'},
+    {id:'assassin_mask',slot:'shades',name:'Assassin Mask', icon:'shades-mask',      cost:0, lvl:8, desc:'Part of the Assassin Set.', set:'assassin', setOnly:true},
+    {id:'pirate_scar', slot:'shades',name:'Eye Scar',       icon:'shades-none',      cost:0, lvl:1, desc:'Part of the Pirate Set.',  set:'pirate',  setOnly:true},
+    {id:'princess_blush',slot:'shades',name:'Rosy Cheeks',  icon:'shades-none',      cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
+    {id:'berserker_paint',slot:'shades',name:'War Paint',   icon:'shades-mask',      cost:0, lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
+    {id:'jeremy_eyes', slot:'shades',name:'Piercing Blue Eyes',icon:'shades-polarized',cost:0,lvl:1,desc:'Part of the Jeremy Set.',  set:'jeremy',  setOnly:true},
   ],
 };
+// ── OUTFIT SETS (bought with rubies; bonus is passive, ability works in tournaments) ──
+const SETS=[
+  {id:'assassin', name:'Assassin Set', cost:500, color:'#111111',
+   pieces:{hat:'assassin_hood',shirt:'assassin_suit',shades:'assassin_mask'},
+   bonus:'+50% night fish spawn rate · +20% movement speed at night',
+   ability:'Vanish', abilityDesc:'Turn invisible for 30s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10–15s. The cloud lingers 30s.'},
+  {id:'pirate', name:'Pirate Set', cost:400, color:'#c62828',
+   pieces:{hat:'pirate_hat',shirt:'pirate_shirt',shades:'pirate_scar'},
+   bonus:'Bad weather is 50% less harsh · +15% movement speed when wind is 10 mph or higher',
+   ability:'Plunder', abilityDesc:'Steal 20–50% of a nearby angler’s equipped bait or lures. You can’t rob the same angler twice.'},
+  {id:'princess', name:'Princess Set', cost:250, color:'#ff7ab0',
+   pieces:{hat:'princess_tiara',shirt:'princess_dress',shades:'princess_blush'},
+   bonus:'Charm: +10% fish bite rate',
+   ability:'Confuse', abilityDesc:'Bewitch a nearby angler so they drift in a random direction for 15–30s.'},
+  {id:'berserker', name:'Berserker Set', cost:500, color:'#8a3a1a',
+   pieces:{hat:'berserker_mohawk',shirt:'berserker_vest',shades:'berserker_paint'},
+   bonus:'+20% movement speed during the day · +20% in Spring & Summer (these stack)',
+   ability:'Punch', abilityDesc:'Shove a nearby angler away — harder the faster you’re moving — knocking 10–30% of their bait/lures loose.'},
+  {id:'jeremy', name:'Jeremy Set', cost:1000, color:'#9098a0',
+   pieces:{hat:'jeremy_hair',shirt:'jeremy_shirt',shades:'jeremy_eyes'},
+   bonus:'+50% legendary fish spawn chance',
+   ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds.'},
+];
+function setById(id){return SETS.find(function(s){return s.id===id;});}
+function equippedSetId(){
+  if(!S.cosmetic)return null;
+  for(const s of SETS){const p=s.pieces;if(S.cosmetic.hat===p.hat&&S.cosmetic.shirt===p.shirt&&S.cosmetic.shades===p.shades)return s.id;}
+  return null;
+}
+function setColorOf(id){const s=setById(id);return s?s.color:'#cf7a35';}
 
 const SKIN_TONES=[
   {id:'light',   color:'#FDDBB4', label:'Light'},
@@ -1771,16 +1841,16 @@ const FISH=[
 
 // ===================== STATE =====================
 let S={
-  xp:0,level:1,gold:0,clock:360, // start 6:00 spring
+  xp:0,level:1,gold:0,rubies:0,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['mono'],
-  ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
+  ownedCosmetics:[],ownedSets:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
   ownedCrowns:[],achievements:{},
   bullseyeStreak:0,bullseyeBest:0,bullseyeTotal:0,tournamentWins:0,fishedStructures:[],
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
-  ownedLures:[],lureSel:'',
+  ownedLures:[],lureInv:{},lureSel:'',
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
@@ -2018,6 +2088,19 @@ async function loadGame(){
   let loaded=false;
   try{if(window.storage&&window.storage.get){const r=await window.storage.get(SAVE_KEY);if(r&&r.value){S=Object.assign(S,JSON.parse(r.value));loaded=true;}}}catch(e){}
   if(!loaded){try{const s=localStorage.getItem(SAVE_KEY);if(s)S=Object.assign(S,JSON.parse(s));}catch(e){}}
+  normalizeState();
+}
+// Ensure new V6 fields exist and migrate legacy data after any load.
+function normalizeState(){
+  if(typeof S.rubies!=='number')S.rubies=0;
+  if(!Array.isArray(S.ownedSets))S.ownedSets=[];
+  if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
+  // migrate legacy one-time lure purchases into consumable stacks
+  if(Array.isArray(S.ownedLures)){
+    S.ownedLures.forEach(function(id){if(!(S.lureInv[id]>0))S.lureInv[id]=LURE_PACK;});
+  }
+  if(!S.cosmetic)S.cosmetic={hat:'none',shirt:'none',shades:'none',crown:'none'};
+  if(!S.ownedCosmetics)S.ownedCosmetics=[];
 }
 // Pull the player's cloud save and merge it into the live state. Called after
 // a successful sign in so progress follows the account, not the device.
@@ -2030,6 +2113,7 @@ async function loadCloudSave(uid){
     if(!d.data)return false;
     const cloud=JSON.parse(d.data);
     S=Object.assign(S,cloud);
+    normalizeState();
     if(S.zone>maxZone())S.zone=maxZone();
     // also mirror to local so the next reload starts from cloud
     try{localStorage.setItem(SAVE_KEY,d.data);}catch(e){}
@@ -2115,7 +2199,11 @@ function tackleById(id){return TACKLE.find(t=>t.id===id);}
 
 // ===================== TIME =====================
 function hourNow(){return (S.clock%1440)/60;}
-function seasonNow(){return SEASONS[Math.floor(S.clock/(1440*10))%4];}
+function seasonNow(){
+  // A tournament is held entirely during one randomly chosen season.
+  if(activeTournament&&activeTournament.season)return activeTournament.season;
+  return SEASONS[Math.floor(S.clock/(1440*10))%4];
+}
 function dayNum(){return Math.floor(S.clock/1440)+1;}
 function phaseOf(h){if(h<5||h>=19)return 'night';if(h<7)return 'dawn';if(h<17)return 'day';return 'dusk';}
 function skyState(h){
@@ -2203,10 +2291,35 @@ function environmentBiteFactor(){
   // Tide: stronger current = better bite, slack = worse
   const tide=currentTide();
   mul*=(tide.dir==='slack')?0.82:(1+tide.strength*0.20);
-  mul*=currentWeather().mul;
+  let wMul=currentWeather().mul;
+  // Pirate set bonus: bad weather is 50% less harsh (bite penalty halved)
+  if(equippedSetId()==='pirate'&&wMul<1)wMul=1-(1-wMul)*0.5;
+  mul*=wMul;
   mul*=currentWind().mul;
+  // Princess set bonus: charm, +10% bite rate
+  if(equippedSetId()==='princess')mul*=1.10;
   return mul;
 }
+
+// ===================== SET BONUSES & ABILITY STATE =====================
+// Movement multiplier from equipped set bonuses (whole-game passive).
+function playerMoveMult(){
+  const set=equippedSetId();let m=1;
+  const ph=phaseOf(hourNow());
+  if(set==='assassin'&&ph==='night')m*=1.20;                    // +20% at night
+  if(set==='pirate'&&WIND.indexOf(currentWind())>=2)m*=1.15;    // +15% when wind 10mph+
+  if(set==='berserker'){
+    if(ph==='day')m*=1.20;                                       // +20% during day
+    const se=seasonNow();if(se==='spring'||se==='summer')m*=1.20;// +20% spring/summer (stacks)
+  }
+  return m;
+}
+// Ability effects applied to the LOCAL player (set by abilities / incoming events)
+let confusedUntil=0,confuseAng=0;   // Princess: drift in a random direction
+let knockVX=0,knockVY=0;            // Berserker: punch knockback impulse
+let blindUntil=0;                   // Assassin: blinded by a smoke cloud
+let immuneUntil=0;                  // Jeremy: immune to others' abilities
+let invisibleUntil=0;              // Assassin: self invisibility
 
 // ===================== CANVAS =====================
 const canvas=document.getElementById('ocean');
@@ -2357,8 +2470,18 @@ function initTournamentWorld(def){
   tourn.active=true;
 }
 // Other players roaming the tournament world (bots + real entrants from the lobby).
-const GHOST_BOATS=['kayak','jon','bay','console'];
+const GHOST_BOATS=['kayak','jon','bay','console','walk','sport'];
+const GHOST_HATS=['none','bucket','baseball','cowboy','captainshat','straw','beanie'];
+const GHOST_SHIRTS=['fishing_tee','performance','flannel','vest','hoodie','tournament','overalls'];
 function myTournUid(){return fbUser?fbUser.uid:'guest';}
+// Give a bot a random loadout so cosmetics are visible. ~40% sport a full set.
+function randomBotLook(){
+  if(Math.random()<0.4){
+    const s=SETS[Math.floor(Math.random()*SETS.length)];
+    return {set:s.id,cosmetic:{hat:s.pieces.hat,shirt:s.pieces.shirt,shades:s.pieces.shades}};
+  }
+  return {set:null,cosmetic:{hat:GHOST_HATS[Math.floor(Math.random()*GHOST_HATS.length)],shirt:GHOST_SHIRTS[Math.floor(Math.random()*GHOST_SHIRTS.length)],shades:'none'}};
+}
 function initTournamentGhosts(){
   tourn.ghosts=[];
   if(!activeLobby)return;
@@ -2366,12 +2489,14 @@ function initTournamentGhosts(){
   activeLobby.players.forEach(function(p){
     if(p.uid===myUid)return; // don't draw yourself
     const wx=160+Math.random()*(tourn.W-320),wy=160+Math.random()*(tourn.H-320);
+    const look=randomBotLook();
     tourn.ghosts.push({
       uid:p.uid,name:p.username||'Angler',isBot:!!p.isBot,real:!p.isBot,
       wx:wx,wy:wy,
       heading:Math.random()*6.28,targetAng:Math.random()*6.28,turnTimer:0,
       speed:0.9+Math.random()*1.7,
       boat:GHOST_BOATS[Math.floor(Math.random()*GHOST_BOATS.length)],
+      cosmetic:look.cosmetic,set:look.set,_stash:8+Math.floor(Math.random()*15),
       pause:0,
       // real players: interpolate toward the position they broadcast over Firestore
       tx:wx,ty:wy,th:0,hasReal:false,
@@ -2394,7 +2519,21 @@ function updateGhosts(){
       continue;
     }
     if(g.real&&!g.hasReal)continue; // real player who hasn't broadcast yet: hold still
-    // Bots: simulated wandering
+    // Bots: ability effects then simulated wandering
+    const now=Date.now();
+    // walk through any smoke clouds I didn't drop -> blinded
+    if(activeTournament&&activeTournament.smokeClouds){
+      for(const sc of activeTournament.smokeClouds){
+        if(now>sc.until||sc.owner===g.uid)continue;
+        if(dist(g.wx,g.wy,sc.wx,sc.wy)<sc.r)g._blindUntil=Math.max(g._blindUntil||0,now+(10000+Math.random()*5000));
+      }
+    }
+    // knockback impulse from a punch
+    if(g._knockVX||g._knockVY){g.wx+=g._knockVX;g.wy+=g._knockVY;g._knockVX*=0.86;g._knockVY*=0.86;if(Math.abs(g._knockVX)<0.1)g._knockVX=0;if(Math.abs(g._knockVY)<0.1)g._knockVY=0;clampGhost(g);}
+    // confused: drift in a random direction
+    if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng+=(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*g.speed;g.wy+=Math.sin(g._confuseAng)*g.speed*0.7;clampGhost(g);continue;}
+    // blinded by smoke: stall in place
+    if(g._blindUntil&&now<g._blindUntil)continue;
     if(g.pause>0){g.pause--;continue;}
     g.turnTimer--;
     if(g.turnTimer<=0){
@@ -2436,20 +2575,31 @@ function startTournamentSync(){
         // A real player we didn't have in the lobby snapshot: add them
         g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
            wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
+           cosmetic:p.cos||{},set:p.set||null,
            tx:p.wx,ty:p.wy,th:p.heading||0,hasReal:true};
         tourn.ghosts.push(g);
-        return;
+      }else{
+        g.real=true;g.isBot=false;g.hasReal=true;
+        g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
+        if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
+        if(p.cos)g.cosmetic=p.cos;g.set=p.set||null;
       }
-      g.real=true;g.isBot=false;g.hasReal=true;
-      g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
-      if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
+      // show their vanish state
+      if(p.inv)g._invisibleUntil=nowMs+2000; else g._invisibleUntil=0;
+      // apply any ability event aimed at me
+      if(p.act&&p.act.target===myTournUid()){
+        tourn._seenActs=tourn._seenActs||{};
+        if(!tourn._seenActs[p.act.id]){tourn._seenActs[p.act.id]=1;applyIncomingAct(p.act);}
+      }
     });
   },function(){});
 }
 function publishMyPosition(ref){
   if(!ref||!fbUser)return;
   const upd={};
-  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,t:Date.now()};
+  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,
+    cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades},set:equippedSetId()||null,
+    inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null,t:Date.now()};
   ref.set({players:{}},{merge:true}).then(function(){
     return ref.update(upd);
   }).catch(function(){
@@ -2471,30 +2621,205 @@ function stopTournamentSync(){
   }
   tourn.posKey=null;
 }
+const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
+function hexA(hex,a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
+function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#5a4632',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
+function ghostHatColor(cos){if(!cos||!cos.hat||cos.hat==='none')return null;const c={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060',assassin_hood:'#0f0f0f',pirate_hat:'#cdb86a',princess_tiara:'#ffd24a',berserker_mohawk:'#c0431c',jeremy_hair:'#eef0f2'};return c[cos.hat]||'#666';}
+function drawSmokeClouds(now){
+  if(!activeTournament||!activeTournament.smokeClouds)return;
+  for(const sc of activeTournament.smokeClouds){
+    if(now>sc.until)continue;
+    const sx=sc.wx-camera.x,sy=sc.wy-camera.y;
+    if(sx<-120||sx>CW+120||sy<-120||sy>CH+120)continue;
+    const life=Math.max(0,(sc.until-now)/30000);
+    const gl=ctx.createRadialGradient(sx,sy,4,sx,sy,sc.r*1.4);
+    gl.addColorStop(0,'rgba(46,46,52,'+(0.6*life)+')');
+    gl.addColorStop(1,'rgba(46,46,52,0)');
+    ctx.fillStyle=gl;ctx.beginPath();ctx.arc(sx,sy,sc.r*1.4,0,6.28);ctx.fill();
+  }
+}
+let _abilityFx=[];
+function spawnAbilityFx(wx,wy,col){_abilityFx.push({wx:wx,wy:wy,col:col,r:6,a:1});}
+function drawAbilityFx(){
+  for(let i=_abilityFx.length-1;i>=0;i--){const f=_abilityFx[i];f.r+=2.4;f.a-=0.045;if(f.a<=0){_abilityFx.splice(i,1);continue;}
+    const sx=f.wx-camera.x,sy=f.wy-camera.y;ctx.save();ctx.globalAlpha=Math.max(0,f.a);ctx.strokeStyle=f.col;ctx.lineWidth=3;ctx.beginPath();ctx.arc(sx,sy,f.r,0,6.28);ctx.stroke();ctx.restore();}
+}
 function drawGhosts(t){
   if(!tourn.active||!tourn.ghosts.length)return;
+  const now=Date.now();
   for(const g of tourn.ghosts){
+    if(g._invisibleUntil&&now<g._invisibleUntil)continue; // vanished player
     const sx=g.wx-camera.x,sy=g.wy-camera.y;
-    if(sx<-60||sx>CW+60||sy<-60||sy>CH+60)continue;
+    if(sx<-70||sx>CW+70||sy<-70||sy>CH+70)continue;
+    const setId=g.set;
+    // glow ring for anglers wearing a full set (showing off)
+    if(setId){const col=setColorOf(setId);const gl=ctx.createRadialGradient(sx,sy,2,sx,sy,28);gl.addColorStop(0,hexA(col,.5));gl.addColorStop(1,hexA(col,0));ctx.fillStyle=gl;ctx.beginPath();ctx.arc(sx,sy,28,0,6.28);ctx.fill();}
     ctx.save();
     ctx.translate(sx,sy);ctx.rotate(g.heading+Math.PI/2);
-    // simple boat hull
     ctx.fillStyle='rgba(0,30,45,.22)';
     ctx.beginPath();ctx.moveTo(0,-15);ctx.quadraticCurveTo(8,2,6,17);ctx.quadraticCurveTo(0,23,-6,17);ctx.quadraticCurveTo(-8,2,0,-15);ctx.closePath();ctx.fill();
-    ctx.fillStyle=g.isBot?'#b9772f':'#2f7a6a';
+    ctx.fillStyle=GHOST_HULL[g.boat]||(g.isBot?'#b9772f':'#2f7a6a');
     ctx.beginPath();ctx.moveTo(0,-14);ctx.quadraticCurveTo(7,2,5,15);ctx.quadraticCurveTo(0,20,-5,15);ctx.quadraticCurveTo(-7,2,0,-14);ctx.closePath();ctx.fill();
-    // angler dot
+    // angler: shirt collar + head + hat color so cosmetics are visible
+    const cos=g.cosmetic||{};
+    ctx.fillStyle=ghostShirtColor(cos);ctx.beginPath();ctx.arc(0,7,3.6,0,6.28);ctx.fill();
     ctx.fillStyle='#f0c89a';ctx.beginPath();ctx.arc(0,3,3,0,6.28);ctx.fill();
+    const hc=ghostHatColor(cos);
+    if(hc){ctx.fillStyle=hc;ctx.beginPath();ctx.arc(0,2,3.4,Math.PI,0);ctx.fill();}
     ctx.restore();
-    // name label
+    if(g._blindUntil&&now<g._blindUntil){ctx.save();ctx.fillStyle='rgba(255,255,255,.9)';ctx.font='800 13px Nunito';ctx.textAlign='center';ctx.fillText('?',sx,sy-27);ctx.restore();}
+    // name + set label
     ctx.save();
     ctx.font='700 11px Nunito, sans-serif';ctx.textAlign='center';
     ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';
     ctx.strokeText(g.name,sx,sy-22);
     ctx.fillStyle=g.isBot?'#dfe6ee':'#8fe6b6';
     ctx.fillText(g.name,sx,sy-22);
+    if(setId){const sName=(setById(setId)||{}).name||'';ctx.font='800 9px Nunito, sans-serif';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.strokeText(sName,sx,sy-33);ctx.fillStyle=setColorOf(setId);ctx.fillText(sName,sx,sy-33);}
     ctx.restore();
   }
+}
+
+// ===================== TOURNAMENT ABILITIES =====================
+function clampGhost(g){if(g.wx<70)g.wx=70;if(g.wx>tourn.W-70)g.wx=tourn.W-70;if(g.wy<70)g.wy=70;if(g.wy>tourn.H-70)g.wy=tourn.H-70;}
+function setupAbilityButton(){
+  const btn=document.getElementById('ability-btn');if(!btn)return;
+  const setId=equippedSetId();const s=setId?setById(setId):null;
+  if(activeTournament&&s){
+    btn.querySelector('.ab-name').textContent=s.ability;
+    updateAbilityButton();
+    btn.classList.add('show');
+  }else{btn.classList.remove('show');}
+}
+function updateAbilityButton(){
+  const btn=document.getElementById('ability-btn');if(!btn||!activeTournament)return;
+  const left=activeTournament.abilityUsesLeft||0;
+  btn.querySelector('.ab-uses').textContent=left+' left';
+  btn.disabled=left<=0;
+}
+function nearestGhost(maxDist){
+  if(!tourn.active||!tourn.ghosts.length)return null;
+  const now=Date.now();let best=null,bd=maxDist||1e9;
+  for(const g of tourn.ghosts){
+    if(g._invisibleUntil&&now<g._invisibleUntil)continue;
+    const d=dist(boat.wx,boat.wy,g.wx,g.wy);
+    if(d<bd){bd=d;best=g;}
+  }
+  return best;
+}
+function useAbility(){
+  if(!activeTournament){return;}
+  const setId=equippedSetId();const s=setId?setById(setId):null;
+  if(!s){toast('Equip a set with an ability first.','#b58b53');return;}
+  if((activeTournament.abilityUsesLeft||0)<=0){toast('No ability uses left this tournament.','#b58b53');return;}
+  let used=false;
+  if(setId==='pirate')used=abilityPlunder();
+  else if(setId==='princess')used=abilityConfuse();
+  else if(setId==='berserker')used=abilityPunch();
+  else if(setId==='jeremy')used=abilityJeremy();
+  else if(setId==='assassin')used=abilityVanish();
+  if(used){activeTournament.abilityUsesLeft--;updateAbilityButton();}
+}
+function abilityPlunder(){
+  const g=nearestGhost(340);
+  if(!g){toast('No angler within range to rob.','#b58b53');return false;}
+  if(activeTournament.stolenTargets.includes(g.uid)){toast("You've already robbed "+g.name+".",'#b58b53');return false;}
+  activeTournament.stolenTargets.push(g.uid);
+  const frac=0.2+Math.random()*0.3;
+  const stash=(g._stash!=null)?g._stash:(g._stash=8+Math.floor(Math.random()*15));
+  const amt=Math.max(1,Math.round(stash*frac));
+  g._stash=Math.max(0,stash-amt);
+  if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=(S.baitInv[S.baitSel]||0)+amt;
+  else if(S.lureSel)S.lureInv[S.lureSel]=(S.lureInv[S.lureSel]||0)+amt;
+  else if(S.baitSel)S.baitInv[S.baitSel]=(S.baitInv[S.baitSel]||0)+amt;
+  updateRigBar();queueSave();
+  toast('Plundered '+amt+' bait/lures from '+g.name+'!','#2aa890');
+  spawnAbilityFx(g.wx,g.wy,'#ffd24a');
+  if(g.real)broadcastAbility('plunder',g.uid,{amt:amt});
+  return true;
+}
+function abilityConfuse(){
+  const g=nearestGhost(380);
+  if(!g){toast('No angler within range to confuse.','#b58b53');return false;}
+  const dur=15000+Math.random()*15000;
+  if(g.real){broadcastAbility('confuse',g.uid,{dur:dur});}
+  else{g._confuseUntil=Date.now()+dur;g._confuseAng=Math.random()*6.28;}
+  toast('Confused '+g.name+'!','#a872d8');
+  spawnAbilityFx(g.wx,g.wy,'#c77ad8');
+  return true;
+}
+function abilityPunch(){
+  const g=nearestGhost(220);
+  if(!g){toast('Get closer to punch an angler.','#b58b53');return false;}
+  const spd=Math.hypot(boat.vx,boat.vy);
+  const power=10+spd*5; // farther the faster you're moving
+  let dx=g.wx-boat.wx,dy=g.wy-boat.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
+  if(g.real){broadcastAbility('punch',g.uid,{vx:dx*power,vy:dy*power});}
+  else{g._knockVX=dx*power;g._knockVY=dy*power;g._stash=Math.max(0,((g._stash!=null?g._stash:10))*(1-(0.1+Math.random()*0.2)));}
+  toast('Punched '+g.name+' away!','#c46f28');
+  spawnAbilityFx(g.wx,g.wy,'#ff8a3a');
+  return true;
+}
+function abilityJeremy(){
+  immuneUntil=Date.now()+60000;
+  toast('Untouchable for 60s — no ability can affect you.','#2aa890');
+  spawnAbilityFx(boat.wx,boat.wy,'#bcd8f4');
+  return true;
+}
+function abilityVanish(){
+  const now=Date.now();
+  invisibleUntil=now+30000;
+  activeTournament.smokeClouds.push({wx:boat.wx,wy:boat.wy,until:now+30000,r:58,owner:myTournUid()});
+  toast('Vanished! Smoke dropped — invisible for 30s.','#2aa890');
+  spawnAbilityFx(boat.wx,boat.wy,'#cfd2d6');
+  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
+  return true;
+}
+function broadcastAbility(type,targetUid,data){
+  tourn._pendingAct={id:Date.now()+'_'+Math.floor(Math.random()*1e6),type:type,target:targetUid,data:data||{},t:Date.now()};
+  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
+  setTimeout(function(){tourn._pendingAct=null;},5000);
+}
+function applyIncomingAct(act){
+  const now=Date.now();
+  const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder');
+  if(hostile&&now<immuneUntil){toast('Untouchable — blocked an ability!','#2aa890');return;}
+  if(act.type==='confuse'){confusedUntil=now+(act.data.dur||20000);confuseAng=Math.random()*6.28;toast('You were confused!','#a872d8');}
+  else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;toast('You got punched!','#c46f28');}
+  else if(act.type==='plunder'){const amt=act.data.amt||0;
+    if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
+    else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
+    updateRigBar();queueSave();toast('Robbed of '+amt+' bait/lures!','#b3402a');}
+}
+// Tap an angler while roaming a tournament to see their loadout (show off!).
+function ghostAtScreen(x,y){
+  if(!tourn.active)return null;const now=Date.now();
+  for(const g of tourn.ghosts){if(g._invisibleUntil&&now<g._invisibleUntil)continue;const sx=g.wx-camera.x,sy=g.wy-camera.y;if(Math.hypot(x-sx,y-sy)<26)return g;}
+  return null;
+}
+function showGhostInfo(g){
+  const boatName=(BOATS.find(b=>b.id===g.boat)||{}).name||g.boat;
+  const setName=g.set?(setById(g.set)||{}).name:null;
+  const cos=g.cosmetic||{};
+  const bits=[boatName];
+  if(setName)bits.push(setName+' (set)');
+  else{const parts=[cos.hat,cos.shirt].filter(function(x){return x&&x!=='none';});if(parts.length)bits.push(parts.join(', '));}
+  toast(g.name+' — '+bits.join(' · '),'#1c6a9e');
+}
+// Per-frame ability housekeeping: prune smoke, blind the local player on contact,
+// toggle the white blind overlay.
+function tickAbilityEffects(){
+  const bo=document.getElementById('blind-overlay');
+  if(!activeTournament){if(bo)bo.classList.remove('show');return;}
+  const now=Date.now();
+  if(activeTournament.smokeClouds){
+    activeTournament.smokeClouds=activeTournament.smokeClouds.filter(function(sc){return now<sc.until;});
+    for(const sc of activeTournament.smokeClouds){
+      if(sc.owner===myTournUid())continue;
+      if(now>=immuneUntil&&dist(boat.wx,boat.wy,sc.wx,sc.wy)<sc.r){blindUntil=Math.max(blindUntil,now+(10000+Math.random()*5000));}
+    }
+  }
+  if(bo)bo.classList.toggle('show',now<blindUntil);
 }
 function enterWorld(tz,arriveDir){
   S.zone=tz;
@@ -2741,12 +3066,12 @@ function anglerHairColor(){
   return c[S.skinTone]||'#8B5E3C';
 }
 function anglerShirtColor(){
-  if(assassinSetActive())return'#111111';
-  const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111'};
+  const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
+    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#5a4632',jeremy_shirt:'#9098a0'};
   return(S.cosmetic&&c[S.cosmetic.shirt])||'#cf7a35';
 }
 function drawAnglerHairBack(cx,cy,r){
-  if(assassinSetActive())return; // hood handles everything, no hair
+  if(equippedSetId())return; // each set's hat piece defines the head; skip generic hair
   const hc=anglerHairColor();
   ctx.fillStyle=hc;
   if(S.gender==='female'){
@@ -2766,9 +3091,39 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.beginPath();ctx.ellipse(cx,cy+r*0.88,r*1.06,r*0.28,0,0,6.28);ctx.fill();
       ctx.fillStyle='#d42020';
       ctx.beginPath();ctx.ellipse(cx-r*0.22,cy+r*0.83,r*0.32,r*0.11,-0.2,0,6.28);ctx.fill();
-      // Hood: snug outline that ends right at the scarf, not below
+      // Hood: snug outline, raised slightly upward
       ctx.fillStyle='#0f0f0f';
-      ctx.beginPath();ctx.ellipse(cx,cy,r*1.06,r*0.88,0,0,6.28);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx,cy-r*0.14,r*1.06,r*0.92,0,0,6.28);ctx.fill();
+    } else if(hat==='pirate_hat'){
+      // straw hat with a red band
+      ctx.fillStyle='#cdb86a';
+      ctx.beginPath();ctx.arc(cx,cy-r*.5,r*.9,Math.PI,0);ctx.fill();
+      ctx.fillRect(cx-r*1.9,cy-r*.5,r*3.8,r*.4);
+      ctx.fillStyle='#c62828';ctx.fillRect(cx-r*.9,cy-r*.56,r*1.8,r*.16);
+    } else if(hat==='princess_tiara'){
+      // little gold tiara with a pink gem
+      ctx.fillStyle='#ffd24a';
+      ctx.fillRect(cx-r*.7,cy-r*.95,r*1.4,r*.16);
+      ctx.beginPath();
+      ctx.moveTo(cx-r*.6,cy-r*.95);ctx.lineTo(cx-r*.35,cy-r*1.35);ctx.lineTo(cx-r*.1,cy-r*.95);
+      ctx.moveTo(cx-r*.1,cy-r*.95);ctx.lineTo(cx,cy-r*1.5);ctx.lineTo(cx+r*.1,cy-r*.95);
+      ctx.moveTo(cx+r*.1,cy-r*.95);ctx.lineTo(cx+r*.35,cy-r*1.35);ctx.lineTo(cx+r*.6,cy-r*.95);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#ff5a8a';ctx.beginPath();ctx.arc(cx,cy-r*1.18,r*.13,0,6.28);ctx.fill();
+    } else if(hat==='berserker_mohawk'){
+      // shaved dark sides + tall red mohawk fin
+      ctx.fillStyle='#2a2018';
+      ctx.beginPath();ctx.arc(cx,cy,r*1.02,Math.PI,0);ctx.fill();
+      ctx.fillStyle='#c0431c';
+      ctx.beginPath();
+      ctx.moveTo(cx-r*.28,cy-r*.7);ctx.lineTo(cx-r*.16,cy-r*1.7);ctx.lineTo(cx,cy-r*.95);
+      ctx.lineTo(cx+r*.16,cy-r*1.7);ctx.lineTo(cx+r*.28,cy-r*.7);
+      ctx.closePath();ctx.fill();
+    } else if(hat==='jeremy_hair'){
+      // white buzzcut cap
+      ctx.fillStyle='#eef0f2';
+      ctx.beginPath();ctx.arc(cx,cy-r*.1,r*1.0,Math.PI,0);ctx.fill();
+      ctx.fillRect(cx-r,cy-r*.1,r*2,r*.18);
     } else {
       const hc={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060'}[hat]||'#555';
       ctx.fillStyle=hc;
@@ -2824,6 +3179,20 @@ function drawAnglerHatAndExtras(cx,cy,r){
       // Red diagonal slash
       ctx.strokeStyle='#cc1a1a';ctx.lineWidth=r*0.14;ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(cx-r*0.62,cy-r*0.62);ctx.lineTo(cx+r*0.62,cy+r*0.72);ctx.stroke();
+    } else if(sh==='pirate_scar'){
+      ctx.strokeStyle='#a01818';ctx.lineWidth=r*.13;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(cx+r*.2,cy-r*.12);ctx.lineTo(cx+r*.46,cy+r*.4);ctx.stroke();
+    } else if(sh==='princess_blush'){
+      ctx.fillStyle='rgba(255,110,160,.55)';
+      ctx.beginPath();ctx.arc(cx-r*.46,cy+r*.22,r*.2,0,6.28);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+r*.46,cy+r*.22,r*.2,0,6.28);ctx.fill();
+    } else if(sh==='berserker_paint'){
+      ctx.fillStyle='rgba(20,18,16,.72)';
+      ctx.fillRect(cx-r*.82,cy-r*.16,r*1.64,r*.34);
+    } else if(sh==='jeremy_eyes'){
+      ctx.fillStyle='#2f6fb0';
+      ctx.beginPath();ctx.arc(cx-r*.32,cy-r*.04,r*.16,0,6.28);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+r*.32,cy-r*.04,r*.16,0,6.28);ctx.fill();
     } else {
       ctx.fillStyle='rgba(10,10,18,.62)';
       ctx.beginPath();ctx.ellipse(cx,cy,r*.65,r*.26,0,0,6.28);ctx.fill();
@@ -3134,9 +3503,19 @@ function render(ts){
 
   // ---- boat physics + camera (open world) ----
   if(driving()){
-    const spd=boatSpeed(S.boat);
-    boat.vx+=(joy.dx*spd-boat.vx)*0.12;
-    boat.vy+=(joy.dy*spd-boat.vy)*0.12;
+    const spd=boatSpeed(S.boat)*playerMoveMult();
+    // Confuse ability: input is overridden with a wandering drift
+    let jdx=joy.dx,jdy=joy.dy;
+    if(typeof confusedUntil!=='undefined'&&performance.now()<confusedUntil){
+      jdx=Math.cos(confuseAng);jdy=Math.sin(confuseAng);
+      confuseAng+=(Math.random()-0.5)*0.3;
+    }
+    boat.vx+=(jdx*spd-boat.vx)*0.12;
+    boat.vy+=(jdy*spd-boat.vy)*0.12;
+    // Punch / knockback impulse decays over time
+    if(typeof knockVX!=='undefined'&&(Math.abs(knockVX)>0.05||Math.abs(knockVY)>0.05)){
+      boat.wx+=knockVX;boat.wy+=knockVY;knockVX*=0.88;knockVY*=0.88;
+    }
     boat.wx+=boat.vx;boat.wy+=boat.vy;
     boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
@@ -3171,8 +3550,11 @@ function render(ts){
     if(sx<-90||sx>CW+90||sy<-90||sy>CH+90)continue;
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
-  // other players roaming the tournament world
+  // other players roaming the tournament world + ability effects
+  tickAbilityEffects();
+  drawSmokeClouds(Date.now());
   updateGhosts();drawGhosts(t);
+  drawAbilityFx();
   // transition gates
   for(const gt of gatesFor()){
     const gx=gt.wx-camera.x,gy=gt.wy-camera.y;
@@ -3195,7 +3577,9 @@ function render(ts){
   ripples=ripples.filter(r=>r.life>0);
   for(const r of ripples){r.life-=.016;r.r+=.9;ctx.strokeStyle='rgba(255,255,255,'+(r.life*.5)+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,6.28);ctx.stroke();}
 
-  drawBoat(sky.darkness);
+  // Assassin vanish: render yourself translucent while invisible
+  if(invisibleUntil>Date.now()){ctx.save();ctx.globalAlpha=0.35;drawBoat(sky.darkness);ctx.restore();}
+  else drawBoat(sky.darkness);
 
   if(bobber.active&&boat.anchored){
     ctx.strokeStyle=curBraid().color;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(lineRig.tipX,lineRig.tipY);ctx.lineTo(bobber.x,bobber.y);ctx.stroke();
@@ -3293,7 +3677,15 @@ const FIND_RADIUS={power_plant:36,wreck:40};
 function nearestStruct(x,y){let best=null,bd=1e9;for(const s of activeStructures()){const d=dist(x,y,s.x-camera.x,s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
 
 canvas.addEventListener('click',e=>{
-  if(driving()){setStatus('Drop anchor before you cast.');return;}
+  if(driving()){
+    if(tourn.active){
+      const rect=canvas.getBoundingClientRect();
+      const gx=(e.clientX-rect.left)*(CW/rect.width),gy=(e.clientY-rect.top)*(CH/rect.height);
+      const g=ghostAtScreen(gx,gy);
+      if(g){showGhostInfo(g);return;}
+    }
+    setStatus('Drop anchor before you cast.');return;
+  }
   if(phase==='waiting'){clearTimeout(biteTimeout);phase='idle';bobber.active=false;setStatus('Reeled in. Cast again.');return;}
   if(phase!=='idle')return;
   const rect=canvas.getBoundingClientRect();
@@ -3343,6 +3735,7 @@ function updateDriveUI(){
   j.addEventListener('pointerup',end);j.addEventListener('pointercancel',end);
   window.addEventListener('pointerup',()=>{if(joy.active)end();});
 })();
+document.getElementById('ability-btn').addEventListener('click',useAbility);
 document.getElementById('anchor-btn').addEventListener('click',()=>{
   if(boat.anchored){
     if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
@@ -3364,7 +3757,8 @@ function cast(x,y){
   // Artificial methods now require a lure tied on
   if(!m.bait){
     const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
-    if(!lure||!(S.ownedLures||[]).includes(S.lureSel)||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
+    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
+    if(!(S.lureInv[S.lureSel]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
   }
   // consume tackle durability (unless tacklesaver perk)
   if(!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
@@ -3405,6 +3799,8 @@ function poolNow(){
     let w=f.weight;
     // rarity spawn penalty so epic and legendary are genuinely rare
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
+    // Jeremy set bonus: +50% legendary spawn chance
+    if(f.rarity==='legendary'&&equippedSetId()==='jeremy')w*=1.5;
     // season
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
     // time
@@ -3481,6 +3877,15 @@ function triggerBite(){
   }
   hookedFish=pick;hookW=rollWeight(pick);
   phase='biting';
+  if(activeTournament){
+    // During a tournament ONLY the target species triggers the Stardew fight —
+    // even a legendary that isn't the target uses the normal hookset minigame.
+    const tgt=activeTournament.def&&activeTournament.def.targetFish;
+    if(tgt&&pick.id===tgt.id){startSdewGame(pick);return;}
+    setStatus('Fish on! Set the hook!');setupMiniGame();
+    escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
+    return;
+  }
   if(pick.rarity==='legendary'){
     setStatus('LEGENDARY FISH ON THE LINE!');
     showLegendaryAlert(pick);
@@ -3551,7 +3956,13 @@ let sdewActive=false,sdewHolding=false;
 let sdewBarTop=105,sdewBarVel=0;
 let sdewFishCy=140,sdewFishVel=0;
 let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
-let sdewStartTime=0;
+let sdewStartTime=0,sdewDiff=1;
+// Tournament-target Stardew difficulty scales with the target's rarity. Legendary
+// species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
+function sdewDifficultyFor(fish){
+  if(SDEW_BEHAVIORS[fish.id])return 1;
+  return 0.55+RARITY_ORDER.indexOf(fish.rarity)*0.11; // common .55 .. epic .88
+}
 const SDEW_GRACE_MS=2000; // first 2s: fish moves very slowly, meter fills at half speed
 
 function showLegendaryAlert(fish){
@@ -3565,6 +3976,7 @@ function showLegendaryAlert(fish){
 
 function startSdewGame(fish){
   sdewActive=true;sdewHolding=false;
+  sdewDiff=sdewDifficultyFor(fish);
   sdewStartTime=performance.now?performance.now():Date.now();
   document.getElementById('rig-bar').style.pointerEvents='none';
   sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
@@ -3592,10 +4004,11 @@ function sdewLoop(){
   sdewBarTop+=sdewBarVel;
   if(sdewBarTop<=0){sdewBarTop=0;sdewBarVel=Math.abs(sdewBarVel)*.3;}
   if(sdewBarTop>=SDEW_TRACK_H-SDEW_BAR_H){sdewBarTop=SDEW_TRACK_H-SDEW_BAR_H;sdewBarVel=-Math.abs(sdewBarVel)*.3;}
-  // Fish physics — during grace the fish drifts very slowly with no dart attempts
-  const erratic=grace?beh.erratic*0.15:beh.erratic;
-  const dartChance=grace?0:beh.dartChance;
-  const maxVel=grace?beh.maxVel*0.18:beh.maxVel;
+  // Fish physics — during grace the fish drifts very slowly with no dart attempts.
+  // sdewDiff scales the challenge by the target's rarity (tournament targets).
+  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff;
+  const dartChance=grace?0:beh.dartChance*sdewDiff;
+  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff;
   sdewFishVel+=(Math.random()-.5)*erratic;
   if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce;
   sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
@@ -3626,7 +4039,7 @@ function endSdewGame(success){
   clearTimeout(sdewAlertTimer);
   document.getElementById('sdew-overlay').classList.remove('show');
   document.getElementById('rig-bar').style.pointerEvents='';
-  if(!success){fail('The legendary fish got away! So close...');return;}
+  if(!success){fail('The '+(hookedFish?hookedFish.name:'fish')+' got away! So close...');return;}
   const f=hookedFish,w=hookW;
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f,w)>curReel().drag){snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
@@ -3680,8 +4093,9 @@ function fail(msg){phase='done';bobber.active=false;S.misses++;setStatus(msg);qu
 
 function land(f,w,perfect,bullseye){
   phase='caught';bobber.active=false;
-  // consume bait
+  // consume bait (natural methods) or a lure (artificial methods)
   if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
+  else if(S.lureSel){S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-1);}
   S.caught[f.id]=(S.caught[f.id]||0)+1;
   const isNew=S.caught[f.id]===1;
   const prevBest=S.best[f.id]||0;const pb=w>prevBest;if(pb)S.best[f.id]=w;
@@ -3693,6 +4107,8 @@ function land(f,w,perfect,bullseye){
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
+  // No gold from fish during a tournament — you're fishing for ranking & rubies.
+  if(activeTournament)gold=0;
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   recordTournamentCatch(f.name,w);
   addXP(xp);
@@ -3717,7 +4133,7 @@ function showCatch(f,w,o){
     '<div class="catch-name">'+f.name+'</div>'+
     '<div class="catch-rarity" style="color:'+RARITY_COLORS[f.rarity]+'">'+f.rarity+' \u00b7 '+ZONES[f.zone].name+'</div>'+
     '<div class="catch-weight">'+fmtLb(w)+' lb</div>'+
-    '<div class="catch-rewards">+'+o.xp+' XP &nbsp;\u00b7&nbsp; +'+o.gold+' gold</div>'+
+    '<div class="catch-rewards">+'+o.xp+' XP'+(activeTournament?' &nbsp;\u00b7&nbsp; tournament catch':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold')+'</div>'+
     '<div class="catch-fact">'+f.fact+'</div>'+
     '<button class="catch-ok" onclick="closeCatch()">Nice!</button>';
   document.getElementById('catch-bg').classList.add('show');
@@ -3742,7 +4158,9 @@ function updateRigBar(){
     // Artificial method: this slot becomes the lure slot
     if(baitLabel)baitLabel.textContent='Lure';
     const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
-    if(lure&&(S.ownedLures||[]).includes(lure.id)){bEl.textContent=lure.name;bq.textContent='tied on';bslot.classList.remove('empty');}
+    const lq=lure?(S.lureInv[lure.id]||0):0;
+    if(lure&&lq>0){bEl.textContent=lure.name;bq.textContent='x'+lq;bslot.classList.remove('empty');}
+    else if(lure){bEl.textContent=lure.name;bq.textContent='out — restock';bslot.classList.add('empty');}
     else{bEl.textContent='no lure';bq.textContent='buy a lure';bslot.classList.add('empty');}
   } else {
     if(baitLabel)baitLabel.textContent='Bait';
@@ -3753,6 +4171,7 @@ function updateRigBar(){
   // HUD
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
   document.getElementById('gold-pill').textContent=S.gold;
+  var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
 }
@@ -3777,10 +4196,10 @@ function openChooser(type){
     if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
       html='<h3>Tie on a lure</h3><div class="sub">Pick a lure that suits the method. Buy more in the Lures shop tab.</div>';
-      const myLures=LURES.filter(l=>(S.ownedLures||[]).includes(l.id)&&l.methods.includes(curMethod().id));
+      const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id));
       if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No lures for this method yet. Open the Lures shop tab to buy one.</div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">tie on</div></div>';
+        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
@@ -3833,12 +4252,13 @@ document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=
 
 let shopTab='boats';
 function assassinSetActive(){
-  return S.cosmetic.hat==='assassin_hood'&&S.cosmetic.shirt==='assassin_suit'&&S.cosmetic.shades==='assassin_mask';
+  return equippedSetId()==='assassin';
 }
 function updateCosmeticHUD(){
   const el=document.getElementById('cosmetic-pill');
   if(!el)return;
-  if(assassinSetActive()){el.innerHTML=svgIcon('shades-mask',18);return;}
+  const setId=equippedSetId();
+  if(setId){const ic={assassin:'shades-mask',pirate:'hat-straw',princess:'crown',berserker:'hat-beanie',jeremy:'shades-polarized'}[setId]||'fits';el.innerHTML=svgIcon(ic,18);return;}
   const hat=COSMETICS.hats.find(x=>x.id===S.cosmetic.hat);
   const shirt=COSMETICS.shirts.find(x=>x.id===S.cosmetic.shirt);
   const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
@@ -3894,7 +4314,9 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
 let cosmeticSubTab='hats';
 let lureSubTab='softplastic';
 function renderShop(){
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['cosmetics',svgIcon('fits',13)+' Fits']];
+  const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
+  const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(function(b,i){
@@ -3912,15 +4334,16 @@ function renderShop(){
   else if(shopTab==='lures'){
     html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>';
     html+=LURES.filter(function(l){return l.cat===lureSubTab;}).map(function(l){
-      const owned=(S.ownedLures||[]).includes(l.id);
+      const q=S.lureInv[l.id]||0;
       const equipped=S.lureSel===l.id;
       const canAfford=S.gold>=l.cost,meetsLvl=S.level>=l.lvl;
+      // Buyable any time to restock (like bait). Tapping when you own some ties it on.
       let action;
-      if(equipped)action='<span class="shop-action equipped-tag">Tied On</span>';
-      else if(owned)action='<span class="shop-action equip">Tie On</span>';
-      else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
+      if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
       else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+l.cost+'</span>';
-      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+l.desc+'</div></div>'+action+'</div>';
+      const tieBtn=(q>0&&!equipped)?'<span class="shop-action equip" data-tie="'+l.id+'" style="margin-right:6px;">Tie On</span>':(equipped?'<span class="shop-action equipped-tag" style="margin-right:6px;">Tied On</span>':'');
+      const sub=l.desc+' · '+LURE_PACK+' per pack'+(q>0?' · have x'+q:'');
+      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+sub+'</div></div>'+tieBtn+action+'</div>';
     }).join('');
   }
   else if(shopTab==='cosmetics'){
@@ -3946,7 +4369,7 @@ function renderShop(){
       }).join('');
     } else {
       const slot={hats:'hat',shirts:'shirt',shades:'shades'}[cosmeticSubTab];
-      html+=COSMETICS[cosmeticSubTab].map(item=>{
+      html+=COSMETICS[cosmeticSubTab].filter(item=>!item.setOnly).map(item=>{
         const owned=item.cost===0||S.ownedCosmetics.includes(item.id);
         const equipped=S.cosmetic[slot]===item.id;
         const canAfford=S.gold>=item.cost;
@@ -3962,6 +4385,24 @@ function renderShop(){
           +action+'</div>';
       }).join('');
     }
+  }
+  else if(shopTab==='sets'){
+    html='<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:11px;line-height:1.55;">Outfit sets are bought with <span class="gem-s"></span> <b>rubies</b> (won in tournaments). Each gives a passive <b>set bonus</b> for the whole game, plus an <b>ability</b> usable 3× per tournament.</div>';
+    const curSet=equippedSetId();
+    html+=SETS.map(function(s){
+      const owned=(S.ownedSets||[]).includes(s.id);
+      const equipped=curSet===s.id;
+      const canAfford=(S.rubies||0)>=s.cost;
+      let action;
+      if(equipped)action='<span class="shop-action equipped-tag">Wearing</span>';
+      else if(owned)action='<span class="shop-action equip">Equip</span>';
+      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'"><span class="gem-s" style="width:11px;height:11px;margin-right:3px;"></span>'+s.cost+'</span>';
+      const swatch='<span class="shop-swatch" style="background:'+s.color+';"></span>';
+      return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="set" data-id="'+s.id+'">'+swatch
+        +'<div class="shop-info"><div class="shop-name">'+s.name+'</div>'
+        +'<div class="shop-desc"><b style="color:var(--wood-dark)">Bonus:</b> '+s.bonus+'<br><b style="color:var(--accent)">'+s.ability+':</b> '+s.abilityDesc+'</div></div>'
+        +action+'</div>';
+    }).join('');
   }
   document.getElementById('shop-list').innerHTML=html;
   if(shopTab==='cosmetics'){
@@ -3999,15 +4440,29 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     if(id!=='none'&&!S.ownedCrowns.includes(id)){toast('Crown locked. Earn a GOAT achievement to unlock.','#b58b53');return;}
     S.cosmetic.crown=id;updateCosmeticHUD();
   }
+  else if(kind==='set'){
+    const s=setById(id);if(!s)return;
+    if(!(S.ownedSets||[]).includes(s.id)){
+      if((S.rubies||0)<s.cost){toast('Not enough rubies. Place top 3 in tournaments to earn rubies.','#b3402a');return;}
+      S.rubies-=s.cost;S.ownedSets.push(s.id);
+      [s.pieces.hat,s.pieces.shirt,s.pieces.shades].forEach(function(pid){if(!S.ownedCosmetics.includes(pid))S.ownedCosmetics.push(pid);});
+      toast('Unlocked the '+s.name+'!','#2aa890');
+    }
+    S.cosmetic.hat=s.pieces.hat;S.cosmetic.shirt=s.pieces.shirt;S.cosmetic.shades=s.pieces.shades;
+    updateCosmeticHUD();
+  }
   else if(kind==='lure'){
     const l=LURES.find(x=>x.id===id);if(!l)return;
-    if(!S.ownedLures)S.ownedLures=[];
-    if(!S.ownedLures.includes(id)){
+    const tie=e.target.closest('[data-tie]');
+    if(tie){
+      if(S.lureInv[id]>0)S.lureSel=id;
+    }else{
       if(S.level<l.lvl){toast('Reach Level '+l.lvl+' first.','#b58b53');return;}
       if(S.gold<l.cost){toast('Not enough gold.','#b3402a');return;}
-      S.gold-=l.cost;S.ownedLures.push(id);toast('Bought '+l.name+'!','#2aa890');
+      S.gold-=l.cost;S.lureInv[id]=(S.lureInv[id]||0)+LURE_PACK;
+      if(!S.lureSel)S.lureSel=id;
+      toast('Bought '+l.name+' (x'+LURE_PACK+')','#2aa890');
     }
-    S.lureSel=id;
   }
   else{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
