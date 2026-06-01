@@ -3476,7 +3476,7 @@ function setupMiniGame(){
   zoneSel.speed=1.55+ri*0.52+sizeFrac*0.60+Math.random()*0.18;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=zoneSel.speed*0.6;
+  marker.speed=zoneSel.speed*0.48; // 25% more marker time than 0.6
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
