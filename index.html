@@ -1614,7 +1614,7 @@ function anglerIconSVG(gender,skinColor,size){
 // boats: maxZone gates water; perk applied in logic
 const BOATS=[
   {id:'kayak',  name:'Kayak',        icon:'boat-kayak',   cost:0,    lvl:1,  maxZone:0, range:0,  speed:2.1, perk:'stealth',   perkName:'Stealth: +10% inshore bites'},
-  {id:'jon',    name:'Jon Boat',     icon:'boat-jon',     cost:250,  lvl:2,  maxZone:0, range:0,  speed:2.7, perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
+  {id:'jon',    name:'Skiff',        icon:'boat-jon',     cost:250,  lvl:2,  maxZone:0, range:0,  speed:2.7, perk:'baitsaver', perkName:'Bait Saver: 12% bait not used'},
   {id:'bay',    name:'Bay Boat',     icon:'boat-bay',     cost:700,  lvl:3,  maxZone:1, range:0,  speed:3.4, perk:'fastbite',  perkName:'Fast Bites: bites come 15% sooner'},
   {id:'console',name:'Center Console',icon:'boat-console',cost:1800, lvl:5,  maxZone:2, range:0,  speed:4.2, perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
   {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, speed:5.1, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
@@ -3473,10 +3473,10 @@ function setupMiniGame(){
   zoneSel.dir=Math.random()<0.5?1:-1;
   // Standard mini-game covers common..epic (legendary uses the Stardew game,
   // so ri maxes at 3 here). Faster and more demanding the rarer/bigger the fish.
-  zoneSel.speed=1.15+ri*0.42+sizeFrac*0.50+Math.random()*0.15;
+  zoneSel.speed=1.55+ri*0.52+sizeFrac*0.60+Math.random()*0.18;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=zoneSel.speed*0.55;
+  marker.speed=zoneSel.speed*0.6;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
