@@ -3471,12 +3471,12 @@ function setupMiniGame(){
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
   zoneSel.dir=Math.random()<0.5?1:-1;
-  // Green bar moves faster, marker at half the bar speed. Balanced so the
-  // player can read it but big trophies still demand precise timing.
-  zoneSel.speed=0.65+ri*0.22+sizeFrac*0.32+Math.random()*0.12;
+  // Standard mini-game covers common..epic (legendary uses the Stardew game,
+  // so ri maxes at 3 here). Faster and more demanding the rarer/bigger the fish.
+  zoneSel.speed=1.15+ri*0.42+sizeFrac*0.50+Math.random()*0.15;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=zoneSel.speed*0.5;
+  marker.speed=zoneSel.speed*0.55;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
