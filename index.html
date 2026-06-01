@@ -3471,13 +3471,11 @@ function setupMiniGame(){
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
   zoneSel.dir=Math.random()<0.5?1:-1;
-  // Green bar speed scales with rarity AND size, but stays human-readable.
-  // Common min: ~0.32/frame (5.2s across). Legendary max: ~1.20/frame (1.4s).
-  zoneSel.speed=0.32+ri*0.18+sizeFrac*0.22+Math.random()*0.08;
+  // Green bar moves faster, marker at half the bar speed. Balanced so the
+  // player can read it but big trophies still demand precise timing.
+  zoneSel.speed=0.65+ri*0.22+sizeFrac*0.32+Math.random()*0.12;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  // Marker moves at half the zone speed so it's still slower but the player
-  // can actually track it on small/common fish.
   marker.speed=zoneSel.speed*0.5;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
