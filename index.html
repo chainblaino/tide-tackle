@@ -3468,11 +3468,11 @@ function setupMiniGame(){
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
-  zoneSel.dir=Math.random()<0.5?1:-1;
-  zoneSel.speed=1.1+ri*0.28+Math.random()*0.4;
+  // Green catch zone stays put. Marker moves at the rarity-based speed.
+  zoneSel.dir=0;zoneSel.speed=0;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=zoneSel.speed*0.3;
+  marker.speed=1.1+ri*0.28+Math.random()*0.4;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
@@ -3487,11 +3487,7 @@ function updateMiniGameDOM(){
   document.getElementById('catch-ind').style.left=marker.pos+'%';
 }
 function animateMiniGame(){
-  // move green zone
-  zoneSel.left+=zoneSel.dir*zoneSel.speed;
-  if(zoneSel.left<=0){zoneSel.left=0;zoneSel.dir=1;}
-  if(zoneSel.left>=100-zoneSel.width){zoneSel.left=100-zoneSel.width;zoneSel.dir=-1;}
-  // move marker at 30% of zone speed
+  // Green zone stays put. Only the marker moves.
   marker.pos+=marker.dir*marker.speed;
   if(marker.pos>=100){marker.pos=100;marker.dir=-1;}
   if(marker.pos<=0){marker.pos=0;marker.dir=1;}
