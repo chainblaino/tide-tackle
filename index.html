@@ -3466,13 +3466,16 @@ function setupMiniGame(){
   document.getElementById('rig-bar').style.pointerEvents='none';
   document.getElementById('drive-controls').style.visibility='hidden';
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
+  const [smin,smax]=hookedFish.size;
+  const sizeFrac=Math.max(0,Math.min(1,(hookW-smin)/Math.max(0.01,smax-smin)));
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
-  // Green catch zone stays put. Marker moves at the rarity-based speed.
-  zoneSel.dir=0;zoneSel.speed=0;
+  zoneSel.dir=Math.random()<0.5?1:-1;
+  // Green bar speed scales with both rarity and how big this individual fish is
+  zoneSel.speed=0.9+ri*0.30+sizeFrac*0.55+Math.random()*0.25;
   marker.pos=Math.random()*100;
   marker.dir=Math.random()<0.5?1:-1;
-  marker.speed=1.1+ri*0.28+Math.random()*0.4;
+  marker.speed=zoneSel.speed*0.3;
   updateMiniGameDOM();
   document.getElementById('catch-hint').textContent=ri>=3?'Hit the YELLOW center for DOUBLE COINS!':'Stop the marker in the green. Yellow = double!';
   animateMiniGame();
@@ -3487,7 +3490,11 @@ function updateMiniGameDOM(){
   document.getElementById('catch-ind').style.left=marker.pos+'%';
 }
 function animateMiniGame(){
-  // Green zone stays put. Only the marker moves.
+  // Move the green zone bouncing left and right
+  zoneSel.left+=zoneSel.dir*zoneSel.speed;
+  if(zoneSel.left<=0){zoneSel.left=0;zoneSel.dir=1;}
+  if(zoneSel.left>=100-zoneSel.width){zoneSel.left=100-zoneSel.width;zoneSel.dir=-1;}
+  // Move the orange marker at 30% of the zone speed
   marker.pos+=marker.dir*marker.speed;
   if(marker.pos>=100){marker.pos=100;marker.dir=-1;}
   if(marker.pos<=0){marker.pos=0;marker.dir=1;}
