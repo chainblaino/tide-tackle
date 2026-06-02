@@ -56,7 +56,11 @@
   .ability-btn:disabled{opacity:.5;filter:grayscale(.6);cursor:default;}
   .blind-overlay{position:fixed;inset:0;z-index:460;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s;}
   .blind-overlay.show{opacity:.94;}
-  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}}
+  .items-btn{position:absolute;right:14px;bottom:152px;z-index:8;display:none;align-items:center;gap:7px;padding:10px 15px;border-radius:14px;border:2px solid #7fe3c0;background:linear-gradient(135deg,#2bbf96,#127a5e);color:#fff;font-weight:900;font-family:'Fredoka';font-size:14px;cursor:pointer;box-shadow:0 4px 0 #0c5742;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+  .items-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0c5742;}
+  .items-btn.show{display:flex;}
+  .items-btn .ib-icon{width:16px;height:16px;border-radius:4px;background:repeating-linear-gradient(45deg,#ffe27a 0 4px,#ffb347 4px 8px);display:inline-block;}
+  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:160px;font-size:13px;padding:9px 13px;}}
   /* hide the rig bar while driving so the joystick has clear room */
   body.driving .rig-bar{display:none;}
   @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;top:48px;}}
@@ -464,6 +468,7 @@
 
     <button class="anchor-btn" id="anchor-btn">Drop Anchor</button>
     <button class="ability-btn" id="ability-btn"><span class="ab-name">Ability</span><span class="ab-uses">3 left</span></button>
+    <button class="items-btn" id="items-btn" onclick="openItems()"><span class="ib-icon"></span><span class="ib-label">Items</span></button>
     <div class="drive-controls" id="drive-controls">
       <div class="joystick" id="joystick"><div class="joy-knob" id="joy-knob"></div></div>
     </div>
@@ -1694,6 +1699,20 @@ const LURE_CATS=[
   {id:'metaljig',   name:'Metal Jigs'},
 ];
 
+// ── DISPOSABLE ITEMS (bought with rubies; used from the Items button while fishing) ──
+const ITEMS=[
+  {id:'chum',    name:'Chum Bag',      icon:'bait-cutbait',   cost:40, desc:'+30% bite chance from rarer fish in your cast radius. Lasts 5 casts.'},
+  {id:'castnet', name:'Cast Net',      icon:'struct-baitball',cost:30, desc:'Throw a cast net for a random 20–50 mixed live baits.'},
+  {id:'sabiki',  name:'Sabiki Rig',    icon:'tackle-hook',    cost:10, desc:'Jig up a mix of 10 live baitfish.'},
+  {id:'radar',   name:'Fish Radar',    icon:'zone-pin',       cost:50, desc:'A pointer shows the way to the nearest cruising target fish until you land one.'},
+  {id:'led',     name:'Underwater LED',icon:'reel',           cost:70, desc:'A green glow around your boat all night. +20% bite chance from rarer fish. Lasts one night.'},
+];
+function itemById(id){return ITEMS.find(function(x){return x.id===id;});}
+const LIVE_BAITS=['shrimp','pinfish','pilchard'];   // cast-net mix
+const SABIKI_BAITS=['pinfish','pilchard'];          // sabiki baitfish
+// Underwater LED only glows / boosts at night; expires at the next non-night phase.
+function ledActive(){return S.ledActive&&phaseOf(hourNow())==='night';}
+
 // ── COSMETICS ─────────────────────────────────────────────────
 const COSMETICS={
   hats:[
@@ -2406,6 +2425,10 @@ function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
   if(typeof S.bigCastWins!=='number')S.bigCastWins=0;
   if(!Array.isArray(S.ownedSets))S.ownedSets=[];
+  if(!S.itemInv||typeof S.itemInv!=='object')S.itemInv={};
+  if(typeof S.chumCasts!=='number')S.chumCasts=0;
+  if(typeof S.ledActive!=='boolean')S.ledActive=false;
+  if(typeof S.radarActive!=='boolean')S.radarActive=false;
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
   // migrate legacy one-time lure purchases into consumable stacks
   if(Array.isArray(S.ownedLures)){
@@ -2777,6 +2800,40 @@ function drawSightFishBody(size,color,t){
   ctx.beginPath();ctx.moveTo(-size*.88,0);ctx.lineTo(-size*1.55,-size*.55+tw*size);ctx.lineTo(-size*1.55,size*.55+tw*size);ctx.closePath();ctx.fill();
   // top fin
   ctx.beginPath();ctx.moveTo(-size*.1,-size*.4);ctx.lineTo(size*.15,-size*.85);ctx.lineTo(size*.3,-size*.4);ctx.closePath();ctx.fill();
+}
+// Underwater LED: a bright green glow ring around the boat at night.
+function drawLedGlow(t){
+  const cx=ORIGIN.x,cy=ORIGIN.y,pulse=1+Math.sin(t*3)*0.06;
+  const R=128*pulse;
+  const g=ctx.createRadialGradient(cx,cy,8,cx,cy,R);
+  g.addColorStop(0,'rgba(80,255,140,0.42)');
+  g.addColorStop(0.5,'rgba(50,230,120,0.20)');
+  g.addColorStop(1,'rgba(40,220,110,0)');
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  ctx.fillStyle=g;ctx.beginPath();ctx.arc(cx,cy,R,0,6.28);ctx.fill();
+  ctx.restore();
+}
+// Fish Radar: an arrow above the boat pointing to the nearest cruising target fish.
+function drawRadarPointer(t){
+  let best=null,bd=1e18;
+  for(const sf of sightFish){const dx=sf.wx-boat.wx,dy=sf.wy-boat.wy;const d=dx*dx+dy*dy;if(d<bd){bd=d;best=sf;}}
+  const cx=ORIGIN.x,cy=ORIGIN.y-46,pulse=0.6+Math.abs(Math.sin(t*4))*0.4;
+  ctx.save();
+  // radar disc
+  ctx.fillStyle='rgba(10,30,46,0.78)';ctx.strokeStyle='rgba(90,220,255,'+pulse+')';ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(cx,cy,15,0,6.28);ctx.fill();ctx.stroke();
+  if(best){
+    const ang=Math.atan2(best.wy-boat.wy,best.wx-boat.wx);
+    ctx.translate(cx,cy);ctx.rotate(ang);
+    ctx.fillStyle='#3ad6ff';
+    ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-2,-6);ctx.lineTo(-2,6);ctx.closePath();ctx.fill();
+  }else{
+    // scanning sweep when nothing is in the water
+    ctx.translate(cx,cy);ctx.rotate(t*2.2);
+    ctx.strokeStyle='rgba(90,220,255,0.7)';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(12,0);ctx.stroke();
+  }
+  ctx.restore();
 }
 function sightFishHitAt(sx,sy){
   for(let i=0;i<sightFish.length;i++){
@@ -3989,7 +4046,11 @@ function render(ts){
 
   // hourly sight fish spawn check (1 in-game hour = 20 real sec at MIN_PER_SEC=3)
   const curHour=Math.floor(hourNow());
-  if(curHour!==_spawnLastHour){_spawnLastHour=curHour;trySightFishSpawn();}
+  if(curHour!==_spawnLastHour){
+    _spawnLastHour=curHour;trySightFishSpawn();
+    // Underwater LED burns out at sunrise (when night ends)
+    if(S.ledActive&&phaseOf(curHour)!=='night'){S.ledActive=false;toast('The LED faded with the sunrise.','#8b5a2b');queueSave();}
+  }
   const now=ts;
   updateSightFish(now);
   drawSightFish(now,t,sky.darkness);
@@ -3997,9 +4058,13 @@ function render(ts){
   ripples=ripples.filter(r=>r.life>0);
   for(const r of ripples){r.life-=.016;r.r+=.9;ctx.strokeStyle='rgba(255,255,255,'+(r.life*.5)+')';ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(r.x,r.y,r.r,0,6.28);ctx.stroke();}
 
+  if(ledActive())drawLedGlow(t);
+
   // Assassin vanish: render yourself translucent while invisible
   if(invisibleUntil>Date.now()){ctx.save();ctx.globalAlpha=0.35;drawBoat(sky.darkness);ctx.restore();}
   else drawBoat(sky.darkness);
+
+  if(S.radarActive)drawRadarPointer(t);
 
   if(bobber.active&&boat.anchored){
     ctx.strokeStyle=curBraid().color;ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(lineRig.tipX,lineRig.tipY);ctx.lineTo(bobber.x,bobber.y);ctx.stroke();
@@ -4187,6 +4252,7 @@ function cast(x,y){
   bobber={x,y,active:true,struct:nearestStruct(x,y)};
   ripples.push({x,y,r:3,life:1},{x,y,r:8,life:.7});
   phase='waiting';S.totalCasts++;
+  if(S.chumCasts>0){S.chumCasts--;if(S.chumCasts===0)setTimeout(function(){toast('Your chum slick washed out.','#8b5a2b');},300);}
   // Track which structure kinds the player has fished for the Explorer achievement
   if(bobber.struct){
     if(!S.fishedStructures)S.fishedStructures=[];
@@ -4222,6 +4288,11 @@ function poolNow(){
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04,ultra:0.00003}[f.rarity]||1;
     // Jeremy set bonus: +50% legendary AND ultra legendary spawn chance
     if((f.rarity==='legendary'||f.rarity==='ultra')&&equippedSetId()==='jeremy')w*=1.5;
+    // Chum bag & Underwater LED: boost rarer fish (epic and up) in the cast radius
+    if(RARITY_ORDER.indexOf(f.rarity)>=3){
+      if(S.chumCasts>0)w*=1.3;
+      if(ledActive())w*=1.2;
+    }
     // season
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
     // time
@@ -4563,6 +4634,7 @@ function fail(msg){phase='done';bobber.active=false;S.misses++;setStatus(msg);qu
 
 function land(f,w,perfect,bullseye){
   phase='caught';bobber.active=false;
+  if(S.radarActive){S.radarActive=false;}
   // consume bait (natural methods) or a lure (artificial methods)
   if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
   else if(S.lureSel){S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-1);}
@@ -4649,6 +4721,7 @@ function updateRigBar(){
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
+  const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!activeTournament&&!(typeof tourn!=='undefined'&&tourn.active));
 }
 
 // choosers
@@ -4690,8 +4763,47 @@ function openChooser(type){
   document.getElementById('chooser-bg').classList.add('show');
 }
 function closeChooser(){document.getElementById('chooser-bg').classList.remove('show');}
+
+// ── DISPOSABLE ITEMS ──
+function openItems(){
+  if(activeTournament){toast('Items are stowed during the tournament.','#b58b53');return;}
+  const c=document.getElementById('chooser');
+  let html='<h3>Items</h3><div class="sub">Disposable gear bought with rubies. Tap one to use it.</div>';
+  let any=false;
+  ITEMS.forEach(function(it){
+    const q=S.itemInv[it.id]||0;
+    let tag='';
+    if(it.id==='chum'&&S.chumCasts>0)tag=' · active ('+S.chumCasts+' casts)';
+    if(it.id==='led'&&S.ledActive)tag=' · glowing';
+    if(it.id==='radar'&&S.radarActive)tag=' · scanning';
+    html+='<div class="opt '+(q>0?'':'disabled')+'" data-use="'+(q>0?it.id:'')+'"><div class="oi">'+svgIcon(it.icon,20)+'</div><div class="oinfo"><div class="on">'+it.name+tag+'</div><div class="od">'+it.desc+'</div></div><div class="oq">'+(q>0?'x'+q:'buy')+'</div></div>';
+    if(q>0)any=true;
+  });
+  if(!any)html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:10px;">No items yet. Buy them with rubies in the shop’s Items tab.</div>';
+  html+='<button class="chooser-close" onclick="closeChooser()">Close</button>';
+  c.innerHTML=html;
+  document.getElementById('chooser-bg').classList.add('show');
+}
+function grantMixedBait(total,pool){
+  for(var i=0;i<total;i++){var b=pool[Math.floor(Math.random()*pool.length)];S.baitInv[b]=(S.baitInv[b]||0)+1;}
+}
+function useItem(id){
+  const q=S.itemInv[id]||0;if(q<=0){toast('You don’t have that item.','#b3402a');return;}
+  if(id==='chum'){S.chumCasts=5;toast('Chum slick out — rarer fish for 5 casts.','#2aa890');}
+  else if(id==='led'){
+    if(phaseOf(hourNow())!=='night'){toast('Save the LED for nighttime.','#b58b53');return;}
+    S.ledActive=true;toast('Underwater LED on — rarer fish all night.','#2aa890');
+  }
+  else if(id==='radar'){S.radarActive=true;toast('Radar online — pointing to the nearest target.','#2aa890');}
+  else if(id==='castnet'){const total=20+Math.floor(Math.random()*31);grantMixedBait(total,LIVE_BAITS);toast('Cast net: +'+total+' live baits!','#2aa890');}
+  else if(id==='sabiki'){grantMixedBait(10,SABIKI_BAITS);toast('Sabiki: +10 live baitfish!','#2aa890');}
+  S.itemInv[id]=q-1;
+  updateRigBar();queueSave();closeChooser();
+}
 document.getElementById('chooser-bg').addEventListener('click',e=>{
   if(e.target.id==='chooser-bg'){closeChooser();return;}
+  const useOpt=e.target.closest('[data-use]');
+  if(useOpt){if(useOpt.dataset.use)useItem(useOpt.dataset.use);return;}
   const opt=e.target.closest('.opt');if(!opt||!opt.dataset.pick)return;
   const[type,val]=opt.dataset.pick.split(':');
   if(type==='zone'){const zi=+val;if(zi>maxZone())return;S.zone=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
@@ -4791,7 +4903,7 @@ let lureSubTab='softplastic';
 function renderShop(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(function(b,i){
@@ -4819,6 +4931,15 @@ function renderShop(){
       const tieBtn=(q>0&&!equipped)?'<span class="shop-action equip" data-tie="'+l.id+'" style="margin-right:6px;">Tie On</span>':(equipped?'<span class="shop-action equipped-tag" style="margin-right:6px;">Tied On</span>':'');
       const sub=l.desc+' · '+LURE_PACK+' per pack'+(q>0?' · have x'+q:'');
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+sub+'</div></div>'+tieBtn+action+'</div>';
+    }).join('');
+  }
+  else if(shopTab==='items'){
+    html='<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:11px;line-height:1.55;">Disposable gear bought with <span class="gem-s"></span> <b>rubies</b>. Use them from the <b>Items</b> button while fishing.</div>';
+    html+=ITEMS.map(function(it){
+      const q=S.itemInv[it.id]||0;
+      const canAfford=(S.rubies||0)>=it.cost;
+      const action='<span class="shop-action buy '+(canAfford?'':'cant')+'"><span class="gem-s" style="width:11px;height:11px;margin-right:3px;"></span>'+it.cost+'</span>';
+      return '<div class="shop-item" data-kind="item" data-id="'+it.id+'"><div class="shop-icon">'+svgIcon(it.icon)+'</div><div class="shop-info"><div class="shop-name">'+it.name+(q>0?' · have x'+q:'')+'</div><div class="shop-desc">'+it.desc+'</div></div>'+action+'</div>';
     }).join('');
   }
   else if(shopTab==='cosmetics'){
@@ -4925,6 +5046,12 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     }
     S.cosmetic.hat=s.pieces.hat;S.cosmetic.shirt=s.pieces.shirt;S.cosmetic.shades=s.pieces.shades;
     updateCosmeticHUD();
+  }
+  else if(kind==='item'){
+    const it=itemById(id);if(!it)return;
+    if((S.rubies||0)<it.cost){toast('Not enough rubies. Earn rubies by placing in tournaments.','#b3402a');return;}
+    S.rubies-=it.cost;S.itemInv[id]=(S.itemInv[id]||0)+1;
+    toast('Bought '+it.name+'!','#2aa890');
   }
   else if(kind==='lure'){
     const l=LURES.find(x=>x.id===id);if(!l)return;
