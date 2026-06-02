@@ -1661,10 +1661,13 @@ function renderStructuresGuide(){
     const info=STRUCT_META[k];
     const fish=(sMap[k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
     const total=fish.length;
-    const caught=fish.filter(function(f){return (S.caught[f.id]||0)>0;});
-    const unknown=total-caught.length;
-    const pills=caught.map(function(f){
-      return "<span class=\"struct-fish-pill\" style=\"background:"+RARITY_COLORS[f.rarity]+"22;color:"+RARITY_COLORS[f.rarity]+";\">"+f.name+"</span>";
+    // Ultra legendary spots are always revealed so anglers know where to hunt them.
+    const revealed=fish.filter(function(f){return (S.caught[f.id]||0)>0||f.rarity==='ultra';});
+    const unknown=total-revealed.length;
+    const pills=revealed.map(function(f){
+      const c=RARITY_COLORS[f.rarity];
+      if(f.rarity==='ultra')return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";font-weight:800;border:1px solid "+c+";\">✦ "+f.name+"</span>";
+      return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";\">"+f.name+"</span>";
     }).join("")+(unknown>0?"<span class=\"struct-fish-pill\" style=\"background:rgba(0,0,0,.06);color:var(--text-soft);\">+"+unknown+" unknown</span>":"");
     return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+svgIcon(info.icon,20)+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
   }).join("");
@@ -1851,18 +1854,18 @@ const SETS=[
    pieces:{hat:'assassin_hood',shirt:'assassin_suit',shades:'assassin_mask'},
    bonus:'+50% night fish spawn rate · +20% movement speed at night',
    ability:'Vanish', abilityDesc:'Turn invisible for 10s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10-15s. The cloud lingers 30s. (45s cooldown)'},
-  {id:'pirate', name:'Pirate Set', cost:400, color:'#c62828', cd:45,
+  {id:'pirate', name:'Pirate Set', cost:500, color:'#c62828', cd:45,
    pieces:{hat:'pirate_hat',shirt:'pirate_shirt',shades:'pirate_scar'},
    bonus:'Bad weather is 50% less harsh · +15% movement speed when wind is 10 mph or higher',
-   ability:'Plunder', abilityDesc:'Steal 20–50% of a nearby angler’s equipped bait or lures. You can’t rob the same angler twice. (45s cooldown)'},
-  {id:'princess', name:'Princess Set', cost:250, color:'#ff7ab0', cd:30,
+   ability:'Plunder', abilityDesc:'Steal 5-15% of a nearby angler’s equipped bait or lures. You can’t rob the same angler twice. (45s cooldown)'},
+  {id:'princess', name:'Princess Set', cost:250, color:'#ff7ab0', cd:20,
    pieces:{hat:'princess_tiara',shirt:'princess_dress',shades:'princess_blush'},
    bonus:'Charm: +10% fish bite rate',
-   ability:'Confuse', abilityDesc:'Bewitch a nearby angler so they drift in a random direction for 15–30s. (30s cooldown)'},
+   ability:'Confuse', abilityDesc:'Bewitch a nearby angler so they drift out of control for 3s. (20s cooldown)'},
   {id:'berserker', name:'Berserker Set', cost:500, color:'#8a3a1a', cd:20,
    pieces:{hat:'berserker_mohawk',shirt:'berserker_vest',shades:'berserker_paint'},
    bonus:'+20% movement speed during the day · +20% in Spring & Summer (these stack)',
-   ability:'Punch', abilityDesc:'Shove a nearby angler away - harder the faster you’re moving - knocking 10–30% of their bait/lures loose. (20s cooldown)'},
+   ability:'Punch', abilityDesc:'Shove a nearby angler away - harder the faster you’re moving - knocking 10-15% of their bait/lures loose. (20s cooldown)'},
   {id:'jeremy', name:'Jeremy Set', cost:1000, color:'#9098a0', cd:60,
    pieces:{hat:'jeremy_hair',shirt:'jeremy_shirt',shades:'jeremy_eyes'},
    bonus:'+50% legendary & ultra legendary fish spawn chance',
@@ -3061,6 +3064,7 @@ function updateGhosts(){
   // Aggressive by day, focused on fishing at night (can still do either anytime).
   const _dark=(typeof skyState==='function')?skyState(hourNow()).darkness:0;
   const dayAgg=1-_dark; // 1 in full daylight .. 0 at deep night
+  const pVisible=!(invisibleUntil>Date.now()); // bots can't see a vanished player
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
       // Smoothly chase the real broadcast position from Firestore
@@ -3104,8 +3108,8 @@ function updateGhosts(){
     if(g.turnTimer<=0){
       let chase=0.3+0.5*dayAgg; if(pTop3)chase=Math.max(chase,0.92); // hunt by day / leaders
       const spread=pTop3?0.4:(0.55+0.5*_dark);
-      if(g.set&&Math.random()<chase)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*spread;
-      else g.targetAng=Math.random()*6.28;
+      if(g.set&&pVisible&&Math.random()<chase)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*spread;
+      else g.targetAng=Math.random()*6.28; // wander (also when the player is invisible)
       g.turnTimer=80+Math.random()*220;
       // At night (or non-set bots) they settle to "fish" more often
       if((!g.set||_dark>0.45)&&!pTop3&&Math.random()<(0.18+0.32*_dark))g.pause=120+Math.random()*240;
@@ -3309,7 +3313,7 @@ function abilityPlunder(){
   if(!g){toast('No angler within range to rob.','#b58b53');return false;}
   if(activeTournament.stolenTargets.includes(g.uid)){toast("You've already robbed "+g.name+".",'#b58b53');return false;}
   activeTournament.stolenTargets.push(g.uid);
-  const frac=0.2+Math.random()*0.3;
+  const frac=0.05+Math.random()*0.10;   // steal 5-15%
   const stash=(g._stash!=null)?g._stash:(g._stash=8+Math.floor(Math.random()*15));
   const amt=Math.max(1,Math.round(stash*frac));
   g._stash=Math.max(0,stash-amt);
@@ -3325,7 +3329,7 @@ function abilityPlunder(){
 function abilityConfuse(){
   const g=nearestGhost(380);
   if(!g){toast('No angler within range to confuse.','#b58b53');return false;}
-  const dur=15000+Math.random()*15000;
+  const dur=3000;   // 3 seconds, then control returns
   if(g.real){broadcastAbility('confuse',g.uid,{dur:dur});}
   else{g._confuseUntil=Date.now()+dur;g._confuseAng=Math.random()*6.28;}
   toast('Confused '+g.name+'!','#a872d8');
@@ -3339,7 +3343,7 @@ function abilityPunch(){
   const power=10+spd*5; // farther the faster you're moving
   let dx=g.wx-boat.wx,dy=g.wy-boat.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
   if(g.real){broadcastAbility('punch',g.uid,{vx:dx*power,vy:dy*power});}
-  else{g._knockVX=dx*power;g._knockVY=dy*power;g._stash=Math.max(0,((g._stash!=null?g._stash:10))*(1-(0.1+Math.random()*0.2)));}
+  else{g._knockVX=dx*power;g._knockVY=dy*power;g._stash=Math.max(0,((g._stash!=null?g._stash:10))*(1-(0.1+Math.random()*0.05)));}
   toast('Punched '+g.name+' away!','#c46f28');
   spawnAbilityFx(g.wx,g.wy,'#ff8a3a');
   return true;
@@ -3376,8 +3380,8 @@ function applyIncomingAct(act){
   const now=Date.now();
   const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder');
   if(hostile&&now<immuneUntil){toast('Untouchable - blocked an ability!','#2aa890');return;}
-  if(act.type==='confuse'){confusedUntil=now+(act.data.dur||20000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');}
-  else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();toast('You got punched!','#c46f28');}
+  if(act.type==='confuse'){confusedUntil=now+(act.data.dur||3000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');}
+  else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();const l=loseEquippedConsumable(0.10+Math.random()*0.05);toast('You got punched'+(l?' (-'+l+' bait/lures)':'')+'!','#c46f28');}
   else if(act.type==='plunder'){const amt=act.data.amt||0;
     if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
     else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
@@ -3386,6 +3390,7 @@ function applyIncomingAct(act){
 // A set-bot uses its set ability against the player when in range.
 function botUseAbility(g,s,dp,now){
   if(!activeTournament||!s)return false;
+  if(invisibleUntil>now)return false;   // can't act on an invisible player
   if(g.set==='assassin'){
     if(dp>560)return false;
     activeTournament.smokeClouds.push({wx:g.wx,wy:g.wy,until:now+30000,r:58,owner:g.uid});
@@ -3396,7 +3401,7 @@ function botUseAbility(g,s,dp,now){
   if(g.set==='princess'){
     if(dp>380)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
-    confusedUntil=now+(12000+Math.random()*8000);confuseAng=Math.random()*6.28;popAnchorFromAbility();
+    confusedUntil=now+3000;confuseAng=Math.random()*6.28;popAnchorFromAbility();
     toast(g.name+' confused you!','#a872d8');spawnAbilityFx(boat.wx,boat.wy,'#c77ad8');return true;
   }
   if(g.set==='berserker'){
@@ -3404,18 +3409,22 @@ function botUseAbility(g,s,dp,now){
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
     let dx=boat.wx-g.wx,dy=boat.wy-g.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
     const power=12+Math.random()*8;knockVX+=dx*power;knockVY+=dy*power;popAnchorFromAbility();
-    toast(g.name+' punched you!','#c46f28');spawnAbilityFx(boat.wx,boat.wy,'#ff8a3a');return true;
+    const lost=loseEquippedConsumable(0.10+Math.random()*0.05); // knock 10-15% loose
+    toast(g.name+' punched you'+(lost?' (-'+lost+' bait/lures)':'')+'!','#c46f28');spawnAbilityFx(boat.wx,boat.wy,'#ff8a3a');return true;
   }
   if(g.set==='pirate'){
     if(dp>340)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
-    const amt=2+Math.floor(Math.random()*5);
-    if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
-    else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
-    updateRigBar();queueSave();
+    const amt=loseEquippedConsumable(0.05+Math.random()*0.10); // steal 5-15%
     toast(g.name+' plundered '+amt+' bait/lures!','#b3402a');spawnAbilityFx(g.wx,g.wy,'#ffd24a');return true;
   }
   return false;
+}
+// Knock loose / steal a fraction of the player's equipped bait (or lure). Returns the amount lost.
+function loseEquippedConsumable(frac){
+  if(curMethod().bait&&S.baitSel){const c=S.baitInv[S.baitSel]||0;const loss=Math.min(c,Math.ceil(c*frac));S.baitInv[S.baitSel]=c-loss;updateRigBar();queueSave();return loss;}
+  if(S.lureSel){const c=S.lureInv[S.lureSel]||0;const loss=Math.min(c,Math.ceil(c*frac));S.lureInv[S.lureSel]=c-loss;updateRigBar();queueSave();return loss;}
+  return 0;
 }
 // Tap an angler while roaming a tournament to see their loadout (show off!).
 function ghostAtScreen(x,y){
