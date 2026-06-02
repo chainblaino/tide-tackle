@@ -1,0 +1,8 @@
+# Firebase admin credentials — NEVER commit these
+tools/serviceAccount.json
+serviceAccount.json
+*.serviceAccount.json
+
+# Node
+node_modules/
+package-lock.json
