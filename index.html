@@ -191,6 +191,21 @@
   .cbadge{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;padding:3px 9px;border-radius:20px;color:#fff;}
   .catch-name{font-family:'Fredoka';font-size:23px;font-weight:600;color:var(--wood-dark);line-height:1.1;}
   .catch-rarity{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;margin-top:1px;}
+  /* ── Ultra Legendary treatments ── */
+  @keyframes ultraShift{to{background-position:200% center;}}
+  @keyframes ultraPulse{0%,100%{box-shadow:0 12px 40px rgba(0,0,0,.55),0 0 24px rgba(255,61,240,.55),0 0 60px rgba(123,92,255,.4);}50%{box-shadow:0 12px 40px rgba(0,0,0,.55),0 0 40px rgba(52,231,228,.7),0 0 90px rgba(255,94,212,.55);}}
+  .ultra-catch{position:relative;max-width:400px;border:none;background:#1a1320;color:#fff;animation:pop .28s cubic-bezier(.2,1.2,.4,1),ultraPulse 2.2s ease-in-out infinite;}
+  .ultra-catch::before{content:"";position:absolute;inset:-3px;border-radius:22px;padding:3px;background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;animation:ultraShift 2.5s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;}
+  .ultra-catch .catch-name{color:#fff;}
+  .ultra-catch .catch-weight{color:#ffe9a8;}
+  .ultra-catch .catch-fact{color:rgba(255,255,255,.78);}
+  .ultra-catch .catch-ok{background:linear-gradient(100deg,#ff5ed4,#7b5cff);border-color:#7b5cff;}
+  .ultra-badge,.ultra-rarity{background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;animation:ultraShift 2.5s linear infinite;-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .ultra-badge{-webkit-background-clip:border-box;background-clip:border-box;color:#1a1320 !important;}
+  .ultra-art{filter:drop-shadow(0 0 10px rgba(255,94,212,.6)) drop-shadow(0 0 20px rgba(123,92,255,.4));}
+  .leg-label.ultra{font-size:42px;letter-spacing:3px;background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:ultraShift 2s linear infinite;}
+  .fish-card.ultra .fname{color:#c83bbf;}
+  .fish-card.ultra.caught{border-color:#ff3df0;background:linear-gradient(135deg,#fbe6fb,#eee2ff);box-shadow:0 0 12px rgba(255,61,240,.35);}
   .catch-weight{font-family:'Fredoka';font-size:30px;font-weight:600;color:var(--ink);margin:8px 0 2px;}
   .catch-rewards{font-size:14px;font-weight:800;color:var(--accent-dark);margin-bottom:10px;}
   .catch-fact{background:var(--parchment);border-radius:11px;padding:10px 12px;font-size:12.5px;font-weight:600;font-style:italic;color:var(--text);line-height:1.5;text-align:left;}
@@ -864,7 +879,9 @@ async function renderLeaderboard(){
     el.innerHTML=snap.docs.map(function(doc,i){
       const d=doc.data();
       const me=fbUser&&doc.id===fbUser.uid;
-      return "<div class=\"lb-row\"><div class=\"lb-rank\">"+(medals[i]||(i+1))+"</div><div class=\"lb-uname\">"+(me?"<span style=\"color:var(--accent);\">"+svgIcon('star',11)+"</span> ":"")+d.username+"</div><div class=\"lb-stat\">"+(d.biggestName||"-")+" "+(d.biggestWeight?d.biggestWeight.toFixed(1)+"lb":"")+"</div></div>";
+      const bf=d.biggestName?FISH.find(function(x){return x.name===d.biggestName;}):null;
+      const statCls=(bf&&bf.rarity==='ultra')?' ultra-rarity':'';
+      return "<div class=\"lb-row\"><div class=\"lb-rank\">"+(medals[i]||(i+1))+"</div><div class=\"lb-uname\">"+(me?"<span style=\"color:var(--accent);\">"+svgIcon('star',11)+"</span> ":"")+d.username+"</div><div class=\"lb-stat"+statCls+"\">"+(d.biggestName||"-")+" "+(d.biggestWeight?d.biggestWeight.toFixed(1)+"lb":"")+"</div></div>";
     }).join("");
   }catch(e){el.innerHTML="<div class=\"lb-empty\">Could not load leaderboard.</div>";}
 }
@@ -1029,7 +1046,7 @@ const TOURN_FEES=[
 function tournFee(zone,rarity){return (TOURN_FEES[zone]||TOURN_FEES[0])[rarity]||300;}
 const ALWAYS_TOURN_NAMES=["Open Gulf Challenge","Gulf Coast Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
 const ZONE_LBL=["Inshore","Nearshore","Offshore"];
-const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary"};
+const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary",ultra:"Ultra Legendary"};
 let activeLobby=null,lobbyInt=null,activeTournament=null;
 // Aliases used throughout tournament code
 function updatePills(){updateRigBar();}
@@ -1528,7 +1545,7 @@ function renderStructuresGuide(){
   if(!el)return;
   const sMap={};
   FISH.forEach(function(f){(f.structure||[]).forEach(function(sk){if(!sMap[sk])sMap[sk]=[];if(!sMap[sk].find(function(x){return x.id===f.id;}))sMap[sk].push(f);});});
-  const rarOrder=["common","uncommon","rare","epic","legendary"];
+  const rarOrder=["common","uncommon","rare","epic","legendary","ultra"];
   el.innerHTML=Object.keys(STRUCT_META).map(function(k){
     const info=STRUCT_META[k];
     const fish=(sMap[k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
@@ -1566,8 +1583,10 @@ setInterval(function(){
 const SEASONS=['spring','summer','fall','winter'];
 const SEASON_ICON={spring:'season-spring',summer:'season-summer',fall:'season-fall',winter:'season-winter'};
 const SEASON_LABEL={spring:'Spring',summer:'Summer',fall:'Fall',winter:'Winter'};
-const RARITY_COLORS={common:'#9aa39b',uncommon:'#5fae6a',rare:'#4a9fd4',epic:'#a872d8',legendary:'#e0a93c'};
-const RARITY_ORDER=['common','uncommon','rare','epic','legendary'];
+const RARITY_COLORS={common:'#9aa39b',uncommon:'#5fae6a',rare:'#4a9fd4',epic:'#a872d8',legendary:'#e0a93c',ultra:'#ff3df0'};
+const RARITY_ORDER=['common','uncommon','rare','epic','legendary','ultra'];
+// Prismatic shimmer used for Ultra Legendary treatments (catch card, badges, etc.)
+const ULTRA_GRAD='linear-gradient(100deg,#ffd24a 0%,#ff5ed4 28%,#7b5cff 52%,#34e7e4 76%,#ffd24a 100%)';
 const XP_CURVE=[0,50,120,230,400,640,980,1450,2100,3200,5200,8000];
 const MIN_PER_SEC=3; // 1440 game-min over 480s = 8 real min per cycle (4 min day + 4 min night)
 
@@ -1781,7 +1800,7 @@ const REELS=[
 function fightStrength(f,w){
   const a=f.size[0],b=f.size[1];
   const frac=Math.max(0,Math.min(1,(w-a)/Math.max(0.01,b-a)));
-  const band={common:[2,6],uncommon:[4,8],rare:[8,12],epic:[14,16],legendary:[22,26]}[f.rarity]||[6,8];
+  const band={common:[2,6],uncommon:[4,8],rare:[8,12],epic:[14,16],legendary:[22,26],ultra:[30,18]}[f.rarity]||[6,8];
   return band[0]+frac*band[1];
 }
 const BRAIDS=[
@@ -1875,6 +1894,12 @@ const FISH=[
   {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball','channel'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
   {id:'barracuda',name:'Great Barracuda',zone:1,rarity:'epic',size:[5,60],line:40,methods:['troll','jig','livebait'],baits:['pilchard','cutbait'],leader:'wire',structure:['reef','wreck','open','ledge'],season:['all'],time:['day','dawn','dusk'],xp:130,gold:150,weight:4,fact:'Ranks among the most spectacular fighters. Wire leader essential. Razor sharp teeth.'},
   {id:'tripletail',name:'Tripletail',zone:1,rarity:'epic',size:[2,25],line:30,methods:['cork','livebait','jig'],baits:['shrimp','pilchard'],leader:'mono',structure:['channel','open','weedline','baitball'],season:['spring','summer','fall'],time:['day','dawn'],xp:130,gold:145,weight:5,fact:'Drifts with currents and hides near floating debris and channel markers, resembling a floating leaf.'},
+  {id:'goliath',name:'Goliath Grouper',zone:1,rarity:'legendary',size:[50,400],line:80,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['wreck','reef','ledge','bridge'],season:['all'],time:['day','dawn','dusk'],xp:220,gold:260,weight:2,fact:'The largest grouper in the Atlantic. Federally protected — catch and release only. Can exceed 800 lbs. Ambushes prey from structure.'},
+  {id:'stripedmarlin',name:'Striped Marlin',zone:2,rarity:'legendary',size:[80,300],line:80,methods:['troll','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','weedline','rip'],season:['summer','fall'],time:['day','dawn','dusk'],xp:260,gold:300,weight:1.2,fact:'One of the most acrobatic billfish, famous for greyhounding across the surface when hooked. Found in warm blue water offshore.'},
+  {id:'bonefish',name:'Bonefish',zone:0,rarity:'epic',size:[2,14],line:12,methods:['cork','jig','livebait'],baits:['shrimp','crab'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:140,gold:160,weight:4,fact:'Called the "Gray Ghost" of the flats. One of the fastest fish in the ocean for its size. A trophy catch for sight fishermen. World record 16 lbs.'},
+  {id:'roosterfish',name:'Roosterfish',zone:2,rarity:'epic',size:[10,80],line:40,methods:['troll','livebait','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','rip','weedline'],season:['summer','fall'],time:['dawn','day','dusk'],xp:150,gold:175,weight:4,fact:'Named for its distinctive seven-spined dorsal fin that fans out like a rooster’s comb when excited. An aggressive surface feeder.'},
+  {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
+  {id:'blackmarlin',name:'Black Marlin',zone:2,rarity:'ultra',size:[200,1500],line:130,methods:['troll','livebait','chunk'],baits:['cutbait','pilchard'],leader:'wire',structure:['deep','open','bluhole','oil_rig'],season:['summer','fall'],time:['day','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'The largest and most powerful billfish on earth. World record 1,560 lbs. Known for violent, unstoppable runs. Only the Big Game reel and Sportfisher can realistically handle one.'},
 ];
 
 // ===================== STATE =====================
@@ -1935,6 +1960,12 @@ const FISH_ART={
   bluefish:{shape:'torpedo',back:'#3a6a7a',body:'#7aa0aa',belly:'#dde8ea',marks:[],mark:'#2a4a54',beak:true},
   barracuda:{shape:'torpedo',back:'#5a6068',body:'#9aa0a8',belly:'#e0e4e8',marks:['bars-faint'],mark:'#2a2e34',beak:true},
   tripletail:{shape:'panfish',back:'#3a3228',body:'#6a5e48',belly:'#a89878',marks:['mottle'],mark:'#2a2218'},
+  goliath:{shape:'grouper',back:'#4e4a3e',body:'#726c58',belly:'#9c9684',marks:['mottle'],mark:'#332f28'},
+  stripedmarlin:{shape:'billfish',back:'#2f5f9a',body:'#5f7faa',belly:'#dfe6ee',marks:['bars-dot'],mark:'#1f4f8a',bill:true,dorsal:true},
+  bonefish:{shape:'torpedo',back:'#9aa6b0',body:'#cdd6de',belly:'#f2f5f8',marks:[],mark:'#7a8690'},
+  roosterfish:{shape:'torpedo',back:'#586068',body:'#9aa2aa',belly:'#eef2f4',marks:['bars-faint'],mark:'#2a2e34'},
+  sawfish:{shape:'billfish',back:'#7a7e74',body:'#a8aa9e',belly:'#dedcd2',marks:[],mark:'#5a5e54',sword:true,bill:true},
+  blackmarlin:{shape:'billfish',back:'#1a2230',body:'#2c3c50',belly:'#98a4b0',marks:['bars-cobalt'],mark:'#3a5a78',bill:true,dorsal:true},
 };
 
 function _hx(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
@@ -2680,7 +2711,7 @@ const BOAT_FOOT={bottom:136,halfW:62};
 let sightFish=[],ripples=[];
 
 // ===================== SIGHT FISHING =====================
-const SIGHT_FISH_WEIGHTS={tarpon:5,cobia:5,mahi:12,permit:12,barracuda:12,redfish:23,snook:23};
+const SIGHT_FISH_WEIGHTS={tarpon:5,cobia:5,mahi:12,permit:12,barracuda:12,bonefish:14,roosterfish:12,redfish:23,snook:23};
 let _spawnLastHour=-1;
 let _forcedBiteFish=null;
 function trySightFishSpawn(){
@@ -4187,8 +4218,9 @@ function poolNow(){
     if(f.zone!==S.zone)continue;
     if(!f.methods.includes(m.id))continue;
     let w=f.weight;
-    // rarity spawn penalty so epic and legendary are genuinely rare
-    w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
+    // rarity spawn penalty so epic and legendary are genuinely rare;
+    // Ultra Legendary is vanishingly rare (~0.001% of the pool even at a prime spot).
+    w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04,ultra:0.00003}[f.rarity]||1;
     // Jeremy set bonus: +50% legendary spawn chance
     if(f.rarity==='legendary'&&equippedSetId()==='jeremy')w*=1.5;
     // season
@@ -4276,8 +4308,8 @@ function triggerBite(){
     escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
     return;
   }
-  if(pick.rarity==='legendary'){
-    setStatus('LEGENDARY FISH ON THE LINE!');
+  if(pick.rarity==='legendary'||pick.rarity==='ultra'){
+    setStatus(pick.rarity==='ultra'?'ULTRA LEGENDARY ON THE LINE!!!':'LEGENDARY FISH ON THE LINE!');
     showLegendaryAlert(pick);
     return;
   }
@@ -4350,6 +4382,7 @@ let sdewStartTime=0,sdewDiff=1;
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
+  if(fish.rarity==='ultra')return 1.2;   // hardest fight in the game
   if(SDEW_BEHAVIORS[fish.id])return 1;
   return 0.55+RARITY_ORDER.indexOf(fish.rarity)*0.11; // common .55 .. epic .88
 }
@@ -4357,6 +4390,8 @@ const SDEW_GRACE_MS=2000; // first 2s: fish moves very slowly, meter fills at ha
 
 function showLegendaryAlert(fish){
   document.getElementById('leg-fishname').textContent=fish.name;
+  const lbl=document.querySelector('#leg-alert .leg-label');
+  if(lbl){const ultra=fish.rarity==='ultra';lbl.textContent=ultra?'ULTRA LEGENDARY':'LEGENDARY';lbl.classList.toggle('ultra',ultra);}
   document.getElementById('leg-alert').classList.add('show');
   sdewAlertTimer=setTimeout(function(){
     document.getElementById('leg-alert').classList.remove('show');
@@ -4433,6 +4468,8 @@ function endSdewGame(success){
   document.getElementById('rig-bar').style.pointerEvents='';
   if(!success){fail('The '+(hookedFish?hookedFish.name:'fish')+' got away! So close...');return;}
   const f=hookedFish,w=hookW;
+  // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
+  if(f.rarity==='ultra'&&!ultraGearOK()){snap(f,w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');return;}
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f,w)>curReel().drag){snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
@@ -4470,6 +4507,8 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   }
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish,w=hookW,perfect=dd<snapZone.width*0.2;
+  // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
+  if(f.rarity==='ultra'&&!ultraGearOK()){return snap(f,w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');}
   // drag ceiling: fish stronger than the reel's drag rating snaps automatically
   if(fightStrength(f,w)>curReel().drag){return snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
@@ -4479,6 +4518,8 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   land(f,w,perfect,bullseye);
 });
 
+// Ultra Legendary fish can only be landed with the top-tier reel + 130 lb braid.
+function ultraGearOK(){return S.reel==='reel4'&&curBraid().line>=130;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
 function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
 function fail(msg){phase='done';bobber.active=false;S.misses++;setStatus(msg);queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
@@ -4506,6 +4547,7 @@ function land(f,w,perfect,bullseye){
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
+  if(f.rarity==='ultra')toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
@@ -4513,21 +4555,25 @@ function land(f,w,perfect,bullseye){
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
 
 function showCatch(f,w,o){
+  const ultra=f.rarity==='ultra';
   const badges=[];
+  if(ultra)badges.push(['\u2726 ULTRA LEGENDARY \u2726','ultra']);
   if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 GOLD','#2aa890']);
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
   if(o.bullseye)badges.push(['\ud83d\udfe1 BULLSEYE! 2\u00d7 COINS','#b8a000']);
-  document.getElementById('catch-card').innerHTML=
-    '<div class="catch-badges">'+badges.map(b=>'<span class="cbadge" style="background:'+b[1]+'">'+b[0]+'</span>').join('')+'</div>'+
-    '<div style="display:flex;justify-content:center;margin:4px 0 6px;">'+buildFishArt(f.id,210)+'</div>'+
+  const card=document.getElementById('catch-card');
+  card.classList.toggle('ultra-catch',ultra);
+  card.innerHTML=
+    '<div class="catch-badges">'+badges.map(b=>b[1]==='ultra'?'<span class="cbadge ultra-badge">'+b[0]+'</span>':'<span class="cbadge" style="background:'+b[1]+'">'+b[0]+'</span>').join('')+'</div>'+
+    '<div style="display:flex;justify-content:center;margin:4px 0 6px;" class="'+(ultra?'ultra-art':'')+'">'+buildFishArt(f.id,210)+'</div>'+
     '<div class="catch-name">'+f.name+'</div>'+
-    '<div class="catch-rarity" style="color:'+RARITY_COLORS[f.rarity]+'">'+f.rarity+' \u00b7 '+ZONES[f.zone].name+'</div>'+
+    '<div class="catch-rarity'+(ultra?' ultra-rarity':'')+'"'+(ultra?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+' \u00b7 '+ZONES[f.zone].name+'</div>'+
     '<div class="catch-weight">'+fmtLb(w)+' lb</div>'+
     '<div class="catch-rewards">+'+o.xp+' XP'+(activeTournament?' &nbsp;\u00b7&nbsp; tournament catch':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold')+'</div>'+
     '<div class="catch-fact">'+f.fact+'</div>'+
-    '<button class="catch-ok" onclick="closeCatch()">Nice!</button>';
+    '<button class="catch-ok" onclick="closeCatch()">'+(ultra?'Once in a lifetime!':'Nice!')+'</button>';
   document.getElementById('catch-bg').classList.add('show');
 }
 function closeCatch(){document.getElementById('catch-bg').classList.remove('show');if(phase==='caught'){phase='idle';setStatus('Cast again, or re-rig to target something new.');}}
@@ -4667,7 +4713,7 @@ function renderLogbook(){
     html+='<div class="zone-head">'+z.name+' <small>'+z.sub+' \u00b7 '+z.depth+'</small></div><div class="fish-grid">';
     html+=zfish.map(f=>{const c=S.caught[f.id]||0,caught=c>0,showLock=zlock&&!caught;
       const icon=showLock?'<span style="font-size:18px;opacity:.4">\uD83D\uDD12</span>':buildFishArt(f.id,40,!caught);
-      return '<div class="fish-card '+(caught?'caught':'')+' '+(showLock?'locked':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(showLock?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
+      return '<div class="fish-card '+(caught?'caught':'')+' '+(showLock?'locked':'')+' '+(f.rarity==='ultra'?'ultra':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(showLock?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
     }).join('')+'</div>';
   });
   document.getElementById('logbook-zones').innerHTML=html;
@@ -4915,7 +4961,7 @@ function openFish(id){
   const lead=f.leader==='fluoro'?'Fluorocarbon (line-shy)':f.leader==='wire'?'Wire (toothy, will cut you off!)':'Any leader';
   document.getElementById('modal').innerHTML=
     '<span class="close-x" onclick="closeModal()">\u00d7</span>'+
-    '<div class="mhead">'+buildFishArt(f.id,76)+'<div><div class="mname">'+f.name+'</div><div class="mrarity" style="color:'+RARITY_COLORS[f.rarity]+'">'+f.rarity+'</div></div></div>'+
+    '<div class="mhead">'+buildFishArt(f.id,76)+'<div><div class="mname">'+f.name+'</div><div class="mrarity'+(f.rarity==='ultra'?' ultra-rarity':'')+'"'+(f.rarity==='ultra'?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+'</div></div></div>'+
     '<div class="mrow"><span class="ml">Where</span><span class="mv">'+ZONES[f.zone].name+'</span></div>'+
     '<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methodNames+'</span></div>'+
     '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitNames+'</span></div>'+
