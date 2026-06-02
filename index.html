@@ -1226,6 +1226,12 @@ function tournPrizes(rarity,boost){
   const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
   return [Math.round(40*rarMult*boost),Math.round(18*rarMult*boost),Math.round(8*rarMult*boost)];
 }
+// Tournaments also pay GOLD winnings to the top 3 (alongside the rubies).
+function tournGoldPrizes(rarity,boost){
+  boost=boost||1;
+  const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
+  return [Math.round(600*rarMult*boost),Math.round(280*rarMult*boost),Math.round(120*rarMult*boost)];
+}
 // Small numbered medal badge for 1st/2nd/3rd (gold/silver/bronze).
 function medalBadge(i){
   const c=['#e0a93c','#b8bdc6','#cd7f32'][i]||'#9a8a6a';
@@ -1234,16 +1240,18 @@ function medalBadge(i){
 // Info popup: shows the potential ruby winnings for a tournament.
 function showTournInfo(rarity,boost){
   const p=tournPrizes(rarity,boost);
+  const gp=tournGoldPrizes(rarity,boost);
   const rows=[0,1,2].map(function(i){
     return '<div style="display:flex;align-items:center;gap:9px;padding:8px;border-radius:9px;background:var(--parchment);border:1.5px solid #d2b886;margin-bottom:6px;">'
       +medalBadge(i)
       +'<span style="flex:1;font-size:13px;font-weight:800;color:var(--ink);">'+['1st place','2nd place','3rd place'][i]+'</span>'
-      +'<span style="font-size:14px;font-weight:900;color:#d61f3a;"><span class="gem-s"></span> +'+p[i]+'</span></div>';
+      +'<span style="font-size:13px;font-weight:900;color:#b8860b;white-space:nowrap;"><span class="coin-s"></span> +'+gp[i]+'</span>'
+      +'<span style="font-size:13px;font-weight:900;color:#d61f3a;white-space:nowrap;"><span class="gem-s"></span> +'+p[i]+'</span></div>';
   }).join('');
   const body=document.getElementById('modal');
   body.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
     +'<div style="font-size:16px;font-weight:900;color:#d61f3a;text-align:center;margin-bottom:4px;">Potential Winnings</div>'
-    +'<div style="font-size:11.5px;color:var(--text-soft);text-align:center;margin-bottom:13px;">Placement prizes for this tournament, paid in rubies.</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);text-align:center;margin-bottom:13px;">Placement prizes for this tournament, paid in gold &amp; rubies.</div>'
     +rows
     +'<button onclick="closeModal()" style="width:100%;margin-top:8px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Got it</button>';
   document.getElementById('modal-bg').classList.add('show');
@@ -1440,6 +1448,7 @@ function recordTournamentCatch(fishName,weight){
 }
 function endTournament(){
   if(!activeTournament)return;
+  if(typeof closeMenu==='function')closeMenu(); // don't leave the leaderboard/menu open behind the results
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Reset all ability effects and hide the ability button
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
@@ -1467,13 +1476,17 @@ function endTournament(){
   }
   // Sort by biggest catch descending; ties resolve in the player's favor.
   entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
-  // Prizes are paid in RUBIES (gold is no longer won). Harder target rarities
-  // pay more. The Big Cast (always-on) pays 1.5x.
-  const prizes=tournPrizes(def.rarity,def.alwaysOn?1.5:1);
+  // Top 3 are paid in BOTH gold and rubies. Harder target rarities pay more.
+  // The Big Cast (always-on) pays 1.5x.
+  const boost=def.alwaysOn?1.5:1;
+  const prizes=tournPrizes(def.rarity,boost);
+  const goldPrizes=tournGoldPrizes(def.rarity,boost);
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Prize only if the player genuinely placed top 3 with a real catch.
-  let winnings=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0)?prizes[rank]:0;
-  if(winnings>0){S.rubies=(S.rubies||0)+winnings;updatePills();queueSave();}
+  const placed=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0);
+  let winnings=placed?prizes[rank]:0;
+  let goldWin=placed?goldPrizes[rank]:0;
+  if(winnings>0||goldWin>0){S.rubies=(S.rubies||0)+winnings;S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;updatePills();queueSave();}
   if(rank===0&&(activeTournament.biggestWeight||0)>0){
     S.tournamentWins=(S.tournamentWins||0)+1;
     if(def.alwaysOn)S.bigCastWins=(S.bigCastWins||0)+1;
@@ -1485,14 +1498,14 @@ function endTournament(){
     +entries.slice(0,10).map(function(e,i){
       // Top 3 with a real catch get a medal badge and the rubies they won.
       const placeIcon=(i<3)?medalBadge(i):"<span style=\"font-size:13px;width:22px;text-align:center;font-weight:800;color:var(--text-soft);\">"+(i+1)+"</span>";
-      const prizeTag=(i<3&&e.weight>0)?"<span style=\"font-size:12.5px;font-weight:900;color:#d61f3a;white-space:nowrap;margin-left:6px;\"><span class=\"gem-s\"></span> +"+prizes[i]+"</span>":"";
+      const prizeTag=(i<3&&e.weight>0)?"<span style=\"font-size:12px;font-weight:900;white-space:nowrap;margin-left:6px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> "+goldPrizes[i]+"</span> <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> "+prizes[i]+"</span></span>":"";
       return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#d2b886")+";margin-bottom:5px;\">"
         +placeIcon
         +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);min-width:0;\">"+e.username+"</span>"
         +"<span style=\"font-size:12px;color:var(--text-soft);white-space:nowrap;\">"+(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch")+"</span>"
         +prizeTag+"</div>";
     }).join("")
-    +(winnings?"<div style=\"text-align:center;font-size:15px;font-weight:900;color:#d61f3a;margin-top:10px;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</div>":"")
+    +(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":"")
     +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
   document.getElementById("modal-bg").classList.add("show");
   activeTournament=null;activeLobby=null;
