@@ -2851,11 +2851,13 @@ const canvas=document.getElementById('ocean');
 const ctx=canvas.getContext('2d');
 let CW=760,CH=560;
 let _bgGrad=null,_bgGradKey=''; // cached base-water gradient (per zone+height)
-// Cap the canvas pixel density. The world is flat-shaded, so phones render at 1x
-// (instead of the screen's 2-3x) — this is the single biggest GPU fill-rate win
-// for a full-screen animated canvas. Tablets 1.5x, desktop 2x.
+// Adaptive canvas density. Start sharp (1.5x on phones/tablets, 2x desktop) and
+// let render() measure the real frame rate and step it down to 1x ONLY if the
+// device can't hold a smooth frame rate. Capable phones keep full graphics;
+// weaker ones automatically stay smooth.
 const _iw=window.innerWidth||999;
-const DPR=Math.min(window.devicePixelRatio||1, _iw<760?1:(_iw<1100?1.5:2));
+let DPR=Math.min(window.devicePixelRatio||1, _iw<1100?1.5:2);
+let _dprSettled=false,_dprProbeSum=0,_dprProbeN=0;
 // canvas dimensions and scale set by resizeCanvas()
 let ORIGIN={x:380,y:72};
 const BOAT_FOOT={bottom:136,halfW:62};
@@ -4291,6 +4293,15 @@ function worldCovered(){
 function render(ts){
   if(!render._last)render._last=ts;
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
+  // Auto-tune resolution: sample real frame intervals while the world is actually
+  // drawing and, if the device is running slow, drop to 1x density once.
+  if(!_dprSettled&&!tourn.active&&!surfActive&&!worldCovered()){
+    if(dt>0.008&&dt<0.05){_dprProbeSum+=dt;_dprProbeN++;}  // ignore stalls/covered frames
+    if(_dprProbeN>=70){
+      if(_dprProbeN/_dprProbeSum<48&&DPR>1){DPR=1;resizeCanvas();}else{_dprSettled=true;}
+      _dprProbeSum=0;_dprProbeN=0;
+    }
+  }
   // Tournaments run time faster so a full day+night cycle fits the 6-minute match
   // (3 min day + 3 min night). 1440 game-min / 360s = 4 game-min per real sec.
   if(activeTournament){
