@@ -2870,6 +2870,9 @@ const _iw=window.innerWidth||999;
 const _isPhone=_iw<760, _isTablet=_iw>=760&&_iw<1100;
 let DPR=_isPhone?1:Math.min(window.devicePixelRatio||1,_isTablet?1.5:2);
 let gfxLow=_isPhone; // trim always-on detail on phones by default
+// Per-frame movement is multiplied by this so the boat/bots travel at the same
+// real speed at any frame rate (e.g. iOS Low Power Mode caps Safari to 30fps).
+let frameScale=1;
 function applyGfxQuality(){
   const dpr=window.devicePixelRatio||1, q=(typeof S!=='undefined'&&S.gfx)||'auto';
   if(q==='high'){DPR=Math.min(dpr,2);gfxLow=false;}
@@ -3114,11 +3117,11 @@ function updateGhosts(){
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
       // Smoothly chase the real broadcast position from Firestore
-      g.wx+=(g.tx-g.wx)*0.12;
-      g.wy+=(g.ty-g.wy)*0.12;
+      g.wx+=(g.tx-g.wx)*0.12*frameScale;
+      g.wy+=(g.ty-g.wy)*0.12*frameScale;
       let dh=g.th-g.heading;
       while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
-      g.heading+=dh*0.15;
+      g.heading+=dh*0.15*frameScale;
       continue;
     }
     if(g.real&&!g.hasReal)continue; // real player who hasn't broadcast yet: hold still
@@ -3132,9 +3135,9 @@ function updateGhosts(){
       }
     }
     // knockback impulse from a punch
-    if(g._knockVX||g._knockVY){g.wx+=g._knockVX;g.wy+=g._knockVY;g._knockVX*=0.86;g._knockVY*=0.86;if(Math.abs(g._knockVX)<0.1)g._knockVX=0;if(Math.abs(g._knockVY)<0.1)g._knockVY=0;clampGhost(g);}
+    if(g._knockVX||g._knockVY){g.wx+=g._knockVX*frameScale;g.wy+=g._knockVY*frameScale;g._knockVX*=Math.pow(0.86,frameScale);g._knockVY*=Math.pow(0.86,frameScale);if(Math.abs(g._knockVX)<0.1)g._knockVX=0;if(Math.abs(g._knockVY)<0.1)g._knockVY=0;clampGhost(g);}
     // confused: drift in a random direction
-    if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng+=(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*g.speed;g.wy+=Math.sin(g._confuseAng)*g.speed*0.7;clampGhost(g);continue;}
+    if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng+=(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*g.speed*frameScale;g.wy+=Math.sin(g._confuseAng)*g.speed*0.7*frameScale;clampGhost(g);continue;}
     // blinded by smoke: stall in place
     if(g._blindUntil&&now<g._blindUntil)continue;
     // Set-bots use their ability: often in daylight (aggressive), less at night
@@ -3162,8 +3165,8 @@ function updateGhosts(){
     }
     let d=g.targetAng-g.heading;
     while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
-    g.heading+=d*(g.set?(pTop3?0.06:0.03+0.03*dayAgg):0.02);
-    const sp=g.set?g.speed*(1.25+0.35*dayAgg)*(pTop3?1.25:1):g.speed;  // faster by day, faster still vs a leader
+    g.heading+=d*(g.set?(pTop3?0.06:0.03+0.03*dayAgg):0.02)*frameScale;
+    const sp=(g.set?g.speed*(1.25+0.35*dayAgg)*(pTop3?1.25:1):g.speed)*frameScale;  // faster by day, faster still vs a leader
     g.wx+=Math.cos(g.heading)*sp;
     g.wy+=Math.sin(g.heading)*sp*0.7;
     if(g.wx<70){g.wx=70;g.targetAng=Math.random()*Math.PI-Math.PI/2;}
@@ -4316,6 +4319,7 @@ function worldCovered(){
 function render(ts){
   if(!render._last)render._last=ts;
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
+  frameScale=Math.max(0.1,Math.min(3,dt*60)); // 1 at 60fps, 2 at 30fps, etc.
   // Live FPS (smoothed) for the optional on-screen meter.
   if(dt>0){render._fa=render._fa?render._fa+((1/dt)-render._fa)*0.1:1/dt;}
   if(S.showFps&&ts-(render._fpsT||0)>250){render._fpsT=ts;const fe=document.getElementById('fps-meter');if(fe)fe.textContent=Math.round(render._fa||0)+' fps';}
@@ -4340,13 +4344,13 @@ function render(ts){
       jdx=Math.cos(confuseAng);jdy=Math.sin(confuseAng);
       confuseAng+=(Math.random()-0.5)*0.3;
     }
-    boat.vx+=(jdx*spd-boat.vx)*0.12;
-    boat.vy+=(jdy*spd-boat.vy)*0.12;
+    boat.vx+=(jdx*spd-boat.vx)*0.12*frameScale;
+    boat.vy+=(jdy*spd-boat.vy)*0.12*frameScale;
     // Punch / knockback impulse decays over time
     if(typeof knockVX!=='undefined'&&(Math.abs(knockVX)>0.05||Math.abs(knockVY)>0.05)){
-      boat.wx+=knockVX;boat.wy+=knockVY;knockVX*=0.88;knockVY*=0.88;
+      boat.wx+=knockVX*frameScale;boat.wy+=knockVY*frameScale;knockVX*=Math.pow(0.88,frameScale);knockVY*=Math.pow(0.88,frameScale);
     }
-    boat.wx+=boat.vx;boat.wy+=boat.vy;
+    boat.wx+=boat.vx*frameScale;boat.wy+=boat.vy*frameScale;
     boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
     const sp=Math.hypot(boat.vx,boat.vy);
