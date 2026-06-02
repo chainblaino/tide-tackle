@@ -423,6 +423,19 @@
 .sdew-hint{font-size:11px;color:rgba(255,255,255,.35);letter-spacing:.5px;text-align:center;text-transform:uppercase;}
 .sdew-btn{padding:18px 48px;border-radius:14px;border:2px solid var(--accent);background:var(--accent);color:#fff;font-size:20px;font-weight:900;font-family:'Fredoka';cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;box-shadow:0 5px 0 var(--accent-dark);}
 .sdew-btn:active{transform:translateY(4px);box-shadow:0 1px 0 var(--accent-dark);}
+.sdew-slowmo{margin-top:4px;padding:11px 26px;border-radius:12px;border:2px solid #ff7a1a;background:linear-gradient(135deg,#ff9a2a,#d4500a);color:#fff;font-size:15px;font-weight:900;font-family:'Fredoka';cursor:pointer;user-select:none;-webkit-user-select:none;touch-action:manipulation;box-shadow:0 4px 0 #8a3000;letter-spacing:.5px;display:flex;align-items:center;gap:7px;}
+.sdew-slowmo:active{transform:translateY(3px);box-shadow:0 1px 0 #8a3000;}
+.sdew-slowmo:disabled{opacity:.4;filter:grayscale(.7);cursor:default;}
+.cs-blade{width:15px;height:15px;border-radius:3px;background:repeating-linear-gradient(45deg,#fff 0 3px,#9aa 3px 6px);display:inline-block;}
+.retry-box{background:linear-gradient(160deg,#10283f,#091a2b);border:2px solid rgba(255,255,255,.16);border-radius:18px;padding:26px 30px;max-width:340px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.6);}
+.retry-title{font-family:'Fredoka';font-size:22px;font-weight:700;color:#ff6a8a;margin-bottom:7px;}
+.retry-sub{font-size:13px;color:rgba(255,255,255,.7);line-height:1.5;margin-bottom:18px;}
+.retry-btns{display:flex;flex-direction:column;gap:10px;}
+.retry-pay{padding:14px 20px;border-radius:13px;border:2px solid #ff9ab0;background:linear-gradient(135deg,#e0344e,#9c0f25);color:#fff;font-size:16px;font-weight:900;font-family:'Fredoka';cursor:pointer;box-shadow:0 4px 0 #6c0a1a;display:flex;align-items:center;justify-content:center;gap:7px;}
+.retry-pay:active{transform:translateY(3px);box-shadow:0 1px 0 #6c0a1a;}
+.retry-pay:disabled{opacity:.45;filter:grayscale(.6);cursor:default;}
+.retry-let{padding:11px 20px;border-radius:13px;border:2px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);font-size:14px;font-weight:700;font-family:'Fredoka';cursor:pointer;}
+.retry-let:active{transform:translateY(2px);}
 
 </style>
 
@@ -583,6 +596,17 @@
   </div>
   <div class="sdew-hint">Hold to rise &nbsp;·&nbsp; Release to sink</div>
   <button class="sdew-btn" id="sdew-btn">HOLD TO REEL</button>
+  <button class="sdew-slowmo" id="sdew-slowmo" style="display:none" onclick="useChainsawSlowmo()"><span class="cs-blade"></span> SLOW-MO</button>
+</div>
+<div class="sdew-overlay" id="retry-overlay">
+  <div class="retry-box">
+    <div class="retry-title" id="retry-title">It's getting away!</div>
+    <div class="retry-sub" id="retry-sub"></div>
+    <div class="retry-btns">
+      <button class="retry-pay" id="retry-pay" onclick="sdewRetryPay()"><span class="gem-s"></span> Pay 5 &mdash; Try again</button>
+      <button class="retry-let" onclick="sdewRetryDecline()">Let it go</button>
+    </div>
+  </div>
 </div>
 <div class="auth-overlay" id="skin-overlay" style="display:none">
   <div class="auth-box" style="text-align:center;max-width:400px;">
@@ -1736,7 +1760,7 @@ const SETS=[
    ability:'Punch', abilityDesc:'Shove a nearby angler away — harder the faster you’re moving — knocking 10–30% of their bait/lures loose. (20s cooldown)'},
   {id:'jeremy', name:'Jeremy Set', cost:1000, color:'#9098a0', cd:60,
    pieces:{hat:'jeremy_hair',shirt:'jeremy_shirt',shades:'jeremy_eyes'},
-   bonus:'+50% legendary fish spawn chance',
+   bonus:'+50% legendary & ultra legendary fish spawn chance',
    ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds. (60s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
@@ -4196,8 +4220,8 @@ function poolNow(){
     // rarity spawn penalty so epic and legendary are genuinely rare;
     // Ultra Legendary is vanishingly rare (~0.001% of the pool even at a prime spot).
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04,ultra:0.00003}[f.rarity]||1;
-    // Jeremy set bonus: +50% legendary spawn chance
-    if(f.rarity==='legendary'&&equippedSetId()==='jeremy')w*=1.5;
+    // Jeremy set bonus: +50% legendary AND ultra legendary spawn chance
+    if((f.rarity==='legendary'||f.rarity==='ultra')&&equippedSetId()==='jeremy')w*=1.5;
     // season
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
     // time
@@ -4273,6 +4297,7 @@ function triggerBite(){
     for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
   }
   hookedFish=pick;hookW=rollWeight(pick);
+  sdewRetryUsed=false;
   phase='biting';
   if(activeTournament){
     // During a tournament ONLY the target species triggers the Stardew fight —
@@ -4354,6 +4379,7 @@ let sdewBarTop=105,sdewBarVel=0;
 let sdewFishCy=140,sdewFishVel=0;
 let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
 let sdewStartTime=0,sdewDiff=1;
+let sdewRetryUsed=false;          // a non-ultra fish gives only one paid retry
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
@@ -4441,7 +4467,7 @@ function endSdewGame(success){
   clearTimeout(sdewAlertTimer);
   document.getElementById('sdew-overlay').classList.remove('show');
   document.getElementById('rig-bar').style.pointerEvents='';
-  if(!success){fail('The '+(hookedFish?hookedFish.name:'fish')+' got away! So close...');return;}
+  if(!success){offerSdewRetry();return;}
   const f=hookedFish,w=hookW;
   // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
   if(f.rarity==='ultra'&&!ultraGearOK()){snap(f,w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');return;}
@@ -4450,6 +4476,42 @@ function endSdewGame(success){
   if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off!');return;}}
   land(f,w,true,false);
+}
+
+// Lose the Stardew fight: offer a paid retry. One chance for normal fish;
+// ultra legendary can be retried indefinitely as long as you keep paying.
+const SDEW_RETRY_COST=5;
+function offerSdewRetry(){
+  const f=hookedFish;
+  const ultra=f&&f.rarity==='ultra';
+  const canRetry=f&&(ultra||!sdewRetryUsed)&&(S.rubies||0)>=SDEW_RETRY_COST;
+  if(!canRetry){
+    if(f&&(ultra||!sdewRetryUsed)&&(S.rubies||0)<SDEW_RETRY_COST){
+      fail('The '+f.name+' got away! Not enough rubies for another chance.');
+    }else{
+      fail('The '+(f?f.name:'fish')+' got away! So close...');
+    }
+    return;
+  }
+  document.getElementById('retry-title').textContent='The '+f.name+' is winning!';
+  document.getElementById('retry-sub').innerHTML=ultra
+    ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b> — a once-in-a-lifetime fish. Pay <b>'+SDEW_RETRY_COST+'</b> rubies for another shot. You can keep trying as long as you pay.'
+    : 'Pay <b>'+SDEW_RETRY_COST+'</b> rubies to grab the rod again. You get <b>one</b> more chance.';
+  const pay=document.getElementById('retry-pay');
+  pay.innerHTML='<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+' — Try again ('+(S.rubies||0)+')';
+  document.getElementById('retry-overlay').classList.add('show');
+}
+function sdewRetryPay(){
+  const f=hookedFish;if(!f)return;
+  if((S.rubies||0)<SDEW_RETRY_COST){toast('Not enough rubies.','#b3402a');return;}
+  S.rubies-=SDEW_RETRY_COST;updatePills();queueSave();
+  if(f.rarity!=='ultra')sdewRetryUsed=true;
+  document.getElementById('retry-overlay').classList.remove('show');
+  startSdewGame(f);
+}
+function sdewRetryDecline(){
+  document.getElementById('retry-overlay').classList.remove('show');
+  fail('You let the '+(hookedFish?hookedFish.name:'fish')+' go.');
 }
 
 // Controls
