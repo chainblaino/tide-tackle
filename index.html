@@ -126,9 +126,9 @@
   .chooser-close{width:100%;margin-top:6px;padding:9px;font-family:'Fredoka';font-size:15px;font-weight:500;color:var(--text-soft);background:transparent;border:2px dashed #c4a875;border-radius:10px;cursor:pointer;}
 
   /* slide menu */
-  .menu-bg{position:fixed;inset:0;background:rgba(20,15,8,.5);display:none;z-index:50;}
+  .menu-bg{position:fixed;inset:0;background:rgba(20,15,8,.5);display:none;z-index:190;}
   .menu-bg.show{display:block;}
-  .menu-panel{position:fixed;top:0;right:-460px;width:min(440px,92vw);height:100%;background:var(--cream);border-left:3px solid var(--wood);z-index:51;transition:right .25s ease;display:flex;flex-direction:column;}
+  .menu-panel{position:fixed;top:0;right:-460px;width:min(440px,92vw);height:100%;background:var(--cream);border-left:3px solid var(--wood);z-index:191;transition:right .25s ease;display:flex;flex-direction:column;}
   .menu-panel.show{right:0;}
   .menu-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:3px solid var(--wood);background:var(--parchment);}
   .menu-head .mt{font-family:'Fredoka';font-size:20px;font-weight:600;color:var(--wood-dark);}
@@ -670,7 +670,7 @@
   <div class="lobby-box">
     <div class="lobby-title" id="lobby-title">Tournament Lobby</div>
     <div class="lobby-sub" id="lobby-sub"></div>
-    <div class="lobby-timer" id="lobby-timer">2:00</div>
+    <div class="lobby-timer" id="lobby-timer">1:00</div>
     <ul class="lobby-players" id="lobby-players"></ul>
     <button class="lobby-shop-btn" onclick="inviteFriendsToLobby()">Invite Friends</button>
     <button class="lobby-shop-btn" onclick="openShopFromLobby()">Open Shop</button>
@@ -1254,7 +1254,7 @@ function enterTournament(defId){
   if(!def.alwaysOn&&tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
   S.gold-=def.fee;updatePills();queueSave();
   const meEntry={uid:fbUser?fbUser.uid:"guest",username:fbUsername,isBot:false};
-  activeLobby={def:def,players:[meEntry],timeLeft:120};
+  activeLobby={def:def,players:[meEntry],timeLeft:60};
   document.getElementById("lobby-title").textContent=def.name;
   const fishStr=def.targetFish?def.targetFish.name+" ("+RAR_LBL[def.rarity]+")":RAR_LBL[def.rarity]+" fish";
   document.getElementById("lobby-sub").textContent=fishStr+" · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
