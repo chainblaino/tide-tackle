@@ -60,7 +60,27 @@
   .items-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0c5742;}
   .items-btn.show{display:flex;}
   .items-btn .ib-icon{width:16px;height:16px;border-radius:4px;background:repeating-linear-gradient(45deg,#ffe27a 0 4px,#ffb347 4px 8px);display:inline-block;}
-  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:160px;font-size:13px;padding:9px 13px;}}
+  .surf-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:150px;z-index:8;display:none;padding:12px 20px;border-radius:16px;border:2px solid #ffe0a0;background:linear-gradient(135deg,#e8a93c,#b5701a);color:#fff;font-weight:900;font-family:'Fredoka';font-size:15px;cursor:pointer;box-shadow:0 5px 0 #7c4a10;user-select:none;-webkit-user-select:none;touch-action:manipulation;white-space:nowrap;}
+  .surf-btn:active{transform:translateX(-50%) translateY(3px);box-shadow:0 2px 0 #7c4a10;}
+  .surf-btn.show{display:block;}
+  .surf-overlay{position:fixed;inset:0;z-index:300;display:none;overflow:hidden;}
+  .surf-figure{transition:transform .15s;}
+  .surf-figure.twitch{transform:translateX(-50%) translateY(-4px) rotate(-1deg);}
+  .surf-figure.bent{transform:translateX(-50%) rotate(-3deg) scale(1.02);}
+  .surf-overlay.show{display:block;}
+  .surf-sky{position:absolute;top:0;left:0;right:0;height:42%;background:linear-gradient(180deg,#7fc4e8,#bfe3f2 70%,#e8f2ee);}
+  .surf-sea{position:absolute;top:34%;left:0;right:0;height:34%;background:linear-gradient(180deg,#2f86b0,#1f6f9a 50%,#3a93b8);box-shadow:inset 0 8px 24px rgba(0,0,0,.25);}
+  .surf-sea::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 18px,transparent 18px 40px);opacity:.8;animation:surfFoam 2.4s linear infinite;}
+  @keyframes surfFoam{from{background-position:0 0;}to{background-position:40px 0;}}
+  .surf-sand{position:absolute;bottom:0;left:0;right:0;height:34%;background:linear-gradient(180deg,#e7d29a,#d2b779 60%,#c2a766);}
+  .surf-figure{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);width:220px;height:240px;}
+  .surf-panel{position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center;background:rgba(8,24,38,.72);border:2px solid rgba(255,255,255,.18);border-radius:16px;padding:12px 20px;max-width:86%;backdrop-filter:blur(3px);}
+  .surf-h{font-family:'Fredoka';font-size:19px;font-weight:700;color:#ffe0a0;letter-spacing:.5px;}
+  .surf-status{font-size:14px;color:#eaf2f8;margin-top:5px;line-height:1.45;min-height:20px;}
+  .surf-bait{font-size:12px;color:#cfe0ec;margin-top:6px;font-weight:700;}
+  .surf-leave{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:14px;border:2px solid rgba(255,255,255,.35);background:rgba(10,26,40,.7);color:#fff;font-family:'Fredoka';font-weight:700;font-size:14px;cursor:pointer;}
+  .surf-leave:active{transform:translateX(-50%) translateY(2px);}
+  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:160px;font-size:13px;padding:9px 13px;}.surf-btn{bottom:158px;font-size:14px;}}
   /* hide the rig bar while driving so the joystick has clear room */
   body.driving .rig-bar{display:none;}
   @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;top:48px;}}
@@ -469,6 +489,7 @@
     <button class="anchor-btn" id="anchor-btn">Drop Anchor</button>
     <button class="ability-btn" id="ability-btn"><span class="ab-name">Ability</span><span class="ab-uses">3 left</span></button>
     <button class="items-btn" id="items-btn" onclick="openItems()"><span class="ib-icon"></span><span class="ib-label">Items</span></button>
+    <button class="surf-btn" id="surf-btn" onclick="tryEnterSurf()">🏖 Wade into the surf</button>
     <div class="drive-controls" id="drive-controls">
       <div class="joystick" id="joystick"><div class="joy-knob" id="joy-knob"></div></div>
     </div>
@@ -602,6 +623,18 @@
   <div class="sdew-hint">Hold to rise &nbsp;·&nbsp; Release to sink</div>
   <button class="sdew-btn" id="sdew-btn">HOLD TO REEL</button>
   <button class="sdew-slowmo" id="sdew-slowmo" style="display:none" onclick="useChainsawSlowmo()"><span class="cs-blade"></span> SLOW-MO</button>
+</div>
+<div class="surf-overlay" id="surf-overlay">
+  <div class="surf-sky"></div>
+  <div class="surf-sea" id="surf-sea"></div>
+  <div class="surf-sand"></div>
+  <div class="surf-figure" id="surf-figure"></div>
+  <div class="surf-panel">
+    <div class="surf-h">Surf Fishing</div>
+    <div class="surf-status" id="surf-status">Waiting for a bite…</div>
+    <div class="surf-bait" id="surf-bait"></div>
+  </div>
+  <button class="surf-leave" id="surf-leave" onclick="leaveSurf()">Leave the surf</button>
 </div>
 <div class="sdew-overlay" id="retry-overlay">
   <div class="retry-box">
@@ -1649,6 +1682,7 @@ const TACKLE=[
   {id:'dd_b',   cat:'deeprig', name:'Deep-Drop Rig', icon:'tackle-deep', cost:150, pack:3, dur:5, rare:1, lvl:7, desc:'Weighted rig for the depths.'},
   {id:'dd_p',   cat:'deeprig', name:'Electric Deep Rig', icon:'tackle-anchor', cost:520, pack:3, dur:12, rare:1.35, lvl:9, desc:'Lighted bait, 1,500 ft+.'},
   {id:'tooth_hook',cat:'special',name:'Great White Tooth Hook',icon:'tackle-circle',cost:0,pack:0,dur:9999,rare:1.5,lvl:1,desc:'Carved from a great white tooth. Never breaks — works as a jighead or a circle hook.',reward:'greatwhite',rewardName:'a Great White'},
+  {id:'hook1440',cat:'surf',name:'14/0 Circle Hook',icon:'tackle-circle',cost:600,pack:1,dur:9999,lvl:11,surfGear:true,desc:'A giant 14/0 circle hook — the only hook big enough to hold a surf shark. One-time buy.'},
 ];
 
 const BAIT=[
@@ -1946,6 +1980,14 @@ const FISH=[
   {id:'roosterfish',name:'Roosterfish',zone:2,rarity:'epic',size:[10,80],line:40,methods:['troll','livebait','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','rip','weedline'],season:['summer','fall'],time:['dawn','day','dusk'],xp:150,gold:175,weight:4,fact:'Named for its distinctive seven-spined dorsal fin that fans out like a rooster’s comb when excited. An aggressive surface feeder.'},
   {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
   {id:'blackmarlin',name:'Black Marlin',zone:2,rarity:'ultra',size:[200,1500],line:130,methods:['troll','livebait','chunk'],baits:['cutbait','pilchard'],leader:'wire',structure:['deep','open','bluhole','oil_rig'],season:['summer','fall'],time:['day','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'The largest and most powerful billfish on earth. World record 1,560 lbs. Known for violent, unstoppable runs. Only the Big Game reel and Sportfisher can realistically handle one.'},
+  // ── SURF SHARKS (caught only from the inshore surf; never appear in normal fishing) ──
+  {id:'nurseshark',name:'Nurse Shark',zone:0,surf:true,rarity:'common',size:[20,200],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:160,gold:110,weight:1,fact:'A slow, docile bottom-dweller that suctions prey off the sand. Sluggish but heavy — a dead-weight tug-of-war.'},
+  {id:'sandbarshark',name:'Sandbar Shark',zone:0,surf:true,rarity:'uncommon',size:[30,150],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:210,gold:150,weight:1,fact:'A stout, high-finned requiem shark that patrols the bar. The classic surf catch along the Gulf beaches.'},
+  {id:'lemonshark',name:'Lemon Shark',zone:0,surf:true,rarity:'uncommon',size:[40,180],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:240,gold:170,weight:1,fact:'Yellow-brown for camouflage over sandy flats. Powerful and stubborn close to the beach.'},
+  {id:'bullshark',name:'Bull Shark',zone:0,surf:true,rarity:'rare',size:[60,400],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:340,gold:240,weight:1,fact:'Pound for pound the most aggressive shark in the surf. Tolerates fresh water and crashes the bar in inches of water.'},
+  {id:'hammerhead',name:'Great Hammerhead',zone:0,surf:true,rarity:'epic',size:[100,600],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:520,gold:360,weight:1,fact:'Unmistakable mallet-shaped head and towering dorsal. Blistering first runs that smoke the drag.'},
+  {id:'tigershark',name:'Tiger Shark',zone:0,surf:true,rarity:'legendary',size:[150,1000],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:780,gold:520,weight:1,fact:'The "garbage can of the sea" and an apex predator. Enormous, relentless, and one of the hardest fights from the sand.'},
+  {id:'greatwhite',name:'Great White Shark',zone:0,surf:true,rarity:'ultra',size:[400,2500],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:1400,gold:2000,weight:1,fact:'The ocean’s most iconic apex predator. A surf encounter with one is the rarest fishing moment imaginable. Catch, photograph, release.'},
 ];
 
 // ===================== STATE =====================
@@ -1988,6 +2030,13 @@ const FISH_ART={
   gag:{shape:'grouper',back:'#5f5848',body:'#7a7464',belly:'#a8a290',marks:['mottle'],mark:'#46402e'},
   cobia:{shape:'torpedo',back:'#46423a',body:'#5f5a4e',belly:'#9a9486',marks:['lateral-w'],mark:'#e8e2d2',broadhead:true},
   blacktip:{shape:'shark',back:'#7a808a',body:'#a4aab2',belly:'#eef0f2',marks:['blacktips'],mark:'#1c1c1c'},
+  nurseshark:{shape:'shark',back:'#8a6a44',body:'#b09060',belly:'#e6d4b4',marks:[],mark:'#5a4428'},
+  sandbarshark:{shape:'shark',back:'#6f7682',body:'#9aa2ac',belly:'#e4e8ec',marks:[],mark:'#3a4048'},
+  lemonshark:{shape:'shark',back:'#9a8a4a',body:'#c8b86a',belly:'#efe6c0',marks:[],mark:'#6a5e2e'},
+  bullshark:{shape:'shark',back:'#5f6770',body:'#8a929c',belly:'#e0e4e8',marks:[],mark:'#33383e'},
+  hammerhead:{shape:'shark',back:'#6a7078',body:'#969ca4',belly:'#e2e6ea',marks:[],mark:'#363a40',hammer:true},
+  tigershark:{shape:'shark',back:'#5a6058',body:'#868c82',belly:'#dde2dc',marks:['tigerbars'],mark:'#33372f'},
+  greatwhite:{shape:'shark',back:'#7c8590',body:'#aab2bc',belly:'#f4f6f8',marks:[],mark:'#2a2e34'},
   vermilion:{shape:'panfish',back:'#a83a34',body:'#cf504a',belly:'#e8a09a',marks:[],mark:'#7a2420',snapper:true},
   almaco:{shape:'torpedo',back:'#5f5648',body:'#7a7060',belly:'#a8a08e',marks:['eyestripe'],mark:'#c9a85a'},
   blackfin:{shape:'torpedo',back:'#2a4256',body:'#5f7488',belly:'#cdd6de',marks:['finlets-dk'],mark:'#1c2c3a',finlets:true},
@@ -2433,6 +2482,9 @@ function normalizeState(){
   if(typeof S.ledActive!=='boolean')S.ledActive=false;
   if(typeof S.radarActive!=='boolean')S.radarActive=false;
   if(typeof S.toothHook!=='boolean')S.toothHook=false;
+  if(typeof S.surfUnlocked!=='boolean')S.surfUnlocked=false;
+  if(typeof S.surfHook!=='boolean')S.surfHook=false;
+  if(typeof S.surfBait!=='number')S.surfBait=0;
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
   // migrate legacy one-time lure purchases into consumable stacks
   if(Array.isArray(S.ownedLures)){
@@ -4005,6 +4057,7 @@ function render(ts){
     for(const gt of gatesFor()){if(dist(boat.wx,boat.wy,gt.wx,gt.wy)<85){tryGate(gt);break;}}
   }
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
+  updateSurfButton();
 
   ctx.clearRect(0,0,CW,CH);
   const z=curZone();
@@ -4022,6 +4075,21 @@ function render(ts){
   // whitecaps
   for(const w of WHITECAPS){const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx,wy,w.r,w.r*.38,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
+
+  // Beach at the south edge of the inshore — drive here to surf fish.
+  if(S.zone===0&&!tourn.active){
+    const beachTop=(worldH()-200)-camera.y;
+    if(beachTop<CH){
+      const top=Math.max(0,beachTop);
+      const sg=ctx.createLinearGradient(0,beachTop,0,beachTop+200);
+      sg.addColorStop(0,'rgba(228,208,150,0)');sg.addColorStop(0.22,'rgba(228,208,150,0.55)');
+      sg.addColorStop(0.5,'#e7d29a');sg.addColorStop(1,'#d6bd80');
+      ctx.fillStyle=sg;ctx.fillRect(0,top,CW,CH-top);
+      ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=4;
+      ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=beachTop+24+Math.sin(x*.03+t*1.2)*4;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();
+      if(S.surfUnlocked){ctx.fillStyle='rgba(70,46,20,0.85)';ctx.font='700 13px Fredoka, system-ui, sans-serif';ctx.textAlign='center';ctx.fillText('▼  SURF FISHING  ▼',CW/2,Math.max(16,beachTop+74));ctx.textAlign='left';}
+    }
+  }
 
   // structures in world space, offset by camera, culled to viewport
   for(const s of activeStructures()){
@@ -4284,6 +4352,7 @@ function poolNow(){
   const tk=tackleById(currentTackleId());const finder=curBoat().perk==='finder';
   const out=[];
   for(const f of FISH){
+    if(f.surf)continue;            // sharks only bite from the surf
     if(f.zone!==S.zone)continue;
     if(!f.methods.includes(m.id))continue;
     let w=f.weight;
@@ -4372,7 +4441,7 @@ function triggerBite(){
     for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
   }
   hookedFish=pick;hookW=rollWeight(pick);
-  sdewRetryUsed=false;
+  sdewRetryUsed=false;sdewSurf=false;
   phase='biting';
   if(activeTournament){
     // During a tournament ONLY the target species triggers the Stardew fight —
@@ -4456,6 +4525,7 @@ let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
 let sdewStartTime=0,sdewDiff=1;
 let sdewRetryUsed=false;          // a non-ultra fish gives only one paid retry
 let sdewSlowmoUsed=false,sdewSlowmoUntil=0;   // Chainsaw Rod: one slow-mo per fight
+let sdewSurf=false;                            // surf shark fight: slower bar & fish
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
@@ -4514,7 +4584,8 @@ function sdewLoop(){
   // SDEW_EASE keeps the fish slower & more readable: challenging but enjoyable.
   const ease=0.6;
   // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
-  const slow=(now<sdewSlowmoUntil)?0.5:1;
+  // Surf sharks move slightly slower than normal.
+  const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1);
   const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow;
   const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
   const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease*slow;
@@ -4526,7 +4597,8 @@ function sdewLoop(){
   if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
   // Meter — gain rate is halved during grace so the player has time to settle in
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
-  const gain=grace?0.3:0.6;
+  let gain=grace?0.3:0.6;
+  if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
   sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)));
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
@@ -4563,7 +4635,7 @@ function endSdewGame(success){
   if(f.rarity==='ultra'&&!ultraGearOK()){snap(f,w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');return;}
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f,w)>curReel().drag){snap(f,w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
-  if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
+  if(!f.surf&&f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f,w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f,w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off!');return;}}
   land(f,w,true,false);
 }
@@ -4602,6 +4674,99 @@ function sdewRetryPay(){
 function sdewRetryDecline(){
   document.getElementById('retry-overlay').classList.remove('show');
   fail('You let the '+(hookedFish?hookedFish.name:'fish')+' go.');
+}
+
+// ─────────────────────────────────────────────────────────────
+// SURF FISHING (beach at the south edge of the inshore)
+// ─────────────────────────────────────────────────────────────
+let surfActive=false,surfPhase='idle',surfBiteTimer=null,surfShark=null,surfTwitchTimer=null;
+const SURF_SHARKS=['nurseshark','sandbarshark','lemonshark','bullshark','hammerhead','tigershark','greatwhite'];
+function updateSurfButton(){
+  const b=document.getElementById('surf-btn');if(!b)return;
+  const near=S.zone===0&&!tourn.active&&!activeTournament&&!surfActive&&boat.wy>worldH()-185;
+  b.classList.toggle('show',!!near);
+}
+function tryEnterSurf(){
+  if(!surfRigOK()){toast('The surf needs the Big-Game reel, Bluewater rod & 130 lb braid.','#b58b53');return;}
+  if(!surfHookOK()){toast('Rig a 14/0 Circle Hook first — buy one in the Tackle shop.','#b58b53');return;}
+  enterSurf();
+}
+function enterSurf(){
+  surfActive=true;surfPhase='idle';boat.anchored=true;
+  const b=document.getElementById('surf-btn');if(b)b.classList.remove('show');
+  document.getElementById('surf-figure').innerHTML=buildSurfFigure();
+  document.getElementById('surf-overlay').classList.add('show');
+  startSurfWait();
+}
+function leaveSurf(){
+  clearTimeout(surfBiteTimer);clearTimeout(surfTwitchTimer);
+  surfActive=false;surfPhase='idle';surfShark=null;
+  document.getElementById('surf-overlay').classList.remove('show');
+  setStatus('Back on the beach. Drive off to fish the flats again.');
+  queueSave();
+}
+function setSurfStatus(m){const el=document.getElementById('surf-status');if(el)el.textContent=m;}
+function updateSurfBaitLine(){const el=document.getElementById('surf-bait');if(el)el.innerHTML='Surf bait (jacks &amp; amberjacks): <b>'+(S.surfBait||0)+'</b>';}
+function startSurfWait(){
+  surfShark=null;surfPhase='waiting';updateSurfBaitLine();
+  if((S.surfBait||0)<=0){
+    surfPhase='nobait';
+    setSurfStatus('Out of surf bait. Catch a Crevalle Jack or Amberjack on the flats — they’re the only surf bait.');
+    return;
+  }
+  S.surfBait--;queueSave();updateSurfBaitLine();
+  const night=phaseOf(hourNow())==='night';
+  const delay=night?(120000+Math.random()*180000):(300000+Math.random()*300000);
+  setSurfStatus(night?'Bait’s out in the dark wash. Sharks feed at night — this won’t take as long…':'Bait’s out on the bar. Sharks cruise here, but it can take a while in the daylight…');
+  clearTimeout(surfBiteTimer);
+  surfBiteTimer=setTimeout(surfBiteNow,delay);
+  scheduleSurfTwitch();
+}
+function scheduleSurfTwitch(){
+  clearTimeout(surfTwitchTimer);
+  surfTwitchTimer=setTimeout(function(){
+    if(!surfActive||surfPhase!=='waiting')return;
+    const fig=document.getElementById('surf-figure');
+    if(fig){fig.classList.add('twitch');setTimeout(function(){fig.classList.remove('twitch');},260);}
+    scheduleSurfTwitch();
+  },4000+Math.random()*6000);
+}
+function pickSurfShark(){
+  const wts={common:60,uncommon:34,rare:16,epic:7,legendary:2,ultra:0.05};
+  const pool=[];let total=0;
+  for(const id of SURF_SHARKS){const f=FISH.find(x=>x.id===id);if(!f)continue;const w=wts[f.rarity]||1;pool.push({f,w});total+=w;}
+  let r=Math.random()*total,pick=pool[0].f;
+  for(const o of pool){r-=o.w;if(r<=0){pick=o.f;break;}}
+  return pick;
+}
+function surfBiteNow(){
+  if(!surfActive||surfPhase!=='waiting')return;
+  surfShark=pickSurfShark();surfPhase='hooked';
+  setSurfStatus('SHARK ON! It’s a '+surfShark.name+'!');
+  const fig=document.getElementById('surf-figure');if(fig)fig.classList.add('bent');
+  setTimeout(function(){startSharkFight(surfShark);},800);
+}
+function startSharkFight(shark){
+  hookedFish=shark;hookW=rollWeight(shark);
+  sdewRetryUsed=false;sdewSurf=true;
+  const fig=document.getElementById('surf-figure');if(fig)fig.classList.remove('bent');
+  if(shark.rarity==='legendary'||shark.rarity==='ultra')showLegendaryAlert(shark);
+  else startSdewGame(shark);
+}
+function buildSurfFigure(){
+  const skin=skinColorOf(S.skinTone);
+  const shirt=(typeof ghostShirtColor==='function'?ghostShirtColor(S.cosmetic):null)||'#cf7a35';
+  return '<svg viewBox="0 0 220 240" width="220" height="240">'
+    +'<ellipse cx="104" cy="210" rx="50" ry="12" fill="rgba(0,0,0,.16)"/>'
+    +'<line x1="120" y1="150" x2="212" y2="18" stroke="#caa24a" stroke-width="5" stroke-linecap="round"/>'
+    +'<line x1="212" y1="18" x2="156" y2="96" stroke="rgba(255,255,255,.55)" stroke-width="1.4"/>'
+    +'<rect x="58" y="118" width="14" height="74" rx="6" fill="#2c5468"/>'
+    +'<rect x="58" y="150" width="92" height="56" rx="10" fill="#3a6e8a"/>'
+    +'<rect x="70" y="184" width="58" height="13" rx="6" fill="'+skin+'"/>'
+    +'<rect x="90" y="148" width="42" height="42" rx="13" fill="'+shirt+'"/>'
+    +'<rect x="118" y="156" width="44" height="11" rx="5" fill="'+skin+'" transform="rotate(-33 118 156)"/>'
+    +'<circle cx="111" cy="130" r="17" fill="'+skin+'"/>'
+    +'</svg>';
 }
 
 // Controls
@@ -4647,16 +4812,21 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
 
 // Ultra Legendary fish can only be landed with the top-tier reel + 130 lb braid.
 function ultraGearOK(){return S.reel==='reel4'&&curBraid().line>=130;}
+// Surf fishing gate: Big-Game reel + Bluewater rod (or Chainsaw) + 130 lb braid.
+function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||S.rod==='chainsaw')&&curBraid().line>=130;}
+function surfHookOK(){return S.surfHook||S.toothHook;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
-function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
-function fail(msg){phase='done';bobber.active=false;S.misses++;setStatus(msg);queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
+function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
+function fail(msg){phase='done';bobber.active=false;S.misses++;queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
 function land(f,w,perfect,bullseye){
   phase='caught';bobber.active=false;
   if(S.radarActive){S.radarActive=false;}
-  // consume bait (natural methods) or a lure (artificial methods)
-  if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
-  else if(S.lureSel){S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-1);}
+  // consume bait (natural methods) or a lure (artificial methods); surf bait is handled separately
+  if(!f.surf){
+    if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
+    else if(S.lureSel){S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-1);}
+  }
   S.caught[f.id]=(S.caught[f.id]||0)+1;
   const isNew=S.caught[f.id]===1;
   const prevBest=S.best[f.id]||0;const pb=w>prevBest;if(pb)S.best[f.id]=w;
@@ -4676,6 +4846,8 @@ function land(f,w,perfect,bullseye){
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
   if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
+  // After surf is unlocked, jacks & amberjacks are kept as the only surf bait.
+  if(S.surfUnlocked&&(f.id==='jack'||f.id==='amberjack')){S.surfBait=(S.surfBait||0)+1;setTimeout(function(){toast('Kept as surf bait (x'+S.surfBait+').','#2aa890');},950);}
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
@@ -4723,7 +4895,7 @@ function showCatch(f,w,o){
     '<button class="catch-ok" onclick="closeCatch()">'+(ultra?'Once in a lifetime!':'Nice!')+'</button>';
   document.getElementById('catch-bg').classList.add('show');
 }
-function closeCatch(){document.getElementById('catch-bg').classList.remove('show');if(phase==='caught'){phase='idle';setStatus('Cast again, or re-rig to target something new.');}}
+function closeCatch(){document.getElementById('catch-bg').classList.remove('show');if(surfActive){surfPhase='idle';phase='idle';startSurfWait();return;}if(phase==='caught'){phase='idle';setStatus('Cast again, or re-rig to target something new.');}}
 
 // ===================== UI =====================
 function setStatus(m){document.getElementById('status').textContent=m;}
@@ -4761,6 +4933,7 @@ function updateRigBar(){
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
   const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!activeTournament&&!(typeof tourn!=='undefined'&&tourn.active));
+  if(!S.surfUnlocked&&surfRigOK()){S.surfUnlocked=true;setTimeout(function(){toast('Surf fishing unlocked! Drive to the beach at the south edge of the inshore.','#2aa890');},400);queueSave();}
 }
 
 // choosers
@@ -4959,7 +5132,11 @@ function renderShop(){
   else if(shopTab==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
   else if(shopTab==='braid')html=BRAIDS.map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),S.braid===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
   else if(shopTab==='leaders')html=LEADERS.map(l=>shopRow(l,'leader',S.ownedLeaders.includes(l.id),S.leader===l.id,'',false)).join('');
-  else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>m.cat===t.cat);
+  else if(shopTab==='tackle')html=TACKLE.filter(t=>!(t.id==='hook1440'&&!S.surfUnlocked)).map(t=>{
+    if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(S.gold>=t.cost?'':'cant')+'">'+COIN+t.cost+'</span>';
+      return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
+    if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
+    const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>m.cat===t.cat);
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(shopTab==='lures'){
@@ -5061,7 +5238,9 @@ document.getElementById('shop-tabs').addEventListener('click',e=>{const t=e.targ
 document.getElementById('shop-list').addEventListener('click',e=>{
   const item=e.target.closest('.shop-item');if(!item)return;
   const kind=item.dataset.kind,id=item.dataset.id;
-  if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack,dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
+  if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
+    if(t.surfGear){if(S.surfHook){toast('You already own the 14/0 Circle Hook.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;S.surfHook=true;toast('Bought the 14/0 Circle Hook! Surf rig ready.','#2aa890');updateRigBar();renderShop();queueSave();return;}
+    if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack,dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
   else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(S.gold<bt.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=bt.cost;S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();}
   else if(kind==='cosmetic'){
     const slot=item.dataset.slot;
