@@ -56,7 +56,7 @@
   .ability-btn:disabled{opacity:.5;filter:grayscale(.6);cursor:default;}
   .blind-overlay{position:fixed;inset:0;z-index:460;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s;}
   .blind-overlay.show{opacity:.94;}
-  .items-btn{position:absolute;right:14px;bottom:152px;z-index:8;display:none;align-items:center;gap:7px;padding:10px 15px;border-radius:14px;border:2px solid #7fe3c0;background:linear-gradient(135deg,#2bbf96,#127a5e);color:#fff;font-weight:900;font-family:'Fredoka';font-size:14px;cursor:pointer;box-shadow:0 4px 0 #0c5742;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
+  .items-btn{position:absolute;right:14px;bottom:208px;z-index:8;display:none;align-items:center;gap:7px;padding:10px 15px;border-radius:14px;border:2px solid #7fe3c0;background:linear-gradient(135deg,#2bbf96,#127a5e);color:#fff;font-weight:900;font-family:'Fredoka';font-size:14px;cursor:pointer;box-shadow:0 4px 0 #0c5742;user-select:none;-webkit-user-select:none;touch-action:manipulation;}
   .items-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #0c5742;}
   .items-btn.show{display:flex;}
   .items-btn .ib-icon{width:16px;height:16px;border-radius:4px;background:repeating-linear-gradient(45deg,#ffe27a 0 4px,#ffb347 4px 8px);display:inline-block;}
@@ -80,7 +80,7 @@
   .surf-bait{font-size:12px;color:#cfe0ec;margin-top:6px;font-weight:700;}
   .surf-leave{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);padding:11px 22px;border-radius:14px;border:2px solid rgba(255,255,255,.35);background:rgba(10,26,40,.7);color:#fff;font-family:'Fredoka';font-weight:700;font-size:14px;cursor:pointer;}
   .surf-leave:active{transform:translateX(-50%) translateY(2px);}
-  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:160px;font-size:13px;padding:9px 13px;}.surf-btn{bottom:158px;font-size:14px;}}
+  @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:214px;font-size:13px;padding:9px 13px;}.surf-btn{bottom:158px;font-size:14px;}}
   /* hide the rig bar while driving so the joystick has clear room */
   body.driving .rig-bar{display:none;}
   @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;top:48px;}}
@@ -1350,6 +1350,9 @@ function startTournamentMode(def){
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[]};
   S.zone=def.zone;
+  // Run a full day then a full night: start at sunrise so the 8-minute match is
+  // 4 minutes of daylight followed by 4 minutes of night (one whole day cycle).
+  S.clock=300;
   // Build the big tournament world with scattered structures and other players
   initTournamentWorld(def);
   initTournamentGhosts();
@@ -1366,11 +1369,11 @@ function startTournamentMode(def){
     document.getElementById('mp-logbook').classList.add('active');
   }
   document.getElementById("tourn-banner").style.display="block";
-  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 5 minutes to fish.","#e0a93c");
+  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 8 minutes to fish — a full day & night.","#e0a93c");
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
-      const delay=5000+Math.random()*220000; // 5s to 3m40s so most bots catch within 5min
+      const delay=5000+Math.random()*430000; // 5s to ~7m10s so most bots catch within the 8min
       setTimeout(function(){
         if(!activeTournament)return;
         // Each bot independently picks any eligible species of the target rarity
@@ -1383,7 +1386,7 @@ function startTournamentMode(def){
       },delay);
     });
   }
-  setTimeout(endTournament,5*60*1000);
+  setTimeout(endTournament,8*60*1000);
 }
 function recordTournamentCatch(fishName,weight){
   if(!activeTournament)return;
@@ -3497,6 +3500,7 @@ const BOAT_ANCHORS={
   console: {dx: 10, dy:  8, ang: 0.18},
   walk:    {dx: 10, dy:  6, ang: 0.15},
   sport:   {dx: 12, dy:  8, ang: 0.12},
+  marlinboat:{dx: 12, dy: 6, ang: 0.12},
 };
 let lineRig={tipX:380,tipY:92};
 
@@ -3814,6 +3818,7 @@ function drawBoat(dark){
   else if(b==='console')drawCenterConsole(dark);
   else if(b==='walk')drawWalkaround(dark);
   else if(b==='sport')drawSportfisher(dark);
+  else if(b==='marlinboat')drawMarlinBoat(dark);
   ctx.restore();
   if(boat.anchored)drawRodAndReel(dark);
 }
@@ -3959,6 +3964,58 @@ function drawSportfisher(dark){
   if(dark>0.4){ctx.fillStyle='rgba(255,225,140,'+(dark*0.9)+')';ctx.beginPath();ctx.moveTo(0,-34);ctx.quadraticCurveTo(15,-16,14,-10);ctx.lineTo(-14,-10);ctx.quadraticCurveTo(-15,-16,0,-34);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,200,'+(dark*0.55)+')';ctx.beginPath();ctx.arc(0,-4,22,0,6.28);ctx.fill();ctx.fillStyle='rgba(255,80,80,'+(dark*0.8)+')';ctx.beginPath();ctx.arc(-32,-14,2.6,0,6.28);ctx.fill();ctx.fillStyle='rgba(80,255,80,'+(dark*0.8)+')';ctx.beginPath();ctx.arc(32,-14,2.6,0,6.28);ctx.fill();ctx.fillStyle='rgba(255,225,140,'+(dark*0.4)+')';ctx.beginPath();ctx.arc(0,24,30,0,6.28);ctx.fill();}
 }
 
+// Black Marlin Speedboat: an all-black hull shaped like a black marlin —
+// sharp billed bow, sleek body, dorsal sail fin and a sickle tail.
+function drawMarlinBoat(dark){
+  // wake shadow
+  ctx.fillStyle='rgba(0,18,32,.4)';
+  ctx.beginPath();ctx.moveTo(0,-44);ctx.quadraticCurveTo(40,4,28,54);ctx.quadraticCurveTo(0,64,-28,54);ctx.quadraticCurveTo(-40,4,0,-44);ctx.closePath();ctx.fill();
+  // long marlin bill (spear) off the bow
+  ctx.lineCap='round';
+  ctx.strokeStyle='#23262e';ctx.lineWidth=4.5;ctx.beginPath();ctx.moveTo(0,-44);ctx.lineTo(0,-84);ctx.stroke();
+  ctx.strokeStyle='#4a5160';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(0,-44);ctx.lineTo(0,-82);ctx.stroke();
+  ctx.lineCap='butt';
+  // sleek black hull (marlin body)
+  const hull=ctx.createLinearGradient(-30,0,30,0);
+  hull.addColorStop(0,'#070810');hull.addColorStop(.5,'#1c2029');hull.addColorStop(1,'#070810');
+  ctx.fillStyle=hull;
+  ctx.beginPath();
+  ctx.moveTo(0,-46);
+  ctx.quadraticCurveTo(30,-18,24,30);
+  ctx.quadraticCurveTo(16,50,0,52);
+  ctx.quadraticCurveTo(-16,50,-24,30);
+  ctx.quadraticCurveTo(-30,-18,0,-46);
+  ctx.closePath();ctx.fill();
+  // glossy rim so the black reads against dark water
+  ctx.strokeStyle='#3c4454';ctx.lineWidth=2;ctx.stroke();
+  ctx.strokeStyle='rgba(130,160,210,.5)';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-6,-40);ctx.quadraticCurveTo(-22,-10,-18,28);ctx.stroke();
+  // cobalt lateral stripe (marlin marking)
+  ctx.strokeStyle='rgba(58,112,224,.6)';ctx.lineWidth=2.5;
+  ctx.beginPath();ctx.moveTo(0,-34);ctx.quadraticCurveTo(18,-6,12,34);ctx.stroke();
+  // tall dorsal sail fin
+  ctx.fillStyle='#111319';
+  ctx.beginPath();ctx.moveTo(-3,-22);ctx.quadraticCurveTo(-22,-32,-28,-6);ctx.quadraticCurveTo(-13,-4,-3,-2);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#39414f';ctx.lineWidth=1.2;ctx.stroke();
+  // dark cockpit
+  ctx.fillStyle='rgba(44,52,66,.92)';roundRect(ctx,-13,2,26,22,5);ctx.fill();
+  ctx.fillStyle='#262d3a';roundRect(ctx,-10,4,20,9,2);ctx.fill();
+  // seated angler
+  ctx.fillStyle=anglerShirtColor();roundRect(ctx,-6,9,12,12,3);ctx.fill();
+  drawAnglerHairBack(0,7,5);
+  ctx.fillStyle=anglerSkinColor();ctx.beginPath();ctx.arc(0,7,5,0,6.28);ctx.fill();
+  drawAnglerHatAndExtras(0,7,5);
+  // sickle tail at the stern
+  ctx.fillStyle='#111319';
+  ctx.beginPath();ctx.moveTo(0,48);ctx.lineTo(-17,65);ctx.quadraticCurveTo(0,55,17,65);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#39414f';ctx.lineWidth=1.2;ctx.stroke();
+  // night running lights + cabin glow
+  if(dark>0.4){
+    ctx.fillStyle='rgba(120,180,255,'+(dark*0.45)+')';ctx.beginPath();ctx.arc(0,4,17,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(255,80,80,'+(dark*0.8)+')';ctx.beginPath();ctx.arc(-22,-2,2.4,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(80,255,80,'+(dark*0.8)+')';ctx.beginPath();ctx.arc(22,-2,2.4,0,6.28);ctx.fill();
+  }
+}
 function drawRodAndReel(dark){
   const a=BOAT_ANCHORS[S.boat]||BOAT_ANCHORS.bay;
   const rodIdx=RODS.findIndex(r=>r.id===S.rod);
@@ -4533,7 +4590,7 @@ function sdewDifficultyFor(fish){
   if(SDEW_BEHAVIORS[fish.id])return 1;
   return 0.55+RARITY_ORDER.indexOf(fish.rarity)*0.11; // common .55 .. epic .88
 }
-const SDEW_GRACE_MS=2000; // first 2s: fish moves very slowly, meter fills at half speed
+const SDEW_GRACE_MS=1000; // first 1s: fish moves very slowly, meter fills at half speed
 
 function showLegendaryAlert(fish){
   document.getElementById('leg-fishname').textContent=fish.name;
@@ -4932,7 +4989,7 @@ function updateRigBar(){
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
-  const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!activeTournament&&!(typeof tourn!=='undefined'&&tourn.active));
+  const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!(typeof surfActive!=='undefined'&&surfActive));
   if(!S.surfUnlocked&&surfRigOK()){S.surfUnlocked=true;setTimeout(function(){toast('Surf fishing unlocked! Drive to the beach at the south edge of the inshore.','#2aa890');},400);queueSave();}
 }
 
@@ -4978,7 +5035,6 @@ function closeChooser(){document.getElementById('chooser-bg').classList.remove('
 
 // ── DISPOSABLE ITEMS ──
 function openItems(){
-  if(activeTournament){toast('Items are stowed during the tournament.','#b58b53');return;}
   const c=document.getElementById('chooser');
   let html='<h3>Items</h3><div class="sub">Disposable gear bought with rubies. Tap one to use it.</div>';
   let any=false;
