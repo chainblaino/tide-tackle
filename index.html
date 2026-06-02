@@ -64,20 +64,38 @@
   .surf-btn:active{transform:translateX(-50%) translateY(3px);box-shadow:0 2px 0 #7c4a10;}
   .surf-btn.show{display:block;}
   .surf-overlay{position:fixed;inset:0;z-index:300;display:none;overflow:hidden;}
-  .surf-figure{transition:transform .15s;}
-  .surf-figure.twitch{transform:translateX(-50%) translateY(-4px) rotate(-1deg);}
-  .surf-figure.bent{transform:translateX(-50%) rotate(-3deg) scale(1.02);}
   .surf-overlay.show{display:block;}
-  .surf-sky{position:absolute;top:0;left:0;right:0;height:42%;background:linear-gradient(180deg,#7fc4e8,#bfe3f2 70%,#e8f2ee);}
-  .surf-sea{position:absolute;top:34%;left:0;right:0;height:34%;background:linear-gradient(180deg,#2f86b0,#1f6f9a 50%,#3a93b8);box-shadow:inset 0 8px 24px rgba(0,0,0,.25);}
-  .surf-sea::after{content:"";position:absolute;left:0;right:0;bottom:0;height:14px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 18px,transparent 18px 40px);opacity:.8;animation:surfFoam 2.4s linear infinite;}
+  .surf-sky{position:absolute;top:0;left:0;right:0;height:40%;background:linear-gradient(180deg,#74bfe6,#a9d8ee 60%,#dfeef0);}
+  .surf-sea{position:absolute;top:40%;left:0;right:0;bottom:11%;background:linear-gradient(180deg,#256f97,#1c6390 45%,#2b81ab);box-shadow:inset 0 10px 26px rgba(0,0,0,.28);overflow:hidden;}
+  .surf-sea::before{content:"";position:absolute;left:0;right:0;top:0;height:5px;background:rgba(255,255,255,.5);}
+  .surf-sea::after{content:"";position:absolute;left:0;right:0;bottom:0;height:16px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.55) 0 18px,transparent 18px 40px);opacity:.85;animation:surfFoam 2.4s linear infinite;}
   @keyframes surfFoam{from{background-position:0 0;}to{background-position:40px 0;}}
-  .surf-sand{position:absolute;bottom:0;left:0;right:0;height:34%;background:linear-gradient(180deg,#e7d29a,#d2b779 60%,#c2a766);}
+  .surf-wave{position:absolute;left:-25%;right:-25%;height:10px;background:radial-gradient(ellipse 26px 5px at 50% 50%,rgba(255,255,255,.55),transparent 72%);background-size:64px 10px;background-repeat:repeat-x;pointer-events:none;}
+  .surf-wave.w1{top:14%;opacity:.5;animation:waveScroll 7s linear infinite;}
+  .surf-wave.w2{top:34%;opacity:.42;animation:waveScroll 11s linear infinite reverse;}
+  .surf-wave.w3{top:56%;opacity:.5;animation:waveScroll 8.5s linear infinite;}
+  .surf-wave.w4{top:78%;opacity:.55;animation:waveScroll 6s linear infinite reverse;}
+  @keyframes waveScroll{from{transform:translateX(0);}to{transform:translateX(64px);}}
+  .surf-sand{position:absolute;bottom:0;left:0;right:0;height:11%;background:linear-gradient(180deg,#e7d29a,#d2b779 55%,#bfa35f);}
+  .surf-sand::before{content:"";position:absolute;left:0;right:0;top:0;height:8px;background:repeating-linear-gradient(90deg,rgba(255,255,255,.45) 0 22px,transparent 22px 50px);animation:surfFoam 2s linear infinite reverse;}
   .surf-night{position:absolute;inset:0;background:linear-gradient(180deg,#091627,#0a1a2e 55%,#10243a);opacity:0;pointer-events:none;transition:opacity 1.2s;}
-  .surf-sun{position:absolute;left:18%;top:14%;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle,#fff6c4,#ffd24a 58%,rgba(255,180,60,0));box-shadow:0 0 46px rgba(255,212,92,.85);pointer-events:none;opacity:0;transition:opacity 1.2s,left 1.2s,top 1.2s;}
-  .surf-moon{position:absolute;left:70%;top:13%;width:54px;height:54px;color:#eef2ff;pointer-events:none;opacity:0;filter:drop-shadow(0 0 13px rgba(200,220,255,.7));transition:opacity 1.2s,left 1.2s,top 1.2s;}
+  .surf-sun{position:absolute;left:18%;top:24%;width:62px;height:62px;border-radius:50%;background:radial-gradient(circle,#fff6c4,#ffd24a 58%,rgba(255,180,60,0));box-shadow:0 0 50px rgba(255,212,92,.9);pointer-events:none;opacity:0;transition:opacity 1s,left 1s,top 1s;}
+  .surf-moon{position:absolute;left:70%;top:24%;width:54px;height:54px;color:#eef2ff;pointer-events:none;opacity:0;filter:drop-shadow(0 0 13px rgba(200,220,255,.7));transition:opacity 1s,left 1s,top 1s;}
   .surf-moon svg{width:54px;height:54px;}
-  .surf-figure{position:absolute;left:50%;bottom:14%;transform:translateX(-50%);width:220px;height:240px;}
+  .surf-rig{position:absolute;inset:0;pointer-events:none;transition:transform .16s;}
+  .surf-rig.twitch{transform:translateY(-4px) rotate(-.4deg);}
+  .surf-rig.bent{transform:translateY(5px) rotate(-1.2deg) scale(1.01);}
+  .surf-rod-svg{position:absolute;inset:0;width:100%;height:100%;}
+  .surf-reel{position:absolute;left:80%;top:83%;transform:translate(-50%,-50%);width:40px;height:40px;}
+  .surf-reel .rspool{position:absolute;left:5px;top:5px;width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 38% 34%,#6a6e74,#15151a);border:2.5px solid #c9a24a;box-shadow:0 2px 5px rgba(0,0,0,.4);}
+  .surf-reel .rspool::after{content:"";position:absolute;left:11px;top:11px;width:6px;height:6px;border-radius:50%;background:#c9a24a;}
+  .surf-reel .rhandle{position:absolute;right:-2px;top:16px;width:15px;height:5px;border-radius:3px;background:#222;}
+  .surf-bobber{position:absolute;left:38%;top:52%;width:20px;height:20px;transform:translate(-50%,-50%);animation:surfBob 2.4s ease-in-out infinite;}
+  .surf-bobber .bbody{position:absolute;inset:0;border-radius:50%;background:linear-gradient(180deg,#e23a26 0 50%,#f5f3ee 50% 100%);border:1.5px solid rgba(0,0,0,.35);box-shadow:0 3px 5px rgba(0,0,0,.3);}
+  .surf-bobber .btip{position:absolute;left:50%;top:-7px;width:2.5px;height:8px;background:#e23a26;transform:translateX(-50%);border-radius:2px;}
+  .surf-bobber::after{content:"";position:absolute;left:50%;top:64%;width:30px;height:9px;border-radius:50%;background:rgba(255,255,255,.26);transform:translateX(-50%);animation:surfRipple 2.4s ease-in-out infinite;}
+  @keyframes surfBob{0%,100%{transform:translate(-50%,-50%) translateY(-3px);}50%{transform:translate(-50%,-50%) translateY(4px);}}
+  @keyframes surfRipple{0%,100%{opacity:.28;width:24px;}50%{opacity:.5;width:36px;}}
   .surf-panel{position:absolute;top:16px;left:50%;transform:translateX(-50%);text-align:center;background:rgba(8,24,38,.72);border:2px solid rgba(255,255,255,.18);border-radius:16px;padding:12px 20px;max-width:86%;backdrop-filter:blur(3px);}
   .surf-h{font-family:'Fredoka';font-size:19px;font-weight:700;color:#ffe0a0;letter-spacing:.5px;}
   .surf-status{font-size:14px;color:#eaf2f8;margin-top:5px;line-height:1.45;min-height:20px;}
@@ -425,7 +443,8 @@
 .ach-row-status{font-size:11px;font-weight:800;padding:4px 9px;border-radius:8px;color:#fff;white-space:nowrap;}
 .ach-row-status.locked{background:#cbb48c;}
 /* TOURNAMENT BANNER */
-.tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.9);color:#fff;font-size:11px;font-weight:900;padding:4px 12px;border-radius:20px;pointer-events:none;display:none;}
+.tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.92);color:#fff;font-size:13px;font-weight:900;letter-spacing:.3px;padding:5px 15px;border-radius:20px;pointer-events:none;display:none;box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.tourn-banner.leading{background:linear-gradient(135deg,#e8b53c,#c98a1a);color:#3a2a08;}
 /* LEGENDARY ALERT */
 .leg-alert-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;flex-direction:column;}
 .leg-alert-overlay.show{display:flex;}
@@ -630,12 +649,17 @@
 </div>
 <div class="surf-overlay" id="surf-overlay">
   <div class="surf-sky"></div>
-  <div class="surf-sea" id="surf-sea"></div>
+  <div class="surf-sea" id="surf-sea">
+    <div class="surf-wave w1"></div>
+    <div class="surf-wave w2"></div>
+    <div class="surf-wave w3"></div>
+    <div class="surf-wave w4"></div>
+  </div>
   <div class="surf-sand"></div>
-  <div class="surf-figure" id="surf-figure"></div>
   <div class="surf-night" id="surf-night"></div>
   <div class="surf-sun" id="surf-sun"></div>
   <div class="surf-moon" id="surf-moon"></div>
+  <div class="surf-rig" id="surf-rig"></div>
   <div class="surf-panel">
     <div class="surf-h">Surf Fishing</div>
     <div class="surf-status" id="surf-status">Waiting for a bite…</div>
@@ -1376,11 +1400,11 @@ function startTournamentMode(def){
     document.getElementById('mp-logbook').classList.add('active');
   }
   document.getElementById("tourn-banner").style.display="block";
-  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 8 minutes to fish - a full day & night.","#e0a93c");
+  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 6 minutes to fish - a full day & night.","#e0a93c");
   // Simulate bot catches
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
-      const delay=5000+Math.random()*430000; // 5s to ~7m10s so most bots catch within the 8min
+      const delay=5000+Math.random()*320000; // 5s to ~5m20s so most bots catch within the 6min
       setTimeout(function(){
         if(!activeTournament)return;
         // Each bot independently picks any eligible species of the target rarity
@@ -1393,7 +1417,7 @@ function startTournamentMode(def){
       },delay);
     });
   }
-  setTimeout(endTournament,8*60*1000);
+  setTimeout(endTournament,6*60*1000);
 }
 function recordTournamentCatch(fishName,weight){
   if(!activeTournament)return;
@@ -1809,7 +1833,7 @@ const SETS=[
   {id:'assassin', name:'Assassin Set', cost:500, color:'#111111', cd:45,
    pieces:{hat:'assassin_hood',shirt:'assassin_suit',shades:'assassin_mask'},
    bonus:'+50% night fish spawn rate · +20% movement speed at night',
-   ability:'Vanish', abilityDesc:'Turn invisible for 30s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10–15s. The cloud lingers 30s. (45s cooldown)'},
+   ability:'Vanish', abilityDesc:'Turn invisible for 10s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10-15s. The cloud lingers 30s. (45s cooldown)'},
   {id:'pirate', name:'Pirate Set', cost:400, color:'#c62828', cd:45,
    pieces:{hat:'pirate_hat',shirt:'pirate_shirt',shades:'pirate_scar'},
    bonus:'Bad weather is 50% less harsh · +15% movement speed when wind is 10 mph or higher',
@@ -3039,17 +3063,29 @@ function updateGhosts(){
     if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng+=(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*g.speed;g.wy+=Math.sin(g._confuseAng)*g.speed*0.7;clampGhost(g);continue;}
     // blinded by smoke: stall in place
     if(g._blindUntil&&now<g._blindUntil)continue;
+    // Set-bots are aggressive: they hunt the player down and use their ability.
+    if(g.set&&activeTournament){
+      if(!g._abilityReadyAt)g._abilityReadyAt=now+4000+Math.random()*7000;
+      if(now>g._abilityReadyAt){
+        const s=setById(g.set),dp=dist(g.wx,g.wy,boat.wx,boat.wy);
+        if(botUseAbility(g,s,dp,now))g._abilityReadyAt=now+((s.cd||30)*1000)+Math.random()*5000;
+        else g._abilityReadyAt=now+2500;
+      }
+    }
     if(g.pause>0){g.pause--;continue;}
     g.turnTimer--;
     if(g.turnTimer<=0){
-      g.targetAng=Math.random()*6.28;g.turnTimer=80+Math.random()*220;
-      if(Math.random()<0.25)g.pause=120+Math.random()*240;
+      if(g.set&&Math.random()<0.7)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*0.7; // chase the player
+      else g.targetAng=Math.random()*6.28;
+      g.turnTimer=80+Math.random()*220;
+      if(!g.set&&Math.random()<0.25)g.pause=120+Math.random()*240;
     }
     let d=g.targetAng-g.heading;
     while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
-    g.heading+=d*0.02;
-    g.wx+=Math.cos(g.heading)*g.speed;
-    g.wy+=Math.sin(g.heading)*g.speed*0.7;
+    g.heading+=d*(g.set?0.045:0.02);
+    const sp=g.set?g.speed*1.5:g.speed;   // set-bots move faster
+    g.wx+=Math.cos(g.heading)*sp;
+    g.wy+=Math.sin(g.heading)*sp*0.7;
     if(g.wx<70){g.wx=70;g.targetAng=Math.random()*Math.PI-Math.PI/2;}
     if(g.wx>tourn.W-70){g.wx=tourn.W-70;g.targetAng=Math.random()*Math.PI+Math.PI/2;}
     if(g.wy<70){g.wy=70;g.targetAng=Math.random()*Math.PI;}
@@ -3286,9 +3322,9 @@ function abilityJeremy(){
 }
 function abilityVanish(){
   const now=Date.now();
-  invisibleUntil=now+30000;
+  invisibleUntil=now+10000;
   activeTournament.smokeClouds.push({wx:boat.wx,wy:boat.wy,until:now+30000,r:58,owner:myTournUid()});
-  toast('Vanished! Smoke dropped - invisible for 30s.','#2aa890');
+  toast('Vanished! Smoke dropped - invisible for 10s.','#2aa890');
   spawnAbilityFx(boat.wx,boat.wy,'#cfd2d6');
   if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
   return true;
@@ -3309,6 +3345,40 @@ function applyIncomingAct(act){
     else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
     updateRigBar();queueSave();toast('Robbed of '+amt+' bait/lures!','#b3402a');}
 }
+// A set-bot uses its set ability against the player when in range.
+function botUseAbility(g,s,dp,now){
+  if(!activeTournament||!s)return false;
+  if(g.set==='assassin'){
+    if(dp>560)return false;
+    activeTournament.smokeClouds.push({wx:g.wx,wy:g.wy,until:now+30000,r:58,owner:g.uid});
+    g._invisibleUntil=now+10000;spawnAbilityFx(g.wx,g.wy,'#cfd2d6');return true;
+  }
+  if(g.set==='jeremy'){g._immuneUntil=now+60000;spawnAbilityFx(g.wx,g.wy,'#bcd8f4');return true;}
+  const blocked=now<immuneUntil; // player's Untouchable blocks hostile abilities
+  if(g.set==='princess'){
+    if(dp>380)return false;
+    if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
+    confusedUntil=now+(12000+Math.random()*8000);confuseAng=Math.random()*6.28;
+    toast(g.name+' confused you!','#a872d8');spawnAbilityFx(boat.wx,boat.wy,'#c77ad8');return true;
+  }
+  if(g.set==='berserker'){
+    if(dp>240)return false;
+    if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
+    let dx=boat.wx-g.wx,dy=boat.wy-g.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
+    const power=12+Math.random()*8;knockVX+=dx*power;knockVY+=dy*power;
+    toast(g.name+' punched you!','#c46f28');spawnAbilityFx(boat.wx,boat.wy,'#ff8a3a');return true;
+  }
+  if(g.set==='pirate'){
+    if(dp>340)return false;
+    if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
+    const amt=2+Math.floor(Math.random()*5);
+    if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
+    else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
+    updateRigBar();queueSave();
+    toast(g.name+' plundered '+amt+' bait/lures!','#b3402a');spawnAbilityFx(g.wx,g.wy,'#ffd24a');return true;
+  }
+  return false;
+}
 // Tap an angler while roaming a tournament to see their loadout (show off!).
 function ghostAtScreen(x,y){
   if(!tourn.active)return null;const now=Date.now();
@@ -3324,12 +3394,34 @@ function showGhostInfo(g){
   else{const parts=[cos.hat,cos.shirt].filter(function(x){return x&&x!=='none';});if(parts.length)bits.push(parts.join(', '));}
   toast(g.name+' - '+bits.join(' · '),'#1c6a9e');
 }
+function ordinalNum(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
+// Live tournament standing: the player's biggest catch vs each rival's best so far.
+function liveTournPlace(){
+  if(!activeTournament||!activeLobby)return null;
+  const myW=activeTournament.biggestWeight||0;
+  const best={};
+  (activeTournament.botCatches||[]).forEach(function(b){if(!(best[b.username]>=b.weight))best[b.username]=b.weight;});
+  const total=activeLobby.players.length;
+  let ahead=0;
+  activeLobby.players.forEach(function(p){
+    if(p.uid===myTournUid())return;
+    if((best[p.username]||0)>myW)ahead++;   // ties resolve in the player's favor
+  });
+  return {place:ahead+1,total:total,myW:myW};
+}
+function updateTournBanner(){
+  const bn=document.getElementById('tourn-banner');if(!bn)return;
+  const p=liveTournPlace();if(!p){bn.textContent='TOURNAMENT IN PROGRESS';return;}
+  bn.textContent=ordinalNum(p.place)+' of '+p.total+(p.myW>0?' · '+p.myW.toFixed(1)+' lb':' · no catch yet');
+  bn.classList.toggle('leading',p.place===1&&p.myW>0);
+}
 // Per-frame ability housekeeping: prune smoke, blind the local player on contact,
 // toggle the white blind overlay.
 function tickAbilityEffects(){
   const bo=document.getElementById('blind-overlay');
   if(!activeTournament){if(bo)bo.classList.remove('show');return;}
   const now=Date.now();
+  updateTournBanner();
   if(activeTournament.smokeClouds){
     activeTournament.smokeClouds=activeTournament.smokeClouds.filter(function(sc){return now<sc.until;});
     for(const sc of activeTournament.smokeClouds){
@@ -4093,7 +4185,9 @@ function drawReel(x,y,tier,ang){
 function render(ts){
   if(!render._last)render._last=ts;
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
-  S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
+  // Tournaments run time faster so a full day+night cycle fits the 6-minute match
+  // (3 min day + 3 min night). 1440 game-min / 360s = 4 game-min per real sec.
+  S.clock+=dt*(activeTournament?4:MIN_PER_SEC); if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
   const h=hourNow(),sky=skyState(h),t=ts/1000;
 
   // ---- boat physics + camera (open world) ----
@@ -4759,7 +4853,7 @@ function tryEnterSurf(){
 function enterSurf(){
   surfActive=true;surfPhase='idle';boat.anchored=true;
   const b=document.getElementById('surf-btn');if(b)b.classList.remove('show');
-  document.getElementById('surf-figure').innerHTML=buildSurfFigure();
+  document.getElementById('surf-rig').innerHTML=buildSurfRig();
   document.getElementById('surf-overlay').classList.add('show');
   _surfMoonIcon='';updateSurfSky();
   startSurfWait();
@@ -4792,7 +4886,7 @@ function scheduleSurfTwitch(){
   clearTimeout(surfTwitchTimer);
   surfTwitchTimer=setTimeout(function(){
     if(!surfActive||surfPhase!=='waiting')return;
-    const fig=document.getElementById('surf-figure');
+    const fig=document.getElementById('surf-rig');
     if(fig){fig.classList.add('twitch');setTimeout(function(){fig.classList.remove('twitch');},260);}
     scheduleSurfTwitch();
   },4000+Math.random()*6000);
@@ -4809,76 +4903,56 @@ function surfBiteNow(){
   if(!surfActive||surfPhase!=='waiting')return;
   surfShark=pickSurfShark();surfPhase='hooked';
   setSurfStatus('SHARK ON! It’s a '+surfShark.name+'!');
-  const fig=document.getElementById('surf-figure');if(fig)fig.classList.add('bent');
+  const fig=document.getElementById('surf-rig');if(fig)fig.classList.add('bent');
   setTimeout(function(){startSharkFight(surfShark);},800);
 }
 function startSharkFight(shark){
   hookedFish=shark;hookW=rollWeight(shark);
   sdewRetryUsed=false;sdewSurf=true;
-  const fig=document.getElementById('surf-figure');if(fig)fig.classList.remove('bent');
+  const fig=document.getElementById('surf-rig');if(fig)fig.classList.remove('bent');
   if(shark.rarity==='legendary'||shark.rarity==='ultra')showLegendaryAlert(shark);
   else startSdewGame(shark);
 }
-// The angler seen from behind, sitting in a beach chair facing the surf, wearing
-// their equipped fits/set, with the rod parked in a white sand-spike holder to
-// the right of the chair.
-function buildSurfFigure(){
-  const cos=S.cosmetic||{};
-  const skin=skinColorOf(S.skinTone);
-  const shirt=(typeof ghostShirtColor==='function'?ghostShirtColor(cos):null)||'#cf7a35';
-  const hatCol=(typeof ghostHatColor==='function'?ghostHatColor(cos):null);
-  const hasHat=hatCol&&cos.hat&&cos.hat!=='none';
-  const hair='#3a2614';
-  const female=S.gender==='female';
+// First-person surf rig: the rod, reel, braid and bobber as if you're holding
+// it, looking out over the breaking waves. No angler shown.
+function buildSurfRig(){
   const rodCol=(typeof curRod==='function'&&curRod())?curRod().color:'#caa24a';
-  let s='<svg viewBox="0 0 220 240" width="220" height="240">';
-  s+='<ellipse cx="110" cy="220" rx="70" ry="12" fill="rgba(0,0,0,.18)"/>';
-  // --- beach chair (back of it) ---
-  s+='<defs><pattern id="chairstripe" width="24" height="12" patternUnits="userSpaceOnUse"><rect width="24" height="12" fill="#cf5b46"/><rect width="12" height="12" fill="#efe6d4"/></pattern></defs>';
-  s+='<rect x="64" y="74" width="92" height="138" rx="9" fill="url(#chairstripe)"/>';
-  s+='<rect x="56" y="66" width="108" height="10" rx="5" fill="#2c3f49"/>';   // top bar
-  s+='<rect x="56" y="70" width="10" height="146" rx="5" fill="#2c3f49"/>';   // left post
-  s+='<rect x="154" y="70" width="10" height="146" rx="5" fill="#2c3f49"/>';  // right post
-  // --- player, seen from behind ---
-  if(female)s+='<path d="M88 96 Q80 150 90 192 L130 192 Q140 150 132 96 Z" fill="'+hair+'" opacity=".9"/>';
-  // back / torso (shirt = their fit)
-  s+='<path d="M82 116 Q110 106 138 116 L133 188 Q110 196 87 188 Z" fill="'+shirt+'"/>';
-  s+='<rect x="74" y="122" width="14" height="46" rx="7" fill="'+shirt+'"/>';   // left arm
-  s+='<rect x="132" y="122" width="14" height="46" rx="7" fill="'+shirt+'"/>';  // right arm
-  s+='<rect x="103" y="100" width="14" height="20" fill="'+skin+'"/>';          // neck
-  s+='<circle cx="110" cy="92" r="16" fill="'+skin+'"/>';                        // back of head
-  // hair cap, then hat (their fit) over it
-  s+='<path d="M95 94 Q96 78 110 76 Q124 78 125 94 Q110 86 95 94 Z" fill="'+hair+'"/>';
-  if(hasHat){
-    s+='<path d="M92 90 Q110 72 128 90 Z" fill="'+hatCol+'"/>';
-    s+='<rect x="90" y="87" width="40" height="7" rx="3.5" fill="'+hatCol+'"/>';
-  }
-  // --- white sand-spike rod holder + parked rod, to the RIGHT of the chair ---
-  s+='<rect x="171" y="120" width="13" height="78" rx="6" fill="#f4f4ef" stroke="#c6c6bd" stroke-width="1.5"/>';
-  s+='<rect x="173" y="123" width="9" height="6" rx="2" fill="#d8d8cf"/>';
-  s+='<line x1="178" y1="126" x2="126" y2="20" stroke="'+rodCol+'" stroke-width="4.5" stroke-linecap="round"/>'; // rod
-  s+='<circle cx="172" cy="138" r="5.5" fill="#23262e"/>';                       // reel
-  s+='<line x1="126" y1="20" x2="112" y2="2" stroke="rgba(255,255,255,.6)" stroke-width="1.3"/>'; // line to the sea
+  const braidCol=(typeof curBraid==='function'&&curBraid())?curBraid().color:'#e8e8e8';
+  let s='<svg class="surf-rod-svg" viewBox="0 0 100 100" preserveAspectRatio="none">';
+  // cork grip (dark) then the rod blank in the line color, from bottom-right up
+  s+='<line x1="98" y1="106" x2="85" y2="90" stroke="#2a2a2a" stroke-width="11" vector-effect="non-scaling-stroke" stroke-linecap="round"/>';
+  s+='<line x1="85" y1="90" x2="40" y2="26" stroke="'+rodCol+'" stroke-width="5.5" vector-effect="non-scaling-stroke" stroke-linecap="round"/>';
+  // braid out to the bobber on the water
+  s+='<line x1="40" y1="26" x2="38" y2="52" stroke="'+braidCol+'" stroke-width="2" vector-effect="non-scaling-stroke" opacity=".9"/>';
   s+='</svg>';
+  s+='<div class="surf-reel"><span class="rspool"></span><span class="rhandle"></span></div>';
+  s+='<div class="surf-bobber"><span class="bbody"></span><span class="btip"></span></div>';
   return s;
 }
 let _surfMoonIcon='';
 // Sun by day, phase-correct moon by night (both visible at dawn/dusk), sky darkens at night.
+// Sun by day, phase-correct moon by night. Each rises from / sets into the
+// horizon line (40%) and fades there, so neither is ever drawn over the water.
 function updateSurfSky(){
   if(!surfActive)return;
   const h=hourNow(),dk=skyState(h).darkness;
   const night=document.getElementById('surf-night');if(night)night.style.opacity=(dk*0.58).toFixed(2);
-  const dayFrac=Math.min(1,Math.max(0,(h-5)/14)); // sun arc, 5:00..19:00
-  const sun=document.getElementById('surf-sun');
-  if(sun){sun.style.left=(14+dayFrac*68)+'%';sun.style.top=(31-Math.sin(dayFrac*Math.PI)*12)+'%';sun.style.opacity=(1-dk).toFixed(2);}
-  const moon=document.getElementById('surf-moon');
-  if(moon){
-    let nf;if(h>=19)nf=(h-19)/10;else if(h<5)nf=(h+5)/10;else nf=0.5; // moon arc through the night
-    moon.style.left=(14+nf*68)+'%';moon.style.top=(31-Math.sin(nf*Math.PI)*12)+'%';
-    moon.style.opacity=dk.toFixed(2);
-    const ic=currentMoonPhase().icon;
-    if(ic!==_surfMoonIcon){_surfMoonIcon=ic;moon.innerHTML=svgIcon(ic,54);}
+  const HOR=40,ZEN=23; // horizon row % .. zenith row %
+  function place(el,frac,vis){
+    if(!el)return;
+    frac=Math.max(0,Math.min(1,frac));
+    const top=HOR-Math.sin(frac*Math.PI)*(HOR-ZEN);
+    const aboveHor=(HOR-top)/(HOR-ZEN);            // 0 at the horizon, 1 at the peak
+    el.style.left=(15+frac*66)+'%';
+    el.style.top=top+'%';
+    el.style.opacity=(vis*Math.max(0,Math.min(1,aboveHor*1.7))).toFixed(2);
   }
+  const dayFrac=Math.min(1,Math.max(0,(h-5)/14));  // 5:00..19:00 across the sky
+  place(document.getElementById('surf-sun'),dayFrac,1-dk);
+  let nf;if(h>=19)nf=(h-19)/10;else if(h<5)nf=(h+5)/10;else nf=0.5; // night arc 19:00..5:00
+  const moon=document.getElementById('surf-moon');
+  place(moon,nf,dk);
+  if(moon){const ic=currentMoonPhase().icon;if(ic!==_surfMoonIcon){_surfMoonIcon=ic;moon.innerHTML=svgIcon(ic,54);}}
 }
 
 // Controls
