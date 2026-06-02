@@ -1428,9 +1428,9 @@ function startTournamentMode(def){
         const delay=night?(TOURN_MS*0.5+Math.random()*TOURN_MS*0.48):(4000+Math.random()*(TOURN_MS*0.5-4000));
         setTimeout(function(){
           if(!activeTournament)return;
-          const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
-          if(!pool.length)return;
-          const f=pool[Math.floor(Math.random()*pool.length)];
+          // Bots compete for the SAME target species the player is after.
+          const f=def.targetFish||FISH.filter(function(x){return x.zone===def.zone&&x.rarity===def.rarity;})[0];
+          if(!f)return;
           const a=f.size[0],b=f.size[1];
           const isNight=skyState(hourNow()).darkness>0.5;
           const skew=isNight?0.42:0.62;     // lower exponent -> bigger fish; biggest at night
@@ -1442,9 +1442,12 @@ function startTournamentMode(def){
   }
   setTimeout(endTournament,6*60*1000);
 }
-function recordTournamentCatch(fishName,weight){
+function recordTournamentCatch(fish,weight){
   if(!activeTournament)return;
-  if(weight>activeTournament.biggestWeight){activeTournament.biggestWeight=weight;activeTournament.biggestName=fishName;}
+  const tgt=activeTournament.def&&activeTournament.def.targetFish;
+  // Only the tournament's target species counts toward the standings.
+  if(tgt&&fish.id!==tgt.id){toast('Only '+tgt.name+' counts in this tournament.','#b58b53');return;}
+  if(weight>activeTournament.biggestWeight){activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;}
 }
 function endTournament(){
   if(!activeTournament)return;
@@ -5128,7 +5131,7 @@ function land(f,w,perfect,bullseye){
   // No gold from fish during a tournament - you're fishing for ranking & rubies.
   if(activeTournament)gold=0;
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
-  recordTournamentCatch(f.name,w);
+  recordTournamentCatch(f,w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
