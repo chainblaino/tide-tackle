@@ -1981,7 +1981,7 @@ function _bodyClip(s){
 }
 
 function buildFishArt(id,px,mono){
-  if(id==='hogfish')return buildHogfishArt(px,mono);
+  if(PNG_FISH[id])return buildPngFishArt(id,px,mono);
   const base=FISH_ART[id]||FISH_ART.trout;
   const s=base, cid='f'+(__cid++);
   let bodyD='',tailD='',finsB=[],pect='',eye=[100,28,4,'#15202a'],extras='',gillX=88,tailRays=[];
@@ -2306,11 +2306,18 @@ function buildFishArtRealistic(id,px){return buildFishArtR(id,px)||buildFishArt(
 // Hogfish uses a custom raster illustration (hogfish.png, 640x426). The source
 // faces left, so mirror it to face right like the rest of the fish art.
 // Undiscovered fish get a washed-out greyscale treatment.
-function buildHogfishArt(px,mono){
+// Custom PNG illustrations. Each entry: file (640x426, source faces left), alt label.
+const PNG_FISH={
+  hogfish:{file:'hogfish.png',alt:'Hogfish'},
+  sheepshead:{file:'sheepshead.png',alt:'Sheepshead'},
+  tarpon:{file:'tarpon.png',alt:'Tarpon'}
+};
+function buildPngFishArt(id,px,mono){
   px=px||240;
+  const cfg=PNG_FISH[id];
   const h=Math.round(px*426/640);
   const filt=mono?'filter:grayscale(1) brightness(1.45) opacity(.45);':'';
-  return '<img src="hogfish.png" alt="Hogfish" width="'+px+'" height="'+h+'" '
+  return '<img src="'+cfg.file+'" alt="'+cfg.alt+'" width="'+px+'" height="'+h+'" '
     +'style="transform:scaleX(-1);'+filt+'display:inline-block;vertical-align:middle;" '
     +'onerror="this.style.opacity=0"/>';
 }
