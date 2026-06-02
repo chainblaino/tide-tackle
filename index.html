@@ -445,6 +445,12 @@
 /* TOURNAMENT BANNER */
 .tourn-banner{position:absolute;top:8px;left:50%;transform:translateX(-50%);z-index:8;background:rgba(220,80,40,.92);color:#fff;font-size:13px;font-weight:900;letter-spacing:.3px;padding:5px 15px;border-radius:20px;pointer-events:none;display:none;box-shadow:0 3px 10px rgba(0,0,0,.3);}
 .tourn-banner.leading{background:linear-gradient(135deg,#e8b53c,#c98a1a);color:#3a2a08;}
+.tourn-standings{position:absolute;top:38px;left:50%;transform:translateX(-50%);z-index:8;display:none;background:rgba(12,28,44,.86);border:1.5px solid rgba(255,255,255,.18);border-radius:12px;padding:6px 11px;min-width:172px;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.ts-row{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#eaf2f8;padding:2px 0;}
+.ts-row.me{color:#ffd24a;}
+.ts-rank{width:18px;text-align:center;font-size:13px;}
+.ts-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:112px;}
+.ts-wt{font-variant-numeric:tabular-nums;opacity:.92;}
 /* LEGENDARY ALERT */
 .leg-alert-overlay{position:fixed;inset:0;z-index:500;background:rgba(0,0,0,.88);display:none;align-items:center;justify-content:center;flex-direction:column;}
 .leg-alert-overlay.show{display:flex;}
@@ -709,6 +715,7 @@
   </div>
 </div>
 <div class="tourn-banner" id="tourn-banner">TOURNAMENT IN PROGRESS</div>
+    <div class="tourn-standings" id="tourn-standings"></div>
 
 <script>
 // ─────────────────────────────────────────────────────────────
@@ -1379,11 +1386,11 @@ function startTournamentMode(def){
   // The whole tournament is held during one randomly chosen season.
   const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
-    abilityReadyAt:0,stolenTargets:[],smokeClouds:[]};
+    abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now()};
   S.zone=def.zone;
-  // Run a full day then a full night: start at sunrise so the 8-minute match is
-  // 4 minutes of daylight followed by 4 minutes of night (one whole day cycle).
-  S.clock=300;
+  // The match clock is driven from elapsed time (see render): it starts at the
+  // beginning of the day and ends exactly at the end of the night, one full cycle.
+  S.clock=TOURN_DAY_START;
   // Build the big tournament world with scattered structures and other players
   initTournamentWorld(def);
   initTournamentGhosts();
@@ -1685,6 +1692,8 @@ const RARITY_ORDER=['common','uncommon','rare','epic','legendary','ultra'];
 const ULTRA_GRAD='linear-gradient(100deg,#ffd24a 0%,#ff5ed4 28%,#7b5cff 52%,#34e7e4 76%,#ffd24a 100%)';
 const XP_CURVE=[0,50,120,230,400,640,980,1450,2100,3200,5200,8000];
 const MIN_PER_SEC=3; // 1440 game-min over 480s = 8 real min per cycle (4 min day + 4 min night)
+const TOURN_MS=6*60*1000;     // a tournament runs 6 real minutes...
+const TOURN_DAY_START=300;    // ...as one full day->night cycle, starting at dawn (5:00)
 
 // methods: cat = tackle category, bait = needs natural bait
 const METHODS=[
@@ -3037,6 +3046,10 @@ function initTournamentGhosts(){
 function ghostByUid(uid){for(const g of tourn.ghosts)if(g.uid===uid)return g;return null;}
 function updateGhosts(){
   if(!tourn.active||!tourn.ghosts.length)return;
+  // Bots gang up on whoever is leading: when the player sits in the top 3 they
+  // get hunted harder (faster, tighter chase, more frequent abilities).
+  const _lp=liveTournPlace();
+  const pTop3=!!(_lp&&_lp.place<=3&&_lp.myW>0);
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
       // Smoothly chase the real broadcast position from Firestore
@@ -3065,25 +3078,26 @@ function updateGhosts(){
     if(g._blindUntil&&now<g._blindUntil)continue;
     // Set-bots are aggressive: they hunt the player down and use their ability.
     if(g.set&&activeTournament){
-      if(!g._abilityReadyAt)g._abilityReadyAt=now+4000+Math.random()*7000;
+      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?1500:4000)+Math.random()*7000;
       if(now>g._abilityReadyAt){
         const s=setById(g.set),dp=dist(g.wx,g.wy,boat.wx,boat.wy);
-        if(botUseAbility(g,s,dp,now))g._abilityReadyAt=now+((s.cd||30)*1000)+Math.random()*5000;
-        else g._abilityReadyAt=now+2500;
+        if(botUseAbility(g,s,dp,now))g._abilityReadyAt=now+((s.cd||30)*1000)*(pTop3?0.5:1)+Math.random()*5000;
+        else g._abilityReadyAt=now+(pTop3?1500:2500);
       }
     }
     if(g.pause>0){g.pause--;continue;}
     g.turnTimer--;
     if(g.turnTimer<=0){
-      if(g.set&&Math.random()<0.7)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*0.7; // chase the player
+      const chase=pTop3?0.95:0.7,spread=pTop3?0.4:0.7;
+      if(g.set&&Math.random()<chase)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*spread; // hunt the leader
       else g.targetAng=Math.random()*6.28;
       g.turnTimer=80+Math.random()*220;
       if(!g.set&&Math.random()<0.25)g.pause=120+Math.random()*240;
     }
     let d=g.targetAng-g.heading;
     while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
-    g.heading+=d*(g.set?0.045:0.02);
-    const sp=g.set?g.speed*1.5:g.speed;   // set-bots move faster
+    g.heading+=d*(g.set?(pTop3?0.06:0.045):0.02);
+    const sp=g.set?g.speed*(pTop3?1.8:1.5):g.speed;   // set-bots move faster, faster still vs a leader
     g.wx+=Math.cos(g.heading)*sp;
     g.wy+=Math.sin(g.heading)*sp*0.7;
     if(g.wx<70){g.wx=70;g.targetAng=Math.random()*Math.PI-Math.PI/2;}
@@ -3415,13 +3429,39 @@ function updateTournBanner(){
   bn.textContent=ordinalNum(p.place)+' of '+p.total+(p.myW>0?' · '+p.myW.toFixed(1)+' lb':' · no catch yet');
   bn.classList.toggle('leading',p.place===1&&p.myW>0);
 }
+// Everyone's current standing (player + each rival's best), sorted best-first.
+function tournStandings(){
+  if(!activeTournament||!activeLobby)return [];
+  const best={};
+  (activeTournament.botCatches||[]).forEach(function(b){if(!(best[b.username]>=b.weight))best[b.username]=b.weight;});
+  const myUid=myTournUid();
+  const entries=activeLobby.players.map(function(p){
+    const isP=p.uid===myUid;
+    return {uid:p.uid,name:isP?((fbUsername&&fbUsername!=='Guest')?fbUsername:'You'):p.username,
+      weight:isP?(activeTournament.biggestWeight||0):(best[p.username]||0),isPlayer:isP};
+  });
+  entries.sort(function(a,b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
+  return entries;
+}
+// Names of who currently sits 1st/2nd/3rd (used to mark bot targets).
+function topThreeUids(){return tournStandings().slice(0,3).filter(function(e){return e.weight>0;}).map(function(e){return e.uid;});}
+function updateTournStandings(){
+  const el=document.getElementById('tourn-standings');if(!el)return;
+  const e=tournStandings();
+  if(!e.length){el.style.display='none';return;}
+  el.style.display='block';
+  const medals=['🥇','🥈','🥉'];
+  el.innerHTML=e.slice(0,3).map(function(x,i){
+    return '<div class="ts-row'+(x.isPlayer?' me':'')+'"><span class="ts-rank">'+medals[i]+'</span><span class="ts-name">'+x.name+'</span><span class="ts-wt">'+(x.weight>0?x.weight.toFixed(1)+' lb':'-')+'</span></div>';
+  }).join('');
+}
 // Per-frame ability housekeeping: prune smoke, blind the local player on contact,
 // toggle the white blind overlay.
 function tickAbilityEffects(){
   const bo=document.getElementById('blind-overlay');
   if(!activeTournament){if(bo)bo.classList.remove('show');return;}
   const now=Date.now();
-  updateTournBanner();
+  updateTournBanner();updateTournStandings();
   if(activeTournament.smokeClouds){
     activeTournament.smokeClouds=activeTournament.smokeClouds.filter(function(sc){return now<sc.until;});
     for(const sc of activeTournament.smokeClouds){
@@ -4187,7 +4227,14 @@ function render(ts){
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
   // Tournaments run time faster so a full day+night cycle fits the 6-minute match
   // (3 min day + 3 min night). 1440 game-min / 360s = 4 game-min per real sec.
-  S.clock+=dt*(activeTournament?4:MIN_PER_SEC); if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
+  if(activeTournament){
+    // Drive the clock from match progress so it always runs the beginning of a
+    // day through the end of the night, exactly one cycle over the 6 minutes.
+    const prog=Math.min(1,(Date.now()-(activeTournament.startMs||Date.now()))/TOURN_MS);
+    S.clock=TOURN_DAY_START+prog*1440;
+  }else{
+    S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
+  }
   const h=hourNow(),sky=skyState(h),t=ts/1000;
 
   // ---- boat physics + camera (open world) ----
