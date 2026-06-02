@@ -1408,20 +1408,28 @@ function startTournamentMode(def){
   }
   document.getElementById("tourn-banner").style.display="block";
   toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 6 minutes to fish - a full day & night.","#e0a93c");
-  // Simulate bot catches
+  // Simulate bot catches. A bot's main focus is landing the BIGGEST fish, so it
+  // makes several attempts that skew toward the top of the size range. Bots fish
+  // harder at night, so more (and bigger) attempts fall in the second half.
   if(activeLobby){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
-      const delay=5000+Math.random()*320000; // 5s to ~5m20s so most bots catch within the 6min
-      setTimeout(function(){
-        if(!activeTournament)return;
-        // Each bot independently picks any eligible species of the target rarity
-        // in this zone, so the results show a realistic mix of fish.
-        const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
-        if(!pool.length)return;
-        const f=pool[Math.floor(Math.random()*pool.length)];
-        const w=rollWeight(f); // same biased roll as the player, for a fair fight
-        activeTournament.botCatches.push({username:bot.username,fish:f.name,weight:w});
-      },delay);
+      const attempts=3+Math.floor(Math.random()*3); // 3-5 casts each
+      for(let i=0;i<attempts;i++){
+        // ~60% of attempts land in the night half (second 3 minutes)
+        const night=Math.random()<0.6;
+        const delay=night?(TOURN_MS*0.5+Math.random()*TOURN_MS*0.48):(4000+Math.random()*(TOURN_MS*0.5-4000));
+        setTimeout(function(){
+          if(!activeTournament)return;
+          const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===def.rarity;});
+          if(!pool.length)return;
+          const f=pool[Math.floor(Math.random()*pool.length)];
+          const a=f.size[0],b=f.size[1];
+          const isNight=skyState(hourNow()).darkness>0.5;
+          const skew=isNight?0.42:0.62;     // lower exponent -> bigger fish; biggest at night
+          const w=+(a+(b-a)*Math.pow(Math.random(),skew)).toFixed(2);
+          activeTournament.botCatches.push({username:bot.username,fish:f.name,weight:w});
+        },delay);
+      }
     });
   }
   setTimeout(endTournament,6*60*1000);
@@ -3050,6 +3058,9 @@ function updateGhosts(){
   // get hunted harder (faster, tighter chase, more frequent abilities).
   const _lp=liveTournPlace();
   const pTop3=!!(_lp&&_lp.place<=3&&_lp.myW>0);
+  // Aggressive by day, focused on fishing at night (can still do either anytime).
+  const _dark=(typeof skyState==='function')?skyState(hourNow()).darkness:0;
+  const dayAgg=1-_dark; // 1 in full daylight .. 0 at deep night
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
       // Smoothly chase the real broadcast position from Firestore
@@ -3076,28 +3087,33 @@ function updateGhosts(){
     if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng+=(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*g.speed;g.wy+=Math.sin(g._confuseAng)*g.speed*0.7;clampGhost(g);continue;}
     // blinded by smoke: stall in place
     if(g._blindUntil&&now<g._blindUntil)continue;
-    // Set-bots are aggressive: they hunt the player down and use their ability.
+    // Set-bots use their ability: often in daylight (aggressive), less at night
+    // (busy fishing), and relentlessly when the player is leading.
     if(g.set&&activeTournament){
-      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?1500:4000)+Math.random()*7000;
+      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?1500:3000)+Math.random()*6000;
       if(now>g._abilityReadyAt){
         const s=setById(g.set),dp=dist(g.wx,g.wy,boat.wx,boat.wy);
-        if(botUseAbility(g,s,dp,now))g._abilityReadyAt=now+((s.cd||30)*1000)*(pTop3?0.5:1)+Math.random()*5000;
-        else g._abilityReadyAt=now+(pTop3?1500:2500);
+        if(botUseAbility(g,s,dp,now)){
+          const cdMul=pTop3?0.45:(1.5-0.8*dayAgg); // ~0.7 by day, ~1.5 at night
+          g._abilityReadyAt=now+((s.cd||30)*1000)*cdMul+Math.random()*4000;
+        }else g._abilityReadyAt=now+(pTop3?1200:2500);
       }
     }
     if(g.pause>0){g.pause--;continue;}
     g.turnTimer--;
     if(g.turnTimer<=0){
-      const chase=pTop3?0.95:0.7,spread=pTop3?0.4:0.7;
-      if(g.set&&Math.random()<chase)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*spread; // hunt the leader
+      let chase=0.3+0.5*dayAgg; if(pTop3)chase=Math.max(chase,0.92); // hunt by day / leaders
+      const spread=pTop3?0.4:(0.55+0.5*_dark);
+      if(g.set&&Math.random()<chase)g.targetAng=Math.atan2(boat.wy-g.wy,boat.wx-g.wx)+(Math.random()-0.5)*spread;
       else g.targetAng=Math.random()*6.28;
       g.turnTimer=80+Math.random()*220;
-      if(!g.set&&Math.random()<0.25)g.pause=120+Math.random()*240;
+      // At night (or non-set bots) they settle to "fish" more often
+      if((!g.set||_dark>0.45)&&!pTop3&&Math.random()<(0.18+0.32*_dark))g.pause=120+Math.random()*240;
     }
     let d=g.targetAng-g.heading;
     while(d>Math.PI)d-=6.28;while(d<-Math.PI)d+=6.28;
-    g.heading+=d*(g.set?(pTop3?0.06:0.045):0.02);
-    const sp=g.set?g.speed*(pTop3?1.8:1.5):g.speed;   // set-bots move faster, faster still vs a leader
+    g.heading+=d*(g.set?(pTop3?0.06:0.03+0.03*dayAgg):0.02);
+    const sp=g.set?g.speed*(1.25+0.35*dayAgg)*(pTop3?1.25:1):g.speed;  // faster by day, faster still vs a leader
     g.wx+=Math.cos(g.heading)*sp;
     g.wy+=Math.sin(g.heading)*sp*0.7;
     if(g.wx<70){g.wx=70;g.targetAng=Math.random()*Math.PI-Math.PI/2;}
@@ -3348,12 +3364,20 @@ function broadcastAbility(type,targetUid,data){
   if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
   setTimeout(function(){tourn._pendingAct=null;},5000);
 }
+// A confuse/punch must move you even while anchored: pull the anchor so the
+// drift/knockback takes hold (unless you're mid-fight, which is left alone).
+function popAnchorFromAbility(){
+  if(!boat.anchored)return;
+  if((typeof sdewActive!=='undefined'&&sdewActive)||phase==='biting')return;
+  boat.anchored=false;phase='idle';bobber.active=false;
+  if(typeof updateDriveUI==='function')updateDriveUI();
+}
 function applyIncomingAct(act){
   const now=Date.now();
   const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder');
   if(hostile&&now<immuneUntil){toast('Untouchable - blocked an ability!','#2aa890');return;}
-  if(act.type==='confuse'){confusedUntil=now+(act.data.dur||20000);confuseAng=Math.random()*6.28;toast('You were confused!','#a872d8');}
-  else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;toast('You got punched!','#c46f28');}
+  if(act.type==='confuse'){confusedUntil=now+(act.data.dur||20000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');}
+  else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();toast('You got punched!','#c46f28');}
   else if(act.type==='plunder'){const amt=act.data.amt||0;
     if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
     else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
@@ -3372,14 +3396,14 @@ function botUseAbility(g,s,dp,now){
   if(g.set==='princess'){
     if(dp>380)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
-    confusedUntil=now+(12000+Math.random()*8000);confuseAng=Math.random()*6.28;
+    confusedUntil=now+(12000+Math.random()*8000);confuseAng=Math.random()*6.28;popAnchorFromAbility();
     toast(g.name+' confused you!','#a872d8');spawnAbilityFx(boat.wx,boat.wy,'#c77ad8');return true;
   }
   if(g.set==='berserker'){
     if(dp>240)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
     let dx=boat.wx-g.wx,dy=boat.wy-g.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
-    const power=12+Math.random()*8;knockVX+=dx*power;knockVY+=dy*power;
+    const power=12+Math.random()*8;knockVX+=dx*power;knockVY+=dy*power;popAnchorFromAbility();
     toast(g.name+' punched you!','#c46f28');spawnAbilityFx(boat.wx,boat.wy,'#ff8a3a');return true;
   }
   if(g.set==='pirate'){
