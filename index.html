@@ -2851,9 +2851,11 @@ const canvas=document.getElementById('ocean');
 const ctx=canvas.getContext('2d');
 let CW=760,CH=560;
 let _bgGrad=null,_bgGradKey=''; // cached base-water gradient (per zone+height)
-// Cap the canvas pixel density: phones render at up to 1.5x (instead of 2x) to
-// cut the per-frame fill cost roughly in half on high-DPR screens.
-const DPR=Math.min(window.devicePixelRatio||1, (window.innerWidth||999)<760?1.5:2);
+// Cap the canvas pixel density. The world is flat-shaded, so phones render at 1x
+// (instead of the screen's 2-3x) — this is the single biggest GPU fill-rate win
+// for a full-screen animated canvas. Tablets 1.5x, desktop 2x.
+const _iw=window.innerWidth||999;
+const DPR=Math.min(window.devicePixelRatio||1, _iw<760?1:(_iw<1100?1.5:2));
 // canvas dimensions and scale set by resizeCanvas()
 let ORIGIN={x:380,y:72};
 const BOAT_FOOT={bottom:136,halfW:62};
@@ -4276,6 +4278,16 @@ function drawReel(x,y,tier,ang){
 
 
 
+// True when an opaque overlay fully covers the game canvas, so there's no point
+// drawing (or running the world's per-frame logic) this frame.
+function worldCovered(){
+  if(surfActive)return true;
+  if(typeof sdewActive!=='undefined'&&sdewActive)return true;
+  const mp=document.getElementById('menu-panel');if(mp&&mp.classList.contains('show'))return true;
+  const lb=document.getElementById('lobby-overlay');if(lb&&lb.style.display==='flex')return true;
+  const au=document.getElementById('auth-overlay');if(au&&au.style.display!=='none')return true;
+  return false;
+}
 function render(ts){
   if(!render._last)render._last=ts;
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
@@ -4318,6 +4330,9 @@ function render(ts){
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
   updateSurfButton();
   if(surfActive)updateSurfSky();
+  // Don't draw the world canvas when it's fully hidden behind an overlay (menu,
+  // surf, the fight mini-game, the lobby). Saves the whole frame's GPU fill.
+  if(worldCovered()){requestAnimationFrame(render);return;}
 
   ctx.clearRect(0,0,CW,CH);
   const z=curZone();
@@ -4333,8 +4348,8 @@ function render(ts){
   // swells (reduced from 10 to 5 rows - still looks full, half the sine calls)
   for(let i=0;i<5;i++){const y0=(i/5)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
   // night stars-on-water shimmer + moon glint
-  if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(0,0,CW,CH);}
-  else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,CW,CH);}
+  if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(480,0,240,210);}
+  else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,350,250);}
   // whitecaps
   for(const w of WHITECAPS){const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx,wy,w.r,w.r*.38,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
