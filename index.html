@@ -2867,20 +2867,19 @@ let _bgGrad=null,_bgGradKey=''; // cached base-water gradient (per zone+height)
 // player's Graphics setting (no runtime guessing). Phones default to the fast
 // path (1x density + trimmed detail); the player can force High or Smooth.
 const _iw=window.innerWidth||999;
-const _isPhone=_iw<760, _isTablet=_iw>=760&&_iw<1100;
-let DPR=_isPhone?1:Math.min(window.devicePixelRatio||1,_isTablet?1.5:2);
-let gfxLow=_isPhone; // trim always-on detail on phones by default
+const _isPhone=_iw<760;
+let DPR=Math.min(window.devicePixelRatio||1,2); // crisp by default
+let gfxLow=false;
 // Per-frame movement is multiplied by this so the boat/bots travel at the same
 // real speed at any frame rate (e.g. iOS Low Power Mode caps Safari to 30fps).
 let frameScale=1;
+// Graphics: Auto = crisp full quality (default), High = max sharpness,
+// Smooth = lightest (1x density + trimmed detail) for weak devices.
 function applyGfxQuality(){
   const dpr=window.devicePixelRatio||1, q=(typeof S!=='undefined'&&S.gfx)||'auto';
-  if(q==='high'){DPR=Math.min(dpr,2);gfxLow=false;}
+  if(q==='high'){DPR=Math.min(dpr,3);gfxLow=false;}
   else if(q==='smooth'){DPR=1;gfxLow=true;}
-  else{ // auto: fast on phones, full quality on tablets/desktop
-    DPR=_isPhone?1:Math.min(dpr,_isTablet?1.5:2);
-    gfxLow=_isPhone;
-  }
+  else{DPR=Math.min(dpr,2);gfxLow=false;} // auto (default)
   if(typeof canvas!=='undefined'&&canvas&&canvas.offsetWidth)resizeCanvas();
   const fe=document.getElementById('fps-meter');if(fe)fe.style.display=(typeof S!=='undefined'&&S.showFps)?'block':'none';
 }
@@ -4340,7 +4339,9 @@ function render(ts){
     const spd=boatSpeed(S.boat)*playerMoveMult();
     // Confuse ability: input is overridden with a wandering drift
     let jdx=joy.dx,jdy=joy.dy;
-    if(typeof confusedUntil!=='undefined'&&performance.now()<confusedUntil){
+    // confusedUntil is set from Date.now(), so it must be compared with Date.now()
+    // (performance.now() uses a different time origin and would never expire).
+    if(typeof confusedUntil!=='undefined'&&Date.now()<confusedUntil){
       jdx=Math.cos(confuseAng);jdy=Math.sin(confuseAng);
       confuseAng+=(Math.random()-0.5)*0.3;
     }
@@ -5663,7 +5664,7 @@ function renderStats(){
   // Graphics quality control
   const gfx=S.gfx||'auto';
   const gbtn=function(id,label){return '<button class="gfx-opt'+(gfx===id?' active':'')+'" onclick="setGfx(\''+id+'\')">'+label+'</button>';};
-  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?(_isPhone?'fast (phone default)':'full quality'):gfx==='high'?'full quality':'fastest, lighter detail')+'</span></div>'
+  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?'crisp, full detail':gfx==='high'?'max sharpness':'lightest - for slow devices')+'</span></div>'
     +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div>'
     +'<button class="gfx-fps-btn'+(S.showFps?' active':'')+'" onclick="toggleFps()">'+(S.showFps?'Hide':'Show')+' FPS counter</button></div>';
   // Achievements section
