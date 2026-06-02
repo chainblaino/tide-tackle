@@ -3123,7 +3123,7 @@ function stopTournamentSync(){
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex,a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
-function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#c2a574',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
+function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
 function ghostHatColor(cos){if(!cos||!cos.hat||cos.hat==='none')return null;const c={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060',assassin_hood:'#0f0f0f',pirate_hat:'#cdb86a',princess_tiara:'#ffd24a',berserker_mohawk:'#c0431c',jeremy_hair:'#eef0f2'};return c[cos.hat]||'#666';}
 function drawSmokeClouds(now){
   if(!activeTournament||!activeTournament.smokeClouds)return;
@@ -3581,7 +3581,7 @@ function anglerHairColor(){
 }
 function anglerShirtColor(){
   const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
-    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#c2a574',jeremy_shirt:'#9098a0'};
+    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0'};
   return(S.cosmetic&&c[S.cosmetic.shirt])||'#cf7a35';
 }
 function drawAnglerHairBack(cx,cy,r){
