@@ -2378,23 +2378,31 @@ function progressScore(s){
     + (s.totalCasts||0)
     + (s.tournamentWins||0)*5;
 }
+// Minimum ms between consecutive local saves (throttle to reduce main-thread pressure).
+const SAVE_THROTTLE_MS=5000;
+let _lastSaveMs=0;
 async function saveGame(){
-  const data=JSON.stringify(S);
+  const now=Date.now();
+  // Don't hammer localStorage — cap at one write per 5 s.
+  // The Firestore write is async and doesn't block the thread, so it's fine every call.
+  const doLocal=now-_lastSaveMs>=SAVE_THROTTLE_MS;
+  let data=null;
+  if(doLocal){data=JSON.stringify(S);}
   let ok=false;
-  try{if(window.storage&&window.storage.set){await window.storage.set(SAVE_KEY,data);ok=true;}}catch(e){}
-  if(!ok){try{localStorage.setItem(SAVE_KEY,data);ok=true;}catch(e){}}
-  if(ok)flashSave();
+  if(doLocal){
+    try{if(window.storage&&window.storage.set){await window.storage.set(SAVE_KEY,data);ok=true;}}catch(e){}
+    if(!ok){try{localStorage.setItem(SAVE_KEY,data);ok=true;}catch(e){}}
+    if(ok){flashSave();_lastSaveMs=now;}
+  }
   // Cloud save for signed in players so progress follows them across devices.
   if(fbUser&&fbDb){
-    // Don't touch the cloud until we've reconciled with it this session — this
-    // is what prevents a default/empty boot state from wiping real progress.
     if(!cloudReady&&!forceCloudWrite)return;
     const sc=progressScore(S);
-    // Block writes that would REDUCE cloud progress (a sign of a bad state),
-    // unless the player explicitly forced it (reset / recovery).
     if(sc<cloudBaseScore&&!forceCloudWrite)return;
     cloudBaseScore=Math.max(cloudBaseScore,sc);
-    try{fbDb.collection("saves").doc(fbUser.uid).set({data:data,score:sc,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
+    // Reuse already-serialized data (avoid a second JSON.stringify)
+    const cloudData=data||JSON.stringify(S);
+    try{fbDb.collection("saves").doc(fbUser.uid).set({data:cloudData,score:sc,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
   }
 }
 function queueSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,400);}
@@ -3956,8 +3964,8 @@ function render(ts){
   if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.62)+')';ctx.fillRect(0,0,CW,CH);}
   if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*0.16)+')';ctx.fillRect(0,0,CW,CH);}
 
-  // swells
-  for(let i=0;i<10;i++){const y0=(i/10)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.05*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=12){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
+  // swells (reduced from 10 to 5 rows — still looks full, half the sine calls)
+  for(let i=0;i<5;i++){const y0=(i/5)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
   // night stars-on-water shimmer + moon glint
   if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(0,0,CW,CH);}
   else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,CW,CH);}
@@ -3971,11 +3979,13 @@ function render(ts){
     if(sx<-90||sx>CW+90||sy<-90||sy>CH+90)continue;
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
-  // other players roaming the tournament world + ability effects
-  tickAbilityEffects();
-  drawSmokeClouds(Date.now());
-  updateGhosts();drawGhosts(t,sky.darkness);
-  drawAbilityFx();
+  // other players + ability effects (skip entirely outside tournaments)
+  if(tourn.active){
+    tickAbilityEffects();
+    drawSmokeClouds(Date.now());
+    updateGhosts();drawGhosts(t,sky.darkness);
+    drawAbilityFx();
+  }
   // transition gates
   for(const gt of gatesFor()){
     const gx=gt.wx-camera.x,gy=gt.wy-camera.y;
