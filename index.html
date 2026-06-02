@@ -215,6 +215,9 @@
   .gfx-opts{display:flex;gap:7px;}
   .gfx-opt{flex:1;padding:8px 6px;border-radius:9px;border:1.5px solid #c4a875;background:#fff;color:var(--text-soft);font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
   .gfx-opt.active{background:var(--accent);color:#fff;border-color:var(--accent-dark);}
+  .gfx-fps-btn{margin-top:8px;width:100%;padding:7px;border-radius:9px;border:1.5px solid #c4a875;background:#fff;color:var(--text-soft);font-size:12px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
+  .gfx-fps-btn.active{background:#2a7fb4;color:#fff;border-color:#1f6090;}
+  .fps-meter{position:absolute;top:54px;left:12px;z-index:9;background:rgba(8,16,24,.82);color:#7CFC9A;font-family:ui-monospace,Menlo,monospace;font-weight:800;font-size:13px;padding:3px 8px;border-radius:8px;pointer-events:none;}
   .reset-btn{margin-top:11px;width:100%;padding:8px;font-size:12px;font-weight:800;color:var(--text-soft);background:transparent;border:2px dashed #c4a875;border-radius:9px;cursor:pointer;}
   .reset-btn:hover{color:#b3402a;border-color:#b3402a;}
 
@@ -522,6 +525,7 @@
     <canvas id="ocean" width="760" height="560"></canvas>
 
     <button class="anchor-btn" id="anchor-btn">Drop Anchor</button>
+    <div class="fps-meter" id="fps-meter" style="display:none"></div>
     <button class="ability-btn" id="ability-btn"><span class="ab-name">Ability</span><span class="ab-uses">3 left</span></button>
     <button class="items-btn" id="items-btn" onclick="openItems()"><span class="ib-icon"></span><span class="ib-label">Items</span></button>
     <button class="surf-btn" id="surf-btn" onclick="tryEnterSurf()">🏖 Wade into the surf</button>
@@ -2559,6 +2563,7 @@ function normalizeState(){
   if(typeof S.radarActive!=='boolean')S.radarActive=false;
   if(typeof S.toothHook!=='boolean')S.toothHook=false;
   if(S.gfx!=='high'&&S.gfx!=='smooth'&&S.gfx!=='auto')S.gfx='auto';
+  if(typeof S.showFps!=='boolean')S.showFps=false;
   if(typeof S.surfUnlocked!=='boolean')S.surfUnlocked=false;
   if(typeof S.surfHook!=='boolean')S.surfHook=false;
   if(typeof S.surfBait!=='number')S.surfBait=0;
@@ -2858,21 +2863,23 @@ const canvas=document.getElementById('ocean');
 const ctx=canvas.getContext('2d');
 let CW=760,CH=560;
 let _bgGrad=null,_bgGradKey=''; // cached base-water gradient (per zone+height)
-// Adaptive canvas density. Start sharp (1.5x on phones/tablets, 2x desktop) and
-// let render() measure the real frame rate and step it down to 1x ONLY if the
-// device can't hold a smooth frame rate. Capable phones keep full graphics;
-// weaker ones automatically stay smooth.
+// Canvas density + detail are chosen deterministically by screen size and the
+// player's Graphics setting (no runtime guessing). Phones default to the fast
+// path (1x density + trimmed detail); the player can force High or Smooth.
 const _iw=window.innerWidth||999;
-let DPR=Math.min(window.devicePixelRatio||1, _iw<1100?1.5:2);
-let _dprSettled=false,_dprProbeSum=0,_dprProbeN=0;
-let gfxLow=false; // Smooth mode (or auto-downgrade): trim always-on detail
-// Player graphics setting: 'auto' (adaptive), 'high' (full), 'smooth' (fastest).
+const _isPhone=_iw<760, _isTablet=_iw>=760&&_iw<1100;
+let DPR=_isPhone?1:Math.min(window.devicePixelRatio||1,_isTablet?1.5:2);
+let gfxLow=_isPhone; // trim always-on detail on phones by default
 function applyGfxQuality(){
-  const cap=_iw<1100?1.5:2, q=(typeof S!=='undefined'&&S.gfx)||'auto';
-  if(q==='high'){DPR=cap;gfxLow=false;_dprSettled=true;}
-  else if(q==='smooth'){DPR=1;gfxLow=true;_dprSettled=true;}
-  else{DPR=cap;gfxLow=false;_dprSettled=false;_dprProbeSum=0;_dprProbeN=0;} // auto: re-measure
+  const dpr=window.devicePixelRatio||1, q=(typeof S!=='undefined'&&S.gfx)||'auto';
+  if(q==='high'){DPR=Math.min(dpr,2);gfxLow=false;}
+  else if(q==='smooth'){DPR=1;gfxLow=true;}
+  else{ // auto: fast on phones, full quality on tablets/desktop
+    DPR=_isPhone?1:Math.min(dpr,_isTablet?1.5:2);
+    gfxLow=_isPhone;
+  }
   if(typeof canvas!=='undefined'&&canvas&&canvas.offsetWidth)resizeCanvas();
+  const fe=document.getElementById('fps-meter');if(fe)fe.style.display=(typeof S!=='undefined'&&S.showFps)?'block':'none';
 }
 // canvas dimensions and scale set by resizeCanvas()
 let ORIGIN={x:380,y:72};
@@ -4309,15 +4316,9 @@ function worldCovered(){
 function render(ts){
   if(!render._last)render._last=ts;
   const dt=Math.min(0.1,(ts-render._last)/1000);render._last=ts;
-  // Auto-tune resolution: sample real frame intervals while the world is actually
-  // drawing and, if the device is running slow, drop to 1x density once.
-  if(!_dprSettled&&!tourn.active&&!surfActive&&!worldCovered()){
-    if(dt>0.008&&dt<0.05){_dprProbeSum+=dt;_dprProbeN++;}  // ignore stalls/covered frames
-    if(_dprProbeN>=70){
-      if(_dprProbeN/_dprProbeSum<48&&DPR>1){DPR=1;gfxLow=true;resizeCanvas();}else{_dprSettled=true;}
-      _dprProbeSum=0;_dprProbeN=0;
-    }
-  }
+  // Live FPS (smoothed) for the optional on-screen meter.
+  if(dt>0){render._fa=render._fa?render._fa+((1/dt)-render._fa)*0.1:1/dt;}
+  if(S.showFps&&ts-(render._fpsT||0)>250){render._fpsT=ts;const fe=document.getElementById('fps-meter');if(fe)fe.textContent=Math.round(render._fa||0)+' fps';}
   // Tournaments run time faster so a full day+night cycle fits the 6-minute match
   // (3 min day + 3 min night). 1440 game-min / 360s = 4 game-min per real sec.
   if(activeTournament){
@@ -5658,8 +5659,9 @@ function renderStats(){
   // Graphics quality control
   const gfx=S.gfx||'auto';
   const gbtn=function(id,label){return '<button class="gfx-opt'+(gfx===id?' active':'')+'" onclick="setGfx(\''+id+'\')">'+label+'</button>';};
-  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?'auto-tunes to your device':gfx==='high'?'full quality':'fastest, lighter detail')+'</span></div>'
-    +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div></div>';
+  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?(_isPhone?'fast (phone default)':'full quality'):gfx==='high'?'full quality':'fastest, lighter detail')+'</span></div>'
+    +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div>'
+    +'<button class="gfx-fps-btn'+(S.showFps?' active':'')+'" onclick="toggleFps()">'+(S.showFps?'Hide':'Show')+' FPS counter</button></div>';
   // Achievements section
   html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{})+'</div>';
   document.getElementById('stats-list').innerHTML=html;
@@ -5667,6 +5669,11 @@ function renderStats(){
 function setGfx(mode){
   S.gfx=mode;applyGfxQuality();queueSave();renderStats();
   toast('Graphics: '+mode.charAt(0).toUpperCase()+mode.slice(1),'#2aa890');
+}
+function toggleFps(){
+  S.showFps=!S.showFps;
+  const fe=document.getElementById('fps-meter');if(fe)fe.style.display=S.showFps?'block':'none';
+  queueSave();renderStats();
 }
 function renderAchievementSections(map){
   const tiers=['impressive','extraordinary','goat'];
