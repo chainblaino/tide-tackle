@@ -209,6 +209,12 @@
   .stat-line:last-child{border-bottom:none;}
   .stat-line .sl-label{color:var(--text-soft);}
   .stat-line .sl-val{color:var(--ink);font-weight:800;}
+  .gfx-row{margin-top:13px;padding:11px;border:1.5px solid #d2b886;border-radius:11px;background:var(--parchment);}
+  .gfx-head{font-size:13px;font-weight:900;color:var(--wood-dark);margin-bottom:8px;}
+  .gfx-sub{font-size:11px;font-weight:700;color:var(--text-soft);margin-left:5px;}
+  .gfx-opts{display:flex;gap:7px;}
+  .gfx-opt{flex:1;padding:8px 6px;border-radius:9px;border:1.5px solid #c4a875;background:#fff;color:var(--text-soft);font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
+  .gfx-opt.active{background:var(--accent);color:#fff;border-color:var(--accent-dark);}
   .reset-btn{margin-top:11px;width:100%;padding:8px;font-size:12px;font-weight:800;color:var(--text-soft);background:transparent;border:2px dashed #c4a875;border-radius:9px;cursor:pointer;}
   .reset-btn:hover{color:#b3402a;border-color:#b3402a;}
 
@@ -2552,6 +2558,7 @@ function normalizeState(){
   if(typeof S.ledActive!=='boolean')S.ledActive=false;
   if(typeof S.radarActive!=='boolean')S.radarActive=false;
   if(typeof S.toothHook!=='boolean')S.toothHook=false;
+  if(S.gfx!=='high'&&S.gfx!=='smooth'&&S.gfx!=='auto')S.gfx='auto';
   if(typeof S.surfUnlocked!=='boolean')S.surfUnlocked=false;
   if(typeof S.surfHook!=='boolean')S.surfHook=false;
   if(typeof S.surfBait!=='number')S.surfBait=0;
@@ -2858,6 +2865,15 @@ let _bgGrad=null,_bgGradKey=''; // cached base-water gradient (per zone+height)
 const _iw=window.innerWidth||999;
 let DPR=Math.min(window.devicePixelRatio||1, _iw<1100?1.5:2);
 let _dprSettled=false,_dprProbeSum=0,_dprProbeN=0;
+let gfxLow=false; // Smooth mode (or auto-downgrade): trim always-on detail
+// Player graphics setting: 'auto' (adaptive), 'high' (full), 'smooth' (fastest).
+function applyGfxQuality(){
+  const cap=_iw<1100?1.5:2, q=(typeof S!=='undefined'&&S.gfx)||'auto';
+  if(q==='high'){DPR=cap;gfxLow=false;_dprSettled=true;}
+  else if(q==='smooth'){DPR=1;gfxLow=true;_dprSettled=true;}
+  else{DPR=cap;gfxLow=false;_dprSettled=false;_dprProbeSum=0;_dprProbeN=0;} // auto: re-measure
+  if(typeof canvas!=='undefined'&&canvas&&canvas.offsetWidth)resizeCanvas();
+}
 // canvas dimensions and scale set by resizeCanvas()
 let ORIGIN={x:380,y:72};
 const BOAT_FOOT={bottom:136,halfW:62};
@@ -3719,7 +3735,7 @@ function updateAndDrawRain(t){
   const w=currentWeather();
   if(w.id!=='rain'&&w.id!=='storm')return;
   const heavy=w.id==='storm';
-  const want=heavy?160:90;
+  const want=gfxLow?(heavy?70:45):(heavy?160:90);
   if(RAIN.length!==want)_initRain(want);
   ctx.save();
   ctx.strokeStyle=heavy?'rgba(190,210,235,0.55)':'rgba(180,200,220,0.45)';
@@ -4298,7 +4314,7 @@ function render(ts){
   if(!_dprSettled&&!tourn.active&&!surfActive&&!worldCovered()){
     if(dt>0.008&&dt<0.05){_dprProbeSum+=dt;_dprProbeN++;}  // ignore stalls/covered frames
     if(_dprProbeN>=70){
-      if(_dprProbeN/_dprProbeSum<48&&DPR>1){DPR=1;resizeCanvas();}else{_dprSettled=true;}
+      if(_dprProbeN/_dprProbeSum<48&&DPR>1){DPR=1;gfxLow=true;resizeCanvas();}else{_dprSettled=true;}
       _dprProbeSum=0;_dprProbeN=0;
     }
   }
@@ -4356,13 +4372,14 @@ function render(ts){
   if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.62)+')';ctx.fillRect(0,0,CW,CH);}
   if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*0.16)+')';ctx.fillRect(0,0,CW,CH);}
 
-  // swells (reduced from 10 to 5 rows - still looks full, half the sine calls)
-  for(let i=0;i<5;i++){const y0=(i/5)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
+  // swells (fewer rows in low-detail mode)
+  const _nsw=gfxLow?3:5;
+  for(let i=0;i<_nsw;i++){const y0=(i/_nsw)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.stroke();}
   // night stars-on-water shimmer + moon glint
   if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(480,0,240,210);}
   else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,350,250);}
   // whitecaps
-  for(const w of WHITECAPS){const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx,wy,w.r,w.r*.38,0,0,6.28);ctx.fill();}
+  for(let _wi=0;_wi<WHITECAPS.length;_wi+=(gfxLow?2:1)){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx,wy,w.r,w.r*.38,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
 
   // Beach at the south edge of the inshore - drive here to surf fish.
@@ -5638,9 +5655,18 @@ function renderStats(){
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
   const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
   let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
+  // Graphics quality control
+  const gfx=S.gfx||'auto';
+  const gbtn=function(id,label){return '<button class="gfx-opt'+(gfx===id?' active':'')+'" onclick="setGfx(\''+id+'\')">'+label+'</button>';};
+  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?'auto-tunes to your device':gfx==='high'?'full quality':'fastest, lighter detail')+'</span></div>'
+    +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div></div>';
   // Achievements section
   html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{})+'</div>';
   document.getElementById('stats-list').innerHTML=html;
+}
+function setGfx(mode){
+  S.gfx=mode;applyGfxQuality();queueSave();renderStats();
+  toast('Graphics: '+mode.charAt(0).toUpperCase()+mode.slice(1),'#2aa890');
 }
 function renderAchievementSections(map){
   const tiers=['impressive','extraordinary','goat'];
@@ -5711,7 +5737,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
     const tp=document.getElementById('mp-tournament');
     if(tp&&tp.classList.contains('active'))renderTournamentPanel();
   },60000);
-  requestAnimationFrame(()=>{resizeCanvas();initWorld('center',true);updateDriveUI();requestAnimationFrame(render);});
+  requestAnimationFrame(()=>{resizeCanvas();applyGfxQuality();initWorld('center',true);updateDriveUI();requestAnimationFrame(render);});
 })();
 </script>
 </body>
