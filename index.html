@@ -1648,6 +1648,7 @@ const TACKLE=[
   {id:'ch_p',   cat:'chunkrig', name:'Chum Setup', icon:'bait-cutbait', cost:300, pack:4, dur:14, rare:1.3, lvl:6, desc:'Heavy chum & flat lines.'},
   {id:'dd_b',   cat:'deeprig', name:'Deep-Drop Rig', icon:'tackle-deep', cost:150, pack:3, dur:5, rare:1, lvl:7, desc:'Weighted rig for the depths.'},
   {id:'dd_p',   cat:'deeprig', name:'Electric Deep Rig', icon:'tackle-anchor', cost:520, pack:3, dur:12, rare:1.35, lvl:9, desc:'Lighted bait, 1,500 ft+.'},
+  {id:'tooth_hook',cat:'special',name:'Great White Tooth Hook',icon:'tackle-circle',cost:0,pack:0,dur:9999,rare:1.5,lvl:1,desc:'Carved from a great white tooth. Never breaks — works as a jighead or a circle hook.',reward:'greatwhite',rewardName:'a Great White'},
 ];
 
 const BAIT=[
@@ -1821,6 +1822,7 @@ const BOATS=[
   {id:'console',name:'Center Console',icon:'boat-console',cost:1800, lvl:5,  maxZone:2, range:0,  speed:4.2, perk:'tacklesaver',perkName:'Tackle Saver: 12% no wear per cast'},
   {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, speed:5.1, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
   {id:'sport',  name:'Sportfisher',  icon:'boat-sport',   cost:7000, lvl:10, maxZone:2, range:70, speed:6.2, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
+  {id:'marlinboat',name:'Black Marlin Speedboat',icon:'boat-sport',cost:0,lvl:1,maxZone:2,range:90,speed:9.8,perk:'finder',perkName:'Fish Finder: +range & better odds',reward:'blackmarlin',rewardName:'a Black Marlin'},
 ];
 function boatSpeed(id){const b=BOATS.find(x=>x.id===id);return b?b.speed:3;}
 
@@ -1830,6 +1832,7 @@ const RODS=[
   {id:'rod2',name:'Composite Rod', zoneBonus:9,  color:'#7a4a3a',cost:650, lvl:5, desc:'Backbone for bigger fish.'},
   {id:'rod3',name:'Tournament Rod',zoneBonus:13, color:'#2c2c30',cost:1800,lvl:8, desc:'Pro blank, big forgiveness.'},
   {id:'rod4',name:'Bluewater Rod', zoneBonus:17, color:'#1f2a44',cost:4200,lvl:11,desc:'Heavy stand-up power.'},
+  {id:'chainsaw',name:'Chainsaw Rod',zoneBonus:17,color:'#d4500a',cost:0,lvl:1,desc:'A roaring saw blade for a butt. Adds a SLOW-MO button in the fight: −50% fish speed for 3s, once per fight.',reward:'sawfish',rewardName:'a Sawfish'},
 ];
 const REELS=[
   {id:'reel0',name:'2500 Spinning',range:145,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
@@ -2429,6 +2432,7 @@ function normalizeState(){
   if(typeof S.chumCasts!=='number')S.chumCasts=0;
   if(typeof S.ledActive!=='boolean')S.ledActive=false;
   if(typeof S.radarActive!=='boolean')S.radarActive=false;
+  if(typeof S.toothHook!=='boolean')S.toothHook=false;
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
   // migrate legacy one-time lure purchases into consumable stacks
   if(Array.isArray(S.ownedLures)){
@@ -2593,7 +2597,7 @@ function dist(ax,ay,bx,by){return Math.hypot(ax-bx,ay-by);}
 function fmtLb(w){return w>=10?Math.round(w):w.toFixed(1);}
 function castRange(){return curReel().range + curBoat().range;}
 function tackleForCat(cat){return TACKLE.filter(t=>t.cat===cat && S.tackleInv[t.id] && S.tackleInv[t.id].qty>0).map(t=>t.id);}
-function currentTackleId(){const cat=curMethod().cat;if(S.tackleSel[cat]&&S.tackleInv[S.tackleSel[cat]]&&S.tackleInv[S.tackleSel[cat]].qty>0)return S.tackleSel[cat];const own=tackleForCat(cat);return own[0]||null;}
+function currentTackleId(){const cat=curMethod().cat;if(S.toothHook&&(cat==='jig'||cat==='livehook'))return 'tooth_hook';if(S.tackleSel[cat]&&S.tackleInv[S.tackleSel[cat]]&&S.tackleInv[S.tackleSel[cat]].qty>0)return S.tackleSel[cat];const own=tackleForCat(cat);return own[0]||null;}
 function tackleById(id){return TACKLE.find(t=>t.id===id);}
 
 // ===================== TIME =====================
@@ -4245,8 +4249,8 @@ function cast(x,y){
     if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
     if(!(S.lureInv[S.lureSel]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
   }
-  // consume tackle durability (unless tacklesaver perk)
-  if(!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
+  // consume tackle durability (unless tacklesaver perk; the tooth hook never wears)
+  if(tid!=='tooth_hook'&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
     const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
   }
   bobber={x,y,active:true,struct:nearestStruct(x,y)};
@@ -4451,6 +4455,7 @@ let sdewFishCy=140,sdewFishVel=0;
 let sdewMeter=30,sdewAnimId=null,sdewAlertTimer=null;
 let sdewStartTime=0,sdewDiff=1;
 let sdewRetryUsed=false;          // a non-ultra fish gives only one paid retry
+let sdewSlowmoUsed=false,sdewSlowmoUntil=0;   // Chainsaw Rod: one slow-mo per fight
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
@@ -4483,6 +4488,9 @@ function startSdewGame(fish){
   sdewMeter=30;
   document.getElementById('sdew-fish-icon').innerHTML=svgIcon('fish',26);
   document.getElementById('sdew-title').textContent=fish.name;
+  sdewSlowmoUsed=false;sdewSlowmoUntil=0;
+  const smBtn=document.getElementById('sdew-slowmo');
+  if(smBtn){const has=S.rod==='chainsaw';smBtn.style.display=has?'flex':'none';smBtn.disabled=false;}
   document.getElementById('sdew-overlay').classList.add('show');
   updateSdewDOM();
   sdewAnimId=requestAnimationFrame(sdewLoop);
@@ -4505,9 +4513,11 @@ function sdewLoop(){
   // sdewDiff scales the challenge by the target's rarity (tournament targets).
   // SDEW_EASE keeps the fish slower & more readable: challenging but enjoyable.
   const ease=0.6;
-  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease;
-  const dartChance=grace?0:beh.dartChance*sdewDiff*ease;
-  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease;
+  // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
+  const slow=(now<sdewSlowmoUntil)?0.5:1;
+  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow;
+  const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
+  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease*slow;
   sdewFishVel+=(Math.random()-.5)*erratic;
   if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease;
   sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
@@ -4532,11 +4542,20 @@ function updateSdewDOM(){
   mEl.className='sdew-meter-fill'+(sdewMeter<25?' danger':'');
 }
 
+function useChainsawSlowmo(){
+  if(!sdewActive||S.rod!=='chainsaw'||sdewSlowmoUsed)return;
+  sdewSlowmoUsed=true;
+  const now=performance.now?performance.now():Date.now();
+  sdewSlowmoUntil=now+3000;
+  const smBtn=document.getElementById('sdew-slowmo');if(smBtn)smBtn.disabled=true;
+  toast('Slow-mo! Fish at half speed for 3s.','#ff9a2a');
+}
 function endSdewGame(success){
   sdewActive=false;
   cancelAnimationFrame(sdewAnimId);
   clearTimeout(sdewAlertTimer);
   document.getElementById('sdew-overlay').classList.remove('show');
+  const smBtn=document.getElementById('sdew-slowmo');if(smBtn)smBtn.style.display='none';
   document.getElementById('rig-bar').style.pointerEvents='';
   if(!success){offerSdewRetry();return;}
   const f=hookedFish,w=hookW;
@@ -4656,12 +4675,31 @@ function land(f,w,perfect,bullseye){
   addXP(xp);
   const trophy=sizeFrac>0.85;
   setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
-  if(f.rarity==='ultra')toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');
+  if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
 }
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
+
+// Ultra legendary catches award a signature piece of gear tied to that species.
+function grantUltraReward(f){
+  let msg=null,sub='';
+  if(f.id==='sawfish'){
+    if(!S.ownedRods.includes('chainsaw'))S.ownedRods.push('chainsaw');
+    S.rod='chainsaw';msg='Chainsaw Rod';sub='Equipped! A SLOW-MO button now appears in fights.';
+  }else if(f.id==='blackmarlin'){
+    if(!S.ownedBoats.includes('marlinboat'))S.ownedBoats.push('marlinboat');
+    S.boat='marlinboat';msg='Black Marlin Speedboat';sub='Equipped! The fastest boat in the game.';
+  }else if(f.id==='greatwhite'){
+    S.toothHook=true;S.ownedTooth=true;msg='Great White Tooth Hook';sub='Unbreakable \u2014 jighead or circle hook.';
+  }
+  if(msg){
+    updateRigBar();
+    setTimeout(function(){toast('\u2605 '+msg+' unlocked! '+sub,'#ff3df0');},1500);
+    setTimeout(function(){if(typeof refreshMenu==='function')refreshMenu();},200);
+  }
+}
 
 function showCatch(f,w,o){
   const ultra=f.rarity==='ultra';
@@ -4697,7 +4735,8 @@ function updateRigBar(){
   const tid=currentTackleId();
   const tEl=document.getElementById('rig-tackle'),tq=document.getElementById('rig-tackle-q');
   const tslot=document.querySelector('.rig-slot[data-rig="tackle"]');
-  if(tid){const tk=tackleById(tid),inv=S.tackleInv[tid];tEl.textContent=tk.name;tq.textContent='dur '+inv.dur+' \u00b7 x'+inv.qty;tslot.classList.remove('empty');}
+  if(tid==='tooth_hook'){tEl.textContent='Tooth Hook';tq.textContent='never breaks';tslot.classList.remove('empty');}
+  else if(tid){const tk=tackleById(tid),inv=S.tackleInv[tid];tEl.textContent=tk.name;tq.textContent='dur '+inv.dur+' \u00b7 x'+inv.qty;tslot.classList.remove('empty');}
   else{tEl.textContent='none';tq.textContent='buy in shop';tslot.classList.add('empty');}
   const bEl=document.getElementById('rig-bait'),bq=document.getElementById('rig-bait-q'),bslot=document.querySelector('.rig-slot[data-rig="bait"]');
   const baitLabel=bslot.querySelector('.rl');
@@ -4886,7 +4925,12 @@ function prereqLocked(kind,item){
 const COIN='<span class="coin-s" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
 function shopRow(item,kind,owned,equipped,extra,swatch){
   const canAfford=S.gold>=item.cost,meetsLvl=S.level>=item.lvl;
-  const needPrev=!owned?prereqLocked(kind,item):null;
+  // Reward items can't be bought — they're earned by catching an ultra legendary.
+  if(item.reward&&!owned){
+    const icon0=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
+    return '<div class="shop-item locked reward-locked" data-kind="'+kind+'" data-id="'+item.id+'">'+icon0+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+(item.desc||'')+(extra||'')+'</div></div><span class="shop-action lvl">Catch '+(item.rewardName||'an Ultra Legendary')+'</span></div>';
+  }
+  const needPrev=(!owned&&!item.reward)?prereqLocked(kind,item):null;
   let action;
   if(equipped)action='<span class="shop-action equipped-tag">Equipped</span>';
   else if(owned&&kind!=='tackle'&&kind!=='bait')action='<span class="shop-action equip">Equip</span>';
@@ -4915,8 +4959,8 @@ function renderShop(){
   else if(shopTab==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
   else if(shopTab==='braid')html=BRAIDS.map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),S.braid===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
   else if(shopTab==='leaders')html=LEADERS.map(l=>shopRow(l,'leader',S.ownedLeaders.includes(l.id),S.leader===l.id,'',false)).join('');
-  else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;const meth=METHODS.find(m=>m.cat===t.cat);
-    return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:t.cat)+' \u00b7 durability '+t.dur+(own?' \u00b7 own x'+inv.qty:''),false);}).join('');
+  else if(shopTab==='tackle')html=TACKLE.map(t=>{const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>m.cat===t.cat);
+    return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(shopTab==='lures'){
     html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>';
@@ -5017,7 +5061,7 @@ document.getElementById('shop-tabs').addEventListener('click',e=>{const t=e.targ
 document.getElementById('shop-list').addEventListener('click',e=>{
   const item=e.target.closest('.shop-item');if(!item)return;
   const kind=item.dataset.kind,id=item.dataset.id;
-  if(kind==='tackle'){const t=tackleById(id);if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack,dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
+  if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack,dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
   else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(S.gold<bt.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=bt.cost;S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();}
   else if(kind==='cosmetic'){
     const slot=item.dataset.slot;
@@ -5070,6 +5114,7 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     const map={boat:[BOATS,S.ownedBoats,'boat'],rod:[RODS,S.ownedRods,'rod'],reel:[REELS,S.ownedReels,'reel'],braid:[BRAIDS,S.ownedBraids,'braid'],leader:[LEADERS,S.ownedLeaders,'leader']};
     const[list,owned,key]=map[kind];const obj=list.find(x=>x.id===id);
     if(!owned.includes(id)){
+      if(obj.reward){toast('Earned by catching '+(obj.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
       const need=prereqLocked(kind,obj);
       if(need){toast('Buy the '+need+' first.','#b58b53');return;}
       if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}
