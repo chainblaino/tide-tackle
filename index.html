@@ -766,7 +766,21 @@
 </div>
 <div class="tourn-banner" id="tourn-banner">TOURNAMENT IN PROGRESS</div>
     <div class="tourn-standings" id="tourn-standings"></div>
-<button id="coop-exit" onclick="leaveSession(false)" style="display:none;position:absolute;top:38px;right:12px;z-index:9;padding:7px 12px;border-radius:10px;border:none;background:#d61f3a;color:#fff;font-family:'Fredoka';font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);">Leave World</button>
+<!-- Co-op controls: stacked on the right edge, clear of the Pull Anchor button (top:52) and the joystick (bottom-left). -->
+<button id="map-btn" onclick="openCoopMap()" style="display:none;position:absolute;top:100px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #7fb8e3;background:linear-gradient(135deg,#3a8fd4,#1d5e9c);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #14406c;touch-action:manipulation;white-space:nowrap;">🗺 Map</button>
+<button id="coop-exit" onclick="leaveSession(false)" style="display:none;position:absolute;top:146px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #f2a0ac;background:linear-gradient(135deg,#e0344e,#a3132a);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #6c0a1a;touch-action:manipulation;white-space:nowrap;">Leave World</button>
+
+<!-- Live co-op map overlay -->
+<div id="coop-map-bg" onclick="if(event.target===this)closeCoopMap()" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(8,18,30,.78);align-items:center;justify-content:center;backdrop-filter:blur(2px);">
+  <div style="background:var(--cream,#fdf4e3);border:3px solid var(--wood,#8b5a2b);border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.5);padding:14px 14px 12px;max-width:420px;width:92%;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+      <div style="font-family:'Fredoka';font-weight:800;font-size:15px;color:var(--wood-dark,#5a3a16);">🗺 <span id="coop-map-zone">Zone</span> &middot; Friends</div>
+      <button onclick="closeCoopMap()" style="border:none;background:#d8c6a4;color:#5a3a16;font-weight:900;font-size:16px;width:26px;height:26px;border-radius:50%;cursor:pointer;line-height:1;">×</button>
+    </div>
+    <canvas id="coop-map-canvas" width="380" height="300" style="width:100%;display:block;border-radius:12px;background:#0d2740;"></canvas>
+    <div id="coop-map-legend" style="margin-top:8px;font-size:11px;color:var(--text-soft,#8a6a44);line-height:1.5;"></div>
+  </div>
+</div>
 
 <script>
 // ─────────────────────────────────────────────────────────────
@@ -1592,6 +1606,42 @@ function startTournamentMode(def){
   // Co-op worlds have no timer (leave when you like); everything else runs 6 min.
   if(!def.coop)setTimeout(endTournament,6*60*1000);
 }
+// Co-op friends world: the normal multi-zone world (with working zone gates),
+// shared with friends via live position sync, on the host's seed so structures
+// line up for everyone. No bots, no ranking, shop open, free roam, no timer.
+function startCoopMode(def){
+  activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:seasonNow(),
+    abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now()};
+  if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
+  tourn.active=false;tourn.coop=true;
+  tourn.seed=(activeSession&&activeSession.seed)||S.worldSeed||1;
+  tourn.structs=[];
+  S.zone=def.zone||0;
+  initStructures();          // rebuild every zone on the shared seed
+  initCoopGhosts();          // friends as ghosts + start live position sync
+  setupAbilityButton();      // abilities still work (and affect friends)
+  ensureRig();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
+  closeMenu();               // shop stays open: we do NOT add 'tourn-active'
+  const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
+  _bn.textContent='FISHING WITH FRIENDS';_bn.classList.remove('leading');
+  const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display='block';
+  const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';
+  toast('Fishing with friends! Roam any zone together — same spots for everyone.','#2aa890');
+}
+function initCoopGhosts(){
+  tourn.ghosts=[];
+  if(activeLobby){
+    const myUid=myTournUid();
+    activeLobby.players.forEach(function(p){
+      if(p.uid===myUid)return;
+      const cx=worldW()/2,cy=worldH()/2;
+      tourn.ghosts.push({uid:p.uid,name:p.username||'Angler',isBot:false,real:true,hasReal:false,
+        wx:cx,wy:cy,zone:S.zone,heading:0,boat:'kayak',cosmetic:{},set:null,
+        tx:cx,ty:cy,th:0,buf:[]});
+    });
+  }
+  startTournamentSync();
+}
 function recordTournamentCatch(fish,weight){
   recordChallengeBest(fish,weight);
   if(!activeTournament)return;
@@ -1713,13 +1763,14 @@ function createSession(mode,stake){
   const zone=S.zone||0;
   const fish=mode==='challenge'?_randChallengeSpecies(zone):null;
   const id=_newSessionId();
-  activeSession={id:id,mode:mode,host:fbUser.uid,hostName:fbUsername,stake:stake,zone:zone,
+  const seed=(S.worldSeed&&S.worldSeed>0)?S.worldSeed:(Math.floor(Math.random()*2147483646)+1);
+  activeSession={id:id,mode:mode,host:fbUser.uid,hostName:fbUsername,stake:stake,zone:zone,seed:seed,
     fishId:fish?fish.id:null,fishName:fish?fish.name:null,isHost:true,started:false,
     players:{}};
   activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
   const docPlayers={};docPlayers[fbUser.uid]={username:fbUsername,best:0,bestName:''};
   fbDb.collection('challenges').doc(id).set({
-    host:fbUser.uid,hostName:fbUsername,mode:mode,stake:stake,zone:zone,
+    host:fbUser.uid,hostName:fbUsername,mode:mode,stake:stake,zone:zone,seed:seed,
     fishId:activeSession.fishId,fishName:activeSession.fishName,
     status:'lobby',createdAt:Date.now(),players:docPlayers
   }).catch(function(){toast('Could not start the session.','#b3402a');});
@@ -1816,7 +1867,7 @@ function acceptSessionInvite(inv){
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername,best:0,bestName:''};
     ref.update(upd).catch(function(){});
     activeSession={id:inv.sessionId,mode:data.mode,host:data.host,hostName:data.hostName,stake:data.stake,
-      zone:data.zone,fishId:data.fishId,fishName:data.fishName,isHost:false,started:false,players:data.players||{}};
+      zone:data.zone,seed:data.seed||null,fishId:data.fishId,fishName:data.fishName,isHost:false,started:false,players:data.players||{}};
     activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
     openSessionLobby();
   }).catch(function(){toast('Could not join.','#b3402a');});
@@ -1846,7 +1897,11 @@ function enterSessionMatch(){
     zone:activeSession.zone,rarity:fish?fish.rarity:'rare',targetFish:fish,maxP:SESSION_MAX,
     session:true,coop:activeSession.mode==='coop',mode:activeSession.mode,stake:activeSession.stake,sessId:activeSession.id};
   activeLobby={def:def,players:_sessionPlayersList()};
-  startTournamentMode(def);
+  // Co-op friends worlds use the normal multi-zone world (free roam between
+  // inshore/nearshore/offshore on a shared seed). Ruby challenges stay in the
+  // single big tournament arena, same as ranked tournaments.
+  if(def.coop)startCoopMode(def);
+  else startTournamentMode(def);
 }
 // ---- live best-catch sync (challenge) ----
 function recordChallengeBest(fish,weight){
@@ -1861,13 +1916,18 @@ function recordChallengeBest(fish,weight){
 // ---- end / leave ----
 function _restoreWorldAfterSession(){
   stopTournamentSync();
-  tourn.active=false;tourn.ghosts=[];tourn.structs=[];
+  tourn.active=false;tourn.coop=false;tourn.seed=null;tourn.ghosts=[];tourn.structs=[];
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const bo=document.getElementById('blind-overlay');if(bo)bo.classList.remove('show');
   document.body.classList.remove('tourn-active');
   document.getElementById('tourn-banner').style.display='none';
   const _ce=document.getElementById('coop-exit');if(_ce)_ce.style.display='none';
+  const _mb=document.getElementById('map-btn');if(_mb)_mb.style.display='none';
+  closeCoopMap();
+  // Co-op lets you roam past your boat's limit; back in your own world, snap to the
+  // deepest zone your boat can actually reach so you're never stranded offshore.
+  if(S.zone>maxZone())S.zone=maxZone();
   initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
   if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
 }
@@ -2434,7 +2494,9 @@ const TEMP_STRUCTS=[
 function tempStructFor(zoneIdx){return TEMP_STRUCTS.find(t=>t.zone===zoneIdx)||null;}
 function initStructures(){
   if(typeof S!=='undefined'&&(!S.worldSeed||S.worldSeed<=0))S.worldSeed=Math.floor(Math.random()*2147483646)+1;
-  const seed=(typeof S!=='undefined'&&S.worldSeed)||1;
+  // In a co-op friends world everyone uses the HOST's seed, so every structure
+  // lands in the exact same spot on every player's screen.
+  const seed=(typeof tourn!=='undefined'&&tourn.coop&&tourn.seed)?tourn.seed:((typeof S!=='undefined'&&S.worldSeed)||1);
   ZONES.forEach((z,i)=>{
     const W=WORLD_DIMS[i][0],H=WORLD_DIMS[i][1];
     const defs=ZONE_STRUCTS[i];
@@ -3726,7 +3788,10 @@ function sightFishHitAt(sx,sy){
 const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200]]; // inshore / nearshore / offshore
 // Tournament world: a single big, vast map with randomly scattered structures
 // and other players (ghosts) roaming around. Set up in startTournamentMode.
-let tourn={active:false,W:0,H:0,structs:[],ghosts:[]};
+let tourn={active:false,coop:false,seed:null,W:0,H:0,structs:[],ghosts:[]};
+// True whenever other real players (ghosts) share our water: a ranked tournament
+// (single big world) OR a co-op friends world (normal multi-zone world).
+function mpActive(){return tourn.active||tourn.coop;}
 function worldW(){return tourn.active?tourn.W:WORLD_DIMS[S.zone][0];}
 function worldH(){return tourn.active?tourn.H:WORLD_DIMS[S.zone][1];}
 function activeStructures(){
@@ -3858,7 +3923,7 @@ function sampleGhostBuffer(g,renderT){
   return {x:last.x,y:last.y,h:last.h};
 }
 function updateGhosts(){
-  if(!tourn.active||!tourn.ghosts.length)return;
+  if(!mpActive()||!tourn.ghosts.length)return;
   // Bots gang up on whoever is leading: when the player sits in the top 3 they
   // get hunted harder (faster, tighter chase, more frequent abilities).
   const _lp=liveTournPlace();
@@ -3971,7 +4036,7 @@ function startTournamentSync(){
       const _tOff0=nowMs-senderT;
       if(!g){
         // A real player we didn't have in the lobby snapshot: add them
-        g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
+        g={uid:uid,name:p.name||'Angler',isBot:false,real:true,zone:(typeof p.zone==='number'?p.zone:S.zone),
            wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
            cosmetic:p.cos||{},set:p.set||null,rod:p.rod||'rod0',reel:p.reel||'reel0',gender:p.gen||'male',skinTone:p.skin||'medlight',
            tx:p.wx,ty:p.wy,th:p.heading||0,buf:[],_lastSyncMs:nowMs,_lastSampleT:sampleT,_tOff:_tOff0,hasReal:true};
@@ -3979,6 +4044,7 @@ function startTournamentSync(){
         tourn.ghosts.push(g);
       }else{
         g.real=true;g.isBot=false;g.hasReal=true;
+        if(typeof p.zone==='number')g.zone=p.zone;
         if(typeof g._tOff!=='number')g._tOff=_tOff0;
         // only buffer genuinely new samples (skip duplicate re-publishes)
         if(p.wx!==g.tx||p.wy!==g.ty||sampleT!==g._lastSampleT){pushGhostSample(g,p.wx,p.wy,p.heading||0,sampleT);g._lastSampleT=sampleT;}
@@ -4009,7 +4075,7 @@ function publishMyPosition(ref,force){
   if(!force&&!pending&&!((moved>6&&since>=450)||since>=1600))return;
   publishMyPosition._lx=boat.wx;publishMyPosition._ly=boat.wy;publishMyPosition._lt=now;
   const upd={};
-  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,
+  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,zone:S.zone,
     cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades,crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
     rod:S.rod,reel:S.reel,gen:S.gender||'male',skin:S.skinTone||'medlight',
     inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null,t:Date.now()};
@@ -4033,6 +4099,77 @@ function stopTournamentSync(){
     }catch(e){}
   }
   tourn.posKey=null;
+}
+// ----- Live co-op map: a top-down minimap of the current zone showing every
+// structure plus you and any friends fishing the same zone, updated in real time.
+let _coopMapInt=null;
+function openCoopMap(){
+  if(!tourn.coop){toast('The map opens while fishing with friends.','#b58b53');return;}
+  const bg=document.getElementById('coop-map-bg');if(!bg)return;
+  bg.style.display='flex';
+  drawCoopMap();
+  if(_coopMapInt)clearInterval(_coopMapInt);
+  _coopMapInt=setInterval(drawCoopMap,500); // live refresh while open
+}
+function closeCoopMap(){
+  const bg=document.getElementById('coop-map-bg');if(bg)bg.style.display='none';
+  if(_coopMapInt){clearInterval(_coopMapInt);_coopMapInt=null;}
+}
+function drawCoopMap(){
+  const cv=document.getElementById('coop-map-canvas');if(!cv)return;
+  const g=cv.getContext('2d');const CWp=cv.width,CHp=cv.height;
+  const W=worldW(),H=worldH();
+  const pad=10,availW=CWp-pad*2,availH=CHp-pad*2;
+  const sc=Math.min(availW/W,availH/H);
+  const offX=(CWp-W*sc)/2,offY=(CHp-H*sc)/2;
+  const MX=x=>offX+x*sc,MY=y=>offY+y*sc;
+  // water
+  g.fillStyle='#0d2740';g.fillRect(0,0,CWp,CHp);
+  const wg=g.createLinearGradient(0,offY,0,offY+H*sc);
+  wg.addColorStop(0,'#1d5e7a');wg.addColorStop(1,'#08243a');
+  g.fillStyle=wg;g.fillRect(offX,offY,W*sc,H*sc);
+  g.strokeStyle='rgba(255,255,255,.25)';g.lineWidth=1.5;g.strokeRect(offX,offY,W*sc,H*sc);
+  // zone-edge hints (deeper at top, shallower at bottom)
+  g.fillStyle='rgba(255,255,255,.55)';g.font='700 9px Fredoka, system-ui, sans-serif';g.textAlign='center';
+  if(S.zone<2)g.fillText('▲ '+ZONE_LBL[S.zone+1],CWp/2,offY+11);
+  if(S.zone>0)g.fillText('▼ '+ZONE_LBL[S.zone-1],CWp/2,offY+H*sc-4);
+  // structures
+  for(const s of activeStructures()){
+    const x=MX(s.x),y=MY(s.y);
+    g.fillStyle=s.temp?'#ffd24a':'#e8b66a';
+    g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1;
+    g.beginPath();g.moveTo(x,y-4);g.lineTo(x+4,y);g.lineTo(x,y+4);g.lineTo(x-4,y);g.closePath();g.fill();g.stroke();
+  }
+  // friends in this zone
+  let here=0,elsewhere=0;const now=Date.now();
+  const palette=['#46d39a','#ff8c4a','#c98ce0','#5ab6ff','#ffd24a'];
+  let ci=0;
+  for(const gh of (tourn.ghosts||[])){
+    if(!gh.real)continue;
+    if(typeof gh.zone==='number'&&gh.zone!==S.zone){elsewhere++;continue;}
+    if(gh._lastSyncMs&&now-gh._lastSyncMs>20000)continue;
+    here++;
+    const col=palette[ci++%palette.length];
+    const x=MX(gh.wx),y=MY(gh.wy);
+    g.fillStyle=col;g.beginPath();g.arc(x,y,4.5,0,6.28);g.fill();
+    g.strokeStyle='#fff';g.lineWidth=1.4;g.stroke();
+    g.fillStyle='#fff';g.font='700 9px Fredoka, system-ui, sans-serif';g.textAlign='center';
+    g.fillText((gh.name||'Angler').slice(0,10),x,y-7);
+  }
+  // you
+  const px=MX(boat.wx),py=MY(boat.wy);
+  g.save();g.translate(px,py);
+  g.fillStyle='#fff';g.strokeStyle='#1d7a4a';g.lineWidth=1.6;
+  g.beginPath();g.arc(0,0,5.5,0,6.28);g.fill();g.stroke();
+  g.fillStyle='#1d7a4a';g.beginPath();g.arc(0,0,2.6,0,6.28);g.fill();
+  g.restore();
+  g.fillStyle='#fff';g.font='800 9px Fredoka, system-ui, sans-serif';g.textAlign='center';g.fillText('YOU',px,py-8);
+  // header + legend
+  const zn=document.getElementById('coop-map-zone');if(zn)zn.textContent=ZONE_LBL[S.zone]||'Zone';
+  const lg=document.getElementById('coop-map-legend');
+  if(lg)lg.innerHTML='<span style="color:#1d7a4a;">●</span> You &nbsp; <span style="color:#46d39a;">●</span> Friends here: '+here
+    +(elsewhere?' &nbsp; <span style="opacity:.7;">'+elsewhere+' in other zones</span>':'')
+    +' &nbsp; <span style="color:#e8b66a;">◆</span> Fishing spots';
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex,a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
@@ -4076,12 +4213,14 @@ function drawGhostFull(g,dark){
   boat.anchored=sv.anchored;ORIGIN.x=sv.ox;ORIGIN.y=sv.oy;lineRig.tipX=sv.ltx;lineRig.tipY=sv.lty;
 }
 function drawGhosts(t,dark){
-  if(!tourn.active||!tourn.ghosts.length)return;
+  if(!mpActive()||!tourn.ghosts.length)return;
   const now=Date.now();
   // far ghosts first so nearer ones overlap them naturally
   const list=tourn.ghosts.slice().sort(function(a,b){return a.wy-b.wy;});
   for(const g of list){
     if(g._invisibleUntil&&now<g._invisibleUntil)continue; // vanished player
+    // In a co-op world friends roam separate zones: only draw same-zone players.
+    if(tourn.coop&&typeof g.zone==='number'&&g.zone!==S.zone)continue;
     const sx=g.wx-camera.x,sy=g.wy-camera.y;
     if(sx<-120||sx>CW+120||sy<-120||sy>CH+120)continue;
     const setId=g.set;
@@ -4122,10 +4261,11 @@ function updateAbilityButton(){
   else{btn.querySelector('.ab-uses').textContent='Ready';btn.disabled=false;}
 }
 function nearestGhost(maxDist){
-  if(!tourn.active||!tourn.ghosts.length)return null;
+  if(!mpActive()||!tourn.ghosts.length)return null;
   const now=Date.now();let best=null,bd=maxDist||1e9;
   for(const g of tourn.ghosts){
     if(g._invisibleUntil&&now<g._invisibleUntil)continue;
+    if(tourn.coop&&typeof g.zone==='number'&&g.zone!==S.zone)continue; // same-zone only
     const d=dist(boat.wx,boat.wy,g.wx,g.wy);
     if(d<bd){bd=d;best=g;}
   }
@@ -4264,8 +4404,8 @@ function loseEquippedConsumable(frac){
 }
 // Tap an angler while roaming a tournament to see their loadout (show off!).
 function ghostAtScreen(x,y){
-  if(!tourn.active)return null;const now=Date.now();
-  for(const g of tourn.ghosts){if(g._invisibleUntil&&now<g._invisibleUntil)continue;const sx=g.wx-camera.x,sy=g.wy-camera.y;if(Math.hypot(x-sx,y-sy)<26)return g;}
+  if(!mpActive())return null;const now=Date.now();
+  for(const g of tourn.ghosts){if(g._invisibleUntil&&now<g._invisibleUntil)continue;if(tourn.coop&&typeof g.zone==='number'&&g.zone!==S.zone)continue;const sx=g.wx-camera.x,sy=g.wy-camera.y;if(Math.hypot(x-sx,y-sy)<26)return g;}
   return null;
 }
 function showGhostInfo(g){
@@ -4356,7 +4496,9 @@ function enterWorld(tz,arriveDir){
 function tryGate(g){
   const now=performance.now?performance.now():Date.now();
   if(now<_gateCoolUntil)return;
-  if(g.tz>maxZone()){
+  // In a co-op friends world everyone can roam all three zones together, no matter
+  // what boat they own — the whole point is to fish side by side.
+  if(g.tz>maxZone()&&!tourn.coop){
     const need=BOATS.find(b=>b.maxZone>=g.tz);
     toast('Need the '+(need?need.name:'a bigger boat')+' for '+ZONE_LBL[g.tz],'#b3402a');
     _gateCoolUntil=now+2500;
@@ -5224,8 +5366,8 @@ function render(ts){
     if(s.temp){const pr=42+Math.sin(t*2.2)*5;const gg=ctx.createRadialGradient(sx,sy,6,sx,sy,pr);gg.addColorStop(0,'rgba(255,214,120,.22)');gg.addColorStop(1,'rgba(255,214,120,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(sx,sy,pr,0,6.28);ctx.fill();}
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
-  // other players + ability effects (skip entirely outside tournaments)
-  if(tourn.active){
+  // other players + ability effects (tournaments AND co-op friends worlds)
+  if(mpActive()){
     tickAbilityEffects();
     drawSmokeClouds(Date.now());
     updateGhosts();drawGhosts(t,sky.darkness);
@@ -5362,7 +5504,7 @@ function nearestStruct(x,y){let best=null,bd=1e9;for(const s of activeStructures
 
 canvas.addEventListener('click',e=>{
   if(driving()){
-    if(tourn.active){
+    if(mpActive()){
       const rect=canvas.getBoundingClientRect();
       const gx=(e.clientX-rect.left)*(CW/rect.width),gy=(e.clientY-rect.top)*(CH/rect.height);
       const g=ghostAtScreen(gx,gy);
@@ -6052,7 +6194,7 @@ function showCatch(f,w,o){
     '<div class="catch-name">'+f.name+'</div>'+
     '<div class="catch-rarity'+(ultra?' ultra-rarity':'')+'"'+(ultra?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+' \u00b7 '+ZONES[f.zone].name+'</div>'+
     '<div class="catch-weight">'+fmtLb(w)+' lb</div>'+
-    '<div class="catch-rewards">+'+o.xp+' XP'+(activeTournament?' &nbsp;\u00b7&nbsp; tournament catch':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold')+'</div>'+
+    '<div class="catch-rewards">+'+o.xp+' XP'+((activeTournament&&!(activeTournament.def&&activeTournament.def.coop))?' &nbsp;\u00b7&nbsp; tournament catch':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold')+'</div>'+
     '<div class="catch-fact">'+f.fact+'</div>'+
     '<button class="catch-ok" onclick="closeCatch()">'+(ultra?'Once in a lifetime!':'Nice!')+'</button>';
   document.getElementById('catch-bg').classList.add('show');
