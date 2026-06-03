@@ -1170,7 +1170,7 @@ function getAlwaysTournament(){
   const zone=Math.floor(seededRnd(seed*3)*3);
   const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed*7+1)*3)];
   const fee=tournFee(zone,rarity);
-  const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&f.rarity===rarity;}):[];
+  const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&f.rarity===rarity&&!f.surf;}):[];
   const targetFish=pool.length?pool[Math.floor(seededRnd(seed*11+2)*pool.length)]:null;
   return {id:"always",zone:zone,name:"The Big Cast",maxP:50,rarity:rarity,fee:fee,targetFish:targetFish,alwaysOn:true};
 }
@@ -1187,7 +1187,7 @@ function getDailyTournaments(){
     const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed+i*13337)*3)];
     const fee=tournFee(def.zone,rarity);
     // Pick a specific fish of that rarity in this zone
-    const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===rarity;});
+    const pool=FISH.filter(function(f){return f.zone===def.zone&&f.rarity===rarity&&!f.surf;});
     const targetFish=pool.length?pool[Math.floor(seededRnd(seed+i*97331)*pool.length)]:null;
     return Object.assign({},def,{rarity:rarity,fee:fee,targetFish:targetFish});
   });
@@ -1439,7 +1439,7 @@ function startTournamentMode(def){
         setTimeout(function(){
           if(!activeTournament)return;
           // Bots compete for the SAME target species the player is after.
-          const f=def.targetFish||FISH.filter(function(x){return x.zone===def.zone&&x.rarity===def.rarity;})[0];
+          const f=def.targetFish||FISH.filter(function(x){return x.zone===def.zone&&x.rarity===def.rarity&&!x.surf;})[0];
           if(!f)return;
           const a=f.size[0],b=f.size[1];
           const isNight=skyState(hourNow()).darkness>0.5;
@@ -3142,13 +3142,15 @@ function updateGhosts(){
     // Set-bots use their ability: often in daylight (aggressive), less at night
     // (busy fishing), and relentlessly when the player is leading.
     if(g.set&&activeTournament){
-      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?1500:3000)+Math.random()*6000;
+      // Abilities are an occasional nuisance, not a lock-out: long cooldowns so
+      // the player keeps control the vast majority of the time.
+      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?9000:15000)+Math.random()*9000;
       if(now>g._abilityReadyAt){
         const s=setById(g.set),dp=dist(g.wx,g.wy,boat.wx,boat.wy);
         if(botUseAbility(g,s,dp,now)){
-          const cdMul=pTop3?0.45:(1.5-0.8*dayAgg); // ~0.7 by day, ~1.5 at night
-          g._abilityReadyAt=now+((s.cd||30)*1000)*cdMul+Math.random()*4000;
-        }else g._abilityReadyAt=now+(pTop3?1200:2500);
+          const cdMul=pTop3?1.1:1.8; // leaders pestered a bit more, but never spammed
+          g._abilityReadyAt=now+((s.cd||30)*1000)*cdMul+Math.random()*8000;
+        }else g._abilityReadyAt=now+5000;
       }
     }
     if(g.pause>0){g.pause--;continue;}
@@ -3449,7 +3451,7 @@ function botUseAbility(g,s,dp,now){
   if(g.set==='princess'){
     if(dp>380)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
-    confusedUntil=now+3000;confuseAng=Math.random()*6.28;popAnchorFromAbility();
+    confusedUntil=now+2000;confuseAng=Math.random()*6.28;popAnchorFromAbility();
     toast(g.name+' confused you!','#a872d8');spawnAbilityFx(boat.wx,boat.wy,'#c77ad8');return true;
   }
   if(g.set==='berserker'){
@@ -4339,11 +4341,13 @@ function render(ts){
     const spd=boatSpeed(S.boat)*playerMoveMult();
     // Confuse ability: input is overridden with a wandering drift
     let jdx=joy.dx,jdy=joy.dy;
-    // confusedUntil is set from Date.now(), so it must be compared with Date.now()
-    // (performance.now() uses a different time origin and would never expire).
+    // Confused: a wandering drift, but the player keeps partial control so they
+    // are never fully locked out. (Compared with Date.now() to match the setter;
+    // performance.now() uses a different time origin and would never expire.)
     if(typeof confusedUntil!=='undefined'&&Date.now()<confusedUntil){
-      jdx=Math.cos(confuseAng);jdy=Math.sin(confuseAng);
       confuseAng+=(Math.random()-0.5)*0.3;
+      jdx=Math.cos(confuseAng)*0.8+joy.dx*0.55;
+      jdy=Math.sin(confuseAng)*0.8+joy.dy*0.55;
     }
     boat.vx+=(jdx*spd-boat.vx)*0.12*frameScale;
     boat.vy+=(jdy*spd-boat.vy)*0.12*frameScale;
