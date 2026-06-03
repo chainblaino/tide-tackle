@@ -4087,13 +4087,22 @@ function startTournamentSync(){
     Object.keys(data).forEach(function(uid){
       if(uid===myTournUid())return;
       const p=data[uid];
-      if(!p||(p.t&&nowMs-p.t>20000))return; // ignore stale (disconnected) players
+      if(!p)return;
+      // Skew-proof staleness: NEVER compare the sender's clock to ours (two phones
+      // can be minutes apart, which would wrongly drop a perfectly live friend and
+      // wipe them off the leaderboard). Instead track, on OUR clock, when each
+      // player's payload last changed; only treat them as gone if their writes
+      // have stopped advancing for a while.
+      tourn._seen=tourn._seen||{};
+      const senderT=(typeof p.t==='number')?p.t:nowMs;
+      const seen=tourn._seen[uid];
+      if(!seen||seen.t!==senderT){tourn._seen[uid]={t:senderT,local:nowMs};}
+      else if(nowMs-seen.local>30000){return;} // unchanged for 30s on our clock -> disconnected
       let g=ghostByUid(uid);
       // Use the SENDER's timestamp so interpolation spacing matches when they
       // actually moved (robust to bursty packet delivery), but rebase it onto OUR
       // clock with a fixed per-friend offset so differing device clocks can't break
       // the interpolation window. Resync the offset if it drifts far (long pause).
-      const senderT=(typeof p.t==='number')?p.t:nowMs;
       if(g&&typeof g._tOff==='number'){
         if(Math.abs((senderT+g._tOff)-nowMs)>4000)g._tOff=nowMs-senderT;
       }
@@ -4166,7 +4175,7 @@ function stopTournamentSync(){
       ref.update(upd).catch(function(){});
     }catch(e){}
   }
-  tourn.posKey=null;
+  tourn.posKey=null;tourn._seen=null;tourn._seenActs=null;
 }
 // ----- Live co-op map: a top-down minimap of the current zone showing every
 // structure plus you and any friends fishing the same zone, updated in real time.
