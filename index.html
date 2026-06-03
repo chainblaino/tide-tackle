@@ -547,7 +547,7 @@
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies - won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
-      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
+      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -1540,15 +1540,18 @@ function startTournamentMode(def){
   initTournamentGhosts();
   setupAbilityButton();
   ensureRig();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();updateZonePill();
-  // Shop is locked during the tournament: close menu and hide the Shop tab
-  document.body.classList.add('tourn-active');
+  // Shop is locked during a tournament/challenge - but a co-op friends world is
+  // casual, so the shop stays open for everyone.
   closeMenu();
-  const shopTabBtn=document.querySelector("[data-mtab='shop']");
-  if(shopTabBtn&&shopTabBtn.classList.contains('active')){
-    document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
-    document.querySelector("[data-mtab='logbook']").classList.add('active');
-    document.getElementById('mp-logbook').classList.add('active');
+  if(!def.coop){
+    document.body.classList.add('tourn-active');
+    const shopTabBtn=document.querySelector("[data-mtab='shop']");
+    if(shopTabBtn&&shopTabBtn.classList.contains('active')){
+      document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
+      document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
+      document.querySelector("[data-mtab='logbook']").classList.add('active');
+      document.getElementById('mp-logbook').classList.add('active');
+    }
   }
   const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
   _bn.textContent=def.coop?'FISHING WITH FRIENDS':'TOURNAMENT IN PROGRESS';_bn.classList.remove('leading');
@@ -3793,6 +3796,35 @@ function initTournamentGhosts(){
   startTournamentSync();
 }
 function ghostByUid(uid){for(const g of tourn.ghosts)if(g.uid===uid)return g;return null;}
+// How far in the past we render remote players, for smooth entity interpolation.
+const GHOST_INTERP_MS=700;
+// Append a timestamped position sample to a ghost's interpolation buffer.
+function pushGhostSample(g,x,y,h,t){
+  if(!g.buf)g.buf=[];
+  // a big jump (zone snap / teleport) resets the trail so we don't glide across the map
+  const last=g.buf[g.buf.length-1];
+  if(last&&Math.hypot(x-last.x,y-last.y)>700){g.buf.length=0;g.wx=x;g.wy=y;}
+  g.buf.push({x:x,y:y,h:h,t:t});
+  if(g.buf.length>16)g.buf.shift();
+}
+// Interpolate the buffered trail at the given render time (now - GHOST_INTERP_MS).
+function sampleGhostBuffer(g,renderT){
+  const b=g.buf;
+  if(!b||!b.length)return {x:g.tx,y:g.ty,h:g.th||0};
+  const last=b[b.length-1];
+  if(renderT>=last.t)return {x:last.x,y:last.y,h:last.h};   // no future sample yet: hold newest
+  const first=b[0];
+  if(renderT<=first.t)return {x:first.x,y:first.y,h:first.h};
+  for(let i=b.length-1;i>0;i--){
+    const a=b[i-1],c=b[i];
+    if(renderT>=a.t&&renderT<=c.t){
+      const f=(renderT-a.t)/Math.max(1,c.t-a.t);
+      let dh=c.h-a.h;while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
+      return {x:a.x+(c.x-a.x)*f,y:a.y+(c.y-a.y)*f,h:a.h+dh*f};
+    }
+  }
+  return {x:last.x,y:last.y,h:last.h};
+}
 function updateGhosts(){
   if(!tourn.active||!tourn.ghosts.length)return;
   // Bots gang up on whoever is leading: when the player sits in the top 3 they
@@ -3805,17 +3837,19 @@ function updateGhosts(){
   const pVisible=!(invisibleUntil>Date.now()); // bots can't see a vanished player
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
-      // Friends only broadcast a few times a second, so a plain lerp stutters.
-      // Dead-reckon: extrapolate the aim point forward along their last known
-      // velocity, capped so a dropped packet freezes rather than flies off, then
-      // glide toward it for buttery-smooth motion between updates.
-      const ageS=Math.min(1.5,(Date.now()-(g._lastSyncMs||0))/1000);
-      const aimX=g.tx+(g.vx||0)*ageS, aimY=g.ty+(g.vy||0)*ageS;
-      g.wx+=(aimX-g.wx)*0.22*frameScale;
-      g.wy+=(aimY-g.wy)*0.22*frameScale;
-      let dh=g.th-g.heading;
-      while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
-      g.heading+=dh*0.2*frameScale;
+      // Entity interpolation: friends only broadcast a few times a second and
+      // packets arrive unevenly, so we render them a fixed delay in the PAST and
+      // glide smoothly between the two buffered samples that bracket that time.
+      // No extrapolation -> no overshoot/snap-back when they change direction.
+      const target=sampleGhostBuffer(g,Date.now()-GHOST_INTERP_MS);
+      if(target){
+        // critically-damped follow removes any residual micro-jitter
+        g.wx+=(target.x-g.wx)*0.35*frameScale;
+        g.wy+=(target.y-g.wy)*0.35*frameScale;
+        let dh=target.h-g.heading;
+        while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
+        g.heading+=dh*0.3*frameScale;
+      }
       continue;
     }
     if(g.real&&!g.hasReal)continue; // real player who hasn't broadcast yet: hold still
@@ -3880,8 +3914,10 @@ function startTournamentSync(){
   tourn.posKey=activeTournament.def.id+'_'+today;
   const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);
   // Publish my position a few times a second
-  publishMyPosition(ref);
-  tourn.posInterval=setInterval(function(){publishMyPosition(ref);},1200);
+  publishMyPosition(ref,true);
+  // Poll often, but only WRITE when we've actually moved (or as an idle heartbeat).
+  // This keeps motion smooth without hammering the shared position document.
+  tourn.posInterval=setInterval(function(){publishMyPosition(ref);},300);
   // Listen for everyone else's position
   tourn.posUnsub=ref.onSnapshot(function(snap){
     const data=(snap.data()||{}).players||{};
@@ -3891,20 +3927,29 @@ function startTournamentSync(){
       const p=data[uid];
       if(!p||(p.t&&nowMs-p.t>20000))return; // ignore stale (disconnected) players
       let g=ghostByUid(uid);
+      // Use the SENDER's timestamp so interpolation spacing matches when they
+      // actually moved (robust to bursty packet delivery), but rebase it onto OUR
+      // clock with a fixed per-friend offset so differing device clocks can't break
+      // the interpolation window. Resync the offset if it drifts far (long pause).
+      const senderT=(typeof p.t==='number')?p.t:nowMs;
+      if(g&&typeof g._tOff==='number'){
+        if(Math.abs((senderT+g._tOff)-nowMs)>4000)g._tOff=nowMs-senderT;
+      }
+      const sampleT=g&&typeof g._tOff==='number'?(senderT+g._tOff):nowMs;
+      const _tOff0=nowMs-senderT;
       if(!g){
         // A real player we didn't have in the lobby snapshot: add them
         g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
            wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
            cosmetic:p.cos||{},set:p.set||null,rod:p.rod||'rod0',reel:p.reel||'reel0',gender:p.gen||'male',skinTone:p.skin||'medlight',
-           tx:p.wx,ty:p.wy,th:p.heading||0,vx:0,vy:0,_lastSyncMs:nowMs,hasReal:true};
+           tx:p.wx,ty:p.wy,th:p.heading||0,buf:[],_lastSyncMs:nowMs,_lastSampleT:sampleT,_tOff:_tOff0,hasReal:true};
+        pushGhostSample(g,p.wx,p.wy,p.heading||0,sampleT);
         tourn.ghosts.push(g);
       }else{
         g.real=true;g.isBot=false;g.hasReal=true;
-        // estimate velocity (world units/sec) from the change since the last packet
-        const dtS=Math.max(0.08,(nowMs-(g._lastSyncMs||nowMs))/1000);
-        const jump=Math.hypot(p.wx-g.tx,p.wy-g.ty);
-        if(jump>700){g.vx=0;g.vy=0;g.wx=p.wx;g.wy=p.wy;} // teleport (zone snap): don't glide
-        else if(g._lastSyncMs){g.vx=(p.wx-g.tx)/dtS;g.vy=(p.wy-g.ty)/dtS;}
+        if(typeof g._tOff!=='number')g._tOff=_tOff0;
+        // only buffer genuinely new samples (skip duplicate re-publishes)
+        if(p.wx!==g.tx||p.wy!==g.ty||sampleT!==g._lastSampleT){pushGhostSample(g,p.wx,p.wy,p.heading||0,sampleT);g._lastSampleT=sampleT;}
         g._lastSyncMs=nowMs;
         g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
         if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
@@ -3921,8 +3966,16 @@ function startTournamentSync(){
     });
   },function(){});
 }
-function publishMyPosition(ref){
+function publishMyPosition(ref,force){
   if(!ref||!fbUser)return;
+  // Throttle writes: send when moved >6px and >=450ms since the last write, an
+  // ability/vanish event needs to go out, or as a ~1.6s idle heartbeat.
+  const now=Date.now();
+  const moved=Math.hypot(boat.wx-(publishMyPosition._lx||0),boat.wy-(publishMyPosition._ly||0));
+  const since=now-(publishMyPosition._lt||0);
+  const pending=!!tourn._pendingAct;
+  if(!force&&!pending&&!((moved>6&&since>=450)||since>=1600))return;
+  publishMyPosition._lx=boat.wx;publishMyPosition._ly=boat.wy;publishMyPosition._lt=now;
   const upd={};
   upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat,name:fbUsername,
     cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades,crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
@@ -5914,8 +5967,9 @@ function land(f,w,perfect,bullseye){
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
-  // No gold from fish during a tournament - you're fishing for ranking & rubies.
-  if(activeTournament)gold=0;
+  // No gold from fish in a tournament/challenge (you fish for ranking & rubies),
+  // but a co-op friends world is casual: everyone keeps the coins they catch.
+  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))gold=0;
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   recordTournamentCatch(f,w);
   addXP(xp);
@@ -6117,7 +6171,7 @@ document.getElementById('menu-open').addEventListener('click',openMenu);
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
-    if(t.dataset.mtab==='shop'&&activeTournament){toast('Shop is locked during the tournament.','#b58b53');return;}
+    if(t.dataset.mtab==='shop'&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');return;}
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
     if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
     if(t.dataset.mtab==='friends'){loadFriendRequests();}
