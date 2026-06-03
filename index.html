@@ -3043,6 +3043,7 @@ const AUDIO=(function(){
   let ctx=null, ok=true, unlocked=false;
   let masterGain=null, musicGain=null, sfxGain=null, ambGain=null;
   let noiseBuf=null, ambNodes=null, musicTimer=null, musicOn=false;
+  let rainNodes=null, rainOn=false, rainHeavy=false, crankTimer=null;
   let nextNote=0, step=0, musicMood='calm';
   function vols(){return (typeof S!=='undefined'&&S.audio)?S.audio:{music:0.45,sfx:0.7,amb:0.5,muted:false};}
   function ensure(){
@@ -3091,6 +3092,58 @@ const AUDIO=(function(){
   function stopAmbience(){
     if(!ambNodes)return;try{ambNodes.src.stop();ambNodes.lfo.stop();ambNodes.lfo2.stop();}catch(e){}
     ambNodes=null;
+  }
+  // ---- rain: a steady hiss (high-passed noise) + soft patter, heavier in storms ----
+  function startRainNodes(heavy){
+    if(!ensure())return;stopRainNodes();
+    try{
+      const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+      const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=heavy?1100:1600;
+      const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=heavy?7000:6000;
+      const g=ctx.createGain();g.gain.value=0;
+      g.gain.setTargetAtTime(heavy?0.5:0.34,ctx.currentTime,0.6); // fade in
+      // gentle patter: slow tremolo on the hiss
+      const trem=ctx.createOscillator();trem.type='sine';trem.frequency.value=heavy?5.5:3.2;
+      const tremG=ctx.createGain();tremG.gain.value=heavy?0.10:0.07;
+      trem.connect(tremG);tremG.connect(g.gain);
+      src.connect(hp);hp.connect(lp);lp.connect(g);g.connect(ambGain);
+      src.start();trem.start();
+      // storms add a low rumble bed
+      let rmb=null,rg=null;
+      if(heavy){rmb=ctx.createBufferSource();rmb.buffer=noiseBuf;rmb.loop=true;
+        const rlp=ctx.createBiquadFilter();rlp.type='lowpass';rlp.frequency.value=140;
+        rg=ctx.createGain();rg.gain.value=0;rg.gain.setTargetAtTime(0.22,ctx.currentTime,0.8);
+        rmb.connect(rlp);rlp.connect(rg);rg.connect(ambGain);rmb.start();}
+      rainNodes={src:src,trem:trem,g:g,rmb:rmb};
+    }catch(e){}
+  }
+  function stopRainNodes(){
+    if(!rainNodes)return;
+    try{const t=ctx.currentTime;if(rainNodes.g)rainNodes.g.gain.setTargetAtTime(0,t,0.4);
+      rainNodes.src.stop(t+1.2);rainNodes.trem.stop(t+1.2);if(rainNodes.rmb)rainNodes.rmb.stop(t+1.2);}catch(e){}
+    rainNodes=null;
+  }
+  // Toggle rain from the render loop (idempotent). heavy = thunderstorm.
+  function setRain(on,heavy){
+    on=!!on;heavy=!!heavy;
+    if(on===rainOn&&heavy===rainHeavy)return; // no change
+    rainOn=on;rainHeavy=heavy;
+    if(!ensure()||!unlocked)return; // wait for the first gesture; unlock() will start it
+    if(on)startRainNodes(heavy); else stopRainNodes();
+  }
+  // ---- reel crank: a steady mechanical ratchet while reeling a fish ----
+  function crankClick(){
+    if(!ensure())return;const t=ctx.currentTime;
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=2400;bp.Q.value=2.2;
+    const g=ctx.createGain();g.gain.setValueAtTime(0.16,t);g.gain.exponentialRampToValueAtTime(0.0001,t+0.05);
+    src.connect(bp);bp.connect(g);g.connect(sfxGain);src.start(t);src.stop(t+0.07);
+    blip(150,0.05,'square',0.05,t); // a little body to each click
+  }
+  function crank(on){
+    if(on){ if(crankTimer)return; if(!ensure())return; unlock();
+      crankClick();crankTimer=setInterval(crankClick,92); }
+    else if(crankTimer){clearInterval(crankTimer);crankTimer=null;}
   }
   // ---- SFX ----
   function blip(freq,dur,type,vol,when,glideTo){
@@ -3187,6 +3240,7 @@ const AUDIO=(function(){
     unlocked=true;
     const v=vols();
     if(!v.muted){ if(v.amb>0)startAmbience(); if(v.music>0)startMusic(); }
+    if(rainOn&&!rainNodes)startRainNodes(rainHeavy); // rain requested before first gesture
   }
   function refresh(){
     if(!ctx){return;}
@@ -3198,7 +3252,7 @@ const AUDIO=(function(){
     }
   }
   return {unlock:unlock,sfx:sfx,refresh:refresh,setMood:setMood,
-          startMusic:startMusic,stopMusic:stopMusic,
+          startMusic:startMusic,stopMusic:stopMusic,setRain:setRain,crank:crank,
           available:function(){return ok;}};
 })();
 // Resume/unlock audio on the very first interaction (browser autoplay policy).
@@ -4409,7 +4463,9 @@ function _initRain(count){
 }
 function updateAndDrawRain(t){
   const w=currentWeather();
-  if(w.id!=='rain'&&w.id!=='storm')return;
+  const raining=(w.id==='rain'||w.id==='storm');
+  if(typeof AUDIO!=='undefined')AUDIO.setRain(raining,w.id==='storm');
+  if(!raining)return;
   const heavy=w.id==='storm';
   const want=gfxLow?(heavy?70:45):(heavy?160:90);
   if(RAIN.length!==want)_initRain(want);
@@ -5615,6 +5671,7 @@ function useChainsawSlowmo(){
 }
 function endSdewGame(success){
   sdewActive=false;
+  if(typeof AUDIO!=='undefined')AUDIO.crank(false);
   cancelAnimationFrame(sdewAnimId);
   clearTimeout(sdewAlertTimer);
   document.getElementById('sdew-overlay').classList.remove('show');
@@ -5789,10 +5846,10 @@ function updateSurfSky(){
 
 // Controls
 const sdewBtn=document.getElementById('sdew-btn');
-sdewBtn.addEventListener('mousedown',function(){sdewHolding=true;});
-sdewBtn.addEventListener('touchstart',function(e){e.preventDefault();sdewHolding=true;},{passive:false});
-window.addEventListener('mouseup',function(){sdewHolding=false;});
-window.addEventListener('touchend',function(){sdewHolding=false;});
+sdewBtn.addEventListener('mousedown',function(){sdewHolding=true;if(sdewActive)AUDIO.crank(true);});
+sdewBtn.addEventListener('touchstart',function(e){e.preventDefault();sdewHolding=true;if(sdewActive)AUDIO.crank(true);},{passive:false});
+window.addEventListener('mouseup',function(){sdewHolding=false;AUDIO.crank(false);});
+window.addEventListener('touchend',function(){sdewHolding=false;AUDIO.crank(false);});
 function inBullseye(){
   const bLeft=zoneSel.left+zoneSel.width*(0.5-BULLSEYE_FRAC/2);
   const bRight=bLeft+zoneSel.width*BULLSEYE_FRAC;
