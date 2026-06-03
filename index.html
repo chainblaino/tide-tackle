@@ -1527,7 +1527,10 @@ function startTournamentMode(def){
           const a=f.size[0],b=f.size[1];
           const isNight=skyState(hourNow()).darkness>0.5;
           const skew=isNight?0.42:0.62;     // lower exponent -> bigger fish; biggest at night
-          const w=+(a+(b-a)*Math.pow(Math.random(),skew)).toFixed(2);
+          // Bots top out at 90% of the species' max weight, so a skilled angler who
+          // lands a true giant can always beat them.
+          const cap=Math.max(a,b*0.9);
+          const w=+Math.min(cap,a+(b-a)*Math.pow(Math.random(),skew)).toFixed(2);
           activeTournament.botCatches.push({username:bot.username,fish:f.name,weight:w});
         },delay);
       }
@@ -1762,6 +1765,9 @@ const STRUCT_META={
   oil_rig:{icon:"struct-oilrig",label:"Oil Rig",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
   power_plant:{icon:"struct-powerplant",label:"Power Plant",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8"},
   bluhole:{icon:"struct-bluhole",label:"Blue Hole",zone:"Offshore",depth:"Deep",depthColor:"#8060c8"},
+  runoff:{icon:"struct-pass",label:"Storm Runoff",zone:"Inshore",depth:"Deep",depthColor:"#8060c8",alias:"pass",weather:"Light Rain only"},
+  frenzy:{icon:"struct-baitball",label:"Bird Frenzy",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8",alias:"open",weather:"Overcast only"},
+  colorchange:{icon:"struct-rip",label:"Color Change",zone:"Offshore",depth:"Deep",depthColor:"#8060c8",alias:"rip",weather:"Partly Cloudy only"},
 };
 function renderStructuresGuide(){
   const el=document.getElementById("structs-guide");
@@ -1771,7 +1777,7 @@ function renderStructuresGuide(){
   const rarOrder=["common","uncommon","rare","epic","legendary","ultra"];
   el.innerHTML=Object.keys(STRUCT_META).map(function(k){
     const info=STRUCT_META[k];
-    const fish=(sMap[k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
+    const fish=(sMap[info.alias||k]||[]).slice().sort(function(a,b){return rarOrder.indexOf(a.rarity)-rarOrder.indexOf(b.rarity);});
     const total=fish.length;
     // Ultra legendary spots are always revealed so anglers know where to hunt them.
     const revealed=fish.filter(function(f){return (S.caught[f.id]||0)>0||f.rarity==='ultra';});
@@ -1781,7 +1787,8 @@ function renderStructuresGuide(){
       if(f.rarity==='ultra')return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";font-weight:800;border:1px solid "+c+";\">✦ "+f.name+"</span>";
       return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";\">"+f.name+"</span>";
     }).join("")+(unknown>0?"<span class=\"struct-fish-pill\" style=\"background:rgba(0,0,0,.06);color:var(--text-soft);\">+"+unknown+" unknown</span>":"");
-    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+svgIcon(info.icon,20)+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
+    const wb=info.weather?"<span class=\"struct-fish-pill\" style=\"background:#fff2cf;color:#9a6a18;border:1px solid #e6c772;font-weight:800;\">⛅ "+info.weather+"</span>":"";
+    return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+svgIcon(info.icon,20)+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+wb+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
   }).join("");
 }
 
@@ -2076,14 +2083,36 @@ const ZONE_STRUCTS=[
    {kind:'oil_rig',xF:.62,yF:.69,tier:3},{kind:'bluhole',xF:.22,yF:.76,tier:3},
    {kind:'weedline',xF:.74,yF:.82,tier:3},{kind:'deep',xF:.40,yF:.88,tier:3}],
 ];
+// Deterministic RNG so a given worldSeed always lays out the same map.
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
+function seededShuffle(arr,rng){for(let i=arr.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));const tmp=arr[i];arr[i]=arr[j];arr[j]=tmp;}return arr;}
+// Temporary structures: one per zone, only present (and fishable) in a specific
+// weather. They alias to a strong nearby spot kind so the regular fish bite there.
+const TEMP_STRUCTS=[
+  {zone:0,kind:'runoff',  alias:'pass', xF:.46,yF:.41,tier:3,weather:'rain',    name:'Storm Runoff',   note:'A muddy freshwater outflow that only forms in the rain. Snook, reds and tarpon stack up to ambush flushed bait.'},
+  {zone:1,kind:'frenzy',  alias:'open', xF:.82,yF:.45,tier:3,weather:'overcast',name:'Bird Frenzy',     note:'Diving birds mark a bait pile under overcast skies. Kings, Spanish and cobia crash through it.'},
+  {zone:2,kind:'colorchange',alias:'rip',xF:.50,yF:.39,tier:3,weather:'partly', name:'Color Change',    note:'A blue-green current seam that sets up on partly-cloudy days. Mahi, wahoo and billfish cruise the edge.'},
+];
+function tempStructFor(zoneIdx){return TEMP_STRUCTS.find(t=>t.zone===zoneIdx)||null;}
 function initStructures(){
+  if(typeof S!=='undefined'&&(!S.worldSeed||S.worldSeed<=0))S.worldSeed=Math.floor(Math.random()*2147483646)+1;
+  const seed=(typeof S!=='undefined'&&S.worldSeed)||1;
   ZONES.forEach((z,i)=>{
     const W=WORLD_DIMS[i][0],H=WORLD_DIMS[i][1];
-    z.structures=ZONE_STRUCTS[i].map(d=>({kind:d.kind,x:Math.round(d.xF*W),y:Math.round(d.yF*H),tier:d.tier}));
+    const defs=ZONE_STRUCTS[i];
+    // Same structures for everyone; the seed shuffles which slot each one sits in.
+    const slots=defs.map(d=>({xF:d.xF,yF:d.yF}));
+    const rng=mulberry32((seed^((i+1)*0x9E3779B1))>>>0);
+    seededShuffle(slots,rng);
+    z.structures=defs.map((d,k)=>({kind:d.kind,x:Math.round(slots[k].xF*W),y:Math.round(slots[k].yF*H),tier:d.tier}));
+    // Stash this zone's temp-structure world position (placement is fixed, presence is weather-gated).
+    const tmp=tempStructFor(i);
+    z.tempStruct=tmp?{kind:tmp.kind,x:Math.round(tmp.xF*W),y:Math.round(tmp.yF*H),tier:tmp.tier,weather:tmp.weather,name:tmp.name,temp:true}:null;
   });
 }
 function structKindAlias(k){
-  return {crab_trap:'dock',channel:'pass',baitball:'open',oil_rig:'wreck',bluhole:'deep',power_plant:'wreck'}[k]||k;
+  return {crab_trap:'dock',channel:'pass',baitball:'open',oil_rig:'wreck',bluhole:'deep',power_plant:'wreck',
+          runoff:'pass',frenzy:'open',colorchange:'rip'}[k]||k;
 }
 
 const ZONES=[
@@ -3276,7 +3305,13 @@ const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200]]; // inshore / nearshore /
 let tourn={active:false,W:0,H:0,structs:[],ghosts:[]};
 function worldW(){return tourn.active?tourn.W:WORLD_DIMS[S.zone][0];}
 function worldH(){return tourn.active?tourn.H:WORLD_DIMS[S.zone][1];}
-function activeStructures(){return tourn.active?tourn.structs:curZone().structures;}
+function activeStructures(){
+  if(tourn.active)return tourn.structs;
+  const z=curZone();const base=z.structures;
+  // The zone's temporary structure only exists during its trigger weather.
+  if(z.tempStruct&&!surfActive&&currentWeather().id===z.tempStruct.weather)return base.concat([z.tempStruct]);
+  return base;
+}
 let boat={wx:750,wy:1100,heading:0,anchored:true,vx:0,vy:0};
 let camera={x:0,y:0};
 let joy={active:false,dx:0,dy:0,id:null};
@@ -3980,6 +4015,22 @@ else if(s.kind==='crab_trap'){
     const inn_=ctx.createRadialGradient(x,y,2,x,y,20);inn_.addColorStop(0,'rgba(0,0,35,.98)');inn_.addColorStop(1,'rgba(0,6,55,.6)');
     ctx.fillStyle=inn_;ctx.beginPath();ctx.arc(x,y,20,0,6.28);ctx.fill();
     ctx.strokeStyle='rgba(100,160,255,.18)';ctx.lineWidth=1;[8,13,18].forEach(r=>{ctx.beginPath();ctx.arc(x,y,r+Math.sin(t*1.2)*1.5,0,6.28);ctx.stroke();});
+  }else if(s.kind==='runoff'){
+    // muddy freshwater plume with floating debris (rain-only)
+    const g=ctx.createRadialGradient(x,y,4,x,y,38);g.addColorStop(0,'rgba(120,92,52,.55)');g.addColorStop(.6,'rgba(110,86,50,.30)');g.addColorStop(1,'rgba(110,86,50,0)');
+    ctx.fillStyle=g;ctx.beginPath();ctx.ellipse(x,y,38,26,0,0,6.28);ctx.fill();
+    ctx.strokeStyle='rgba(150,118,70,.45)';ctx.lineWidth=1.4;for(let i=0;i<3;i++){ctx.beginPath();ctx.ellipse(x,y,14+i*9,9+i*6,0,0.4+Math.sin(t+i),Math.PI-0.4+Math.sin(t+i));ctx.stroke();}
+    ctx.fillStyle='rgba(70,52,30,.7)';for(let i=0;i<6;i++){const a=i*1.3+t*0.3,r=8+rr(i)*24;ctx.beginPath();ctx.arc(x+Math.cos(a)*r,y+Math.sin(a)*r*0.7,1.4+rr(i+2),0,6.28);ctx.fill();}
+  }else if(s.kind==='frenzy'){
+    // bait shimmer with diving birds (overcast-only)
+    ctx.fillStyle='rgba(180,205,220,.30)';ctx.beginPath();ctx.ellipse(x,y+4,30,17,0,0,6.28);ctx.fill();
+    for(let i=0;i<16;i++){const a=i*0.9+t,r=6+rr(i)*22;ctx.fillStyle='rgba(225,235,245,.7)';ctx.beginPath();ctx.arc(x+Math.cos(a)*r,y+4+Math.sin(a)*r*0.6,1.1,0,6.28);ctx.fill();}
+    for(let i=0;i<5;i++){const bx=x-26+i*13,by=y-30-((Math.sin(t*2+i)*0.5+0.5)*10);ctx.strokeStyle='rgba(40,44,50,.85)';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(bx-5,by+3);ctx.lineTo(bx,by);ctx.lineTo(bx+5,by+3);ctx.stroke();}
+  }else if(s.kind==='colorchange'){
+    // blue/green current seam with weed bits (partly-cloudy only)
+    ctx.save();ctx.beginPath();for(let i=-52;i<=52;i+=6)ctx.lineTo(x+i,y-9+Math.sin(i*0.08+t)*5);for(let i=52;i>=-52;i-=6)ctx.lineTo(x+i,y+9+Math.sin(i*0.08+t)*5);ctx.closePath();ctx.clip();
+    ctx.fillStyle='rgba(40,150,140,.28)';ctx.fillRect(x-54,y-14,108,12);ctx.fillStyle='rgba(20,60,120,.30)';ctx.fillRect(x-54,y,108,14);ctx.restore();
+    ctx.fillStyle='rgba(120,150,60,.7)';for(let i=0;i<7;i++){const wx=x-44+i*14,wy=y+Math.sin(i*1.7+t)*4;ctx.beginPath();ctx.ellipse(wx,wy,3,1.4,0.5,0,6.28);ctx.fill();}
   }
     ctx.restore();
 }
@@ -4677,6 +4728,8 @@ function render(ts){
   for(const s of activeStructures()){
     const sx=s.x-camera.x,sy=s.y-camera.y;
     if(sx<-90||sx>CW+90||sy<-90||sy>CH+90)continue;
+    // weather-only temp spots get a soft pulsing "hot spot" ring so they're noticeable
+    if(s.temp){const pr=42+Math.sin(t*2.2)*5;const gg=ctx.createRadialGradient(sx,sy,6,sx,sy,pr);gg.addColorStop(0,'rgba(255,214,120,.22)');gg.addColorStop(1,'rgba(255,214,120,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(sx,sy,pr,0,6.28);ctx.fill();}
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
   // other players + ability effects (skip entirely outside tournaments)
@@ -4921,7 +4974,7 @@ function cast(x,y){
   biteTimeout=setTimeout(()=>triggerBite(),wait);
 }
 
-function structLabel(k){return {dock:'dock pilings',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'bridge',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot'}[k]||k;}
+function structLabel(k){return {dock:'dock pilings',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'bridge',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot',runoff:'storm runoff',frenzy:'bird frenzy',colorchange:'color change'}[k]||k;}
 
 function poolNow(){
   const m=curMethod(),leader=S.leader,st=bobber.struct;
