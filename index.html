@@ -378,11 +378,14 @@
 .tut-btns{display:flex;gap:8px;}
 .tut-skip{flex:0 0 auto;padding:10px 14px;border-radius:9px;border:1.5px solid rgba(255,255,255,.15);background:transparent;color:var(--text-soft);font-size:13px;cursor:pointer;}
 .tut-next{flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;}
-/* Interactive NPC guide (Captain Hank) — non-blocking, floats above everything */
+/* Interactive NPC guide (Captain Clancy) - non-blocking, floats above everything */
 .tut-npc{position:fixed;left:50%;transform:translateX(-50%);top:94px;z-index:200;width:min(444px,94vw);
   background:linear-gradient(135deg,#15293a,#0c1a28);border:2px solid var(--accent);border-radius:16px;
   box-shadow:0 10px 30px rgba(0,0,0,.55);padding:12px 14px;display:none;gap:11px;align-items:flex-start;}
 .tut-npc.show{display:flex;animation:tutpop .26s cubic-bezier(.2,1.2,.4,1);}
+/* While the menu/shop is open, dock the guide to the bottom so it never covers
+   the tabs or shop items the player needs to tap. */
+.tut-npc.docked{top:auto;bottom:14px;}
 @keyframes tutpop{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 .tut-npc-portrait{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:2px solid var(--accent);overflow:hidden;line-height:0;}
 .tut-npc-body{flex:1;min-width:0;}
@@ -751,7 +754,7 @@
 <div class="tut-npc" id="tut-npc">
   <div class="tut-npc-portrait" id="tut-npc-portrait"></div>
   <div class="tut-npc-body">
-    <div class="tut-npc-name">Captain Hank</div>
+    <div class="tut-npc-name">Captain Clancy</div>
     <div class="tut-npc-say" id="tut-npc-say"></div>
     <div class="tut-npc-actions" id="tut-npc-actions"></div>
   </div>
@@ -986,16 +989,17 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // ─────────────────────────────────────────────────────────────
 // TUTORIAL
 // ─────────────────────────────────────────────────────────────
-// Interactive, NPC-guided tutorial. Captain Hank picks a target fish and walks
+// Interactive, NPC-guided tutorial. Captain Clancy picks a target fish and walks
 // the player through the logbook, the shop, structure, a real catch, then a
 // no-stakes legendary (Stardew) fight they retry until they win.
-const HANK_SVG='<svg viewBox="0 0 48 48" width="46" height="46">'
+// Centered captain portrait (fills the round frame evenly, top hat to beard).
+const CLANCY_SVG='<svg viewBox="0 0 48 48" width="46" height="46">'
   +'<rect width="48" height="48" fill="#1d5e7a"/>'
-  +'<circle cx="24" cy="27" r="11" fill="#e8b88a"/>'
-  +'<path d="M13 27 Q24 45 35 27 Q35 39 24 41 Q13 39 13 27 Z" fill="#eef0ea"/>'
-  +'<rect x="19.5" y="23" width="3" height="3.4" rx="1" fill="#26323a"/><rect x="25.5" y="23" width="3" height="3.4" rx="1" fill="#26323a"/>'
-  +'<path d="M10 19 Q24 7 38 19 L38 22 Q24 16.5 10 22 Z" fill="#e0922c"/>'
-  +'<path d="M13.5 18.5 Q24 9.5 34.5 18.5 Q24 14 13.5 18.5 Z" fill="#f3b454"/>'
+  +'<circle cx="24" cy="26" r="12" fill="#e8b88a"/>'
+  +'<path d="M12 27 Q24 42 36 27 Q36 39 24 40.5 Q12 39 12 27 Z" fill="#eef0ea"/>'
+  +'<rect x="19.3" y="23.4" width="3.2" height="3.6" rx="1.3" fill="#26323a"/><rect x="25.5" y="23.4" width="3.2" height="3.6" rx="1.3" fill="#26323a"/>'
+  +'<path d="M9.5 18 Q24 6.5 38.5 18 L38.5 21.5 Q24 15 9.5 21.5 Z" fill="#e0922c"/>'
+  +'<path d="M13 17.5 Q24 8.5 35 17.5 Q24 12.5 13 17.5 Z" fill="#f3b454"/>'
   +'</svg>';
 let tut={active:false,i:0,target:null,leg:null,trialActive:false,forceTargetActive:false,buyBait:null,steps:[]};
 function _tutFish(id){return (typeof FISH!=='undefined')?FISH.find(function(f){return f.id===id;}):null;}
@@ -1017,17 +1021,17 @@ function buildTutSteps(){
   const structText=_tutStructText(T);
   const legName=L?L.name:'Tarpon';
   return [
-    {say:"Ahoy! <b>Cap'n Hank</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
+    {say:"Ahoy! <b>Cap'n Clancy</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
     {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top-left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook'},
     {say:"There she is. See what she wants? <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook tells ye exactly how to catch any fish.",btn:"Got it"},
-    {say:"Can't catch 'em without bait. Here's a few coins on me — now tap the <b>Shop</b> tab and buy a pack of <b>"+baitName+"</b>.",hint:"Shop tab → buy "+baitName,await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Hank spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
-    {say:"Stocked up — well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
-    {say:"Fish hold on <b>structure</b> — docks, grass, oyster bars, wrecks. Drive to <b>"+structText+"</b> with the joystick, then <b>Drop Anchor</b> right on the spot.",hint:"Drive to structure → Drop Anchor",await:'anchor'},
+    {say:"Can't catch 'em without bait. Here's a few coins on me - now tap the <b>Shop</b> tab and buy a pack of <b>"+baitName+"</b>.",hint:"Shop tab → buy "+baitName,await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
+    {say:"Stocked up - well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
+    {say:"Fish hold on <b>structure</b> - docks, grass, oyster bars, wrecks. Drive to <b>"+structText+"</b> with the joystick, then <b>Drop Anchor</b> right on the spot.",hint:"Drive to structure → Drop Anchor",await:'anchor'},
     {say:"Right on the money. Now <b>tap the water</b> inside your range ring to cast. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Tap water to cast, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
-    {say:"HAAA! A beauty of a "+tName+"! See how it all comes together — right bait, right spot. That's the whole game.",btn:"Heck yeah"},
-    {say:"Now listen close. Every so often a <b>LEGEND</b> hits — they don't use the hookset. It's a tug-o'-war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run — no reward, just the feel of it.",btn:"Bring it on"},
-    {say:"Here she comes — a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL — keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
-    {say:"YES!! Ye tamed a legend! Ye're ready for the Gulf now, angler. Tight lines and good luck out there — I'll see ye on the leaderboard!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
+    {say:"HAAA! A beauty of a "+tName+"! See how it all comes together - right bait, right spot. That's the whole game.",btn:"Heck yeah"},
+    {say:"Now listen close. Every so often a <b>LEGEND</b> hits - they don't use the hookset. It's a tug-o'-war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run - no reward, just the feel of it.",btn:"Bring it on"},
+    {say:"Here she comes - a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL - keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
+    {say:"YES!! Ye tamed a legend! Ye're ready for the Gulf now, angler. Tight lines and good luck out there - I'll see ye on the leaderboard!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
   ];
 }
 function showTutorial(){
@@ -1035,7 +1039,7 @@ function showTutorial(){
   tut.target=_tutFish('redfish')||(FISH.filter(function(f){return f.zone===0&&!f.surf&&['uncommon','rare'].indexOf(f.rarity)>=0;})[0])||FISH.find(function(f){return f.zone===0&&!f.surf;});
   tut.leg=_tutFish('tarpon')||FISH.find(function(f){return f.zone===0&&f.rarity==='legendary'&&!f.surf;})||FISH.find(function(f){return f.rarity==='legendary'&&!f.surf;});
   tut.active=true;tut.i=0;tut.trialActive=false;tut.forceTargetActive=false;tut.buyBait=null;
-  document.getElementById('tut-npc-portrait').innerHTML=HANK_SVG;
+  document.getElementById('tut-npc-portrait').innerHTML=CLANCY_SVG;
   tutRender();
 }
 function tutRender(){
@@ -1050,11 +1054,19 @@ function tutRender(){
   html+='<button class="tut-npc-skip" id="tut-npc-skip">Skip tutorial</button>';
   document.getElementById('tut-npc-actions').innerHTML=html;
   document.getElementById('tut-npc').classList.add('show');
+  tutPlaceBar();
   const nb=document.getElementById('tut-npc-next');if(nb)nb.onclick=function(){if(s.onBtn)s.onBtn();tutAdvance();};
   const sk=document.getElementById('tut-npc-skip');if(sk)sk.onclick=tutSkip;
   if(s.onEnter)try{s.onEnter();}catch(e){}
 }
 function tutAdvance(){tut.i++;tutRender();}
+// Dock the guide to the bottom while the menu is open so it never blocks the
+// tabs or shop items the player has to tap.
+function tutPlaceBar(){
+  const bar=document.getElementById('tut-npc');if(!bar)return;
+  const mp=document.getElementById('menu-panel');
+  bar.classList.toggle('docked',!!(mp&&mp.classList.contains('show')));
+}
 // Called from game events; advances if the current step is waiting on that event.
 function tutNotify(ev){
   if(!tut.active)return;
@@ -1618,7 +1630,7 @@ function acceptInvite(){
 }
 function declineInvite(){const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);}
 function startTournamentMode(def){
-  // The tournament runs during ONE season — and if the target species only bites
+  // The tournament runs during ONE season - and if the target species only bites
   // in certain seasons, we always pick one of THOSE so the target is catchable.
   // Seeded from the match so every entrant sees the same season.
   const _tf=def.targetFish;
@@ -1686,7 +1698,7 @@ function startCoopMode(def){
   _bn.textContent='FISHING WITH FRIENDS';_bn.classList.remove('leading');
   const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display='block';
   const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';
-  toast('Fishing with friends! Roam any zone together — same spots for everyone.','#2aa890');
+  toast('Fishing with friends! Roam any zone together - same spots for everyone.','#2aa890');
 }
 function initCoopGhosts(){
   tourn.ghosts=[];
@@ -3967,7 +3979,7 @@ function randomBotLook(){
 }
 // Build ONE bot deterministically from the shared match seed + its id, so every
 // player in this tournament sees the same bot (look, boat, gear) following the
-// same wandering path — they behave like a shared set of live anglers.
+// same wandering path - they behave like a shared set of live anglers.
 function makeBotGhost(p,mseed){
   const r=mulberry32((mseed^strHash(p.uid))>>>0);
   let set=null,cosmetic;
@@ -4001,7 +4013,7 @@ function botBasePos(g,tSec){
   if(y<70)y=70;else if(y>tourn.H-70)y=tourn.H-70;
   return {x:x,y:y};
 }
-// Nearest fishing structure to a point (deterministic — same spots on every screen).
+// Nearest fishing structure to a point (deterministic - same spots on every screen).
 function nearestStructPos(x,y){
   let best=null,bd=1e9;
   for(const s of (tourn.structs||[])){const d=dist(x,y,s.x,s.y);if(d<bd){bd=d;best=s;}}
@@ -4030,7 +4042,7 @@ function botTargetPos(g,tSec){
 }
 // ----- Bot fishing: a realistic, time-spread catch schedule (no instant catches) -----
 // Each bot makes attempts across the whole match, misses most of them, and only
-// lands the target species now and then — same odds feel as real fishing, capped
+// lands the target species now and then - same odds feel as real fishing, capped
 // at 90% of the species' max so a true giant always beats them. Deterministic
 // from the match seed, so the leaderboard agrees on every device.
 function buildBotPlan(){
@@ -4630,7 +4642,7 @@ function showGhostInfo(g){
 function ordinalNum(n){const s=['th','st','nd','rd'],v=n%100;return n+(s[(v-20)%10]||s[v]||s[0]);}
 // Each rival's current best catch, keyed by uid. Merges three live sources so the
 // leaderboard is accurate: simulated bot catches, real friends' bests broadcast
-// over the live position doc (g.bestW), and—in a ruby challenge—the bests written
+// over the live position doc (g.bestW), and, in a ruby challenge, the bests written
 // to the shared challenge doc (activeSession.players).
 function rivalBestWeights(){
   const m={};
@@ -4727,7 +4739,7 @@ function tryGate(g){
   const now=performance.now?performance.now():Date.now();
   if(now<_gateCoolUntil)return;
   // In a co-op friends world everyone can roam all three zones together, no matter
-  // what boat they own — the whole point is to fish side by side.
+  // what boat they own - the whole point is to fish side by side.
   if(g.tz>maxZone()&&!tourn.coop){
     const need=BOATS.find(b=>b.maxZone>=g.tz);
     toast('Need the '+(need?need.name:'a bigger boat')+' for '+ZONE_LBL[g.tz],'#b3402a');
@@ -5804,7 +5816,7 @@ document.getElementById('anchor-btn').addEventListener('click',()=>{
     // Tutorial: only count anchoring ON a structure (the whole lesson).
     if(tut&&tut.active&&tut.steps[tut.i]&&tut.steps[tut.i].await==='anchor'){
       if(near)tutNotify('anchor');
-      else toast('Reds hold tight to structure — ease right up onto a spot first.','#b58b53');
+      else toast('Reds hold tight to structure - ease right up onto a spot first.','#b58b53');
     }
   }
   updateDriveUI();
@@ -5887,7 +5899,7 @@ function poolNow(){
       if(S.chumCasts>0)w*=1.3;
       if(ledActive())w*=1.2;
     }
-    // season — still a strong modifier (the right season makes a fish far more
+    // season - still a strong modifier (the right season makes a fish far more
     // likely; a featured tournament always runs one of the target's seasons).
     w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
     // time
@@ -6164,7 +6176,7 @@ function endSdewGame(success){
   // Tutorial practice fight: NO rewards. Win -> move on; lose -> retry until won.
   if(tut&&tut.trialActive){
     if(success){tut.trialActive=false;phase='idle';bobber.active=false;tutNotify('trialwin');}
-    else{toast('Lost her! Happens to the best of us — let\'s try again.','#b58b53');setTimeout(function(){if(tut&&tut.trialActive)tutStartTrial();},950);}
+    else{toast('Lost her! Happens to the best of us - let\'s try again.','#b58b53');setTimeout(function(){if(tut&&tut.trialActive)tutStartTrial();},950);}
     return;
   }
   if(!success){offerSdewRetry();return;}
@@ -6421,7 +6433,7 @@ function land(f,w,perfect,bullseye){
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
-  // Tutorial: this was the guided target catch — advance Captain Hank.
+  // Tutorial: this was the guided target catch - advance Captain Clancy.
   if(tut&&tut.active&&tut.forceTargetActive){tut.forceTargetActive=false;_forcedBiteFish=null;tutNotify('catch');}
 }
 function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}}
@@ -6607,8 +6619,8 @@ document.getElementById('zone-pill').addEventListener('click',()=>{
 });
 
 // menu
-function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();}
-function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');}
+function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();if(tut&&tut.active)tutPlaceBar();}
+function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');if(tut&&tut.active)tutPlaceBar();}
 document.getElementById('menu-open').addEventListener('click',openMenu);
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
