@@ -3416,12 +3416,17 @@ function updateGhosts(){
   const pVisible=!(invisibleUntil>Date.now()); // bots can't see a vanished player
   for(const g of tourn.ghosts){
     if(g.real&&g.hasReal){
-      // Smoothly chase the real broadcast position from Firestore
-      g.wx+=(g.tx-g.wx)*0.12*frameScale;
-      g.wy+=(g.ty-g.wy)*0.12*frameScale;
+      // Friends only broadcast a few times a second, so a plain lerp stutters.
+      // Dead-reckon: extrapolate the aim point forward along their last known
+      // velocity, capped so a dropped packet freezes rather than flies off, then
+      // glide toward it for buttery-smooth motion between updates.
+      const ageS=Math.min(1.5,(Date.now()-(g._lastSyncMs||0))/1000);
+      const aimX=g.tx+(g.vx||0)*ageS, aimY=g.ty+(g.vy||0)*ageS;
+      g.wx+=(aimX-g.wx)*0.22*frameScale;
+      g.wy+=(aimY-g.wy)*0.22*frameScale;
       let dh=g.th-g.heading;
       while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
-      g.heading+=dh*0.15*frameScale;
+      g.heading+=dh*0.2*frameScale;
       continue;
     }
     if(g.real&&!g.hasReal)continue; // real player who hasn't broadcast yet: hold still
@@ -3502,10 +3507,16 @@ function startTournamentSync(){
         g={uid:uid,name:p.name||'Angler',isBot:false,real:true,
            wx:p.wx,wy:p.wy,heading:p.heading||0,boat:p.boat||'kayak',
            cosmetic:p.cos||{},set:p.set||null,rod:p.rod||'rod0',reel:p.reel||'reel0',gender:p.gen||'male',skinTone:p.skin||'medlight',
-           tx:p.wx,ty:p.wy,th:p.heading||0,hasReal:true};
+           tx:p.wx,ty:p.wy,th:p.heading||0,vx:0,vy:0,_lastSyncMs:nowMs,hasReal:true};
         tourn.ghosts.push(g);
       }else{
         g.real=true;g.isBot=false;g.hasReal=true;
+        // estimate velocity (world units/sec) from the change since the last packet
+        const dtS=Math.max(0.08,(nowMs-(g._lastSyncMs||nowMs))/1000);
+        const jump=Math.hypot(p.wx-g.tx,p.wy-g.ty);
+        if(jump>700){g.vx=0;g.vy=0;g.wx=p.wx;g.wy=p.wy;} // teleport (zone snap): don't glide
+        else if(g._lastSyncMs){g.vx=(p.wx-g.tx)/dtS;g.vy=(p.wy-g.ty)/dtS;}
+        g._lastSyncMs=nowMs;
         g.tx=p.wx;g.ty=p.wy;g.th=p.heading||0;
         if(p.boat)g.boat=p.boat;if(p.name)g.name=p.name;
         if(p.cos)g.cosmetic=p.cos;g.set=p.set||null;
