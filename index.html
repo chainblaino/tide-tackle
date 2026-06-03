@@ -1541,8 +1541,13 @@ function acceptInvite(){
 }
 function declineInvite(){const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);}
 function startTournamentMode(def){
-  // The whole tournament is held during one randomly chosen season.
-  const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
+  // The tournament runs during ONE season — and if the target species only bites
+  // in certain seasons, we always pick one of THOSE so the target is catchable.
+  // Seeded from the match so every entrant sees the same season.
+  const _tf=def.targetFish;
+  const _seasonPool=(_tf&&_tf.season&&_tf.season.length&&_tf.season.indexOf('all')<0)?_tf.season:SEASONS;
+  const _sr=mulberry32((defSeed(def)^0x13579bdf)>>>0);
+  const tournSeason=_seasonPool[Math.floor(_sr()*_seasonPool.length)];
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now()};
   if(typeof AUDIO!=='undefined')AUDIO.setMood('tourn');
@@ -2442,6 +2447,26 @@ const BRAIDS=[
   {id:'braid3',name:'80 lb Braid', line:80, color:'#e0c020',cost:1900,lvl:8, desc:'Amberjack, cobia & sharks.'},
   {id:'braid4',name:'130 lb Braid',line:130,color:'#e07020',cost:4400,lvl:11,desc:'Marlin, tuna & swords.'},
 ];
+// V8.5 economy pass (run ONCE at boot, after FISH is defined):
+//  • Bait & lures that can take rarer fish cost more (surcharge by the rarest
+//    species that eats / is imitated by them).
+//  • Then everything in the shop goes up 20%.
+function applyV85Pricing(){
+  if(applyV85Pricing._done)return; applyV85Pricing._done=true;
+  const RT={common:0,uncommon:1,rare:2,epic:3,legendary:4,ultra:5};
+  function maxRarFor(baitIds){
+    let mx=0;
+    for(const f of FISH){ if(f.baits&&f.baits.some(function(b){return baitIds.indexOf(b)>=0;})) mx=Math.max(mx,RT[f.rarity]||0); }
+    return mx;
+  }
+  // rare-targeting surcharge: +16% per rarity tier above uncommon
+  BAIT.forEach(function(b){ if(!b.cost)return; const sur=1+0.16*Math.max(0,maxRarFor([b.id])-1); b.cost=Math.round(b.cost*sur*1.2/5)*5; });
+  LURES.forEach(function(l){ if(!l.cost)return; const sur=1+0.16*Math.max(0,maxRarFor(l.baits||[])-1); l.cost=Math.round(l.cost*sur*1.2/5)*5; });
+  // everything else +20%
+  [TACKLE,LEADERS,RODS,REELS,BRAIDS,BOATS,ITEMS,SETS].forEach(function(arr){
+    arr.forEach(function(it){ if(it.cost)it.cost=Math.round(it.cost*1.2); });
+  });
+}
 
 // zones + structures (760x560 space). tier 1 near .. 3 far (better)
 
@@ -3537,10 +3562,13 @@ const MOON_PHASES=[
   {id:'lastq',       name:'Last Quarter',      icon:'moon-lastq',        mul:1.00},
   {id:'wancrescent', name:'Waning Crescent',   icon:'moon-wancrescent',  mul:0.92},
 ];
+const SEASON_LEN=1440*10; // a season is exactly 10 in-game days
 function currentMoonPhase(){
-  // 8 game day lunar cycle, advancing across the year.
-  const dayInCycle=((S.clock||0)/1440)%8;
-  return MOON_PHASES[Math.floor(dayInCycle)];
+  // One full 8-phase lunar cycle per season: every moon phase happens once in
+  // each 10-day season and the cycle restarts cleanly when the season changes.
+  const within=(((S.clock||0)%SEASON_LEN)+SEASON_LEN)%SEASON_LEN;
+  const idx=Math.floor(within/(SEASON_LEN/8))%8;
+  return MOON_PHASES[idx];
 }
 // Tides: semi-diurnal. Two highs and two lows per ~12.4 game hours. Moon
 // shifts the tide timing (lunar pull) and scales amplitude (spring vs neap).
@@ -5728,28 +5756,41 @@ function cast(x,y){
   queueSave();updateRigBar();
   const st=bobber.struct;
   setStatus(st&&st.kind==='crab_trap'?'Checking the crab trap...':st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
-  const {strength}=poolNow();
-  const wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength,st);
+  const {strength,rarityDelay}=poolNow();
+  const wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength,st,rarityDelay);
   biteTimeout=setTimeout(()=>triggerBite(),wait);
 }
 
 function structLabel(k){return {dock:'dock pilings',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'bridge',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot',runoff:'storm runoff',frenzy:'bird frenzy',colorchange:'color change'}[k]||k;}
 
+// How much longer each rarity makes you wait for a bite. The rarer the fish your
+// rig is dialed in for, the longer it takes one to find your bait.
+const RARITY_BITE_DELAY={common:1,uncommon:1.2,rare:1.7,epic:2.6,legendary:3.8,ultra:5.5};
 function poolNow(){
   const m=curMethod(),leader=S.leader,st=bobber.struct;
   // Artificial methods derive their bait preferences from the equipped lure
   let bait=S.baitSel;
-  if(!m.bait){
-    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
-    if(lure&&lure.baits&&lure.baits.length)bait=lure.baits[0];
-  }
+  const lure=(!m.bait&&S.lureSel)?LURES.find(l=>l.id===S.lureSel):null;
+  if(lure&&lure.baits&&lure.baits.length)bait=lure.baits[0];
   const season=seasonNow(),ph=phaseOf(hourNow());
   const tk=tackleById(currentTackleId());const finder=curBoat().perk==='finder';
+  const stAlias=st?structKindAlias(st.kind):null;
   const out=[];
   for(const f of FISH){
     if(f.surf)continue;            // sharks only bite from the surf
     if(f.zone!==S.zone)continue;
-    if(!f.methods.includes(m.id))continue;
+    if(!f.methods.includes(m.id))continue;   // method must match (hard gate)
+    // STRICT bait/lure gate: a fish only bites what it actually eats.
+    if(m.bait){
+      if(!f.baits.includes(bait))continue;                 // wrong bait -> no bite
+    }else{
+      // Artificial: the lure must imitate one of this fish's baitfish/forage.
+      if(!lure||!lure.baits||!lure.baits.some(function(lb){return f.baits.includes(lb);}))continue;
+    }
+    // STRICT structure gate: structure-oriented fish only bite their structure;
+    // open-water fish bite anywhere; nothing bites the "wrong" structure.
+    if(st){ if(!f.structure.includes(stAlias)&&!f.structure.includes('open'))continue; }
+    else { if(!f.structure.includes('open'))continue; }    // open water needs an open-water fish
     let w=f.weight;
     // rarity spawn penalty so epic and legendary are genuinely rare;
     // Ultra Legendary is vanishingly rare (~0.001% of the pool even at a prime spot).
@@ -5761,16 +5802,14 @@ function poolNow(){
       if(S.chumCasts>0)w*=1.3;
       if(ledActive())w*=1.2;
     }
-    // season
-    w*=(f.season.includes('all')||f.season.includes(season))?1:0.2;
+    // season — still a strong modifier (the right season makes a fish far more
+    // likely; a featured tournament always runs one of the target's seasons).
+    w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
     // time
     if(f.time.includes('all'))w*=1; else if(f.time.includes(ph))w*=1.8; else w*=0.5;
-    // bait
-    if(m.bait)w*= f.baits.includes(bait)?2.6:0.25;
-    // structure
-    if(st&&f.structure.includes(structKindAlias(st.kind)))w*=2.8;
-    else if(f.structure.includes('open'))w*=1;
-    else w*=0.12;
+    // on-structure / matching-bait fish get an extra nudge over the baseline gate
+    if(st&&f.structure.includes(stAlias))w*=1.6;
+    if(m.bait&&f.baits.includes(bait))w*=1.4;
     // hidden: power plant warm-water discharge draws extra cobia
     if(st&&st.kind==='power_plant'&&f.id==='cobia')w*=1.15;
     // leader
@@ -5784,10 +5823,13 @@ function poolNow(){
     if(w>0.0001)out.push({f,w});
   }
   const strength=out.reduce((a,b)=>a+b.w,0);
-  return {out,strength};
+  // Rarity-weighted bite delay: a pool dominated by rare fish is slow to bite.
+  let rd=0;for(const o of out)rd+=o.w*(RARITY_BITE_DELAY[o.f.rarity]||1);
+  const rarityDelay=strength>0?rd/strength:1;
+  return {out,strength,rarityDelay};
 }
 
-function biteWait(strength,st){
+function biteWait(strength,st,rarityDelay){
   const ph=phaseOf(hourNow());
   let phaseFreq={dawn:1.5,dusk:1.4,day:1.0,night:0.8}[ph];
   if(ph==='night'&&curBoat().perk==='nightowl')phaseFreq=1.05;
@@ -5804,7 +5846,9 @@ function biteWait(strength,st){
   // requires more patience and good conditions matter more.
   const freq=phaseFreq*spotFreq*boatFreq*poolMul*envMul*0.65;
   const base=2200+Math.random()*3500;
-  return Math.max(700,Math.min(9000,base/freq));
+  // Rarer-targeted rigs wait noticeably longer for that first bite.
+  const rd=Math.max(1,rarityDelay||1);
+  return Math.max(700,Math.min(26000,(base/freq)*rd));
 }
 
 function triggerCrabTrap(){
@@ -5994,11 +6038,14 @@ function sdewLoop(){
   sdewFishCy+=sdewFishVel*fs;
   if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
   if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
-  // Meter - gain rate is halved during grace so the player has time to settle in
+  // Meter - FROZEN during the grace/buffer window: the progress bar does not move
+  // at all until the buffer is over, giving the player a moment to line up.
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
-  let gain=grace?0.3:0.6;
-  if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
-  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)*fs));
+  if(!grace){
+    let gain=0.6;
+    if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
+    sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)*fs));
+  }
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
   if(sdewMeter<=0){endSdewGame(false);return;}
@@ -6907,6 +6954,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
 
 // ===================== BOOT =====================
 (async function(){
+  applyV85Pricing();   // bump shop prices before any save/shop render uses them
   await loadGame();
   if(S.zone>maxZone())S.zone=maxZone();
   ensureRig();updateRigBar();refreshMenu();updateCosmeticHUD();
