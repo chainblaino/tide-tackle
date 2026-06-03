@@ -409,6 +409,15 @@
 .lobby-player .bot-tag{font-size:10px;color:var(--text-soft);font-weight:400;}
 .lobby-shop-btn{width:100%;padding:10px;border-radius:9px;border:1.5px solid var(--wood);background:transparent;color:var(--accent);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:8px;}
 .lobby-cancel-btn{width:100%;padding:9px;border-radius:9px;border:none;background:rgba(255,255,255,.07);color:var(--text-soft);font-size:12px;cursor:pointer;}
+.stake-opt{flex:1;padding:14px 4px;border-radius:11px;border:2px solid #d2b886;background:var(--parchment);color:var(--wood-dark);font-size:16px;font-weight:900;font-family:'Fredoka';cursor:pointer;}
+.stake-opt:hover{border-color:#d61f3a;color:#d61f3a;}
+.fwf-card{background:linear-gradient(135deg,#11343f,#0e2a3a);border:2px solid var(--accent);border-radius:13px;padding:13px;margin-bottom:14px;}
+.fwf-h{font-size:13px;font-weight:900;color:var(--accent);margin-bottom:3px;}
+.fwf-sub{font-size:11px;color:#a9c2cf;margin-bottom:10px;}
+.fwf-btns{display:flex;gap:8px;}
+.fwf-btn{flex:1;padding:10px 6px;border-radius:10px;border:none;font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
+.fwf-btn.world{background:#2aa890;color:#fff;}
+.fwf-btn.chal{background:#d61f3a;color:#fff;}
 /* FRIENDS */
 .friend-search-row{display:flex;gap:8px;margin-bottom:12px;}
 .friend-input{flex:1;padding:9px 12px;border-radius:9px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--ink);font-size:13px;font-family:inherit;}
@@ -600,7 +609,7 @@
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
     <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
-    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
+    <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div id="fwf-host"></div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
     <div class="mpanel" id="mp-settings"><div id="settings-body"></div></div>
   </div>
 </div>
@@ -744,8 +753,20 @@
     <button class="lobby-cancel-btn" onclick="cancelLobby()">Cancel and Refund</button>
   </div>
 </div>
+<div class="lobby-overlay" id="session-overlay">
+  <div class="lobby-box">
+    <div class="lobby-title" id="session-title">Fish with Friends</div>
+    <div class="lobby-sub" id="session-sub"></div>
+    <div class="lobby-timer" id="session-timer" style="font-size:13px;letter-spacing:0;"></div>
+    <ul class="lobby-players" id="session-players"></ul>
+    <button class="lobby-shop-btn" id="session-invite-btn" onclick="openSessionInvite()">Invite Friends</button>
+    <button class="lobby-shop-btn" id="session-start-btn" onclick="hostStartSession()">Start</button>
+    <button class="lobby-cancel-btn" id="session-cancel-btn" onclick="leaveSession(true)">Leave</button>
+  </div>
+</div>
 <div class="tourn-banner" id="tourn-banner">TOURNAMENT IN PROGRESS</div>
     <div class="tourn-standings" id="tourn-standings"></div>
+<button id="coop-exit" onclick="leaveSession(false)" style="display:none;position:absolute;top:38px;right:12px;z-index:9;padding:7px 12px;border-radius:10px;border:none;background:#d61f3a;color:#fff;font-family:'Fredoka';font-size:12px;font-weight:800;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);">Leave World</button>
 
 <script>
 // ─────────────────────────────────────────────────────────────
@@ -1111,7 +1132,16 @@ function renderFriendRequests(){
     }).join("");
 }
 
+function renderFwfCard(){
+  const host=document.getElementById('fwf-host');if(!host)return;
+  if(!fbUser){host.innerHTML='';return;}
+  host.innerHTML='<div class="fwf-card"><div class="fwf-h">🎣 Fish with Friends</div>'
+    +'<div class="fwf-sub">Invite up to 5 friends into your world, or challenge them for rubies.</div>'
+    +'<div class="fwf-btns"><button class="fwf-btn world" onclick="startCoopFlow()">Invite to my world</button>'
+    +'<button class="fwf-btn chal" onclick="startChallengeFlow()">Challenge for rubies</button></div></div>';
+}
 function renderFriendsPanel(){
+  renderFwfCard();
   const el=document.getElementById("friends-list");
   if(!el)return;
   if(!fbDb){el.innerHTML="<div class=\"lb-empty\">Sign in to manage friends.</div>";return;}
@@ -1452,9 +1482,19 @@ function _maybeShowInvite(){
   _shownInvites[key]=true;
   _pendingInvite=inv;
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
-  modal.innerHTML='<div class="mname" style="text-align:center;color:#e0a93c;">🎣 Tournament Invite</div>'
-    +'<div style="text-align:center;font-size:13px;color:var(--ink);margin:12px 0 3px;"><b>'+(inv.from||'A friend')+'</b> invited you to</div>'
-    +'<div style="text-align:center;font-size:16px;font-weight:900;color:var(--wood-dark);margin-bottom:16px;">'+(inv.name||'a tournament')+'</div>'
+  let head,line;
+  if(inv.kind==='challenge'){
+    head='⚔️ Challenge Invite';
+    line='<b>'+(inv.from||'A friend')+'</b> challenged you<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">Biggest '+(inv.fishName||'fish')+' wins</div><div style="font-size:13px;color:#d61f3a;font-weight:800;margin-top:4px;"><span class="gem-s"></span> '+(inv.stake||0)+' ruby ante &middot; 6 min</div>';
+  }else if(inv.kind==='coop'){
+    head='🎣 World Invite';
+    line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">fish their world</div>';
+  }else{
+    head='🎣 Tournament Invite';
+    line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">'+(inv.name||'a tournament')+'</div>';
+  }
+  modal.innerHTML='<div class="mname" style="text-align:center;color:#e0a93c;">'+head+'</div>'
+    +'<div style="text-align:center;font-size:13px;color:var(--ink);margin:12px 0 16px;">'+line+'</div>'
     +'<div style="display:flex;gap:10px;">'
     +'<button onclick="acceptInvite()" style="flex:1;padding:12px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Accept</button>'
     +'<button onclick="declineInvite()" style="flex:1;padding:12px;border-radius:11px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;">Decline</button>'
@@ -1473,12 +1513,15 @@ function removeInvite(inv){
 }
 function acceptInvite(){
   const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);
-  if(activeTournament){toast('Finish your current tournament first.','#b58b53');return;}
-  if(activeLobby){ // leave the current lobby (refund) to join your friend's
+  if(activeTournament){toast('Finish your current match first.','#b58b53');return;}
+  if(activeLobby){ // leave the current tournament lobby (refund) to join your friend's
     clearInterval(lobbyInt);S.gold+=activeLobby.def.fee;updatePills();queueSave();activeLobby=null;
     if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
     document.getElementById('lobby-overlay').style.display='none';
   }
+  if(activeSession){leaveSession(false);} // leave any existing friends session first
+  // Friends sessions (co-op world / ruby challenge) vs. classic tournament invites.
+  if(inv&&(inv.kind==='challenge'||inv.kind==='coop')&&inv.sessionId){setTimeout(function(){acceptSessionInvite(inv);},150);return;}
   if(inv&&inv.defId)setTimeout(function(){enterTournament(inv.defId);},120);
 }
 function declineInvite(){const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);}
@@ -1507,12 +1550,19 @@ function startTournamentMode(def){
     document.querySelector("[data-mtab='logbook']").classList.add('active');
     document.getElementById('mp-logbook').classList.add('active');
   }
-  document.getElementById("tourn-banner").style.display="block";
-  toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 6 minutes to fish - a full day & night.","#e0a93c");
+  const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
+  _bn.textContent=def.coop?'FISHING WITH FRIENDS':'TOURNAMENT IN PROGRESS';_bn.classList.remove('leading');
+  // Friends sessions (co-op / challenge) skip bots and customise the banner.
+  const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display=def.coop?'block':'none';
+  if(def.session){
+    toast(def.coop?'Fishing with friends! Catch anything you like.':('Challenge on! Biggest '+(def.targetFish?def.targetFish.name:'fish')+' in 6 minutes wins.'),'#e0a93c');
+  }else{
+    toast("Tournament started in "+SEASON_LABEL[tournSeason]+"! 6 minutes to fish - a full day & night.","#e0a93c");
+  }
   // Simulate bot catches. A bot's main focus is landing the BIGGEST fish, so it
   // makes several attempts that skew toward the top of the size range. Bots fish
   // harder at night, so more (and bigger) attempts fall in the second half.
-  if(activeLobby){
+  if(activeLobby&&!def.session){
     activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
       const attempts=3+Math.floor(Math.random()*3); // 3-5 casts each
       for(let i=0;i<attempts;i++){
@@ -1536,9 +1586,11 @@ function startTournamentMode(def){
       }
     });
   }
-  setTimeout(endTournament,6*60*1000);
+  // Co-op worlds have no timer (leave when you like); everything else runs 6 min.
+  if(!def.coop)setTimeout(endTournament,6*60*1000);
 }
 function recordTournamentCatch(fish,weight){
+  recordChallengeBest(fish,weight);
   if(!activeTournament)return;
   const tgt=activeTournament.def&&activeTournament.def.targetFish;
   // Only the tournament's target species counts toward the standings.
@@ -1547,6 +1599,8 @@ function recordTournamentCatch(fish,weight){
 }
 function endTournament(){
   if(!activeTournament)return;
+  // Friends sessions settle through their own path (co-op teardown / ruby payout).
+  if(activeTournament.def&&activeTournament.def.session){if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');return endSession();}
   if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
   if(typeof closeMenu==='function')closeMenu(); // don't leave the leaderboard/menu open behind the results
   document.body.classList.remove('tourn-active'); // shop unlocked again
@@ -1611,6 +1665,287 @@ function endTournament(){
   activeTournament=null;activeLobby=null;
   if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   setTimeout(checkPendingInvites,2500); // surface any invites that arrived mid-match
+}
+
+// ─────────────────────────────────────────────────────────────
+// FISH WITH FRIENDS: shared worlds (co-op) + ruby challenges
+// A "session" reuses the tournament arena, real-time position sync and ability
+// channel. Co-op = no stakes, no timer, fish anything together. Challenge =
+// 6-min, random target species, everyone antes rubies, biggest catch takes the
+// pot. Up to 5 friends (6 anglers) per session.
+// ─────────────────────────────────────────────────────────────
+const CHALLENGE_STAKES=[5,10,20];
+const SESSION_MAX=6; // host + 5 friends
+let activeSession=null,_sessionUnsub=null;
+function requireOnlineForFriends(){
+  if(!fbUser||!fbDb){toast('Sign in to fish with friends.','#b58b53');return false;}
+  if(!fbFriends.length){toast('Add a friend first (Friends tab).','#b58b53');return false;}
+  if(activeTournament){toast('Finish your current match first.','#b58b53');return false;}
+  if(activeLobby){toast('Leave the tournament lobby first.','#b58b53');return false;}
+  return true;
+}
+function _newSessionId(){return (fbUser?fbUser.uid.slice(0,6):'g')+Date.now().toString(36)+Math.floor(Math.random()*1e4).toString(36);}
+function _randChallengeSpecies(zone){
+  const good=FISH.filter(function(f){return f.zone===zone&&!f.surf&&['uncommon','rare','epic'].indexOf(f.rarity)>=0;});
+  const list=good.length?good:FISH.filter(function(f){return f.zone===zone&&!f.surf;});
+  return list[Math.floor(Math.random()*list.length)];
+}
+// ---- create (host) ----
+function startCoopFlow(){ if(requireOnlineForFriends())createSession('coop',0); }
+function startChallengeFlow(){
+  if(!requireOnlineForFriends())return;
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:4px;">Challenge Friends</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:14px;">Everyone antes the same. A random species is chosen - biggest catch in 6 minutes takes the whole pot. Pick a stake:</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +CHALLENGE_STAKES.map(function(s){return '<button class="stake-opt" onclick="createSession(\'challenge\','+s+')"><span class="gem-s"></span> '+s+'</button>';}).join('')
+    +'</div>';
+  bg.classList.add('show');
+}
+function createSession(mode,stake){
+  if(!requireOnlineForFriends())return;
+  stake=mode==='challenge'?stake:0;
+  if(mode==='challenge'&&(S.rubies||0)<stake){toast('You need '+stake+' rubies to host this.','#b3402a');closeModal();return;}
+  const zone=S.zone||0;
+  const fish=mode==='challenge'?_randChallengeSpecies(zone):null;
+  const id=_newSessionId();
+  activeSession={id:id,mode:mode,host:fbUser.uid,hostName:fbUsername,stake:stake,zone:zone,
+    fishId:fish?fish.id:null,fishName:fish?fish.name:null,isHost:true,started:false,
+    players:{}};
+  activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
+  const docPlayers={};docPlayers[fbUser.uid]={username:fbUsername,best:0,bestName:''};
+  fbDb.collection('challenges').doc(id).set({
+    host:fbUser.uid,hostName:fbUsername,mode:mode,stake:stake,zone:zone,
+    fishId:activeSession.fishId,fishName:activeSession.fishName,
+    status:'lobby',createdAt:Date.now(),players:docPlayers
+  }).catch(function(){toast('Could not start the session.','#b3402a');});
+  closeModal();
+  openSessionLobby();
+  setTimeout(openSessionInvite,200); // let the host pick who to invite right away
+}
+// ---- lobby UI (shared overlay) ----
+function openSessionLobby(){
+  if(!activeSession)return;
+  document.getElementById('menu-panel').classList.remove('show');
+  document.getElementById('menu-bg').classList.remove('show');
+  const isCh=activeSession.mode==='challenge';
+  document.getElementById('session-title').textContent=isCh?'Ruby Challenge':'Friends World';
+  document.getElementById('session-sub').innerHTML=isCh
+    ?('Biggest <b>'+activeSession.fishName+'</b> wins &middot; '+ZONE_LBL[activeSession.zone]+' &middot; <span class="gem-s"></span> '+activeSession.stake+' each')
+    :('Fish '+ZONE_LBL[activeSession.zone]+' together &middot; no stakes');
+  const startBtn=document.getElementById('session-start-btn');
+  startBtn.textContent=isCh?'Start challenge':'Start fishing';
+  startBtn.style.display=activeSession.isHost?'block':'none';
+  document.getElementById('session-invite-btn').style.display=activeSession.isHost?'block':'none';
+  document.getElementById('session-cancel-btn').textContent=activeSession.isHost?'Cancel session':'Leave';
+  renderSessionPlayers();
+  document.getElementById('session-overlay').style.display='flex';
+  _listenSession();
+}
+function renderSessionPlayers(){
+  const ul=document.getElementById('session-players');if(!ul||!activeSession)return;
+  const ids=Object.keys(activeSession.players||{});
+  const waiting=activeSession.isHost?'<div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:2px;">Invite friends, then start when ready.</div>'
+    :'<div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:2px;">Waiting for '+(activeSession.hostName||'the host')+' to start…</div>';
+  ul.innerHTML=ids.map(function(uid){
+    const p=activeSession.players[uid];
+    const tag=uid===activeSession.host?'<span class="bot-tag"> host</span>':'';
+    return '<li class="lobby-player">'+(p.username||'Angler')+tag+'</li>';
+  }).join('')+'<li style="list-style:none;">'+waiting+'</li>';
+}
+function _listenSession(){
+  if(_sessionUnsub){_sessionUnsub();_sessionUnsub=null;}
+  if(!activeSession||!fbDb)return;
+  _sessionUnsub=fbDb.collection('challenges').doc(activeSession.id).onSnapshot(function(d){
+    if(!activeSession)return;
+    if(!d.exists){ // host cancelled / doc gone
+      if(!activeSession.started){toast('The session was cancelled.','#b58b53');_teardownSessionLobby();}
+      return;
+    }
+    const data=d.data()||{};
+    activeSession.players=data.players||activeSession.players;
+    activeSession.status=data.status;
+    activeSession.fishName=data.fishName||activeSession.fishName;
+    if(document.getElementById('session-overlay').style.display==='flex')renderSessionPlayers();
+    // host pressed start -> everyone jumps into the match
+    if(data.status==='live'&&!activeSession.started){enterSessionMatch();}
+  },function(){});
+}
+function openSessionInvite(){
+  if(!activeSession||!activeSession.isHost)return;
+  if(!fbFriends.length){toast('Add friends to invite them.','#b58b53');return;}
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:4px;">Invite Friends</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:12px;">Tap to invite (up to 5). They get a pop-up to accept.</div>'
+    +'<div id="sinv-list" style="font-size:12px;color:var(--text-soft);">Loading…</div>';
+  bg.classList.add('show');
+  Promise.all(fbFriends.slice(0,20).map(function(uid){return fbDb.collection('users').doc(uid).get();})).then(function(snaps){
+    document.getElementById('sinv-list').innerHTML=snaps.map(function(s){
+      const dd=s.data()||{};const uname=(dd.username||'Angler').replace(/'/g,"&#39;");
+      return '<div class="friend-card"><div><div class="friend-name">'+(dd.username||'Angler')+'</div><div class="friend-lvl">Level '+(dd.level||1)+'</div></div>'
+        +'<button class="friend-add-btn" id="sinv-'+s.id+'" onclick="sendSessionInvite(\''+s.id+'\',\''+uname+'\')">Invite</button></div>';
+    }).join('')||'<div class="lb-empty">No friends to invite.</div>';
+  }).catch(function(){document.getElementById('sinv-list').innerHTML='<div class="lb-empty">Could not load friends.</div>';});
+}
+function sendSessionInvite(uid,username){
+  if(!activeSession||!fbUser||!fbDb)return;
+  if(Object.keys(activeSession.players||{}).length>=SESSION_MAX){toast('Session is full.','#b58b53');return;}
+  const inv={kind:activeSession.mode,sessionId:activeSession.id,from:fbUsername,fromUid:fbUser.uid,
+    mode:activeSession.mode,stake:activeSession.stake,fishName:activeSession.fishName,zone:activeSession.zone,
+    sentAt:Date.now(),id:fbUser.uid+'_'+Date.now()};
+  fbDb.collection('tournamentInvites').doc(uid).set({pending:firebase.firestore.FieldValue.arrayUnion(inv)},{merge:true}).then(function(){
+    const b=document.getElementById('sinv-'+uid);if(b){b.textContent='Invited ✓';b.disabled=true;b.style.opacity=.6;}
+    toast('Invited '+username+'!','#2aa890');
+  }).catch(function(){toast('Could not send invite.','#b3402a');});
+}
+// ---- accept (guest) ----
+function acceptSessionInvite(inv){
+  if(!fbUser||!fbDb||!inv){return;}
+  if(activeTournament){toast('Finish your current match first.','#b58b53');return;}
+  if(inv.mode==='challenge'&&(S.rubies||0)<(inv.stake||0)){toast('You need '+inv.stake+' rubies to join.','#b3402a');return;}
+  const ref=fbDb.collection('challenges').doc(inv.sessionId);
+  ref.get().then(function(d){
+    if(!d.exists){toast('That session has ended.','#b58b53');return;}
+    const data=d.data()||{};
+    if(data.status!=='lobby'){toast('That challenge already started.','#b58b53');return;}
+    if(Object.keys(data.players||{}).length>=SESSION_MAX){toast('Session is full.','#b58b53');return;}
+    const upd={};upd['players.'+fbUser.uid]={username:fbUsername,best:0,bestName:''};
+    ref.update(upd).catch(function(){});
+    activeSession={id:inv.sessionId,mode:data.mode,host:data.host,hostName:data.hostName,stake:data.stake,
+      zone:data.zone,fishId:data.fishId,fishName:data.fishName,isHost:false,started:false,players:data.players||{}};
+    activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
+    openSessionLobby();
+  }).catch(function(){toast('Could not join.','#b3402a');});
+}
+// ---- start (host writes 'live'; all clients react) ----
+function hostStartSession(){
+  if(!activeSession||!activeSession.isHost)return;
+  const n=Object.keys(activeSession.players||{}).length;
+  if(n<2){toast('Invite at least one friend first.','#b58b53');return;}
+  fbDb.collection('challenges').doc(activeSession.id).update({status:'live',startAt:Date.now()}).catch(function(){
+    if(!activeSession.started)enterSessionMatch(); // offline fallback
+  });
+}
+function _sessionPlayersList(){
+  const ids=Object.keys(activeSession.players||{});
+  return ids.map(function(uid){return {uid:uid,username:(activeSession.players[uid]||{}).username||'Angler',isBot:false};});
+}
+function enterSessionMatch(){
+  if(!activeSession||activeSession.started)return;
+  activeSession.started=true;
+  if(_sessionUnsub){_sessionUnsub();_sessionUnsub=null;}
+  document.getElementById('session-overlay').style.display='none';
+  // challenge: ante up
+  if(activeSession.mode==='challenge'){S.rubies=Math.max(0,(S.rubies||0)-(activeSession.stake||0));updatePills();queueSave();}
+  const fish=activeSession.fishId?FISH.find(function(f){return f.id===activeSession.fishId;}):null;
+  const def={id:'sess_'+activeSession.id,name:activeSession.mode==='challenge'?'Ruby Challenge':'Friends World',
+    zone:activeSession.zone,rarity:fish?fish.rarity:'rare',targetFish:fish,maxP:SESSION_MAX,
+    session:true,coop:activeSession.mode==='coop',mode:activeSession.mode,stake:activeSession.stake,sessId:activeSession.id};
+  activeLobby={def:def,players:_sessionPlayersList()};
+  startTournamentMode(def);
+}
+// ---- live best-catch sync (challenge) ----
+function recordChallengeBest(fish,weight){
+  if(!activeSession||!activeSession.started||activeSession.mode!=='challenge')return;
+  if(!fish||fish.id!==activeSession.fishId)return;
+  const me=activeSession.players[fbUser.uid]||{best:0};
+  if(weight<=(me.best||0))return;
+  activeSession.players[fbUser.uid]={username:fbUsername,best:weight,bestName:fish.name};
+  if(fbDb){const upd={};upd['players.'+fbUser.uid]={username:fbUsername,best:weight,bestName:fish.name};
+    fbDb.collection('challenges').doc(activeSession.id).update(upd).catch(function(){});}
+}
+// ---- end / leave ----
+function _restoreWorldAfterSession(){
+  stopTournamentSync();
+  tourn.active=false;tourn.ghosts=[];tourn.structs=[];
+  confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
+  const bo=document.getElementById('blind-overlay');if(bo)bo.classList.remove('show');
+  document.body.classList.remove('tourn-active');
+  document.getElementById('tourn-banner').style.display='none';
+  const _ce=document.getElementById('coop-exit');if(_ce)_ce.style.display='none';
+  initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
+  if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
+}
+function _teardownSessionLobby(){
+  if(_sessionUnsub){_sessionUnsub();_sessionUnsub=null;}
+  document.getElementById('session-overlay').style.display='none';
+  activeSession=null;
+}
+function leaveSession(fromLobby){
+  if(!activeSession)return;
+  const id=activeSession.id,isHost=activeSession.isHost,started=activeSession.started;
+  if(fbDb){
+    if(isHost&&!started){fbDb.collection('challenges').doc(id).delete().catch(function(){});}
+    else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
+      fbDb.collection('challenges').doc(id).update(upd).catch(function(){});}
+  }
+  if(started){_restoreWorldAfterSession();activeTournament=null;activeLobby=null;}
+  _teardownSessionLobby();
+  toast('Left the session.','#b58b53');
+}
+// Called from endTournament when the match is a session.
+function endSession(){
+  const sess=activeSession,def=activeTournament?activeTournament.def:null;
+  _restoreWorldAfterSession();
+  activeTournament=null;activeLobby=null;
+  if(!sess){return;}
+  if(sess.mode==='coop'){
+    _teardownSessionLobby();
+    const modal=document.getElementById('modal');
+    modal.innerHTML='<div class="mname" style="text-align:center;">Nice session!</div>'
+      +'<div style="text-align:center;font-size:12px;color:var(--text-soft);margin:10px 0 14px;">Thanks for fishing with friends.</div>'
+      +'<button onclick="closeModal()" style="width:100%;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:800;cursor:pointer;">Done</button>';
+    document.getElementById('modal-bg').classList.add('show');
+    return;
+  }
+  // CHALLENGE: read final standings and settle the ruby pot.
+  fbDb.collection('challenges').doc(sess.id).get().then(function(d){
+    const data=d.exists?(d.data()||{}):{players:sess.players,stake:sess.stake};
+    const players=data.players||sess.players||{};
+    const ids=Object.keys(players);
+    const stake=data.stake||sess.stake||0;
+    const pot=stake*ids.length;
+    const ranked=ids.map(function(uid){return {uid:uid,username:players[uid].username,best:players[uid].best||0,bestName:players[uid].bestName||''};})
+      .sort(function(a,b){return b.best-a.best;});
+    const winner=ranked[0];
+    const iWon=winner&&winner.uid===fbUser.uid&&winner.best>0;
+    // The winner credits the pot to themselves exactly once (guarded in the doc).
+    const finish=function(credited){
+      if(credited){S.rubies=(S.rubies||0)+pot;S.tournamentWins=(S.tournamentWins||0)+1;updatePills();queueSave();checkAchievements&&checkAchievements();}
+      _showChallengeResults(sess,ranked,stake,pot,winner,credited);
+    };
+    if(iWon&&fbDb){
+      const ref=fbDb.collection('challenges').doc(sess.id);
+      fbDb.runTransaction(function(tx){return tx.get(ref).then(function(s){
+        const dd=s.data()||{};if(dd.settled)return false;tx.update(ref,{settled:true,winner:fbUser.uid});return true;});
+      }).then(function(didCredit){finish(!!didCredit);
+        setTimeout(function(){ref.delete().catch(function(){});},8000);
+      }).catch(function(){finish(true);}); // offline: still pay the winner locally
+    }else{finish(false);}
+  }).catch(function(){
+    _showChallengeResults(sess,Object.keys(sess.players||{}).map(function(uid){return {uid:uid,username:sess.players[uid].username,best:sess.players[uid].best||0,bestName:sess.players[uid].bestName||''};}).sort(function(a,b){return b.best-a.best;}),sess.stake,0,null,false);
+  });
+  _teardownSessionLobby();
+}
+function _showChallengeResults(sess,ranked,stake,pot,winner,iWon){
+  const body=document.getElementById('modal');
+  body.innerHTML='<div style="font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:2px;">Challenge Over!</div>'
+    +'<div style="font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:12px;">Biggest '+(sess.fishName||'fish')+' &middot; pot <span class="gem-s"></span> '+pot+'</div>'
+    +ranked.slice(0,SESSION_MAX).map(function(e,i){
+      const me=e.uid===(fbUser&&fbUser.uid);
+      return '<div style="display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid '+(me?'var(--accent)':'#d2b886')+';margin-bottom:5px;">'
+        +(i===0?medalBadge(0):'<span style="width:22px;text-align:center;font-weight:800;color:var(--text-soft);">'+(i+1)+'</span>')
+        +'<span style="flex:1;font-size:13px;font-weight:700;color:var(--ink);">'+e.username+(me?' (you)':'')+'</span>'
+        +'<span style="font-size:12px;color:var(--text-soft);white-space:nowrap;">'+(e.best>0?e.best.toFixed(1)+'lb':'No catch')+'</span>'
+        +(i===0&&e.best>0?'<span style="font-size:12px;font-weight:900;color:#d61f3a;white-space:nowrap;margin-left:6px;"><span class="gem-s"></span> +'+pot+'</span>':'')+'</div>';
+    }).join('')
+    +(iWon?'<div style="text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#d61f3a;">You won the pot! <span class="gem-s"></span> +'+pot+' rubies</div>'
+       :(winner&&winner.best>0?'<div style="text-align:center;font-size:12px;color:var(--text-soft);margin-top:10px;">'+winner.username+' takes the pot.</div>':'<div style="text-align:center;font-size:12px;color:var(--text-soft);margin-top:10px;">No winner - nobody landed one.</div>'))
+    +'<button onclick="closeModal()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:800;cursor:pointer;">Done</button>';
+  document.getElementById('modal-bg').classList.add('show');
+  if(typeof AUDIO!=='undefined')AUDIO.sfx(iWon?'win':'open');
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3820,6 +4155,7 @@ function liveTournPlace(){
 }
 function updateTournBanner(){
   const bn=document.getElementById('tourn-banner');if(!bn)return;
+  if(activeTournament&&activeTournament.def&&activeTournament.def.coop){bn.textContent='FISHING WITH FRIENDS';bn.classList.remove('leading');return;}
   const p=liveTournPlace();if(!p){bn.textContent='TOURNAMENT IN PROGRESS';return;}
   bn.textContent=ordinalNum(p.place)+' of '+p.total+(p.myW>0?' · '+p.myW.toFixed(1)+' lb':' · no catch yet');
   bn.classList.toggle('leading',p.place===1&&p.myW>0);
@@ -3842,6 +4178,7 @@ function tournStandings(){
 function topThreeUids(){return tournStandings().slice(0,3).filter(function(e){return e.weight>0;}).map(function(e){return e.uid;});}
 function updateTournStandings(){
   const el=document.getElementById('tourn-standings');if(!el)return;
+  if(activeTournament&&activeTournament.def&&activeTournament.def.coop){el.style.display='none';return;}
   const e=tournStandings();
   if(!e.length){el.style.display='none';return;}
   el.style.display='block';
@@ -4642,6 +4979,7 @@ function worldCovered(){
   if(typeof sdewActive!=='undefined'&&sdewActive)return true;
   const mp=document.getElementById('menu-panel');if(mp&&mp.classList.contains('show'))return true;
   const lb=document.getElementById('lobby-overlay');if(lb&&lb.style.display==='flex')return true;
+  const so=document.getElementById('session-overlay');if(so&&so.style.display==='flex')return true;
   const au=document.getElementById('auth-overlay');if(au&&au.style.display!=='none')return true;
   return false;
 }
@@ -4657,7 +4995,9 @@ function render(ts){
   if(activeTournament){
     // Drive the clock from match progress so it always runs the beginning of a
     // day through the end of the night, exactly one cycle over the 6 minutes.
-    const prog=Math.min(1,(Date.now()-(activeTournament.startMs||Date.now()))/TOURN_MS);
+    // Co-op worlds have no time limit, so they simply loop the day/night cycle.
+    const raw=(Date.now()-(activeTournament.startMs||Date.now()))/TOURN_MS;
+    const prog=(activeTournament.def&&activeTournament.def.coop)?(raw%1):Math.min(1,raw);
     S.clock=TOURN_DAY_START+prog*1440;
   }else{
     S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
@@ -5091,15 +5431,16 @@ function triggerBite(){
   sdewRetryUsed=false;sdewSurf=false;
   phase='biting';
   AUDIO.sfx('bite');
-  if(activeTournament){
-    // During a tournament ONLY the target species triggers the Stardew fight -
-    // even a legendary that isn't the target uses the normal hookset minigame.
+  if(activeTournament&&activeTournament.def.targetFish){
+    // During a tournament/challenge ONLY the target species triggers the Stardew
+    // fight - even a legendary that isn't the target uses the normal hookset.
     const tgt=activeTournament.def&&activeTournament.def.targetFish;
     if(tgt&&pick.id===tgt.id){startSdewGame(pick);return;}
     setStatus('Fish on! Set the hook!');setupMiniGame();
     escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
     return;
   }
+  // Co-op friends world (no target) plays like the normal open world below.
   if(pick.rarity==='legendary'||pick.rarity==='ultra'){
     setStatus(pick.rarity==='ultra'?'ULTRA LEGENDARY ON THE LINE!!!':'LEGENDARY FISH ON THE LINE!');
     showLegendaryAlert(pick);
