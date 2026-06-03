@@ -719,7 +719,7 @@
     <div class="lobby-sub" id="lobby-sub"></div>
     <div class="lobby-timer" id="lobby-timer">1:00</div>
     <ul class="lobby-players" id="lobby-players"></ul>
-    <button class="lobby-shop-btn" onclick="inviteFriendsToLobby()">Invite Friends</button>
+    <button class="lobby-shop-btn" onclick="openInviteFriends()">Invite Friends</button>
     <button class="lobby-shop-btn" onclick="openShopFromLobby()">Open Shop</button>
     <button class="lobby-cancel-btn" onclick="cancelLobby()">Cancel and Refund</button>
   </div>
@@ -1010,8 +1010,8 @@ function loadFriends(){
   }).catch(function(){});
   // Load incoming friend requests
   loadFriendRequests();
-  // Surface any tournament invites
-  loadTournamentInvites();
+  // Listen for tournament invites in real time
+  listenForInvites();
 }
 
 function loadFriendRequests(){
@@ -1158,6 +1158,7 @@ const ALWAYS_TOURN_NAMES=["Open Gulf Challenge","Gulf Coast Showdown","All-Water
 const ZONE_LBL=["Inshore","Nearshore","Offshore"];
 const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary",ultra:"Ultra Legendary"};
 let activeLobby=null,lobbyInt=null,activeTournament=null;
+let _lobbyUnsub=null,_inviteUnsub=null,_shownInvites={},_lastInviteList=[],_pendingInvite=null;
 // Aliases used throughout tournament code
 function updatePills(){updateRigBar();}
 function updateZonePill(){
@@ -1322,13 +1323,16 @@ function enterTournament(defId){
   if(fbUser&&fbDb){
     const today=new Date().toISOString().slice(0,10);
     const ref=fbDb.collection("tournament_lobbies").doc(def.id+"_"+today);
-    ref.set({entries:firebase.firestore.FieldValue.arrayUnion({uid:fbUser.uid,username:fbUsername,joinedAt:Date.now()})},{merge:true})
-      .then(function(){return ref.get();})
-      .then(function(snap){
-        const entries=((snap.data()||{}).entries||[]).filter(function(e){return e.uid!==fbUser.uid;});
-        activeLobby.players=[meEntry].concat(entries.slice(0,def.maxP-1).map(function(e){return{uid:e.uid,username:e.username,isBot:false};}));
-        renderLobbyPlayers();
-      }).catch(function(){});
+    ref.set({entries:firebase.firestore.FieldValue.arrayUnion({uid:fbUser.uid,username:fbUsername,joinedAt:Date.now()})},{merge:true}).catch(function(){});
+    // Live: entrants (friends who accept an invite) appear as they join.
+    if(_lobbyUnsub)_lobbyUnsub();
+    _lobbyUnsub=ref.onSnapshot(function(snap){
+      if(!activeLobby)return;
+      const seen={},others=[];
+      ((snap.data()||{}).entries||[]).forEach(function(e){if(e.uid===fbUser.uid||seen[e.uid])return;seen[e.uid]=1;others.push({uid:e.uid,username:e.username,isBot:false});});
+      activeLobby.players=[meEntry].concat(others.slice(0,def.maxP-1));
+      renderLobbyPlayers();
+    },function(){});
   }
   startLobbyCountdown();
 }
@@ -1347,6 +1351,7 @@ function startLobbyCountdown(){
   },1000);
 }
 function fillBotsAndStart(){
+  if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;} // stop listening once the match begins
   const def=activeLobby.def;
   const needed=def.maxP-activeLobby.players.length;
   const bots=[].concat(BOT_NAMES).sort(function(){return Math.random()-.5;});
@@ -1359,6 +1364,7 @@ function fillBotsAndStart(){
 }
 function cancelLobby(){
   clearInterval(lobbyInt);
+  if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   if(activeLobby){
     S.gold+=activeLobby.def.fee;updatePills();queueSave();
     toast("Entry refunded.","#2aa890");
@@ -1375,31 +1381,87 @@ function openShopFromLobby(){
   document.getElementById("menu-bg").classList.add("show");
   renderShop();
 }
-async function inviteFriendsToLobby(){
+// Open a picker of your friends and invite them one by one to this lobby.
+async function openInviteFriends(){
   if(!activeLobby){return;}
   if(!fbUser||!fbDb){toast("Sign in to invite friends.","#b58b53");return;}
   if(!fbFriends.length){toast("Add friends first in the Friends tab.","#b58b53");return;}
-  const def=activeLobby.def;
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:4px;">Invite Friends</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:12px;">Tap a friend to invite them to this tournament.</div>'
+    +'<div id="invite-list" style="font-size:12px;color:var(--text-soft);">Loading…</div>';
+  bg.classList.add('show');
   try{
-    await Promise.all(fbFriends.slice(0,20).map(function(uid){
-      return fbDb.collection("tournamentInvites").doc(uid).set({
-        pending:firebase.firestore.FieldValue.arrayUnion({from:fbUsername,defId:def.id,name:def.name,zone:def.zone,sentAt:Date.now()})
-      },{merge:true});
-    }));
-    toast("Invited "+fbFriends.length+" friend"+(fbFriends.length>1?"s":"")+"!","#2aa890");
-  }catch(e){toast("Could not send invites.","#b3402a");}
+    const snaps=await Promise.all(fbFriends.slice(0,20).map(function(uid){return fbDb.collection("users").doc(uid).get();}));
+    const rows=snaps.map(function(s){
+      const d=s.data()||{};const uname=(d.username||"Angler").replace(/'/g,"&#39;");
+      return '<div class="friend-card"><div><div class="friend-name">'+(d.username||"Angler")+'</div><div class="friend-lvl">Level '+(d.level||1)+'</div></div>'
+        +'<button class="friend-add-btn" id="inv-'+s.id+'" onclick="inviteOneFriend(\''+s.id+'\',\''+uname+'\')">Invite</button></div>';
+    }).join("");
+    document.getElementById('invite-list').innerHTML=rows||'<div class="lb-empty">No friends to invite.</div>';
+  }catch(e){document.getElementById('invite-list').innerHTML='<div class="lb-empty">Could not load friends.</div>';}
 }
-function loadTournamentInvites(){
+function inviteOneFriend(uid,username){
+  if(!activeLobby||!fbUser||!fbDb)return;
+  const def=activeLobby.def,today=new Date().toISOString().slice(0,10);
+  const invite={from:fbUsername,fromUid:fbUser.uid,defId:def.id,name:def.name,zone:def.zone,day:today,sentAt:Date.now(),id:fbUser.uid+'_'+Date.now()};
+  fbDb.collection("tournamentInvites").doc(uid).set({
+    pending:firebase.firestore.FieldValue.arrayUnion(invite)
+  },{merge:true}).then(function(){
+    const btn=document.getElementById('inv-'+uid);if(btn){btn.textContent='Invited ✓';btn.disabled=true;btn.style.opacity=.6;}
+    toast('Invited '+username+'!','#2aa890');
+  }).catch(function(){toast('Could not send invite.','#b3402a');});
+}
+// Listen in real time for tournament invites and pop them up with Accept/Decline.
+function listenForInvites(){
   if(!fbUser||!fbDb)return;
-  fbDb.collection("tournamentInvites").doc(fbUser.uid).get().then(function(d){
+  if(_inviteUnsub)_inviteUnsub();
+  _inviteUnsub=fbDb.collection("tournamentInvites").doc(fbUser.uid).onSnapshot(function(d){
+    _lastInviteList=((d.data()||{}).pending)||[];
+    _maybeShowInvite();
+  },function(){});
+}
+function _maybeShowInvite(){
+  if(_pendingInvite||activeTournament)return; // don't interrupt a popup or a live match
+  const mbg=document.getElementById('modal-bg');
+  if(mbg&&mbg.classList.contains('show'))return; // don't clobber another open modal
+  const list=_lastInviteList;if(!list||!list.length)return;
+  const inv=list[list.length-1];
+  const key=inv.id||(inv.fromUid+'_'+inv.sentAt);
+  if(_shownInvites[key])return;
+  _shownInvites[key]=true;
+  _pendingInvite=inv;
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<div class="mname" style="text-align:center;color:#e0a93c;">🎣 Tournament Invite</div>'
+    +'<div style="text-align:center;font-size:13px;color:var(--ink);margin:12px 0 3px;"><b>'+(inv.from||'A friend')+'</b> invited you to</div>'
+    +'<div style="text-align:center;font-size:16px;font-weight:900;color:var(--wood-dark);margin-bottom:16px;">'+(inv.name||'a tournament')+'</div>'
+    +'<div style="display:flex;gap:10px;">'
+    +'<button onclick="acceptInvite()" style="flex:1;padding:12px;border-radius:11px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Accept</button>'
+    +'<button onclick="declineInvite()" style="flex:1;padding:12px;border-radius:11px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;">Decline</button>'
+    +'</div>';
+  bg.classList.add('show');
+}
+function checkPendingInvites(){_maybeShowInvite();}
+function removeInvite(inv){
+  if(!fbUser||!fbDb||!inv)return;
+  const ref=fbDb.collection("tournamentInvites").doc(fbUser.uid);
+  ref.get().then(function(d){
     const list=((d.data()||{}).pending)||[];
-    if(list.length){
-      const last=list[list.length-1];
-      toast(last.from+" invited you to "+(last.name||"a tournament")+"! Check the Tourn. tab.","#1c6a9e");
-      fbDb.collection("tournamentInvites").doc(fbUser.uid).set({pending:[]},{merge:true}).catch(function(){});
-    }
+    const key=inv.id||(inv.fromUid+'_'+inv.sentAt);
+    ref.set({pending:list.filter(function(x){return (x.id||(x.fromUid+'_'+x.sentAt))!==key;})},{merge:true}).catch(function(){});
   }).catch(function(){});
 }
+function acceptInvite(){
+  const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);
+  if(activeTournament){toast('Finish your current tournament first.','#b58b53');return;}
+  if(activeLobby){ // leave the current lobby (refund) to join your friend's
+    clearInterval(lobbyInt);S.gold+=activeLobby.def.fee;updatePills();queueSave();activeLobby=null;
+    if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
+    document.getElementById('lobby-overlay').style.display='none';
+  }
+  if(inv&&inv.defId)setTimeout(function(){enterTournament(inv.defId);},120);
+}
+function declineInvite(){const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);}
 function startTournamentMode(def){
   // The whole tournament is held during one randomly chosen season.
   const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
@@ -1522,6 +1584,8 @@ function endTournament(){
     +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
   document.getElementById("modal-bg").classList.add("show");
   activeTournament=null;activeLobby=null;
+  if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
+  setTimeout(checkPendingInvites,2500); // surface any invites that arrived mid-match
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -5729,7 +5793,7 @@ function openFish(id){
     '<div class="mfact">\u201C'+f.fact+'\u201D</div>';
   document.getElementById('modal-bg').classList.add('show');
 }
-function closeModal(){document.getElementById('modal-bg').classList.remove('show');}
+function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal();});
 document.getElementById('catch-bg').addEventListener('click',e=>{if(e.target.id==='catch-bg')closeCatch();});
 document.getElementById('logbook-zones').addEventListener('click',e=>{const c=e.target.closest('.fish-card');if(c)openFish(c.dataset.fish);});
