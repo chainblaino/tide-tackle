@@ -218,6 +218,25 @@
   .gfx-fps-btn{margin-top:8px;width:100%;padding:7px;border-radius:9px;border:1.5px solid #c4a875;background:#fff;color:var(--text-soft);font-size:12px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
   .gfx-fps-btn.active{background:#2a7fb4;color:#fff;border-color:#1f6090;}
   .fps-meter{position:absolute;top:54px;left:12px;z-index:9;background:rgba(8,16,24,.82);color:#7CFC9A;font-family:ui-monospace,Menlo,monospace;font-weight:800;font-size:13px;padding:3px 8px;border-radius:8px;pointer-events:none;}
+  /* Settings tab */
+  .set-sec{background:var(--cream);border:2px solid #e3d3b0;border-radius:13px;padding:12px 13px;margin-bottom:13px;}
+  .set-sec-h{font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:9px;letter-spacing:.2px;}
+  .set-row{margin-bottom:10px;}
+  .set-row:last-child{margin-bottom:0;}
+  .set-row-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;}
+  .set-label{font-size:12.5px;font-weight:700;color:var(--text);}
+  .set-val{font-size:12px;font-weight:800;color:var(--wood);min-width:26px;text-align:right;}
+  .set-slider{-webkit-appearance:none;appearance:none;width:100%;height:7px;border-radius:6px;background:#e3d3b0;outline:none;}
+  .set-slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:var(--accent);border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.25);cursor:pointer;}
+  .set-slider::-moz-range-thumb{width:20px;height:20px;border:2px solid #fff;border-radius:50%;background:var(--accent);cursor:pointer;}
+  .set-audio.dim{opacity:.4;pointer-events:none;filter:grayscale(.6);}
+  .set-toggle{width:100%;padding:9px;border-radius:10px;border:1.5px solid #c4a875;background:#fff;color:var(--wood-dark);font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;margin-bottom:10px;}
+  .set-toggle.on{background:#b58b53;color:#fff;border-color:#8b5a2b;}
+  .set-btn{width:100%;margin-top:8px;padding:9px;border-radius:10px;border:1.5px solid #c4a875;background:#fff;color:var(--wood-dark);font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
+  .set-btn:hover{border-color:var(--accent);color:var(--accent-dark);}
+  .set-btn.danger{border-style:dashed;color:var(--text-soft);}
+  .set-btn.danger:hover{color:#b3402a;border-color:#b3402a;}
+  .set-line{display:flex;justify-content:space-between;align-items:center;font-size:12.5px;margin-bottom:5px;}
   .reset-btn{margin-top:11px;width:100%;padding:8px;font-size:12px;font-weight:800;color:var(--text-soft);background:transparent;border:2px dashed #c4a875;border-radius:9px;cursor:pointer;}
   .reset-btn:hover{color:#b3402a;border-color:#b3402a;}
 
@@ -558,7 +577,7 @@
   <div class="menu-tabs">
     <button class="menu-tab active" data-mtab="shop">Shop</button>
     <button class="menu-tab" data-mtab="logbook">Logbook</button>
-    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="tournament">Tourn.</button><button class="menu-tab" data-mtab="friends">Friends</button>
+    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="tournament">Tourn.</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
@@ -582,6 +601,7 @@
     </div>
     <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
     <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
+    <div class="mpanel" id="mp-settings"><div id="settings-body"></div></div>
   </div>
 </div>
 
@@ -1467,6 +1487,7 @@ function startTournamentMode(def){
   const tournSeason=SEASONS[Math.floor(Math.random()*SEASONS.length)];
   activeTournament={def:def,biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now()};
+  if(typeof AUDIO!=='undefined')AUDIO.setMood('tourn');
   S.zone=def.zone;
   // The match clock is driven from elapsed time (see render): it starts at the
   // beginning of the day and ends exactly at the end of the night, one full cycle.
@@ -1523,6 +1544,7 @@ function recordTournamentCatch(fish,weight){
 }
 function endTournament(){
   if(!activeTournament)return;
+  if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
   if(typeof closeMenu==='function')closeMenu(); // don't leave the leaderboard/menu open behind the results
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Reset all ability effects and hide the ability button
@@ -2638,7 +2660,187 @@ function normalizeState(){
   }
   if(!S.cosmetic)S.cosmetic={hat:'none',shirt:'none',shades:'none',crown:'none'};
   if(!S.ownedCosmetics)S.ownedCosmetics=[];
+  if(!S.audio||typeof S.audio!=='object')S.audio={music:0.45,sfx:0.7,amb:0.5,muted:false};
+  if(typeof S.audio.music!=='number')S.audio.music=0.45;
+  if(typeof S.audio.sfx!=='number')S.audio.sfx=0.7;
+  if(typeof S.audio.amb!=='number')S.audio.amb=0.5;
+  if(typeof S.audio.muted!=='boolean')S.audio.muted=false;
+  // Per-account world seed: same structures for everyone, shuffled placement.
+  if(typeof S.worldSeed!=='number'||!isFinite(S.worldSeed)||S.worldSeed<=0){
+    S.worldSeed=Math.floor(Math.random()*2147483646)+1;
+  }
 }
+
+// ===================== AUDIO (procedural Web Audio) =====================
+// All sound is synthesized live - no files to download - so the game stays a
+// single self-contained page. iOS Safari starts the AudioContext suspended, so
+// we resume it on the first user gesture.
+const AUDIO=(function(){
+  let ctx=null, ok=true, unlocked=false;
+  let masterGain=null, musicGain=null, sfxGain=null, ambGain=null;
+  let noiseBuf=null, ambNodes=null, musicTimer=null, musicOn=false;
+  let nextNote=0, step=0, musicMood='calm';
+  function vols(){return (typeof S!=='undefined'&&S.audio)?S.audio:{music:0.45,sfx:0.7,amb:0.5,muted:false};}
+  function ensure(){
+    if(ctx||!ok)return ctx;
+    try{
+      const AC=window.AudioContext||window.webkitAudioContext;
+      if(!AC){ok=false;return null;}
+      ctx=new AC();
+      masterGain=ctx.createGain();masterGain.gain.value=1;masterGain.connect(ctx.destination);
+      musicGain=ctx.createGain();sfxGain=ctx.createGain();ambGain=ctx.createGain();
+      musicGain.connect(masterGain);sfxGain.connect(masterGain);ambGain.connect(masterGain);
+      applyVols();
+      buildNoise();
+    }catch(e){ok=false;}
+    return ctx;
+  }
+  function applyVols(){
+    if(!ctx)return;const v=vols();const m=v.muted?0:1;
+    musicGain.gain.value=v.music*m;
+    sfxGain.gain.value=v.sfx*m;
+    ambGain.gain.value=v.amb*m*0.9;
+  }
+  function buildNoise(){
+    const len=ctx.sampleRate*2;noiseBuf=ctx.createBuffer(1,len,ctx.sampleRate);
+    const d=noiseBuf.getChannelData(0);let last=0;
+    for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.0;}
+  }
+  // ---- ocean ambience: filtered noise with a slow wave-swell LFO ----
+  function startAmbience(){
+    if(!ensure()||ambNodes)return;
+    try{
+      const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+      const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;lp.Q.value=0.4;
+      const swellG=ctx.createGain();swellG.gain.value=0.5;
+      const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.12;
+      const lfoG=ctx.createGain();lfoG.gain.value=0.28;
+      lfo.connect(lfoG);lfoG.connect(swellG.gain);
+      const lfo2=ctx.createOscillator();lfo2.type='sine';lfo2.frequency.value=0.37;
+      const lfoG2=ctx.createGain();lfoG2.gain.value=180;
+      lfo2.connect(lfoG2);lfoG2.connect(lp.frequency);
+      src.connect(lp);lp.connect(swellG);swellG.connect(ambGain);
+      src.start();lfo.start();lfo2.start();
+      ambNodes={src:src,lfo:lfo,lfo2:lfo2};
+    }catch(e){}
+  }
+  function stopAmbience(){
+    if(!ambNodes)return;try{ambNodes.src.stop();ambNodes.lfo.stop();ambNodes.lfo2.stop();}catch(e){}
+    ambNodes=null;
+  }
+  // ---- SFX ----
+  function blip(freq,dur,type,vol,when,glideTo){
+    if(!ensure())return;const t=(when||ctx.currentTime);
+    const o=ctx.createOscillator();o.type=type||'sine';o.frequency.setValueAtTime(freq,t);
+    if(glideTo)o.frequency.exponentialRampToValueAtTime(Math.max(20,glideTo),t+dur);
+    const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.001,vol||0.2),t+0.012);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(sfxGain);o.start(t);o.stop(t+dur+0.02);
+  }
+  function noiseBurst(dur,cut,vol,sweepTo){
+    if(!ensure())return;const t=ctx.currentTime;
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.setValueAtTime(cut,t);bp.Q.value=0.8;
+    if(sweepTo)bp.frequency.exponentialRampToValueAtTime(sweepTo,t+dur);
+    const g=ctx.createGain();g.gain.setValueAtTime(Math.max(0.001,vol||0.2),t);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    src.connect(bp);bp.connect(g);g.connect(sfxGain);src.start(t);src.stop(t+dur+0.02);
+  }
+  const SCALE=[523.25,587.33,659.25,783.99,880.00,1046.50]; // C major pentatonic up high
+  function sfx(name,opt){
+    if(!ensure())return;opt=opt||{};
+    const ct=ctx.currentTime;
+    switch(name){
+      case 'tick': blip(660,0.05,'triangle',0.10);break;
+      case 'cast': noiseBurst(0.34,900,0.16,260); setTimeout(()=>blip(220,0.10,'sine',0.10,0,150),300);break;
+      case 'plop': blip(360,0.12,'sine',0.18,0,140);break;
+      case 'bite': blip(880,0.09,'square',0.14);blip(1320,0.10,'square',0.12,ct+0.10);break;
+      case 'reel': blip(420+Math.random()*60,0.04,'sawtooth',0.06);break;
+      case 'coin': blip(987,0.07,'square',0.13);blip(1318,0.10,'square',0.12,ct+0.06);break;
+      case 'item': blip(523,0.06,'triangle',0.13);blip(784,0.09,'triangle',0.12,ct+0.05);break;
+      case 'fail': blip(330,0.18,'sawtooth',0.14,0,120);blip(220,0.22,'sine',0.10,ct+0.04,90);break;
+      case 'ability': noiseBurst(0.3,1200,0.12,300);blip(180,0.3,'sawtooth',0.10,0,520);break;
+      case 'open': blip(523,0.07,'sine',0.10);blip(659,0.08,'sine',0.10,ct+0.05);break;
+      case 'catch':{
+        const tier=opt.tier||0; // 0 common .. 5 ultra
+        const notes=2+Math.min(4,tier);
+        for(let i=0;i<notes;i++){blip(SCALE[Math.min(SCALE.length-1,i+Math.min(2,tier))],0.16,'triangle',0.16,ct+i*0.085);}
+        if(tier>=4){blip(SCALE[0]/2,0.6,'sawtooth',0.10,ct);blip(1046.5,0.5,'sine',0.10,ct+notes*0.085);}
+        break;}
+      case 'win': for(let i=0;i<5;i++)blip(SCALE[i],0.22,'triangle',0.16,ct+i*0.12);break;
+      default:break;
+    }
+  }
+  // ---- generative music bed: gentle pads + sparse pentatonic melody ----
+  const CHORDS={
+    calm:[[261.63,329.63,392.00],[220.00,261.63,329.63],[174.61,261.63,349.23],[196.00,246.94,392.00]],
+    tourn:[[261.63,311.13,392.00],[233.08,293.66,349.23],[196.00,261.63,329.63],[207.65,261.63,311.13]]
+  };
+  const MEL={calm:[392,440,523.25,587.33,659.25],tourn:[392,466.16,523.25,622.25,659.25]};
+  function pad(freqs,t,dur){
+    freqs.forEach(function(f){
+      const o=ctx.createOscillator();o.type='sine';o.frequency.value=f;
+      const o2=ctx.createOscillator();o2.type='triangle';o2.frequency.value=f*2.001;
+      const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
+      g.gain.linearRampToValueAtTime(0.05,t+0.6);
+      g.gain.linearRampToValueAtTime(0.0001,t+dur);
+      const g2=ctx.createGain();g2.gain.value=0.012;
+      o.connect(g);o2.connect(g2);g2.connect(g);g.connect(musicGain);
+      o.start(t);o2.start(t);o.stop(t+dur+0.1);o2.stop(t+dur+0.1);
+    });
+  }
+  function melNote(f,t,dur){
+    const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;
+    const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(0.07,t+0.04);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(musicGain);o.start(t);o.stop(t+dur+0.05);
+  }
+  function scheduler(){
+    if(!ctx||!musicOn)return;
+    const beat=0.92; // ~65 bpm, calming
+    while(nextNote<ctx.currentTime+0.2){
+      const prog=CHORDS[musicMood]||CHORDS.calm, mel=MEL[musicMood]||MEL.calm;
+      const bar=Math.floor(step/4)%prog.length;
+      if(step%4===0)pad(prog[bar],nextNote,beat*4);            // new chord every bar
+      if(step%2===1&&Math.random()<0.7)melNote(mel[Math.floor(Math.random()*mel.length)],nextNote,beat*0.9);
+      nextNote+=beat;step++;
+    }
+  }
+  function startMusic(mood){
+    if(!ensure())return;musicMood=mood||musicMood;
+    if(musicOn)return;musicOn=true;nextNote=ctx.currentTime+0.1;step=0;
+    musicTimer=setInterval(scheduler,60);
+  }
+  function stopMusic(){musicOn=false;if(musicTimer){clearInterval(musicTimer);musicTimer=null;}}
+  function setMood(m){if(m!==musicMood){musicMood=m;}}
+  function unlock(){
+    if(unlocked||!ensure())return;
+    try{ctx.resume&&ctx.resume();}catch(e){}
+    // silent kick to fully unlock iOS
+    try{const b=ctx.createBufferSource();b.buffer=ctx.createBuffer(1,1,ctx.sampleRate);b.connect(ctx.destination);b.start(0);}catch(e){}
+    unlocked=true;
+    const v=vols();
+    if(!v.muted){ if(v.amb>0)startAmbience(); if(v.music>0)startMusic(); }
+  }
+  function refresh(){
+    if(!ctx){return;}
+    applyVols();const v=vols();
+    if(v.muted){ /* gains already 0 */ }
+    else{
+      if(v.amb>0&&!ambNodes)startAmbience(); if(v.amb<=0&&ambNodes)stopAmbience();
+      if(v.music>0&&!musicOn)startMusic(); if(v.music<=0&&musicOn)stopMusic();
+    }
+  }
+  return {unlock:unlock,sfx:sfx,refresh:refresh,setMood:setMood,
+          startMusic:startMusic,stopMusic:stopMusic,
+          available:function(){return ok;}};
+})();
+// Resume/unlock audio on the very first interaction (browser autoplay policy).
+['pointerdown','touchstart','keydown','click'].forEach(function(ev){
+  window.addEventListener(ev,function _u(){AUDIO.unlock();},{once:true,passive:true});
+});
 // Pull the player's cloud save and merge it into the live state. Called after
 // a successful sign in so progress follows the account, not the device.
 async function loadCloudSave(uid){
@@ -3420,7 +3622,7 @@ function useAbility(){
   else if(setId==='berserker')used=abilityPunch();
   else if(setId==='jeremy')used=abilityJeremy();
   else if(setId==='assassin')used=abilityVanish();
-  if(used){activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
+  if(used){AUDIO.sfx('ability');activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
 }
 function abilityPlunder(){
   const g=nearestGhost(340);
@@ -4703,6 +4905,7 @@ function cast(x,y){
   }
   bobber={x,y,active:true,struct:nearestStruct(x,y)};
   ripples.push({x,y,r:3,life:1},{x,y,r:8,life:.7});
+  AUDIO.sfx('cast');
   phase='waiting';S.totalCasts++;
   if(S.chumCasts>0){S.chumCasts--;if(S.chumCasts===0)setTimeout(function(){toast('Your chum slick washed out.','#8b5a2b');},300);}
   // Track which structure kinds the player has fished for the Explorer achievement
@@ -4823,6 +5026,7 @@ function triggerBite(){
   hookedFish=pick;hookW=rollWeight(pick);
   sdewRetryUsed=false;sdewSurf=false;
   phase='biting';
+  AUDIO.sfx('bite');
   if(activeTournament){
     // During a tournament ONLY the target species triggers the Stardew fight -
     // even a legendary that isn't the target uses the normal hookset minigame.
@@ -5226,10 +5430,11 @@ function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||S.rod==='chainsaw
 function surfHookOK(){return S.surfHook||S.toothHook;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
 function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
-function fail(msg){phase='done';bobber.active=false;S.misses++;queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
+function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
 function land(f,w,perfect,bullseye){
   phase='caught';bobber.active=false;
+  AUDIO.sfx('catch',{tier:RARITY_ORDER.indexOf(f.rarity)});
   if(S.radarActive){S.radarActive=false;}
   // consume bait (natural methods) or a lure (artificial methods); surf bait is handled separately
   if(!f.surf){
@@ -5308,7 +5513,8 @@ function closeCatch(){document.getElementById('catch-bg').classList.remove('show
 
 // ===================== UI =====================
 function setStatus(m){document.getElementById('status').textContent=m;}
-function toast(msg,color){const t=document.getElementById('toast');t.textContent=msg;t.style.borderColor=color||'#8b5a2b';t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);}
+function toast(msg,color){const t=document.getElementById('toast');t.textContent=msg;t.style.borderColor=color||'#8b5a2b';t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),2400);
+  try{if(typeof AUDIO!=='undefined'){if(/^(Bought|Got |Earned|Unlocked|Equipped)/.test(msg))AUDIO.sfx('coin');}}catch(e){}}
 
 function updateRigBar(){
   document.getElementById('rig-method').textContent=curMethod().name;
@@ -5409,6 +5615,7 @@ function grantMixedBait(total,pool){
 }
 function useItem(id){
   const q=S.itemInv[id]||0;if(q<=0){toast('You don’t have that item.','#b3402a');return;}
+  AUDIO.sfx('item');
   if(id==='chum'){S.chumCasts=5;toast('Chum slick out - rarer fish for 5 casts.','#2aa890');}
   else if(id==='led'){
     if(phaseOf(hourNow())!=='night'){toast('Save the LED for nighttime.','#b58b53');return;}
@@ -5442,7 +5649,7 @@ document.getElementById('zone-pill').addEventListener('click',()=>{
 });
 
 // menu
-function openMenu(){document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();}
+function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();}
 function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');}
 document.getElementById('menu-open').addEventListener('click',openMenu);
 document.getElementById('menu-close').addEventListener('click',closeMenu);
@@ -5452,6 +5659,7 @@ document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
     if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
     if(t.dataset.mtab==='friends'){loadFriendRequests();}
+    if(t.dataset.mtab==='settings'){renderSettings();}
   document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('mp-'+t.dataset.mtab).classList.add('active');
@@ -5731,25 +5939,98 @@ function renderStats(){
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
   const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
   let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
-  // Graphics quality control
-  const gfx=S.gfx||'auto';
-  const gbtn=function(id,label){return '<button class="gfx-opt'+(gfx===id?' active':'')+'" onclick="setGfx(\''+id+'\')">'+label+'</button>';};
-  html+='<div class="gfx-row"><div class="gfx-head">Graphics <span class="gfx-sub">'+(gfx==='auto'?'crisp, full detail':gfx==='high'?'max sharpness':'lightest - for slow devices')+'</span></div>'
-    +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div>'
-    +'<button class="gfx-fps-btn'+(S.showFps?' active':'')+'" onclick="toggleFps()">'+(S.showFps?'Hide':'Show')+' FPS counter</button></div>';
+  html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:6px;">Sound &amp; graphics are in the &#9881; Settings tab.</div>';
   // Achievements section
   html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{})+'</div>';
   document.getElementById('stats-list').innerHTML=html;
 }
+// ===================== SETTINGS TAB =====================
+function renderSettings(){
+  const a=S.audio||{music:0.45,sfx:0.7,amb:0.5,muted:false};
+  const slider=function(key,label,val){
+    return '<div class="set-row"><div class="set-row-top"><span class="set-label">'+label+'</span>'
+      +'<span class="set-val" id="setval-'+key+'">'+Math.round(val*100)+'</span></div>'
+      +'<input type="range" class="set-slider" min="0" max="100" value="'+Math.round(val*100)+'" '
+      +'oninput="setAudioVol(\''+key+'\',this.value)"></div>';
+  };
+  const gfx=S.gfx||'auto';
+  const gbtn=function(id,label){return '<button class="gfx-opt'+(gfx===id?' active':'')+'" onclick="setGfx(\''+id+'\')">'+label+'</button>';};
+  const signedIn=!!(typeof fbUser!=='undefined'&&fbUser);
+  let html='';
+  // --- Audio ---
+  html+='<div class="set-sec"><div class="set-sec-h">Sound</div>'
+    +'<button class="set-toggle'+(a.muted?' on':'')+'" onclick="toggleMute()">'+(a.muted?'🔇 Muted - tap to unmute':'🔊 Sound on - tap to mute')+'</button>'
+    +'<div class="set-audio'+(a.muted?' dim':'')+'" id="set-audio-group">'
+    +slider('music','Music',a.music)
+    +slider('sfx','Sound effects',a.sfx)
+    +slider('amb','Ocean ambience',a.amb)
+    +'</div></div>';
+  // --- Graphics ---
+  html+='<div class="set-sec"><div class="set-sec-h">Graphics</div>'
+    +'<div class="gfx-sub" style="margin-bottom:7px;">'+(gfx==='auto'?'Auto: crisp, full detail':gfx==='high'?'High: maximum sharpness':'Smooth: lightest, for slower phones')+'</div>'
+    +'<div class="gfx-opts">'+gbtn('auto','Auto')+gbtn('high','High')+gbtn('smooth','Smooth')+'</div>'
+    +'<button class="gfx-fps-btn'+(S.showFps?' active':'')+'" onclick="toggleFps()">'+(S.showFps?'Hide':'Show')+' FPS counter</button></div>';
+  // --- World ---
+  html+='<div class="set-sec"><div class="set-sec-h">World</div>'
+    +'<div class="set-line"><span class="sl-label">World seed</span><span class="sl-val">#'+(S.worldSeed||0)+'</span></div>'
+    +'<div class="gfx-sub">Everyone has the same structures - your seed decides where they sit. Reroll to shuffle your whole map.</div>'
+    +'<button class="set-btn" onclick="rerollWorld()">Reroll my world layout</button></div>';
+  // --- Saves & account ---
+  html+='<div class="set-sec"><div class="set-sec-h">Saves &amp; account</div>';
+  if(signedIn){
+    html+='<div class="gfx-sub">Signed in as <b>'+(fbUsername||'angler')+'</b>. Progress syncs to the cloud automatically.</div>'
+      +'<button class="set-btn" onclick="settingsSaveNow()">Save to cloud now</button>'
+      +'<button class="set-btn" onclick="settingsReloadCloud()">Reload from cloud</button>'
+      +'<button class="set-btn" onclick="openRecovery()">Recover lost progress</button>'
+      +'<button class="set-btn danger" onclick="showUserMenu()">Log out</button>';
+  }else{
+    html+='<div class="gfx-sub">Playing as a guest - progress is saved on this device only. Create an account to sync, add friends and join tournaments.</div>';
+  }
+  html+='<button class="set-btn danger" onclick="resetAllProgress()">Reset all progress</button></div>';
+  document.getElementById('settings-body').innerHTML=html;
+}
+function setAudioVol(key,v){
+  v=Math.max(0,Math.min(100,parseInt(v,10)||0));
+  if(!S.audio)S.audio={music:0.45,sfx:0.7,amb:0.5,muted:false};
+  S.audio[key]=v/100;
+  const lab=document.getElementById('setval-'+key);if(lab)lab.textContent=v;
+  if(typeof AUDIO!=='undefined'){AUDIO.unlock();AUDIO.refresh();if(key==='sfx'&&v>0)AUDIO.sfx('tick');}
+  queueSaveSettings();
+}
+function toggleMute(){
+  if(!S.audio)S.audio={music:0.45,sfx:0.7,amb:0.5,muted:false};
+  S.audio.muted=!S.audio.muted;
+  if(typeof AUDIO!=='undefined'){AUDIO.unlock();AUDIO.refresh();}
+  queueSaveSettings();renderSettings();
+}
+let _settingsSaveT=null;
+function queueSaveSettings(){clearTimeout(_settingsSaveT);_settingsSaveT=setTimeout(queueSave,500);}
 function setGfx(mode){
-  S.gfx=mode;applyGfxQuality();queueSave();renderStats();
-  toast('Graphics: '+mode.charAt(0).toUpperCase()+mode.slice(1),'#2aa890');
+  S.gfx=mode;applyGfxQuality();queueSave();
+  const sb=document.getElementById('settings-body');if(sb&&document.getElementById('mp-settings').classList.contains('active'))renderSettings();
+  toast('Graphics set','#2aa890');
 }
 function toggleFps(){
   S.showFps=!S.showFps;
   const fe=document.getElementById('fps-meter');if(fe)fe.style.display=S.showFps?'block':'none';
-  queueSave();renderStats();
+  queueSave();
+  const sb=document.getElementById('settings-body');if(sb&&document.getElementById('mp-settings').classList.contains('active'))renderSettings();
 }
+function settingsSaveNow(){if(typeof saveGame==='function'){saveGame();}toast('Saved to cloud.','#2aa890');}
+async function settingsReloadCloud(){
+  if(!(typeof fbUser!=='undefined'&&fbUser)){toast('Sign in to use cloud saves.','#b58b53');return;}
+  if(!confirm('Reload your save from the cloud? Any unsynced changes on this device will be replaced.'))return;
+  try{await loadCloudSave(fbUser.uid);normalizeState();applyGfxQuality();initStructures();updatePills&&updatePills();updateRigBar&&updateRigBar();refreshMenu&&refreshMenu();toast('Reloaded from cloud.','#2aa890');}
+  catch(e){toast('Could not reach the cloud.','#b3402a');}
+}
+function rerollWorld(){
+  if(activeTournament){toast('Not during a tournament.','#b58b53');return;}
+  if(!confirm('Reroll your world layout? Your structures will move to brand-new spots.'))return;
+  S.worldSeed=Math.floor(Math.random()*2147483646)+1;
+  initStructures();clearSightFish&&clearSightFish();queueSave();renderSettings();
+  toast('Your world has been reshuffled!','#2aa890');
+}
+function resetAllProgress(){var b=document.getElementById('reset-btn');if(b){b.click();}}
 function renderAchievementSections(map){
   const tiers=['impressive','extraordinary','goat'];
   return tiers.map(function(t){
