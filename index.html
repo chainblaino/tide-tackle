@@ -2961,13 +2961,16 @@ let saveTimer=null;
 let cloudReady=false, cloudBaseScore=-1, forceCloudWrite=false;
 // Monotonic-ish measure of how much progress a save represents. Used to decide
 // which of two saves is "further along" and to block regressions to the cloud.
+// IMPORTANT: this must be MONOTONIC (only ever increases during normal play) so
+// it can act as an anti-rollback guard. It therefore uses cumulative totals only
+// - never a spendable balance like current gold or rubies, which would drop when
+// the player buys something and wrongly block the save.
 function progressScore(s){
   s=s||S;
   return (s.totalCatches||0)*4
     + Math.floor((s.goldEarned||0)/50)
     + (s.level||1)*8
     + Object.keys(s.caught||{}).length*6
-    + (s.rubies||0)*2
     + (s.totalCasts||0)
     + (s.tournamentWins||0)*5;
 }
@@ -2991,12 +2994,41 @@ async function saveGame(){
   if(fbUser&&fbDb){
     if(!cloudReady&&!forceCloudWrite)return;
     const sc=progressScore(S);
-    if(sc<cloudBaseScore&&!forceCloudWrite)return;
-    cloudBaseScore=Math.max(cloudBaseScore,sc);
+    if(sc<cloudBaseScore&&!forceCloudWrite)return; // fast client-side guard
     // Reuse already-serialized data (avoid a second JSON.stringify)
     const cloudData=data||JSON.stringify(S);
-    try{fbDb.collection("saves").doc(fbUser.uid).set({data:cloudData,score:sc,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true}).catch(function(){});}catch(e){}
+    const force=forceCloudWrite;
+    writeCloudSaveGuarded(fbDb.collection("saves").doc(fbUser.uid),cloudData,sc,force);
   }
+}
+// Authoritative anti-rollback: a transaction reads the cloud doc and refuses to
+// LOWER its progress score. So a fresh/low client - e.g. right after a deploy,
+// before it has loaded the player's save - can NEVER wipe real progress. Only an
+// explicit reset or a chosen recovery passes force=true to bypass it.
+function writeCloudSaveGuarded(ref,cloudData,sc,force){
+  try{
+    fbDb.runTransaction(function(tx){
+      return tx.get(ref).then(function(snap){
+        let existingScore=-1;
+        if(snap.exists){
+          const ed=snap.data()||{};
+          if(ed.data){try{existingScore=progressScore(JSON.parse(ed.data));}catch(e){existingScore=(typeof ed.score==='number')?ed.score:-1;}}
+          else if(typeof ed.score==='number')existingScore=ed.score;
+        }
+        if(!force&&existingScore>sc){
+          // Cloud is further along than us: leave it untouched and adopt it as our
+          // baseline so we stop trying to push a lower state.
+          cloudBaseScore=Math.max(cloudBaseScore,existingScore);
+          return;
+        }
+        tx.set(ref,{data:cloudData,score:sc,savedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true});
+        cloudBaseScore=Math.max(cloudBaseScore,sc);
+      });
+    }).catch(function(){
+      // Transaction unavailable (offline / contention): the state is safe in
+      // localStorage and the next save retries. Don't do an unguarded write.
+    });
+  }catch(e){}
 }
 function queueSave(){clearTimeout(saveTimer);saveTimer=setTimeout(saveGame,400);}
 async function loadGame(){
