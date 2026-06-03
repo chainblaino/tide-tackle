@@ -4803,12 +4803,13 @@ function updateMiniGameDOM(){
   document.getElementById('catch-ind').style.left=marker.pos+'%';
 }
 function animateMiniGame(){
+  const fs=frameScale; // run at the same speed regardless of frame rate
   // Move the green zone bouncing left and right
-  zoneSel.left+=zoneSel.dir*zoneSel.speed;
+  zoneSel.left+=zoneSel.dir*zoneSel.speed*fs;
   if(zoneSel.left<=0){zoneSel.left=0;zoneSel.dir=1;}
   if(zoneSel.left>=100-zoneSel.width){zoneSel.left=100-zoneSel.width;zoneSel.dir=-1;}
   // Move the orange marker at 30% of the zone speed
-  marker.pos+=marker.dir*marker.speed;
+  marker.pos+=marker.dir*marker.speed*fs;
   if(marker.pos>=100){marker.pos=100;marker.dir=-1;}
   if(marker.pos<=0){marker.pos=0;marker.dir=1;}
   updateMiniGameDOM();
@@ -4885,10 +4886,11 @@ function sdewLoop(){
   // First 2 seconds: grace window. Fish barely moves, meter fills half as fast.
   const now=performance.now?performance.now():Date.now();
   const grace=(now-sdewStartTime)<SDEW_GRACE_MS;
+  const fs=frameScale; // run the fight at the same speed regardless of frame rate
   // Bar physics (player control is normal even during grace)
-  if(sdewHolding)sdewBarVel-=2.0; else sdewBarVel+=1.5;
+  sdewBarVel+=(sdewHolding?-2.0:1.5)*fs;
   sdewBarVel=Math.max(-6,Math.min(6,sdewBarVel));
-  sdewBarTop+=sdewBarVel;
+  sdewBarTop+=sdewBarVel*fs;
   if(sdewBarTop<=0){sdewBarTop=0;sdewBarVel=Math.abs(sdewBarVel)*.3;}
   if(sdewBarTop>=SDEW_TRACK_H-SDEW_BAR_H){sdewBarTop=SDEW_TRACK_H-SDEW_BAR_H;sdewBarVel=-Math.abs(sdewBarVel)*.3;}
   // Fish physics - during grace the fish drifts very slowly with no dart attempts.
@@ -4901,17 +4903,17 @@ function sdewLoop(){
   const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow;
   const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
   const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease*slow;
-  sdewFishVel+=(Math.random()-.5)*erratic;
-  if(Math.random()<dartChance)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease;
+  sdewFishVel+=(Math.random()-.5)*erratic*fs;
+  if(Math.random()<dartChance*fs)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease;
   sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
-  sdewFishCy+=sdewFishVel;
+  sdewFishCy+=sdewFishVel*fs;
   if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
   if(sdewFishCy>SDEW_TRACK_H-SDEW_FISH_R){sdewFishCy=SDEW_TRACK_H-SDEW_FISH_R;sdewFishVel=-Math.abs(sdewFishVel);}
   // Meter - gain rate is halved during grace so the player has time to settle in
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
   let gain=grace?0.3:0.6;
   if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
-  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)));
+  sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)*fs));
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
   if(sdewMeter<=0){endSdewGame(false);return;}
