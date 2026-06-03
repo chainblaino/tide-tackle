@@ -1,0 +1,53 @@
+rules_version = '2';
+
+// Tide & Tackle - Firestore security rules.
+//
+// HOW TO APPLY: Firebase console -> Firestore Database -> Rules tab -> paste
+// this whole file over what's there -> Publish.
+//
+// These rules do NOT expire (the default "test mode" rules deny everything
+// after 30 days). Only signed-in accounts can touch the database; guests never
+// do. A player's cloud SAVE is locked to that player so no one else can read or
+// wipe it. The shared multiplayer docs (lobbies, positions, invites, friend
+// lists) allow cross-account writes because that's how invites / friend
+// requests / co-op sessions work.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // ---- A player's cloud save: ONLY the owner may read or write it. ----
+    match /saves/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---- Public profile + stats: anyone signed in can read (friend search,
+    //      friends lists, leaderboard); only the owner writes their own. ----
+    match /users/{uid} {
+      allow read:  if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+    match /leaderboard/{uid} {
+      allow read:  if signedIn();
+      allow write: if signedIn() && request.auth.uid == uid;
+    }
+
+    // ---- Username directory (login-by-username + friend search). Readable by
+    //      any signed-in user; you may only point a username at YOUR OWN uid. ----
+    match /usernames/{name} {
+      allow read:  if signedIn();
+      allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Social + multiplayer docs need cross-account writes (sending a friend
+    //      request or invite writes to the RECIPIENT's doc; lobbies / positions /
+    //      challenges are shared), so any signed-in account may read/write. ----
+    match /friends/{uid}             { allow read, write: if signedIn(); }
+    match /friendRequests/{uid}      { allow read, write: if signedIn(); }
+    match /tournamentInvites/{uid}   { allow read, write: if signedIn(); }
+    match /tournament_lobbies/{id}   { allow read, write: if signedIn(); }
+    match /tournament_positions/{id} { allow read, write: if signedIn(); }
+    match /challenges/{id}           { allow read, write: if signedIn(); }
+  }
+}
