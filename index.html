@@ -2315,7 +2315,7 @@ const TOURN_DAY_START=300;    // ...as one full day->night cycle, starting at da
 // methods: cat = tackle category, bait = needs natural bait
 const METHODS=[
   {id:'cork',     name:'Cork',       cat:'cork',     bait:true,  zones:[0],     blurb:'A popping cork over the flats calls in trout & reds.'},
-  {id:'jig',      name:'Jig',        cat:'jig',      bait:false, zones:[0,1],   blurb:'Work an artificial jig. No bait needed.'},
+  {id:'jig',      name:'Jig',        cat:'jig',      bait:false, zones:[0,1,2], blurb:'Work an artificial lure. No bait needed. Match the lure to your region.'},
   {id:'structure',name:'Structure',  cat:'finesse',  bait:true,  zones:[0],     blurb:'Drop bait tight to pilings & bars. The sheepshead game.'},
   {id:'livebait', name:'Live bait',  cat:'livehook', bait:true,  zones:[0,1,2], blurb:'Free-line a lively bait. Hard to beat anywhere.'},
   {id:'bottom',   name:'Bottom rig', cat:'bottomrig',bait:true,  zones:[1,2],   blurb:'A knocker rig parked on reefs & wrecks.'},
@@ -2367,31 +2367,32 @@ const LEADERS=[
 // Lures are consumable, like bait: each purchase adds a pack and one is used
 // up per fish landed. Each category targets certain methods.
 const LURE_PACK=10; // lures bought per purchase
+// Lures are REGION-SPECIFIC: each works only in its zone (0 inshore, 1 nearshore,
+// 2 offshore). All are fished on the Jig method; tie one on that matches where you
+// are. The shop groups them by region.
 const LURES=[
-  // Soft Plastics & Jigs
-  {id:'paddletail',     cat:'softplastic', name:'Paddletail',         icon:'reel',    cost:160, lvl:2,  methods:['jig','cork'],          baits:['pilchard'],desc:'Kicking tail mimics fleeing baitfish. Trout, snook, redfish.'},
-  {id:'fluke',          cat:'softplastic', name:'Jerkbait (Fluke)',   icon:'reel',    cost:180, lvl:2,  methods:['jig','cork'],          baits:['pilchard'],desc:'Darts erratically when twitched. Weightless over grass.'},
-  {id:'softshrimp',     cat:'softplastic', name:'Scented Shrimp',     icon:'crab',    cost:140, lvl:1,  methods:['jig','bottom','cork'], baits:['shrimp'],  desc:'Scented soft plastic, fish it on the bottom for drum and reds.'},
-  {id:'bucktail',       cat:'softplastic', name:'Bucktail Jig',       icon:'reel',    cost:260, lvl:3,  methods:['jig','bottom'],        baits:['pinfish'], desc:'Hair pulses in the water. Flounder, tarpon, cobia killer.'},
-  // Topwater
-  {id:'popper',         cat:'topwater',    name:'Popper',             icon:'fish',    cost:220, lvl:3,  methods:['cork','jig'],          baits:['pilchard'],desc:'Concave face spits and splashes. Explosive surface strikes.'},
-  {id:'walkdog',        cat:'topwater',    name:'Walk-the-Dog Plug',  icon:'fish',    cost:280, lvl:4,  methods:['cork','jig'],          baits:['pilchard'],desc:'Zig-zags across the surface with rhythmic twitches.'},
-  // Plugs (twitchbaits & crankbaits)
-  {id:'twitchbait',     cat:'plug',        name:'Suspending Twitchbait',icon:'fish',  cost:300, lvl:3,  methods:['jig','troll'],         baits:['pilchard'],desc:'Slow sinking plug that darts and pauses. Inshore flats.'},
-  {id:'divingplug',     cat:'plug',        name:'Diving Plug',        icon:'fish',    cost:380, lvl:4,  methods:['troll','jig'],         baits:['cutbait'], desc:'Bib up front pulls it to a target depth. Mangroves, offshore.'},
-  // Spoons
-  {id:'castspoon',      cat:'spoon',       name:'Casting Spoon',      icon:'reel',    cost:220, lvl:2,  methods:['cork','jig','troll'],  baits:['pilchard'],desc:'Wobbling flash mimics a wounded baitfish.'},
-  {id:'trollspoon',     cat:'spoon',       name:'Trolling Spoon',     icon:'reel',    cost:420, lvl:5,  methods:['troll'],               baits:['cutbait'], desc:'Runs deep, covers water. Spanish, kingfish, wahoo.'},
-  // Metal Jigs
-  {id:'castmetal',      cat:'metaljig',    name:'Casting Metal Jig',  icon:'anchor',  cost:480, lvl:5,  methods:['jig'],                 baits:['pilchard'],desc:'Long-distance casts to breaking fish on the surface.'},
-  {id:'verticaljig',    cat:'metaljig',    name:'Vertical Jig',       icon:'anchor',  cost:720, lvl:7,  methods:['jig','bottom'],        baits:['squid'],   desc:'Drop straight down on wrecks and reefs for snapper, grouper, tuna.'},
+  // ---- INSHORE (zone 0): flats, grass, docks & mangroves ----
+  {id:'paddletail',  cat:'softplastic', zone:0, name:'Paddletail',          icon:'reel', cost:160, lvl:2, methods:['jig','cork'],         baits:['pilchard'],desc:'Kicking tail mimics fleeing baitfish. Trout, snook, redfish.'},
+  {id:'fluke',       cat:'softplastic', zone:0, name:'Jerkbait (Fluke)',    icon:'reel', cost:180, lvl:2, methods:['jig','cork'],         baits:['pilchard'],desc:'Darts erratically when twitched. Weightless over grass.'},
+  {id:'softshrimp',  cat:'softplastic', zone:0, name:'Scented Shrimp',      icon:'crab', cost:140, lvl:1, methods:['jig','cork'],         baits:['shrimp'],  desc:'Scented soft plastic worked along the bottom for drum and reds.'},
+  {id:'popper',      cat:'topwater',    zone:0, name:'Popper',              icon:'fish', cost:220, lvl:3, methods:['jig','cork'],         baits:['pilchard'],desc:'Concave face spits and splashes. Explosive surface strikes.'},
+  {id:'walkdog',     cat:'topwater',    zone:0, name:'Walk-the-Dog Plug',   icon:'fish', cost:280, lvl:4, methods:['jig','cork'],         baits:['pilchard'],desc:'Zig-zags across the surface with rhythmic twitches.'},
+  {id:'twitchbait',  cat:'plug',        zone:0, name:'Suspending Twitchbait',icon:'fish',cost:300, lvl:4, methods:['jig'],                baits:['pilchard'],desc:'Slow-sinking plug that darts and pauses over the flats.'},
+  // ---- NEARSHORE (zone 1): reefs, wrecks & open water ----
+  {id:'castspoon',   cat:'spoon',       zone:1, name:'Casting Spoon',       icon:'reel', cost:220, lvl:2, methods:['jig'],                baits:['pilchard'],desc:'Wobbling flash for Spanish mackerel and breaking schools.'},
+  {id:'bucktail',    cat:'softplastic', zone:1, name:'Bucktail Jig',        icon:'reel', cost:260, lvl:3, methods:['jig'],                baits:['pinfish'], desc:'Hair pulses in the current. Flounder, cobia and reef fish.'},
+  {id:'divingplug',  cat:'plug',        zone:1, name:'Diving Plug',         icon:'fish', cost:380, lvl:4, methods:['jig'],                baits:['cutbait'], desc:'Digs down to a set depth over reefs and ledges.'},
+  {id:'castmetal',   cat:'metaljig',    zone:1, name:'Casting Metal Jig',   icon:'anchor',cost:480,lvl:5, methods:['jig'],                baits:['pilchard'],desc:'Long casts to fish busting bait on the surface. Kings, jacks.'},
+  // ---- OFFSHORE (zone 2): deep wrecks & bluewater ----
+  {id:'verticaljig', cat:'metaljig',    zone:2, name:'Vertical Jig',        icon:'anchor',cost:720,lvl:7, methods:['jig'],                baits:['squid'],   desc:'Drop straight down on deep wrecks for snapper and grouper.'},
+  {id:'flatfall',    cat:'metaljig',    zone:2, name:'Flat-Fall Jig',       icon:'anchor',cost:820,lvl:8, methods:['jig'],                baits:['squid'],   desc:'Flutters on the fall, irresistible to amberjack and grouper.'},
+  {id:'knifejig',    cat:'metaljig',    zone:2, name:'Speed Knife Jig',     icon:'reel', cost:980, lvl:9, methods:['jig'],                baits:['pilchard'],desc:'Ripped fast through the water column for tuna and wahoo.'},
 ];
+// Lures shop is organised by region (matches each lure's zone).
 const LURE_CATS=[
-  {id:'softplastic',name:'Soft Plastics & Jigs'},
-  {id:'topwater',   name:'Topwater'},
-  {id:'plug',       name:'Plugs'},
-  {id:'spoon',      name:'Spoons'},
-  {id:'metaljig',   name:'Metal Jigs'},
+  {id:0,name:'Inshore'},
+  {id:1,name:'Nearshore'},
+  {id:2,name:'Offshore'},
 ];
 
 // ── DISPOSABLE ITEMS (bought with rubies; used from the Items button while fishing) ──
@@ -5849,6 +5850,7 @@ function cast(x,y){
   if(!m.bait){
     const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
     if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
+    if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure - it won’t draw fish here. Tie on a '+ZONE_LBL[S.zone]+' lure.');return;}
     if(!(S.lureInv[S.lureSel]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
   }
   // consume tackle durability (unless tacklesaver perk; the tooth hook never wears)
@@ -6064,7 +6066,7 @@ function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeou
 // ─────────────────────────────────────────────────────────────
 // LEGENDARY ALERT + STARDEW MINI-GAME
 // ─────────────────────────────────────────────────────────────
-const SDEW_TRACK_H=280,SDEW_BAR_H=88,SDEW_FISH_R=13;
+const SDEW_TRACK_H=280,SDEW_BAR_H=82,SDEW_FISH_R=13;
 const SDEW_BEHAVIORS={
   tarpon:    {dartChance:.08,dartForce:6,  erratic:.15,maxVel:5.5},
   cobia:     {dartChance:.05,dartForce:4,  erratic:.10,maxVel:4.0},
@@ -6140,7 +6142,7 @@ function sdewLoop(){
   // Fish physics - during grace the fish drifts very slowly with no dart attempts.
   // sdewDiff scales the challenge by the target's rarity (tournament targets).
   // SDEW_EASE keeps the fish slower & more readable: challenging but enjoyable.
-  const ease=0.6;
+  const ease=0.68;
   // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
   // Surf sharks move slightly slower than normal.
   const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1);
@@ -6159,7 +6161,7 @@ function sdewLoop(){
   if(!grace){
     let gain=0.6;
     if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
-    sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.6)*fs));
+    sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.66)*fs));
   }
   updateSdewDOM();
   if(sdewMeter>=100){endSdewGame(true);return;}
@@ -6558,9 +6560,9 @@ function openChooser(type){
   } else if(type==='bait'){
     if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
-      html='<h3>Tie on a lure</h3><div class="sub">Pick a lure that suits the method. Buy more in the Lures shop tab.</div>';
-      const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id));
-      if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No lures for this method yet. Open the Lures shop tab to buy one.</div>';}
+      html='<h3>Tie on a lure</h3><div class="sub">Only '+ZONE_LBL[S.zone]+' lures work out here. Buy more in the Lures shop tab.</div>';
+      const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id)&&(typeof l.zone!=='number'||l.zone===S.zone));
+      if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet. Open the Lures shop tab to buy one.</div>';}
       myLures.forEach(function(l){
         html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
@@ -6728,7 +6730,7 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
 }
 
 let cosmeticSubTab='hats';
-let lureSubTab='softplastic';
+let lureSubTab=0; // lures shop region tab (0 inshore / 1 nearshore / 2 offshore)
 function renderShop(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
@@ -6752,8 +6754,9 @@ function renderShop(){
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(shopTab==='lures'){
-    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>';
-    html+=LURES.filter(function(l){return l.cat===lureSubTab;}).map(function(l){
+    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>'
+      +'<div style="font-size:11px;color:var(--text-soft);margin:-4px 0 9px;">'+ZONE_LBL[lureSubTab]+' lures only work in the '+ZONE_LBL[lureSubTab].toLowerCase()+' zone.</div>';
+    html+=LURES.filter(function(l){return l.zone===lureSubTab;}).map(function(l){
       const q=S.lureInv[l.id]||0;
       const equipped=S.lureSel===l.id;
       const canAfford=S.gold>=l.cost,meetsLvl=S.level>=l.lvl;
@@ -6841,7 +6844,7 @@ function renderShop(){
   }
   if(shopTab==='lures'){
     document.getElementById('shop-list').querySelectorAll('[data-lcat]').forEach(el=>{
-      el.addEventListener('click',()=>{lureSubTab=el.dataset.lcat;renderShop();});
+      el.addEventListener('click',()=>{lureSubTab=+el.dataset.lcat;renderShop();});
     });
   }
 }
