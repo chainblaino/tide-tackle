@@ -3642,7 +3642,7 @@ function hourNow(){return (S.clock%1440)/60;}
 function seasonNow(){
   // A tournament is held entirely during one randomly chosen season.
   if(activeTournament&&activeTournament.season)return activeTournament.season;
-  return SEASONS[Math.floor(S.clock/(1440*10))%4];
+  return SEASONS[Math.floor(S.clock/(1440*5))%4];
 }
 function dayNum(){return Math.floor(S.clock/1440)+1;}
 function phaseOf(h){if(h<5||h>=19)return 'night';if(h<7)return 'dawn';if(h<17)return 'day';return 'dusk';}
@@ -3665,7 +3665,7 @@ const MOON_PHASES=[
   {id:'lastq',       name:'Last Quarter',      icon:'moon-lastq',        mul:1.00},
   {id:'wancrescent', name:'Waning Crescent',   icon:'moon-wancrescent',  mul:0.92},
 ];
-const SEASON_LEN=1440*10; // a season is exactly 10 in-game days
+const SEASON_LEN=1440*5; // a season is exactly 5 in-game days
 function currentMoonPhase(){
   // One full 8-phase lunar cycle per season: every moon phase happens once in
   // each 10-day season and the cycle restarts cleanly when the season changes.
@@ -5542,7 +5542,7 @@ function render(ts){
     const prog=(activeTournament.def&&activeTournament.def.coop)?(raw%1):Math.min(1,raw);
     S.clock=TOURN_DAY_START+prog*1440;
   }else{
-    S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*40)S.clock-=1440*40; // 40-day year (10 days per season)
+    S.clock+=dt*MIN_PER_SEC; if(S.clock>1440*20)S.clock-=1440*20; // 20-day year (5 days per season)
   }
   const h=hourNow(),sky=skyState(h),t=ts/1000;
 
