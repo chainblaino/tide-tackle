@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.8.6</title>
+<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.8.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -682,7 +682,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.8.6</div>
+    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.8.7</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1046,11 +1046,15 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // Centered captain portrait (fills the round frame evenly, top hat to beard).
 const CLANCY_SVG='<svg viewBox="0 0 48 48" width="46" height="46">'
   +'<rect width="48" height="48" fill="#1d5e7a"/>'
+  // Head group: scaled up ~12% about the centre and nudged down so the hat-to-beard
+  // figure sits dead-centre in the avatar circle.
+  +'<g transform="translate(24 24) scale(1.12) translate(-24 -21.5)">'
   +'<circle cx="24" cy="24" r="12" fill="#e8b88a"/>'
   +'<path d="M12 25 Q24 39 36 25 Q36 36 24 37.5 Q12 36 12 25 Z" fill="#eef0ea"/>'
   +'<rect x="19.4" y="21.5" width="3.1" height="3.5" rx="1.2" fill="#26323a"/><rect x="25.5" y="21.5" width="3.1" height="3.5" rx="1.2" fill="#26323a"/>'
   +'<path d="M10 16 Q24 5.5 38 16 L38 19.5 Q24 13 10 19.5 Z" fill="#e0922c"/>'
   +'<path d="M13.5 15.5 Q24 7.5 34.5 15.5 Q24 11 13.5 15.5 Z" fill="#f3b454"/>'
+  +'</g>'
   +'</svg>';
 let tut={active:false,i:0,target:null,leg:null,trialActive:false,forceTargetActive:false,buyBait:null,steps:[]};
 function _tutFish(id){return (typeof FISH!=='undefined')?FISH.find(function(f){return f.id===id;}):null;}
@@ -1202,84 +1206,149 @@ function showTournamentIntro(){
   ]);
 }
 // ═══════════════════ CLANCY'S DAILY QUESTS ═══════════════════
-// Three quests a day - one Rare, one Epic, one Legendary - that reset on the
-// Eastern-time calendar day. Rare pays 1000 gold, Epic pays 10 rubies, Legendary
-// pays 15 rubies. A live countdown shows how long is left to finish them.
+// Three quests a day - one Rare, one Epic, one Legendary - chosen from a pool and
+// reset on the Eastern-time calendar day. Rare pays 2000 gold, Epic 15 rubies,
+// Legendary 25 rubies. A live countdown shows how long is left to finish them.
 const QUEST_RANK={common:0,uncommon:1,rare:2,epic:3,legendary:4,ultra:5};
 function _qRank(f){return QUEST_RANK[f.rarity]||0;}
+function qSpName(id){const f=FISH.find(function(x){return x.id===id;});return f?f.name:'fish';}
+// build(it,rng) for the "catch N of a random species" quests
+function _qBuildSpecies(rarity,goal){return function(it,rng){const p=FISH.filter(function(f){return f.rarity===rarity&&!f.surf;});if(!p.length)return false;it.sp=p[Math.floor(rng()*p.length)].id;it.goal=goal;return true;};}
+// build(it,rng) for the "catch a random species at X% of its max size" quests
+function _qBuildBig(rarity,frac){return function(it,rng){const p=FISH.filter(function(f){return f.rarity===rarity&&!f.surf&&f.size&&f.size[1]>0;});if(!p.length)return false;const f=p[Math.floor(rng()*p.length)];it.sp=f.id;it.tgt=Math.round(f.size[1]*frac);it.goal=1;return true;};}
+// Each template: kind 'count' (match per catch), 'unique' (key per catch, goal =
+// distinct keys) or 'event' (evt + optional cond). weight biases the daily pick.
 const QUEST_TEMPLATES={
   rare:[
-    {id:'r_any5',     diff:'rare',goal:5,text:'Catch 5 fish',                 match:function(){return true;}},
-    {id:'r_struct4',  diff:'rare',goal:4,text:'Catch 4 fish on structure',    match:function(f,w,c){return !!c.onStructure;}},
-    {id:'r_inshore5', diff:'rare',goal:5,text:'Catch 5 inshore fish',         match:function(f){return f.zone===0;}},
-    {id:'r_unc3',     diff:'rare',goal:3,text:'Catch 3 Uncommon-or-better fish',match:function(f){return _qRank(f)>=1;}},
-    {id:'r_any6',     diff:'rare',goal:6,text:'Catch 6 fish',                 match:function(){return true;}},
-    {id:'r_over3',    diff:'rare',goal:3,text:'Catch 3 fish over 3 lb',       match:function(f,w){return w>=3;}}
+    {id:'r_species5', diff:'rare', kind:'unique', goalBase:5, key:function(f){return f.id;}, text:function(){return 'Catch 5 different species of fish';}},
+    {id:'r_tourn',    diff:'rare', kind:'event', evt:'tournEnter', goalBase:1, text:function(){return 'Compete in the daily tournament';}},
+    {id:'r_night10',  diff:'rare', kind:'count', goalBase:10, match:function(f,w,c){return !!c.night;}, text:function(){return 'Catch 10 fish at night';}},
+    {id:'r_struct5',  diff:'rare', kind:'unique', goalBase:5, key:function(f,w,c){return c.structKey||null;}, text:function(){return 'Catch a fish at 5 different structures';}},
+    {id:'r_zones3',   diff:'rare', kind:'unique', goalBase:3, key:function(f){return 'z'+f.zone;}, text:function(){return 'Catch a fish in inshore, nearshore, and offshore';}},
+    {id:'r_rare5',    diff:'rare', kind:'count', goalBase:5, build:_qBuildSpecies('rare',5), match:function(f,w,c,it){return f.id===it.sp;}, text:function(it){return 'Catch 5 '+qSpName(it.sp);}},
+    {id:'r_top10',    diff:'rare', kind:'event', evt:'tournPlace', goalBase:1, cond:function(p){return p.place<=10;}, text:function(){return 'Place top 10 or higher in a tournament';}},
+    {id:'r_bull3',    diff:'rare', kind:'event', evt:'bullseye', goalBase:1, cond:function(p){return p.streak>=3;}, text:function(){return 'Get 3 bullseyes in a row';}},
+    {id:'r_bigrare',  diff:'rare', kind:'count', weight:3, goalBase:1, build:_qBuildBig('rare',0.8), match:function(f,w,c,it){return f.id===it.sp&&w>=it.tgt;}, text:function(it){return 'Catch a '+qSpName(it.sp)+' '+it.tgt+' lb or larger';}}
   ],
   epic:[
-    {id:'e_rare2',    diff:'epic',goal:2,text:'Catch 2 Rare-or-better fish',  match:function(f){return _qRank(f)>=2;}},
-    {id:'e_species5', diff:'epic',goal:5,text:'Catch 5 different species',unique:true,match:function(){return true;}},
-    {id:'e_big8',     diff:'epic',goal:1,text:'Land a fish over 8 lb',        match:function(f,w){return w>=8;}},
-    {id:'e_near3',    diff:'epic',goal:3,text:'Catch 3 nearshore fish',       match:function(f){return f.zone===1;}},
-    {id:'e_trophy1',  diff:'epic',goal:1,text:'Land a trophy-size fish',      match:function(f,w,c){return !!c.trophy;}},
-    {id:'e_struct8',  diff:'epic',goal:8,text:'Catch 8 fish on structure',    match:function(f,w,c){return !!c.onStructure;}}
+    {id:'e_epic10',    diff:'epic', kind:'count', goalBase:10, build:_qBuildSpecies('epic',10), match:function(f,w,c,it){return f.id===it.sp;}, text:function(it){return 'Catch 10 '+qSpName(it.sp);}},
+    {id:'e_rank15',    diff:'epic', kind:'count', goalBase:15, match:function(f){return _qRank(f)>=3;}, text:function(){return 'Catch 15 fish of epic rarity or higher';}},
+    {id:'e_friend',    diff:'epic', kind:'event', evt:'coopJoin', goalBase:1, text:function(){return 'Fish with a friend';}},
+    {id:'e_top5',      diff:'epic', kind:'event', evt:'tournPlace', goalBase:1, cond:function(p){return p.place<=5;}, text:function(){return 'Place top 5 in a tournament or higher';}},
+    {id:'e_surfshark', diff:'epic', kind:'count', goalBase:1, match:function(f){return !!f.surf;}, text:function(){return 'Catch a shark on the surf';}},
+    {id:'e_offmethods',diff:'epic', kind:'unique', goalBase:1, build:function(it){it.goal=METHODS.filter(function(m){return m.zones&&m.zones.indexOf(2)>=0;}).length;return true;}, key:function(f,w,c){return (f.zone===2&&c.method)?('m'+c.method):null;}, text:function(){return 'Catch a fish using every method while offshore';}},
+    {id:'e_struct10',  diff:'epic', kind:'unique', goalBase:10, key:function(f,w,c){return c.structKey||null;}, text:function(){return 'Catch a fish at 10 different structures';}},
+    {id:'e_temp3',     diff:'epic', kind:'count', goalBase:3, match:function(f,w,c){return !!c.structTemp;}, text:function(){return 'Catch 3 fish at a temporary structure';}},
+    {id:'e_hammer',    diff:'epic', kind:'count', goalBase:1, match:function(f){return f.id==='hammerhead';}, text:function(){return 'Catch a Great Hammerhead Shark';}},
+    {id:'e_winchal',   diff:'epic', kind:'event', evt:'challengeWin', goalBase:1, text:function(){return 'Win a challenge against a friend';}},
+    {id:'e_bigepic',   diff:'epic', kind:'count', weight:2, goalBase:1, build:_qBuildBig('epic',0.85), match:function(f,w,c,it){return f.id===it.sp&&w>=it.tgt;}, text:function(it){return 'Catch a '+qSpName(it.sp)+' '+it.tgt+' lb or larger';}}
   ],
   legendary:[
-    {id:'l_epic1',    diff:'legendary',goal:1,text:'Catch an Epic-or-better fish',match:function(f){return _qRank(f)>=3;}},
-    {id:'l_legend1',  diff:'legendary',goal:1,text:'Catch a Legendary fish',  match:function(f){return _qRank(f)>=4;}},
-    {id:'l_off_rare2',diff:'legendary',goal:2,text:'Catch 2 Rare+ offshore fish',match:function(f){return f.zone===2&&_qRank(f)>=2;}},
-    {id:'l_big20',    diff:'legendary',goal:1,text:'Land a fish over 20 lb',  match:function(f,w){return w>=20;}},
-    {id:'l_species8', diff:'legendary',goal:8,text:'Catch 8 different species',unique:true,match:function(){return true;}}
+    {id:'l_biglegend', diff:'legendary', kind:'count', weight:3, goalBase:1, build:_qBuildBig('legendary',0.95), match:function(f,w,c,it){return f.id===it.sp&&w>=it.tgt;}, text:function(it){return 'Catch a '+qSpName(it.sp)+' '+it.tgt+' lb or larger';}},
+    {id:'l_first',     diff:'legendary', kind:'event', evt:'tournPlace', goalBase:1, cond:function(p){return p.place===1;}, text:function(){return 'Place 1st in a tournament';}},
+    {id:'l_tiger',     diff:'legendary', kind:'count', goalBase:1, match:function(f){return f.id==='tigershark';}, text:function(){return 'Catch a Tiger Shark';}},
+    {id:'l_legend5',   diff:'legendary', kind:'unique', goalBase:5, key:function(f){return f.rarity==='legendary'?f.id:null;}, text:function(){return 'Catch 5 different legendary fish species';}},
+    {id:'l_rank15',    diff:'legendary', kind:'count', goalBase:15, match:function(f){return f.rarity==='legendary';}, text:function(){return 'Catch 15 fish of legendary rarity';}},
+    {id:'l_100',       diff:'legendary', kind:'count', goalBase:100, match:function(){return true;}, text:function(){return 'Catch 100 fish';}},
+    {id:'l_moon20',    diff:'legendary', kind:'count', goalBase:20, match:function(f,w,c){return !!c.moon;}, text:function(){return 'Catch 20 fish during a full or new moon';}},
+    {id:'l_surfday2',  diff:'legendary', kind:'count', goalBase:2, match:function(f,w,c){return !!f.surf&&!c.night;}, text:function(){return 'Catch 2 surf sharks during the day';}},
+    {id:'l_target10',  diff:'legendary', kind:'count', goalBase:10, match:function(f,w,c){return !!c.tournTarget;}, text:function(){return 'Catch 10 targeted species during a tournament';}}
   ]
 };
 const QUEST_BY_ID={};
 ['rare','epic','legendary'].forEach(function(d){QUEST_TEMPLATES[d].forEach(function(t){QUEST_BY_ID[t.id]=t;});});
-const QUEST_REWARD={rare:{gold:1000},epic:{rubies:10},legendary:{rubies:15}};
+const QUEST_REWARD={rare:{gold:2000},epic:{rubies:15},legendary:{rubies:25}};
 function questRewardLabel(diff){const r=QUEST_REWARD[diff];return r.gold?('<span class="coin-s"></span> '+r.gold):('<span class="gem-s"></span> '+r.rubies);}
-function _qpick(arr,seed){return arr[Math.floor(seededRnd(seed)*arr.length)];}
+function _qPickWeighted(pool,rng){
+  let total=0;for(const t of pool)total+=(t.weight||1);
+  let r=rng()*total;
+  for(const t of pool){r-=(t.weight||1);if(r<=0)return t;}
+  return pool[pool.length-1];
+}
+function _qBuildSlot(diff,rng){
+  let pool=QUEST_TEMPLATES[diff].slice();
+  while(pool.length){
+    const t=_qPickWeighted(pool,rng);
+    const it={tid:t.id,prog:0,done:false,seen:[],goal:t.goalBase||1};
+    let ok=true;
+    if(t.build){try{ok=t.build(it,rng);}catch(e){ok=false;}}
+    if(ok)return it;
+    pool=pool.filter(function(x){return x!==t;});
+  }
+  const f=QUEST_TEMPLATES[diff][0];
+  return {tid:f.id,prog:0,done:false,seen:[],goal:f.goalBase||1};
+}
 // Build (or fetch) today's 3 quests. Deterministic per ET day so a reload mid-day
-// keeps the same quests and progress; a new day swaps in a fresh set.
+// keeps the same quests and progress; a new day swaps in a fresh set. Old saves
+// with retired quest ids are migrated to a fresh set.
 function todaysQuests(){
   const date=etDateSeed();
-  if(S.quests&&S.quests.date===date&&S.quests.items&&S.quests.items.length===3)return S.quests;
-  const seed=parseInt(date)||1;
-  const r=_qpick(QUEST_TEMPLATES.rare,seed*0.0011+3.1);
-  const e=_qpick(QUEST_TEMPLATES.epic,seed*0.0017+7.7);
-  const l=_qpick(QUEST_TEMPLATES.legendary,seed*0.0023+11.3);
-  S.quests={date:date,items:[{tid:r.id,prog:0,done:false,seen:[]},{tid:e.id,prog:0,done:false,seen:[]},{tid:l.id,prog:0,done:false,seen:[]}]};
+  const valid=S.quests&&S.quests.date===date&&S.quests.items&&S.quests.items.length===3&&S.quests.items.every(function(it){return !!QUEST_BY_ID[it.tid];});
+  if(valid)return S.quests;
+  const rng=mulberry32((strHash('clancyquests_'+date))>>>0);
+  S.quests={date:date,items:[_qBuildSlot('rare',rng),_qBuildSlot('epic',rng),_qBuildSlot('legendary',rng)]};
   queueSave();
   return S.quests;
 }
-// Called from land() on every catch. Competitive tournament/challenge catches
-// don't count (you fish those for ranking); normal play and casual co-op do.
+// Catch-driven quest progress. Called from land() on every catch with a context
+// describing the catch (night/moon/structure/method/tournament-target...).
 function questOnCatch(f,w,ctx){
-  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))return;
   const q=todaysQuests();if(!q||!q.items)return;
   ctx=ctx||{};
   let changed=false;
   q.items.forEach(function(it){
     if(it.done)return;
-    const tpl=QUEST_BY_ID[it.tid];if(!tpl)return;
-    if(!tpl.match(f,w,ctx))return;
-    if(tpl.unique){if(!it.seen)it.seen=[];if(it.seen.indexOf(f.id)<0)it.seen.push(f.id);it.prog=it.seen.length;}
-    else it.prog=(it.prog||0)+1;
-    if(it.prog>=tpl.goal){it.done=true;grantQuestReward(tpl);}
+    const tpl=QUEST_BY_ID[it.tid];if(!tpl||tpl.kind==='event')return;
+    if(tpl.kind==='unique'){
+      const k=tpl.key(f,w,ctx,it);if(k==null)return;
+      if(!it.seen)it.seen=[];if(it.seen.indexOf(k)<0)it.seen.push(k);
+      it.prog=it.seen.length;
+    }else{
+      if(!tpl.match(f,w,ctx,it))return;
+      it.prog=(it.prog||0)+1;
+    }
+    if(it.prog>=it.goal){it.prog=it.goal;it.done=true;grantQuestReward(it);}
     changed=true;
   });
   if(changed){queueSave();if(_questPanelOpen())renderQuestsPanel();}
 }
-function grantQuestReward(tpl){
-  const r=QUEST_REWARD[tpl.diff]||{};
+// Non-catch quest progress (tournament enter/place, co-op join, challenge win,
+// bullseye streak). Fired from the relevant game events.
+function questEvent(name,payload){
+  const q=todaysQuests();if(!q||!q.items)return;
+  payload=payload||{};
+  let changed=false;
+  q.items.forEach(function(it){
+    if(it.done)return;
+    const tpl=QUEST_BY_ID[it.tid];if(!tpl||tpl.kind!=='event'||tpl.evt!==name)return;
+    if(tpl.cond&&!tpl.cond(payload,it))return;
+    it.prog=(it.prog||0)+1;
+    if(it.prog>=it.goal){it.prog=it.goal;it.done=true;grantQuestReward(it);}
+    changed=true;
+  });
+  if(changed){queueSave();if(_questPanelOpen())renderQuestsPanel();}
+}
+function grantQuestReward(it){
+  const tpl=QUEST_BY_ID[it.tid]||{};const r=QUEST_REWARD[tpl.diff]||{};
   if(r.gold){S.gold=(S.gold||0)+r.gold;S.goldEarned=(S.goldEarned||0)+r.gold;}
   if(r.rubies){S.rubies=(S.rubies||0)+r.rubies;}
   if(typeof updatePills==='function')updatePills();queueSave();
   const msg=r.gold?('+'+r.gold+' gold'):('+'+r.rubies+' rubies');
   setTimeout(function(){toast('🏆 Quest complete! '+msg,'#e0a93c');},700);
 }
-function nearAnyStructure(){
-  const list=(typeof activeStructures==='function')?activeStructures():[];
-  for(const s of list){if(dist(boat.wx,boat.wy,s.x,s.y)<72)return true;}
-  return false;
+// Context describing the most recent catch, for quest matching.
+function questCatchCtx(f){
+  let moon=false;try{const id=currentMoonPhase&&currentMoonPhase().id;moon=(id==='full'||id==='new');}catch(e){}
+  const night=(typeof phaseOf==='function')?phaseOf(hourNow())==='night':false;
+  const st=(!f.surf&&typeof bobber!=='undefined'&&bobber&&bobber.struct)?bobber.struct:null;
+  const tgt=activeTournament&&activeTournament.def&&!activeTournament.def.coop&&activeTournament.def.targetFish;
+  return {
+    night:night, moon:moon,
+    structKey:st?(st.kind+':'+st.x+','+st.y):null,
+    structTemp:!!(st&&st.temp),
+    method:(typeof S!=='undefined')?S.method:null,
+    tournTarget:!!(tgt&&f.id===tgt.id)
+  };
 }
 // Time until the Eastern-time day rolls over (when quests refresh).
 function etMsUntilReset(){
@@ -1315,17 +1384,19 @@ function renderQuestsPanel(){
   q.items.forEach(function(it){
     const tpl=QUEST_BY_ID[it.tid];if(!tpl)return;
     const dm=dMeta[tpl.diff];
-    const prog=Math.min(it.prog||0,tpl.goal),pct=Math.round(prog/tpl.goal*100);
+    const goal=it.goal||tpl.goalBase||1;
+    const prog=Math.min(it.prog||0,goal),pct=Math.round(prog/goal*100);
+    let txt='';try{txt=tpl.text(it);}catch(e){txt='Quest';}
     cards+='<div style="border:2px solid '+(it.done?'#2aa890':'#d2b886')+';background:'+(it.done?'rgba(42,168,144,.10)':'var(--parchment)')+';border-radius:14px;padding:11px 12px;margin-bottom:10px;">'
       +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">'
         +'<span style="font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.4px;color:#fff;background:'+dm.col+';padding:2px 8px;border-radius:10px;">'+dm.lbl+'</span>'
-        +'<span style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink);">'+tpl.text+'</span>'
+        +'<span style="flex:1;font-size:13.5px;font-weight:800;color:var(--ink);">'+txt+'</span>'
         +'<span style="font-size:12.5px;font-weight:900;white-space:nowrap;color:'+(QUEST_REWARD[tpl.diff].gold?'#b8860b':'#d61f3a')+';">'+questRewardLabel(tpl.diff)+'</span>'
       +'</div>'
       +(it.done
         ?'<div style="font-size:12.5px;font-weight:900;color:#2aa890;">✓ Complete &middot; reward claimed</div>'
         :'<div style="height:10px;border-radius:6px;background:#e8dcc0;overflow:hidden;"><div style="height:100%;width:'+pct+'%;background:linear-gradient(90deg,'+dm.col+',#ffd24a);border-radius:6px;transition:width .3s;"></div></div>'
-         +'<div style="font-size:11px;color:var(--text-soft);font-weight:700;margin-top:4px;text-align:right;">'+prog+' / '+tpl.goal+'</div>')
+         +'<div style="font-size:11px;color:var(--text-soft);font-weight:700;margin-top:4px;text-align:right;">'+prog+' / '+goal+'</div>')
       +'</div>';
   });
   body.innerHTML='<div style="display:flex;align-items:center;gap:9px;margin-bottom:11px;">'
@@ -1943,6 +2014,8 @@ function startTournamentMode(def){
   // plenty, and only land fish now and then (no instant catch at the buzzer). The
   // schedule is deterministic from the match seed so every screen agrees.
   if(activeLobby&&!def.session)buildBotPlan();
+  // Quest: entering a real (non-coop, non-challenge) tournament.
+  if(!def.coop&&!def.session&&typeof questEvent==='function')questEvent('tournEnter');
   // Co-op worlds have no timer (leave when you like); everything else runs 6 min.
   if(!def.coop)setTimeout(endTournament,6*60*1000);
 }
@@ -1967,6 +2040,7 @@ function startCoopMode(def){
   const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display='block';
   const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';
   toast('Fishing with friends! Roam any zone together - same spots for everyone.','#2aa890');
+  if(typeof questEvent==='function')questEvent('coopJoin'); // quest: fish with a friend
 }
 function initCoopGhosts(){
   tourn.ghosts=[];
@@ -2032,6 +2106,11 @@ function endTournament(){
   const prizes=tournPrizes(def.rarity,boost);
   const goldPrizes=tournGoldPrizes(def.rarity,boost);
   const rank=entries.findIndex(function(e){return e.isPlayer;});
+  // Quest: tournament finishing place (1-based). 1st place needs a real catch.
+  if(rank>=0&&typeof questEvent==='function'){
+    const place=rank+1;
+    if(!(place===1&&(activeTournament.biggestWeight||0)<=0))questEvent('tournPlace',{place:place});
+  }
   // Prize only if the player genuinely placed top 3 with a real catch.
   const placed=(rank>=0&&rank<3&&(activeTournament.biggestWeight||0)>0);
   let winnings=placed?prizes[rank]:0;
@@ -2320,7 +2399,7 @@ function endSession(){
     const iWon=winner&&winner.uid===fbUser.uid&&winner.best>0;
     // The winner credits the pot to themselves exactly once (guarded in the doc).
     const finish=function(credited){
-      if(credited){S.rubies=(S.rubies||0)+pot;S.tournamentWins=(S.tournamentWins||0)+1;updatePills();queueSave();checkAchievements&&checkAchievements();}
+      if(credited){S.rubies=(S.rubies||0)+pot;S.tournamentWins=(S.tournamentWins||0)+1;updatePills();queueSave();checkAchievements&&checkAchievements();if(typeof questEvent==='function')questEvent('challengeWin');}
       _showChallengeResults(sess,ranked,stake,pot,winner,credited);
     };
     if(iWon&&fbDb){
@@ -6806,6 +6885,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
     S.bullseyeTotal=(S.bullseyeTotal||0)+1;
     S.bullseyeStreak=(S.bullseyeStreak||0)+1;
     if(S.bullseyeStreak>(S.bullseyeBest||0))S.bullseyeBest=S.bullseyeStreak;
+    if(typeof questEvent==='function')questEvent('bullseye',{streak:S.bullseyeStreak}); // quest: 3 in a row
   }else if(inZone){
     S.bullseyeStreak=0;
   }
@@ -6879,7 +6959,7 @@ function land(f,w,perfect,bullseye){
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold,rubies:rubyReward});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
-  if(typeof questOnCatch==='function')questOnCatch(f,w,{onStructure:nearAnyStructure(),trophy:trophy});
+  if(typeof questOnCatch==='function')questOnCatch(f,w,questCatchCtx(f));
   // Tutorial: this was the guided target catch - advance Captain Clancy.
   if(tut&&tut.active&&tut.forceTargetActive){tut.forceTargetActive=false;_forcedBiteFish=null;tutNotify('catch');}
 }
