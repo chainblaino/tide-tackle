@@ -3123,7 +3123,12 @@ function buildFishArtRealistic(id,px){return buildFishArtR(id,px)||buildFishArt(
 const PNG_FISH={
   hogfish:{file:'hogfish.png',alt:'Hogfish'},
   sheepshead:{file:'sheepshead.png',alt:'Sheepshead'},
-  tarpon:{file:'tarpon.png',alt:'Tarpon'}
+  tarpon:{file:'tarpon.png',alt:'Tarpon'},
+  gag:{file:'gag_grouper.png',alt:'Gag Grouper'},
+  redfish:{file:'red_drum.png',alt:'Red Drum'},
+  snook:{file:'snook.png',alt:'Snook'}
+  // cobia / mahi / roosterfish are held until re-exported: their backgrounds are a
+  // baked-in transparency checkerboard (no alpha), which renders as a checkered box.
 };
 function buildPngFishArt(id,px,mono){
   px=px||240;
