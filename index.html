@@ -3126,9 +3126,10 @@ const PNG_FISH={
   tarpon:{file:'tarpon.png',alt:'Tarpon'},
   gag:{file:'gag_grouper.png',alt:'Gag Grouper'},
   redfish:{file:'red_drum.png',alt:'Red Drum'},
-  snook:{file:'snook.png',alt:'Snook'}
-  // cobia / mahi / roosterfish are held until re-exported: their backgrounds are a
-  // baked-in transparency checkerboard (no alpha), which renders as a checkered box.
+  snook:{file:'snook.png',alt:'Snook'},
+  cobia:{file:'cobia.png',alt:'Cobia'},
+  mahi:{file:'mahi-mahi.png',alt:'Mahi-Mahi'},
+  roosterfish:{file:'roosterfish.png',alt:'Roosterfish'}
 };
 function buildPngFishArt(id,px,mono){
   px=px||240;
@@ -6151,11 +6152,12 @@ function sdewLoop(){
   // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
   // Surf sharks move slightly slower than normal.
   const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1);
-  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow;
+  const spd=0.9; // fish icon moves 10% slower (a touch more catchable)
+  const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow*spd;
   const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
-  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease*slow;
+  const maxVel=(grace?beh.maxVel*0.18:beh.maxVel)*sdewDiff*ease*slow*spd;
   sdewFishVel+=(Math.random()-.5)*erratic*fs;
-  if(Math.random()<dartChance*fs)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease;
+  if(Math.random()<dartChance*fs)sdewFishVel=(Math.random()>.5?1:-1)*beh.dartForce*ease*spd;
   sdewFishVel=Math.max(-maxVel,Math.min(maxVel,sdewFishVel));
   sdewFishCy+=sdewFishVel*fs;
   if(sdewFishCy<SDEW_FISH_R){sdewFishCy=SDEW_FISH_R;sdewFishVel=Math.abs(sdewFishVel);}
