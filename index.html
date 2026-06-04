@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.8.7</title>
+<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -682,7 +682,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.8.7</div>
+    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.9</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1712,13 +1712,13 @@ function tClosesIn(def){
 // boost scales the whole payout (the Big Cast pays 1.5x). Payouts carry a global
 // +20% bump (V8.6).
 function tournPrizes(rarity,boost){
-  boost=(boost||1)*1.2; // global +20% winnings bump (V8.6)
+  boost=(boost||1)*1.2*petTournMult(); // +20% (V8.6) and Tiger pet +20% (V0.9)
   const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
   return [Math.round(40*rarMult*boost),Math.round(18*rarMult*boost),Math.round(8*rarMult*boost)];
 }
 // Tournaments also pay GOLD winnings to the top 3 (alongside the rubies).
 function tournGoldPrizes(rarity,boost){
-  boost=(boost||1)*1.2; // global +20% winnings bump (V8.6)
+  boost=(boost||1)*1.2*petTournMult(); // +20% (V8.6) and Tiger pet +20% (V0.9)
   const rarMult={common:0.7,uncommon:0.85,rare:1,epic:1.4,legendary:2}[rarity]||1;
   return [Math.round(600*rarMult*boost),Math.round(280*rarMult*boost),Math.round(120*rarMult*boost)];
 }
@@ -2077,6 +2077,7 @@ function endTournament(){
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Reset all ability effects and hide the ability button
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  jesterStacks=0;_sunBiteUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const bo=document.getElementById('blind-overlay');if(bo)bo.classList.remove('show');
   // Tear down the tournament world and return to the normal open world
@@ -2340,6 +2341,7 @@ function _restoreWorldAfterSession(){
   stopTournamentSync();
   tourn.active=false;tourn.coop=false;tourn.seed=null;tourn.ghosts=[];tourn.structs=[];tourn._leaderBots=null;tourn._trail=null;
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  jesterStacks=0;_sunBiteUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const bo=document.getElementById('blind-overlay');if(bo)bo.classList.remove('show');
   document.body.classList.remove('tourn-active');
@@ -2736,6 +2738,9 @@ const ITEMS=[
   {id:'sabiki',  name:'Sabiki Rig',    icon:'tackle-hook',    cost:10, desc:'Jig up a mix of 10 live baitfish.'},
   {id:'radar',   name:'Fish Radar',    icon:'zone-pin',       cost:50, desc:'A pointer shows the way to the nearest cruising target fish until you land one.'},
   {id:'led',     name:'Underwater LED',icon:'reel',           cost:70, desc:'A green glow around your boat all night. +20% bite chance from rarer fish. Lasts one night.'},
+  // ── V0.9 tap-to-place sabotage items (rubies, fixedCost) ──
+  {id:'snag',    name:'Snag Rock',     icon:'struct-oyster',  cost:20, fixedCost:true, place:true, desc:'Tap the water to drop a hidden snag. Any angler who casts on it is hung up - no casting or catching for 60s. One use, then it’s gone.'},
+  {id:'buoy',    name:'Slow Buoy',     icon:'zone-pin',       cost:50, fixedCost:true, place:true, desc:'Tap the water to anchor a buoy with a very wide field. Anglers inside it crawl at -90% speed for 6 minutes.'},
 ];
 function itemById(id){return ITEMS.find(function(x){return x.id===id;});}
 const LIVE_BAITS=['shrimp','pinfish','pilchard'];   // cast-net mix
@@ -2759,6 +2764,9 @@ const COSMETICS={
     {id:'princess_tiara',slot:'hat',name:'Princess Tiara',  icon:'crown',      cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
     {id:'berserker_mohawk',slot:'hat',name:'Berserker Mohawk',icon:'hat-beanie',cost:0,lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
     {id:'jeremy_hair', slot:'hat', name:'Jeremy Buzzcut',    icon:'hat-bucket', cost:0, lvl:1, desc:'Part of the Jeremy Set.',  set:'jeremy',  setOnly:true},
+    {id:'jester_hat',  slot:'hat', name:'Jester Cap',         icon:'hat-beanie', cost:0, lvl:1, desc:'Part of the Jester Set.',  set:'jester',  setOnly:true},
+    {id:'astro_helmet',slot:'hat', name:'Astronaut Helmet',   icon:'hat-bucket', cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
+    {id:'robot_antenna',slot:'hat',name:'Robot Antenna',      icon:'hat-visor',  cost:0, lvl:1, desc:'Part of the Robot Set.',   set:'robot',   setOnly:true},
   ],
   shirts:[
     {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
@@ -2774,6 +2782,9 @@ const COSMETICS={
     {id:'princess_dress',slot:'shirt',name:'Pink Dress',   icon:'shirt-tee',        cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
     {id:'berserker_vest',slot:'shirt',name:'Wasteland Vest',icon:'shirt-vest',      cost:0, lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
     {id:'jeremy_shirt',slot:'shirt',name:'Grey Button-Down',icon:'shirt-performance',cost:0, lvl:1, desc:'Part of the Jeremy Set.', set:'jeremy',  setOnly:true},
+    {id:'jester_shirt',slot:'shirt',name:'Jester Motley',  icon:'shirt-tee',       cost:0, lvl:1, desc:'Part of the Jester Set.', set:'jester',  setOnly:true},
+    {id:'astro_suit', slot:'shirt', name:'Spacesuit',      icon:'shirt-hoodie',    cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
+    {id:'robot_chest',slot:'shirt', name:'Robot Chassis',  icon:'shirt-vest',      cost:0, lvl:1, desc:'Part of the Robot Set.',  set:'robot',   setOnly:true},
   ],
   shades:[
     {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
@@ -2787,6 +2798,9 @@ const COSMETICS={
     {id:'princess_blush',slot:'shades',name:'Rosy Cheeks',  icon:'shades-none',      cost:0, lvl:1, desc:'Part of the Princess Set.',set:'princess',setOnly:true},
     {id:'berserker_paint',slot:'shades',name:'War Paint',   icon:'shades-mask',      cost:0, lvl:1, desc:'Part of the Berserker Set.',set:'berserker',setOnly:true},
     {id:'jeremy_eyes', slot:'shades',name:'Piercing Blue Eyes',icon:'shades-polarized',cost:0,lvl:1,desc:'Part of the Jeremy Set.',  set:'jeremy',  setOnly:true},
+    {id:'jester_mask', slot:'shades',name:'Jester Mask',    icon:'shades-mask',     cost:0, lvl:1, desc:'Part of the Jester Set.', set:'jester',  setOnly:true},
+    {id:'astro_visor', slot:'shades',name:'Black Visor',    icon:'shades-mirror',   cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
+    {id:'robot_face',  slot:'shades',name:'Robot Face',     icon:'shades-mask',     cost:0, lvl:1, desc:'Part of the Robot Set.',  set:'robot',   setOnly:true},
   ],
 };
 // ── OUTFIT SETS (bought with rubies; bonus is passive, ability works in tournaments) ──
@@ -2811,6 +2825,19 @@ const SETS=[
    pieces:{hat:'jeremy_hair',shirt:'jeremy_shirt',shades:'jeremy_eyes'},
    bonus:'+50% legendary & ultra legendary fish spawn chance',
    ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds. (60s cooldown)'},
+  // ── V0.9 sets (rubies, fixedCost so the boot price-bump leaves them exact) ──
+  {id:'jester', name:'Jester Set', cost:750, fixedCost:true, color:'#5a2a8a', cd:300,
+   pieces:{hat:'jester_hat',shirt:'jester_shirt',shades:'jester_mask'},
+   bonus:'Each time an opponent uses an ability on you: +5% movement speed and +5% fish spawn rate (stacks all tournament).',
+   ability:'Trick', abilityDesc:'Mark a nearby angler. The next target-species fish they catch counts for YOU instead of them. (300s cooldown)'},
+  {id:'astronaut', name:'Astronaut Set', cost:750, fixedCost:true, color:'#eef2f6', cd:35,
+   pieces:{hat:'astro_helmet',shirt:'astro_suit',shades:'astro_visor'},
+   bonus:'Full moon: +50% luck. New moon: +50% bite rate. Otherwise +15% luck & +15% bite rate.',
+   ability:'Lunar Sun', abilityDesc:'Sun out: +20% bite rate for 20s. Moon out: the next catch fights 15% slower. (35s cooldown)'},
+  {id:'robot', name:'Robot Set', cost:250, fixedCost:true, color:'#9aa2aa', cd:360,
+   pieces:{hat:'robot_antenna',shirt:'robot_chest',shades:'robot_face'},
+   bonus:'Always have a fully-revealed map in tournaments & co-op.',
+   ability:'Hack', abilityDesc:'Radar locks onto the target fish and brings it to the surface to be sight-cast. (360s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
 function equippedSetId(){
@@ -2819,6 +2846,128 @@ function equippedSetId(){
   return null;
 }
 function setColorOf(id){const s=setById(id);return s?s.color:'#cf7a35';}
+
+// ═══════════════════ V0.9: PRESTIGE & PETS ═══════════════════
+const PRESTIGE_MAX=5;
+// Pets accumulate as the player prestiges; each floats beside the boat with a buff.
+const PETS=[
+  {id:'cat',     name:'Cat',     prestige:1, buff:'+10% fish spawn rate'},
+  {id:'dog',     name:'Dog',     prestige:1, buff:'+10% fish spawn rate'},
+  {id:'pig',     name:'Pig',     prestige:2, buff:'+20% coins earned from catches'},
+  {id:'tiger',   name:'Tiger',   prestige:3, buff:'+20% tournament winnings'},
+  {id:'bat',     name:'Bat',     prestige:4, buff:'+100% night fish spawn rate'},
+  {id:'penguin', name:'Penguin', prestige:5, buff:'+1000% ultra legendary spawn rate'},
+];
+function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
+function hasPet(id){const p=S.prestige||0;const def=PETS.find(function(x){return x.id===id;});return !!def&&def.prestige<=p;}
+// Coins multiplier: +10% per prestige level, plus +20% if the Pig is owned.
+function prestigeCoinMult(){return 1+0.10*Math.min(PRESTIGE_MAX,S.prestige||0);}
+function coinMult(){return prestigeCoinMult()*(hasPet('pig')?1.20:1);}
+// How much more often a fish bites (general spawn + the Bat's night boost).
+function petBiteFreqMult(){
+  let m=1;
+  if(hasPet('cat'))m*=1.10;
+  if(hasPet('dog'))m*=1.10;
+  if(hasPet('bat')&&phaseOf(hourNow())==='night')m*=2.0; // +100% at night
+  return m;
+}
+function petUltraMult(){return hasPet('penguin')?11:1;}        // +1000% ultra weight
+function petTournMult(){return hasPet('tiger')?1.20:1;}        // +20% tournament winnings
+
+// ---- Prestige: unlocks once every non-ultra species is in the logbook ----
+function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra';});}
+function prestigeEligible(){
+  if((S.prestige||0)>=PRESTIGE_MAX)return false;
+  return nonUltraSpecies().every(function(f){return (S.caught[f.id]||0)>0;});
+}
+// Show Clancy's prestige offer when newly eligible (unless already declined this cycle).
+function maybePrestigeOffer(){
+  if(!prestigeEligible())return;
+  if(S.prestigeOffered)return;               // already asked this cycle
+  if(tut.active||_clancySeq||surfActive)return;
+  S.prestigeOffered=true;queueSave();
+  setTimeout(showPrestigeOffer,900);
+}
+function prestigeRewardLine(next){
+  const lines=['You’ll keep your <b>rubies</b>, <b>stats</b> and <b>Ultra</b> catches.',
+    'A permanent <b>+'+(next*10)+'% coin bonus</b> on every catch.'];
+  const pet=PETS.filter(function(p){return p.prestige===next;}).map(function(p){return p.name;}).join(' & ');
+  if(pet)lines.push('A new companion: the <b>'+pet+'</b> ('+PETS.find(function(p){return p.prestige===next;}).buff+').');
+  return lines.map(function(l){return '• '+l;}).join('<br>');
+}
+// A two-button Clancy prompt (uses the NPC bar directly so we get Yes/No choices).
+function showPrestigeOffer(){
+  if(tut.active)return;
+  const next=Math.min(PRESTIGE_MAX,(S.prestige||0)+1);
+  document.getElementById('tut-npc-portrait').innerHTML=CLANCY_SVG;
+  document.getElementById('tut-npc-say').innerHTML=
+    "Blow me down - ye’ve caught <b>every fish in the Gulf!</b> That earns ye a <b>Prestige</b>. "
+    +"It wipes your coins, gear and level back to the start, but in return:<br>"+prestigeRewardLine(next)
+    +"<br>Prestige <b>"+(S.prestige||0)+" → "+next+"</b>. Ready to start fresh, angler?";
+  document.getElementById('tut-npc-actions').innerHTML=
+    '<button class="tut-npc-btn" id="prestige-yes">Prestige!</button>'
+    +'<button class="tut-npc-skip" id="prestige-no">Not yet</button>';
+  document.getElementById('tut-npc').classList.add('show');
+  if(typeof tutPlaceBar==='function')tutPlaceBar();
+  const yes=document.getElementById('prestige-yes');
+  const no=document.getElementById('prestige-no');
+  if(yes)yes.onclick=function(){document.getElementById('tut-npc').classList.remove('show');doPrestige();};
+  if(no)no.onclick=function(){document.getElementById('tut-npc').classList.remove('show');toast('No worries - prestige any time from the Stats tab.','#b58b53');};
+}
+// Reset progression, keep rubies/stats/ultra; bump prestige & grant the next pet.
+function doPrestige(){
+  if((S.prestige||0)>=PRESTIGE_MAX){toast('You’re already at max prestige.','#b58b53');return;}
+  const next=(S.prestige||0)+1;
+  // keep ultra catches + their best weights; drop everything else from the logbook
+  const keepCaught={},keepBest={};
+  FISH.forEach(function(f){if(f.rarity==='ultra'&&S.caught[f.id]){keepCaught[f.id]=S.caught[f.id];if(S.best[f.id])keepBest[f.id]=S.best[f.id];}});
+  S.caught=keepCaught;S.best=keepBest;
+  // reset coins, level & xp
+  S.gold=0;S.xp=0;S.level=1;
+  // gear back to starters (ultra-reward gear is kept since ultra catches persist)
+  const keepMarlin=S.ownedBoats&&S.ownedBoats.indexOf('marlinboat')>=0;
+  const keepChainsaw=S.ownedRods&&S.ownedRods.indexOf('chainsaw')>=0;
+  S.ownedBoats=['kayak'].concat(keepMarlin?['marlinboat']:[]);
+  S.ownedRods=['rod0'].concat(keepChainsaw?['chainsaw']:[]);
+  S.ownedReels=['reel0'];S.ownedBraids=['braid0'];S.ownedLeaders=['mono'];
+  S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='mono';
+  // consumables back to the starter kit
+  S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
+  S.baitInv={shrimp:20};S.lureInv={};S.ownedLures=[];
+  S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
+  // bump prestige (grants the next pet automatically via ownedPets())
+  S.prestige=next;S.prestigeOffered=false;
+  updatePills&&updatePills();updateRigBar&&updateRigBar();ensureRig&&ensureRig();
+  if(typeof refreshMenu==='function')refreshMenu();
+  queueSave();
+  const pet=PETS.filter(function(p){return p.prestige===next;}).map(function(p){return p.name;}).join(' & ');
+  toast('✨ PRESTIGE '+next+'! +'+(next*10)+'% coins forever'+(pet?' · '+pet+' joined ye!':'')+'','#ff8a3a');
+  if(typeof AUDIO!=='undefined')AUDIO.sfx('level');
+}
+// Prestige from the Stats tab (player declined Clancy's offer earlier).
+function prestigeFromStats(){
+  if(!prestigeEligible()){toast('Catch every non-Ultra species first.','#b58b53');return;}
+  if(typeof closeMenu==='function')closeMenu();
+  setTimeout(showPrestigeOffer,250);
+}
+// ---- Fail-safe: if a player is out of gear AND broke, Clancy spots them a starter kit ----
+let _failsafeAt=0;
+function clancyFailsafe(){
+  if((S.gold||0)>=50)return false;        // can still afford a cheap restock
+  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))return false; // not mid-tournament
+  if(Date.now()-_failsafeAt<4000)return true; // already just helped; swallow the cast
+  _failsafeAt=Date.now();
+  S.baitInv=S.baitInv||{};S.baitInv.shrimp=(S.baitInv.shrimp||0)+5;
+  S.tackleInv=S.tackleInv||{};
+  const hk=S.tackleInv.lh_b||(S.tackleInv.lh_b={qty:0,dur:0});
+  hk.qty+=2;if(hk.dur<=0)hk.dur=(tackleById('lh_b')||{dur:8}).dur;
+  // make the gift immediately usable
+  S.method='livebait';S.tackleSel=S.tackleSel||{};S.tackleSel.livehook='lh_b';S.baitSel='shrimp';
+  if(typeof ensureRig==='function')ensureRig();
+  updateRigBar&&updateRigBar();queueSave&&queueSave();
+  toast("Cap'n Clancy slipped ye 5 live shrimp & 2 circle hooks - can’t have ye stranded!",'#e0a93c');
+  return true;
+}
 
 const SKIN_TONES=[
   {id:'light',   color:'#FDDBB4', label:'Light'},
@@ -2900,9 +3049,9 @@ function applyV85Pricing(){
   // rare-targeting surcharge: +16% per rarity tier above uncommon
   BAIT.forEach(function(b){ if(!b.cost)return; const sur=1+0.16*Math.max(0,maxRarFor([b.id])-1); b.cost=Math.round(b.cost*sur*1.2/5)*5; });
   LURES.forEach(function(l){ if(!l.cost)return; const sur=1+0.16*Math.max(0,maxRarFor(l.baits||[])-1); l.cost=Math.round(l.cost*sur*1.2/5)*5; });
-  // everything else +20%
+  // everything else +20% (skip fixedCost items so V0.9 prices stay exact)
   [TACKLE,LEADERS,RODS,REELS,BRAIDS,BOATS,ITEMS,SETS].forEach(function(arr){
-    arr.forEach(function(it){ if(it.cost)it.cost=Math.round(it.cost*1.2); });
+    arr.forEach(function(it){ if(it.cost&&!it.fixedCost)it.cost=Math.round(it.cost*1.2); });
   });
 }
 
@@ -3566,6 +3715,9 @@ async function loadGame(){
 function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
   if(typeof S.bigCastWins!=='number')S.bigCastWins=0;
+  // V0.9 prestige
+  if(typeof S.prestige!=='number')S.prestige=0;
+  if(typeof S.prestigeOffered!=='boolean')S.prestigeOffered=false;
   if(!Array.isArray(S.ownedSets))S.ownedSets=[];
   if(!S.itemInv||typeof S.itemInv!=='object')S.itemInv={};
   if(typeof S.chumCasts!=='number')S.chumCasts=0;
@@ -4096,7 +4248,49 @@ function playerMoveMult(){
     if(ph==='day')m*=1.20;                                       // +20% during day
     const se=seasonNow();if(se==='spring'||se==='summer')m*=1.20;// +20% spring/summer (stacks)
   }
+  // V0.9 Jester set: +5% movement speed for every ability used against you this match
+  if(set==='jester'&&jesterStacks>0)m*=(1+0.05*jesterStacks);
+  // V0.9 Slow Buoy item: crawl while inside any active buoy field
+  m*=buoySlowMult();
   return m;
+}
+// ── V0.9 set/pet/ability multipliers (bite rate, luck, jester stacks) ──
+let _sunBiteUntil=0;     // Astronaut "Lunar Sun" daytime bite window
+let _lunarSlowNext=false;// Astronaut "Lunar Sun" nighttime: next catch fights slower
+let jesterStacks=0;      // Jester set: +5%/stack from being hit by abilities (per match)
+// Extra bite-rate multiplier from the equipped set + active abilities.
+function playerBiteMult(){
+  let m=1;const set=equippedSetId();
+  if(set==='astronaut'){
+    const mp=currentMoonPhase().id;
+    if(mp==='new')m*=1.50;            // new moon: +50% bite
+    else if(mp!=='full')m*=1.15;      // neither: +15% bite (full moon is luck-only)
+  }
+  if(_sunBiteUntil>Date.now())m*=1.20;             // Lunar Sun: +20% bite for 20s
+  if(set==='jester'&&jesterStacks>0)m*=(1+0.05*jesterStacks); // +5% spawn / stack
+  return m;
+}
+// Luck = how strongly rarer / target fish are favored in the bite pool.
+function playerLuckMult(){
+  let m=1;const set=equippedSetId();
+  if(set==='astronaut'){
+    const mp=currentMoonPhase().id;
+    if(mp==='full')m*=1.50;           // full moon: +50% luck
+    else if(mp!=='new')m*=1.15;       // neither: +15% luck (new moon is bite-only)
+  }
+  return m;
+}
+// Slow Buoy fields placed by anyone; the local boat crawls at -90% inside one.
+function buoySlowMult(){
+  const list=(typeof placedItems!=='undefined'&&placedItems)?placedItems:null;
+  if(!list||!list.length||typeof boat==='undefined')return 1;
+  const now=Date.now();
+  for(const it of list){
+    if(it.type!=='buoy'||(it.until&&now>it.until))continue;
+    if(typeof it.zone==='number'&&it.zone!==S.zone)continue;
+    if(dist(boat.wx,boat.wy,it.wx,it.wy)<=it.r)return 0.10;
+  }
+  return 1;
 }
 // Ability effects applied to the LOCAL player (set by abilities / incoming events)
 let confusedUntil=0,confuseAng=0;   // Princess: drift in a random direction
@@ -4104,6 +4298,10 @@ let knockVX=0,knockVY=0;            // Berserker: punch knockback impulse
 let blindUntil=0;                   // Assassin: blinded by a smoke cloud
 let immuneUntil=0;                  // Jeremy: immune to others' abilities
 let invisibleUntil=0;              // Assassin: self invisibility
+// V0.9 tap-to-place items (snag rocks + slow buoys) live in world space.
+let placedItems=[];                  // {type:'snag'|'buoy',wx,wy,r,until,owner,zone}
+let _placeItemMode=null;             // id of the item awaiting a tap to place
+let _snaggedUntil=0;                 // Snag Rock: can't cast/catch until this time
 
 // ===================== CANVAS =====================
 const canvas=document.getElementById('ocean');
@@ -4797,6 +4995,19 @@ function drawExploreMap(){
   // backdrop + undiscovered fog over the whole arena
   g.fillStyle='#081420';g.fillRect(0,0,CWp,CHp);
   g.fillStyle='#0c1d2c';g.fillRect(offX,offY,W*sc,H*sc);
+  // V0.9 Robot set bonus: the whole map is already revealed (with all structures).
+  if(equippedSetId()==='robot'){
+    g.fillStyle='#1b5872';g.fillRect(offX,offY,W*sc,H*sc);
+    for(const s of (tourn.structs||[])){
+      g.fillStyle='#e8d24a';g.beginPath();g.arc(MX(s.x),MY(s.y),3.4,0,6.28);g.fill();
+      g.strokeStyle='rgba(0,0,0,.4)';g.lineWidth=1;g.stroke();
+    }
+    g.strokeStyle='rgba(255,255,255,.22)';g.lineWidth=1.5;g.strokeRect(offX,offY,W*sc,H*sc);
+    const rpx=MX(boat.wx),rpy=MY(boat.wy);
+    g.save();g.translate(rpx,rpy);g.fillStyle='#fff';g.strokeStyle='#1d7a4a';g.lineWidth=1.6;
+    g.beginPath();g.arc(0,0,4.5,0,6.28);g.fill();g.stroke();g.restore();
+    return;
+  }
   const trail=tourn._trail||[];
   const rad=EXPLORE_REVEAL*sc;
   g.save();
@@ -4972,6 +5183,9 @@ function useAbility(){
   else if(setId==='berserker')used=abilityPunch();
   else if(setId==='jeremy')used=abilityJeremy();
   else if(setId==='assassin')used=abilityVanish();
+  else if(setId==='jester')used=abilityTrick();
+  else if(setId==='astronaut')used=abilityLunarSun();
+  else if(setId==='robot')used=abilityHack();
   if(used){AUDIO.sfx('ability');activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
 }
 function abilityPlunder(){
@@ -5029,6 +5243,61 @@ function abilityVanish(){
   if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
   return true;
 }
+// ── V0.9 set abilities ──
+// Jester "Trick": the next target catch by the marked angler counts for YOU.
+// Against bots (no live catch events) we transfer their current best target
+// catch to your standings right away; against real players we broadcast the mark.
+function abilityTrick(){
+  const g=nearestGhost(440);
+  if(!g){toast('No angler within range to trick.','#b58b53');return false;}
+  spawnAbilityFx(g.wx,g.wy,'#9a4ad0');
+  const tgt=activeTournament.def&&activeTournament.def.targetFish;
+  if(g.real){
+    g._trickedUntil=Date.now()+45000;
+    broadcastAbility('trick',g.uid,{});
+    toast('Tricked '+g.name+"! Their next "+(tgt?tgt.name:'target')+" is yours.",'#7a3aa0');
+  }else{
+    // steal the bot's best target catch into your standings
+    let bw=(typeof botBestNow==='function')?botBestNow(g.name):0;
+    if(!(bw>0)&&typeof g._bestW==='number')bw=g._bestW;
+    if(tgt&&bw>(activeTournament.biggestWeight||0)){
+      recordTournamentCatch(tgt,bw);g._trickStolen=true;
+      toast('Tricked '+g.name+"! Stole their "+fmtLb(bw)+' lb '+tgt.name+'.','#7a3aa0');
+    }else{
+      toast('Tricked '+g.name+" - but they had no catch to steal yet.",'#7a3aa0');
+    }
+  }
+  return true;
+}
+// Astronaut "Lunar Sun": sun out -> +20% bite for 20s; moon out -> next catch fights slower.
+function abilityLunarSun(){
+  const ph=phaseOf(hourNow());
+  if(ph==='night'){
+    _lunarSlowNext=true;
+    toast('Lunar pull engaged - your next catch fights 15% slower.','#7fa0d8');
+  }else{
+    _sunBiteUntil=Date.now()+20000;
+    toast('Solar charge - +20% bite rate for 20 seconds!','#e0a93c');
+  }
+  spawnAbilityFx(boat.wx,boat.wy,'#dfe6ee');
+  return true;
+}
+// Robot "Hack": lock radar onto the target and raise it to the surface to sight-cast.
+function abilityHack(){
+  S.radarActive=true;
+  const tgt=activeTournament.def&&activeTournament.def.targetFish;
+  const species=tgt||(typeof poolNow==='function'&&(poolNow().out[0]||{}).f)||FISH.find(function(f){return f.zone===S.zone&&!f.surf;});
+  if(species&&typeof spawnSightFish==='function'){
+    spawnSightFish(species);
+    const sf=sightFish[sightFish.length-1];
+    if(sf){sf.wx=boat.wx+(Math.random()-0.5)*120;sf.wy=boat.wy+(Math.random()-0.5)*120;sf.lifetime=20000;sf.fadeStart=(performance.now?performance.now():Date.now())+20000;}
+    toast('Hack online - '+species.name+' surfaced. Sight-cast it!','#3fa9b0');
+  }else{
+    toast('Hack online - radar locked to the target.','#3fa9b0');
+  }
+  spawnAbilityFx(boat.wx,boat.wy,'#8fd0e0');
+  return true;
+}
 function broadcastAbility(type,targetUid,data){
   tourn._pendingAct={id:Date.now()+'_'+Math.floor(Math.random()*1e6),type:type,target:targetUid,data:data||{},t:Date.now()};
   if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
@@ -5044,8 +5313,12 @@ function popAnchorFromAbility(){
 }
 function applyIncomingAct(act){
   const now=Date.now();
-  const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder');
+  const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder'||act.type==='trick');
   if(hostile&&now<immuneUntil){toast('Untouchable - blocked an ability!','#2aa890');return;}
+  // Jester set bonus: every ability used against you ramps your speed & spawn.
+  if(hostile&&equippedSetId()==='jester'){jesterStacks++;toast('Jester thrives on chaos - +5% speed & spawn (x'+jesterStacks+').','#9a4ad0');}
+  if(act.type==='trick'){toast('You were tricked! Your next target catch may be stolen.','#7a3aa0');return;}
+  if(act.type==='place'){const d=act.data||{};placedItems.push({type:d.itype,wx:d.wx,wy:d.wy,r:d.r,until:d.until||0,owner:act.from||'rival',zone:d.zone});return;}
   if(act.type==='confuse'){confusedUntil=now+(act.data.dur||3000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');}
   else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();const l=loseEquippedConsumable(0.10+Math.random()*0.05);toast('You got punched'+(l?' (-'+l+' bait/lures)':'')+'!','#c46f28');}
   else if(act.type==='plunder'){const amt=act.data.amt||0;
@@ -5068,6 +5341,7 @@ function botUseAbility(g,s,dp,now){
     if(dp>380)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
     confusedUntil=now+2000;confuseAng=Math.random()*6.28;popAnchorFromAbility();
+    if(equippedSetId()==='jester')jesterStacks++;
     toast(g.name+' confused you!','#a872d8');spawnAbilityFx(boat.wx,boat.wy,'#c77ad8');return true;
   }
   if(g.set==='berserker'){
@@ -5076,12 +5350,14 @@ function botUseAbility(g,s,dp,now){
     let dx=boat.wx-g.wx,dy=boat.wy-g.wy;const d=Math.hypot(dx,dy)||1;dx/=d;dy/=d;
     const power=12+Math.random()*8;knockVX+=dx*power;knockVY+=dy*power;popAnchorFromAbility();
     const lost=loseEquippedConsumable(0.10+Math.random()*0.05); // knock 10-15% loose
+    if(equippedSetId()==='jester')jesterStacks++;
     toast(g.name+' punched you'+(lost?' (-'+lost+' bait/lures)':'')+'!','#c46f28');spawnAbilityFx(boat.wx,boat.wy,'#ff8a3a');return true;
   }
   if(g.set==='pirate'){
     if(dp>340)return false;
     if(blocked){toast('Untouchable - blocked '+g.name+'!','#2aa890');return true;}
     const amt=loseEquippedConsumable(0.05+Math.random()*0.10); // steal 5-15%
+    if(equippedSetId()==='jester')jesterStacks++;
     toast(g.name+' plundered '+amt+' bait/lures!','#b3402a');spawnAbilityFx(g.wx,g.wy,'#ffd24a');return true;
   }
   return false;
@@ -5463,7 +5739,8 @@ function anglerHairColor(){
 }
 function anglerShirtColor(){
   const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
-    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0'};
+    assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0',
+    jester_shirt:'#5a2a8a',astro_suit:'#eef2f6',robot_chest:'#9aa2aa'};
   return(S.cosmetic&&c[S.cosmetic.shirt])||'#cf7a35';
 }
 function drawAnglerHairBack(cx,cy,r){
@@ -5480,7 +5757,33 @@ function drawAnglerHairBack(cx,cy,r){
 // Set-specific decorations drawn on the torso (below the head). Currently the
 // Berserker's diagonal sash + shoulder spikes.
 function drawAnglerSetBody(cx,cy,r){
-  if(equippedSetId()!=='berserker')return;
+  const set=equippedSetId();
+  if(set==='jester'){
+    // green left half over the purple motley + a yellow collar ruffle
+    const top=cy+r*1.5,h=r*2.2;
+    ctx.fillStyle='#2a9a4a';ctx.fillRect(cx-r,top,r,h);
+    ctx.fillStyle='#f3c63a';
+    for(let i=-2;i<=2;i++){ctx.beginPath();ctx.arc(cx+i*r*0.5,cy+r*1.5,r*0.16,0,6.28);ctx.fill();}
+    return;
+  }
+  if(set==='robot'){
+    // chest seam + blue and green indicator lights (blue above green, left of center)
+    const top=cy+r*1.5;
+    ctx.strokeStyle='rgba(40,46,54,.6)';ctx.lineWidth=Math.max(1,r*0.1);ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(cx,top);ctx.lineTo(cx,cy+r*3.0);ctx.stroke();
+    ctx.fillStyle='#2f6fb0';ctx.beginPath();ctx.arc(cx-r*0.5,top+r*0.5,r*0.22,0,6.28);ctx.fill();
+    ctx.fillStyle='#3fa84a';ctx.beginPath();ctx.arc(cx-r*0.5,top+r*1.05,r*0.22,0,6.28);ctx.fill();
+    return;
+  }
+  if(set==='astronaut'){
+    // small chest control panel with two lights
+    const top=cy+r*1.7;
+    ctx.fillStyle='#cfd6dc';roundRect(ctx,cx-r*0.6,top,r*1.2,r*0.8,r*0.2);ctx.fill();
+    ctx.fillStyle='#e85050';ctx.beginPath();ctx.arc(cx-r*0.25,top+r*0.4,r*0.12,0,6.28);ctx.fill();
+    ctx.fillStyle='#3fa84a';ctx.beginPath();ctx.arc(cx+r*0.2,top+r*0.4,r*0.12,0,6.28);ctx.fill();
+    return;
+  }
+  if(set!=='berserker')return;
   const shY=cy+r*1.5; // shoulder line, just below the head
   // metal shoulder spikes
   ctx.fillStyle='#8a8f96';
@@ -5540,6 +5843,29 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.fillStyle='#eef0f2';
       ctx.fillRect(cx-r-1,cy-r-1,(r+1)*2,r*0.85);
       ctx.restore();
+    } else if(hat==='jester_hat'){
+      // two-pointed motley cap: purple horn curling left, green curling right, yellow bells
+      ctx.fillStyle='#5a2a8a';
+      ctx.beginPath();ctx.arc(cx,cy-r*0.5,r*0.95,Math.PI,0);ctx.fill();
+      ctx.fillRect(cx-r*0.95,cy-r*0.5,r*1.9,r*0.32);
+      ctx.fillStyle='#7a3aa0'; // left horn (purple)
+      ctx.beginPath();ctx.moveTo(cx-r*0.25,cy-r*1.05);ctx.quadraticCurveTo(cx-r*1.7,cy-r*1.25,cx-r*1.5,cy-r*0.05);
+      ctx.quadraticCurveTo(cx-r*1.05,cy-r*0.7,cx-r*0.1,cy-r*0.62);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#2a9a4a'; // right horn (green)
+      ctx.beginPath();ctx.moveTo(cx+r*0.25,cy-r*1.05);ctx.quadraticCurveTo(cx+r*1.7,cy-r*1.25,cx+r*1.5,cy-r*0.05);
+      ctx.quadraticCurveTo(cx+r*1.05,cy-r*0.7,cx+r*0.1,cy-r*0.62);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#f3c63a'; // bells at the points
+      ctx.beginPath();ctx.arc(cx-r*1.5,cy,r*0.27,0,6.28);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+r*1.5,cy,r*0.27,0,6.28);ctx.fill();
+    } else if(hat==='astro_helmet'){
+      // white helmet dome covering the whole head, slightly oversized
+      ctx.fillStyle='#f2f5f8';ctx.beginPath();ctx.arc(cx,cy,r*1.18,0,6.28);ctx.fill();
+      ctx.strokeStyle='#c4ccd4';ctx.lineWidth=Math.max(1,r*0.12);ctx.stroke();
+    } else if(hat==='robot_antenna'){
+      // slim cone in the bot's grey with a small ball on top
+      ctx.fillStyle='#9aa2aa';
+      ctx.beginPath();ctx.moveTo(cx-r*0.3,cy-r*0.55);ctx.lineTo(cx,cy-r*1.5);ctx.lineTo(cx+r*0.3,cy-r*0.55);ctx.closePath();ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy-r*1.62,r*0.18,0,6.28);ctx.fill();
     } else {
       const hc={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060'}[hat]||'#555';
       ctx.fillStyle=hc;
@@ -5610,6 +5936,25 @@ function drawAnglerHatAndExtras(cx,cy,r){
       ctx.fillStyle='#2f6fb0';
       ctx.beginPath();ctx.arc(cx-r*.32,cy-r*.04,r*.16,0,6.28);ctx.fill();
       ctx.beginPath();ctx.arc(cx+r*.32,cy-r*.04,r*.16,0,6.28);ctx.fill();
+    } else if(sh==='jester_mask'){
+      // big vertical black rhombus eyes + a red clown nose
+      ctx.fillStyle='#1a1a1a';
+      const rhomb=function(ex){ctx.beginPath();ctx.moveTo(ex,cy-r*0.42);ctx.lineTo(ex+r*0.18,cy-r*0.05);ctx.lineTo(ex,cy+r*0.32);ctx.lineTo(ex-r*0.18,cy-r*0.05);ctx.closePath();ctx.fill();};
+      rhomb(cx-r*0.34);rhomb(cx+r*0.34);
+      ctx.fillStyle='#e02828';ctx.beginPath();ctx.arc(cx,cy+r*0.34,r*0.2,0,6.28);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.arc(cx-r*0.06,cy+r*0.28,r*0.06,0,6.28);ctx.fill();
+    } else if(sh==='astro_visor'){
+      // black circular visor filling ~70% of the helmet
+      ctx.fillStyle='#0b1016';ctx.beginPath();ctx.arc(cx,cy,r*1.18*0.7,0,6.28);ctx.fill();
+      ctx.fillStyle='rgba(120,180,220,.25)';ctx.beginPath();ctx.ellipse(cx-r*0.28,cy-r*0.3,r*0.3,r*0.15,-0.5,0,6.28);ctx.fill();
+    } else if(sh==='robot_face'){
+      // grey faceplate, two red eyes, a black mouth line across
+      ctx.fillStyle='#9aa2aa';ctx.beginPath();ctx.arc(cx,cy,r*0.98,0,6.28);ctx.fill();
+      ctx.fillStyle='#e23a3a';
+      ctx.beginPath();ctx.arc(cx-r*0.34,cy-r*0.12,r*0.15,0,6.28);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+r*0.34,cy-r*0.12,r*0.15,0,6.28);ctx.fill();
+      ctx.strokeStyle='#1a1a1a';ctx.lineWidth=Math.max(1,r*0.12);ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(cx-r*0.72,cy+r*0.34);ctx.lineTo(cx+r*0.72,cy+r*0.34);ctx.stroke();
     } else {
       ctx.fillStyle='rgba(10,10,18,.62)';
       ctx.beginPath();ctx.ellipse(cx,cy,r*.65,r*.26,0,0,6.28);ctx.fill();
@@ -5678,6 +6023,48 @@ function drawAnglerCrown(cx,cy,r){
 }
 // ── end angler helpers ──────────────────────────────────────────
 
+// V0.9: pets float beside the boat (earned by prestige).
+const PET_EMOJI={cat:'🐱',dog:'🐶',pig:'🐷',tiger:'🐯',bat:'🦇',penguin:'🐧'};
+function drawPets(){
+  const pets=(typeof ownedPets==='function')?ownedPets():[];
+  if(!pets.length)return;
+  const t=performance.now?performance.now():Date.now();
+  const cx=ORIGIN.x,cy=ORIGIN.y;
+  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='17px "Apple Color Emoji","Segoe UI Emoji",serif';
+  for(let i=0;i<pets.length;i++){
+    const side=(i%2===0)?-1:1, ring=Math.floor(i/2);
+    const px=cx+side*(44+ring*12);
+    const py=cy-4-ring*16+Math.sin(t*0.003+i*1.6)*4;
+    ctx.globalAlpha=0.16;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px,py+12,8,3,0,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    ctx.fillText(PET_EMOJI[pets[i].id]||'🐾',px,py);
+  }
+  ctx.restore();
+}
+// V0.9: tap-to-place snag rocks & slow buoys, drawn in world space.
+function drawPlacedItems(){
+  if(!placedItems.length)return;
+  const now=Date.now();
+  for(let i=placedItems.length-1;i>=0;i--){
+    const it=placedItems[i];
+    if(it.until&&now>it.until){placedItems.splice(i,1);continue;}
+    if(typeof it.zone==='number'&&it.zone!==S.zone)continue;
+    const sx=it.wx-camera.x,sy=it.wy-camera.y;
+    if(sx<-it.r-20||sx>CW+it.r+20||sy<-it.r-20||sy>CH+it.r+20)continue;
+    if(it.type==='buoy'){
+      ctx.save();
+      ctx.fillStyle='rgba(255,120,40,0.09)';ctx.beginPath();ctx.arc(sx,sy,it.r,0,6.28);ctx.fill();
+      ctx.strokeStyle='rgba(255,140,60,0.45)';ctx.lineWidth=2;ctx.setLineDash([7,7]);ctx.beginPath();ctx.arc(sx,sy,it.r,0,6.28);ctx.stroke();ctx.setLineDash([]);
+      ctx.fillStyle='#e8552a';ctx.beginPath();ctx.arc(sx,sy,6,0,6.28);ctx.fill();
+      ctx.fillStyle='#fff';ctx.fillRect(sx-1.5,sy-11,3,8);
+      ctx.restore();
+    }else{ // snag rock
+      ctx.save();ctx.globalAlpha=0.6;
+      ctx.fillStyle='#544b42';ctx.beginPath();ctx.arc(sx,sy,5,0,6.28);ctx.fill();
+      ctx.fillStyle='rgba(255,255,255,.25)';ctx.beginPath();ctx.arc(sx-1.5,sy-1.5,1.6,0,6.28);ctx.fill();
+      ctx.restore();
+    }
+  }
+}
 function drawBoat(dark){
   ctx.save();
   if(driving()){
@@ -6113,9 +6500,15 @@ function render(ts){
 
   if(ledActive())drawLedGlow(t);
 
+  // V0.9: snag rocks & slow-buoy fields sit on the water under the boat
+  try{drawPlacedItems();}catch(e){}
+
   // Assassin vanish: render yourself translucent while invisible
   if(invisibleUntil>Date.now()){ctx.save();ctx.globalAlpha=0.35;drawBoat(sky.darkness);ctx.restore();}
   else drawBoat(sky.darkness);
+
+  // V0.9: pets float beside the boat
+  try{drawPets();}catch(e){}
 
   if(S.radarActive)drawRadarPointer(t);
 
@@ -6215,6 +6608,13 @@ const FIND_RADIUS={power_plant:36,wreck:40};
 function nearestStruct(x,y){let best=null,bd=1e9;for(const s of activeStructures()){const d=dist(x,y,s.x-camera.x,s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
 
 canvas.addEventListener('click',e=>{
+  // V0.9: arming a tap-to-place item (snag/buoy) - the next tap drops it anywhere.
+  if(_placeItemMode){
+    const rect=canvas.getBoundingClientRect();
+    const x=(e.clientX-rect.left)*(CW/rect.width),y=(e.clientY-rect.top)*(CH/rect.height);
+    placeItemAt(x+camera.x,y+camera.y);
+    return;
+  }
   if(driving()){
     if(mpActive()){
       const rect=canvas.getBoundingClientRect();
@@ -6295,9 +6695,13 @@ document.getElementById('anchor-btn').addEventListener('click',()=>{
 
 function cast(x,y){
   const m=curMethod();
+  // V0.9 Snag Rock: hung up - can't cast until it wears off.
+  if(_snaggedUntil>Date.now()){setStatus('Snagged on a rock - '+Math.ceil((_snaggedUntil-Date.now())/1000)+'s left. Hang tight.');return;}
+  // V0.9: casting onto someone's snag rock hangs you up and removes the rock.
+  if(placedItems.length&&checkSnagOnCast(x+camera.x,y+camera.y)){return;}
   const tid=currentTackleId();
-  if(!tid){setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
-  if(m.bait){if(!S.baitSel||!(S.baitInv[S.baitSel]>0)){setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
+  if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
+  if(m.bait){if(!S.baitSel||!(S.baitInv[S.baitSel]>0)){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
   // Artificial methods now require a lure tied on
   if(!m.bait){
     const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
@@ -6366,6 +6770,10 @@ function poolNow(){
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04,ultra:0.00003}[f.rarity]||1;
     // Jeremy set bonus: +50% legendary AND ultra legendary spawn chance
     if((f.rarity==='legendary'||f.rarity==='ultra')&&equippedSetId()==='jeremy')w*=1.5;
+    // V0.9 Penguin pet: +1000% ultra legendary spawn chance
+    if(f.rarity==='ultra')w*=petUltraMult();
+    // V0.9 Astronaut set: luck boost makes rarer/target fish more likely
+    if(RARITY_ORDER.indexOf(f.rarity)>=2)w*=playerLuckMult();
     // Chum bag & Underwater LED: boost rarer fish (epic and up) in the cast radius
     if(RARITY_ORDER.indexOf(f.rarity)>=3){
       if(S.chumCasts>0)w*=1.3;
@@ -6409,6 +6817,9 @@ function biteWait(strength,st,rarityDelay){
   if(perk==='fastbite')boatFreq*=1.18;
   // Assassin Set bonus: +50% fish spawn rate at night
   if(ph==='night'&&assassinSetActive())boatFreq*=1.5;
+  // V0.9 pets (cat/dog +10% each, bat +100% at night) and set/ability bite buffs
+  boatFreq*=petBiteFreqMult();
+  boatFreq*=playerBiteMult();
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
   const envMul=environmentBiteFactor();
   // Global bite rate cut: bites come 35% slower across the board so fishing
@@ -6537,6 +6948,7 @@ let sdewStartTime=0,sdewDiff=1;
 let sdewRetryUsed=false;          // a non-ultra fish gives only one paid retry
 let sdewSlowmoUsed=false,sdewSlowmoUntil=0;   // Chainsaw Rod: one slow-mo per fight
 let sdewSurf=false;                            // surf shark fight: slower bar & fish
+let sdewLunar=false;                           // Astronaut "Lunar Sun": this fight is 15% slower
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
@@ -6570,6 +6982,8 @@ function startSdewGame(fish){
   document.getElementById('sdew-fish-icon').innerHTML=svgIcon('fish',26);
   document.getElementById('sdew-title').textContent=fish.name;
   sdewSlowmoUsed=false;sdewSlowmoUntil=0;
+  // Astronaut "Lunar Sun" (moon out): consume the pending buff so this catch fights slower.
+  sdewLunar=!!_lunarSlowNext;_lunarSlowNext=false;
   const smBtn=document.getElementById('sdew-slowmo');
   if(smBtn){const has=S.rod==='chainsaw';smBtn.style.display=has?'flex':'none';smBtn.disabled=false;}
   document.getElementById('sdew-overlay').classList.add('show');
@@ -6597,7 +7011,7 @@ function sdewLoop(){
   const ease=0.68;
   // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
   // Surf sharks move slightly slower than normal.
-  const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1);
+  const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1)*(sdewLunar?0.85:1);
   const spd=0.9; // fish icon moves 10% slower (a touch more catchable)
   const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow*spd;
   const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
@@ -6942,6 +7356,8 @@ function land(f,w,perfect,bullseye){
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
+  // V0.9: prestige (+10%/level) and the Pig pet (+20%) boost coins earned.
+  gold=Math.round(gold*coinMult());
   // No gold from fish in a tournament/challenge (you fish for ranking & rubies),
   // but a co-op friends world is casual: everyone keeps the coins they catch.
   if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))gold=0;
@@ -6959,6 +7375,7 @@ function land(f,w,perfect,bullseye){
   showCatch(f,w,{isNew,perfect,bullseye,trophy,pb:pb&&!isNew,xp,gold,rubies:rubyReward});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
+  if(typeof maybePrestigeOffer==='function')maybePrestigeOffer();
   if(typeof questOnCatch==='function')questOnCatch(f,w,questCatchCtx(f));
   // Tutorial: this was the guided target catch - advance Captain Clancy.
   if(tut&&tut.active&&tut.forceTargetActive){tut.forceTargetActive=false;_forcedBiteFish=null;tutNotify('catch');}
@@ -7121,8 +7538,43 @@ function useItem(id){
   else if(id==='radar'){S.radarActive=true;toast('Radar online - pointing to the nearest target.','#2aa890');}
   else if(id==='castnet'){const total=20+Math.floor(Math.random()*31);grantMixedBait(total,LIVE_BAITS);toast('Cast net: +'+total+' live baits!','#2aa890');}
   else if(id==='sabiki'){grantMixedBait(10,SABIKI_BAITS);toast('Sabiki: +10 live baitfish!','#2aa890');}
+  else if(id==='snag'||id==='buoy'){
+    // tap-to-place: arm placement mode, the next water tap drops it (no charge spent yet)
+    _placeItemMode=id;closeChooser();
+    toast('Tap the water to drop your '+(id==='snag'?'snag rock':'slow buoy')+'.','#2aa890');
+    return;
+  }
   S.itemInv[id]=q-1;
   updateRigBar();queueSave();closeChooser();
+}
+// Drop a tap-to-place item at a world point, consume one charge, broadcast it.
+function placeItemAt(wx,wy){
+  const id=_placeItemMode;if(!id)return;
+  const q=S.itemInv[id]||0;if(q<=0){toast('You don’t have that item.','#b3402a');_placeItemMode=null;return;}
+  const now=Date.now();
+  const m={type:id,wx:Math.round(wx),wy:Math.round(wy),owner:(typeof myTournUid==='function'?myTournUid():'me'),zone:S.zone};
+  if(id==='snag'){m.r=46;}
+  else{m.r=300;m.until=now+360000;} // buoy: wide field, 6 minutes
+  placedItems.push(m);
+  S.itemInv[id]=q-1;_placeItemMode=null;
+  AUDIO.sfx('item');updateRigBar();queueSave();
+  toast((id==='snag'?'Snag rock dropped - first angler to cast on it is hung up.':'Slow buoy set - anglers inside it crawl for 6 minutes.'),'#2aa890');
+  if(typeof broadcastAbility==='function'&&mpActive())broadcastAbility('place',null,{itype:id,wx:m.wx,wy:m.wy,r:m.r,until:m.until||0,zone:S.zone});
+}
+// If casting onto a snag rock, hang the angler up and remove that rock.
+function checkSnagOnCast(wx,wy){
+  for(let i=0;i<placedItems.length;i++){
+    const it=placedItems[i];
+    if(it.type!=='snag')continue;
+    if(typeof it.zone==='number'&&it.zone!==S.zone)continue;
+    if(dist(wx,wy,it.wx,it.wy)<=it.r){
+      placedItems.splice(i,1);
+      _snaggedUntil=Date.now()+60000;
+      toast('SNAGGED! Hung up for 60s - no casting or catching.','#b3402a');
+      return true;
+    }
+  }
+  return false;
 }
 document.getElementById('chooser-bg').addEventListener('click',e=>{
   if(e.target.id==='chooser-bg'){closeChooser();return;}
@@ -7173,7 +7625,7 @@ function updateCosmeticHUD(){
   const el=document.getElementById('cosmetic-pill');
   if(!el)return;
   const setId=equippedSetId();
-  if(setId){const ic={assassin:'shades-mask',pirate:'hat-straw',princess:'crown',berserker:'hat-beanie',jeremy:'shades-polarized'}[setId]||'fits';el.innerHTML=svgIcon(ic,18);return;}
+  if(setId){const ic={assassin:'shades-mask',pirate:'hat-straw',princess:'crown',berserker:'hat-beanie',jeremy:'shades-polarized',jester:'hat-beanie',astronaut:'hat-bucket',robot:'shades-mask'}[setId]||'fits';el.innerHTML=svgIcon(ic,18);return;}
   const hat=COSMETICS.hats.find(x=>x.id===S.cosmetic.hat);
   const shirt=COSMETICS.shirts.find(x=>x.id===S.cosmetic.shirt);
   const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
@@ -7440,6 +7892,22 @@ function renderStats(){
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
   const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
   let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
+  // V0.9 Prestige
+  const pl=S.prestige||0;
+  html+='<div class="stat-line"><span class="sl-label">Prestige</span><span class="sl-val">'+pl+' / '+PRESTIGE_MAX+(pl>0?' (+'+(pl*10)+'% coins)':'')+'</span></div>';
+  const pets=ownedPets();
+  if(pets.length)html+='<div class="stat-line"><span class="sl-label">Pets</span><span class="sl-val">'+pets.map(function(p){return (PET_EMOJI[p.id]||'🐾')+' '+p.name;}).join('  ')+'</span></div>';
+  if(prestigeEligible()){
+    const caught=Object.keys(S.caught).filter(function(id){const f=FISH.find(function(x){return x.id===id;});return f&&f.rarity!=='ultra'&&S.caught[id]>0;}).length;
+    html+='<div style="margin-top:10px;padding:11px;border-radius:12px;background:linear-gradient(135deg,#3a2150,#5a2a8a);color:#fff;text-align:center;">'
+      +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">✨ Prestige available!</div>'
+      +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every non-Ultra species ('+caught+'). Reset progress for a permanent +'+((pl+1)*10)+'% coin bonus and a new pet.</div>'
+      +'<button onclick="prestigeFromStats()" style="padding:8px 18px;border:none;border-radius:9px;background:#ffb347;color:#3a2a08;font-family:\'Fredoka\';font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #c47f1f;">Prestige '+pl+' → '+(pl+1)+'</button>'
+      +'</div>';
+  }else if(pl<PRESTIGE_MAX){
+    const remain=nonUltraSpecies().filter(function(f){return !(S.caught[f.id]>0);}).length;
+    html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">Catch every non-Ultra species to Prestige - <b>'+remain+'</b> to go.</div>';
+  }
   html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:6px;">Sound &amp; graphics are in the &#9881; Settings tab.</div>';
   // Achievements section
   html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{})+'</div>';
