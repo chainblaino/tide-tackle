@@ -1044,7 +1044,7 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // the player through the logbook, the shop, structure, a real catch, then a
 // no-stakes legendary (Stardew) fight they retry until they win.
 // Centered captain portrait (fills the round frame evenly, top hat to beard).
-const CLANCY_SVG='<svg viewBox="0 0 48 48" width="46" height="46">'
+const CLANCY_SVG='<svg viewBox="0 0 48 48" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block;">'
   +'<rect width="48" height="48" fill="#1d5e7a"/>'
   // Head group: scaled up ~12% about the centre and nudged down so the hat-to-beard
   // figure sits dead-centre in the avatar circle.
@@ -1400,7 +1400,7 @@ function renderQuestsPanel(){
       +'</div>';
   });
   body.innerHTML='<div style="display:flex;align-items:center;gap:9px;margin-bottom:11px;">'
-      +'<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;border:2px solid #1d5e7a;line-height:0;">'+CLANCY_SVG.replace('width="46" height="46"','width="36" height="36"')+'</div>'
+      +'<div style="width:36px;height:36px;border-radius:50%;overflow:hidden;flex:none;border:2px solid #1d5e7a;line-height:0;box-sizing:border-box;">'+CLANCY_SVG+'</div>'
       +'<div><div style="font-family:\'Fredoka\';font-weight:800;font-size:15px;color:var(--wood-dark);">Clancy\'s Daily Quests</div>'
       +'<div style="font-size:11px;color:var(--text-soft);">Resets in <b id="quest-countdown">'+fmtQuestCountdown(etMsUntilReset())+'</b></div></div>'
     +'</div>'
