@@ -2875,7 +2875,9 @@ function petUltraMult(){return hasPet('penguin')?11:1;}        // +1000% ultra w
 function petTournMult(){return hasPet('tiger')?1.20:1;}        // +20% tournament winnings
 
 // ---- Prestige: unlocks once every non-ultra species is in the logbook ----
-function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra';});}
+// Prestige requires every inshore/nearshore/offshore species - excluding ultra
+// legendaries AND surf-only sharks.
+function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra'&&!f.surf;});}
 function prestigeEligible(){
   if((S.prestige||0)>=PRESTIGE_MAX)return false;
   return nonUltraSpecies().every(function(f){return (S.caught[f.id]||0)>0;});
@@ -7695,7 +7697,7 @@ let lureSubTab=0; // lures shop region tab (0 inshore / 1 nearshore / 2 offshore
 function renderShop(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets'],['pets','🐾 Pets']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(function(b,i){
@@ -7795,6 +7797,26 @@ function renderShop(){
         +'<div class="shop-info"><div class="shop-name">'+s.name+'</div>'
         +'<div class="shop-desc"><b style="color:var(--wood-dark)">Bonus:</b> '+s.bonus+'<br><b style="color:var(--accent)">'+s.ability+':</b> '+s.abilityDesc+'</div></div>'
         +action+'</div>';
+    }).join('');
+  }
+  else if(shopTab==='pets'){
+    const pl=S.prestige||0;
+    html='<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:11px;line-height:1.55;">Pets are earned by <b>Prestige</b>, not bought. Each one floats beside your boat with a permanent buff. You’re at <b>Prestige '+pl+' / '+PRESTIGE_MAX+'</b>.</div>';
+    // group pets by the prestige level that unlocks them
+    const byLvl={};PETS.forEach(function(p){(byLvl[p.prestige]=byLvl[p.prestige]||[]).push(p);});
+    html+=Object.keys(byLvl).map(function(lvlStr){
+      const lvl=+lvlStr, group=byLvl[lvlStr], owned=pl>=lvl;
+      return group.map(function(p){
+        const emo=(typeof PET_EMOJI!=='undefined'&&PET_EMOJI[p.id])||'🐾';
+        const action=owned
+          ? '<span class="shop-action equipped-tag">Owned</span>'
+          : '<span class="shop-action buy cant" style="white-space:nowrap;">Prestige '+lvl+'</span>';
+        const swatch='<span class="shop-swatch" style="background:'+(owned?'#3a2150':'#2a2f36')+';display:flex;align-items:center;justify-content:center;font-size:18px;'+(owned?'':'filter:grayscale(1);opacity:.5;')+'">'+emo+'</span>';
+        return '<div class="shop-item '+(owned?'':'locked')+'" style="'+(owned?'':'opacity:.78;')+'">'+swatch
+          +'<div class="shop-info"><div class="shop-name">'+p.name+(owned?'':' <span style="font-size:10px;color:var(--text-soft);">🔒 Prestige '+lvl+'</span>')+'</div>'
+          +'<div class="shop-desc"><b style="color:var(--wood-dark)">Buff:</b> '+p.buff+'</div></div>'
+          +action+'</div>';
+      }).join('');
     }).join('');
   }
   document.getElementById('shop-list').innerHTML=html;
@@ -7898,10 +7920,10 @@ function renderStats(){
   const pets=ownedPets();
   if(pets.length)html+='<div class="stat-line"><span class="sl-label">Pets</span><span class="sl-val">'+pets.map(function(p){return (PET_EMOJI[p.id]||'🐾')+' '+p.name;}).join('  ')+'</span></div>';
   if(prestigeEligible()){
-    const caught=Object.keys(S.caught).filter(function(id){const f=FISH.find(function(x){return x.id===id;});return f&&f.rarity!=='ultra'&&S.caught[id]>0;}).length;
+    const caught=nonUltraSpecies().filter(function(f){return S.caught[f.id]>0;}).length;
     html+='<div style="margin-top:10px;padding:11px;border-radius:12px;background:linear-gradient(135deg,#3a2150,#5a2a8a);color:#fff;text-align:center;">'
       +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">✨ Prestige available!</div>'
-      +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every non-Ultra species ('+caught+'). Reset progress for a permanent +'+((pl+1)*10)+'% coin bonus and a new pet.</div>'
+      +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every inshore, nearshore &amp; offshore species ('+caught+'). Reset progress for a permanent +'+((pl+1)*10)+'% coin bonus and a new pet.</div>'
       +'<button onclick="prestigeFromStats()" style="padding:8px 18px;border:none;border-radius:9px;background:#ffb347;color:#3a2a08;font-family:\'Fredoka\';font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #c47f1f;">Prestige '+pl+' → '+(pl+1)+'</button>'
       +'</div>';
   }else if(pl<PRESTIGE_MAX){
