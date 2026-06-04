@@ -4060,11 +4060,12 @@ function botTargetPos(g,tSec){
   const k=0.45;
   return {x:base.x+(best.x-base.x)*k,y:base.y+(best.y-base.y)*k};
 }
-// ----- Bot fishing: a realistic, time-spread catch schedule (no instant catches) -----
-// Each bot makes attempts across the whole match, misses most of them, and only
-// lands the target species now and then - same odds feel as real fishing, capped
-// at 90% of the species' max so a true giant always beats them. Deterministic
-// from the match seed, so the leaderboard agrees on every device.
+// ----- Bot fishing: each bot lands 1-3 of the target species over the match -----
+// Every catch is a fresh random size across the FULL species range, using the
+// same curve as a real player's catch (random^1.7), so bot weights vary just like
+// real anglers instead of all sitting at a cap. Times are spread across the match
+// so the leaderboard climbs over the 6 minutes. Deterministic from the match seed,
+// so every device shows the same bot results.
 function buildBotPlan(){
   const def=activeTournament&&activeTournament.def;
   activeTournament.botPlan={};
@@ -4072,21 +4073,17 @@ function buildBotPlan(){
   const seed=matchSeed();
   const f=def.targetFish||FISH.filter(function(x){return x.zone===def.zone&&x.rarity===def.rarity&&!x.surf;})[0];
   if(!f){return;}
-  const a=f.size[0],b=f.size[1],cap=Math.max(a,b*0.9);
+  const a=f.size[0],b=f.size[1];
   activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(bot){
     const r=mulberry32((seed^strHash('catch_'+bot.uid))>>>0);
-    const prowess=0.30+r()*0.70;                 // angler skill 0.3..1
+    const n=1+Math.floor(r()*3);                  // 1, 2 or 3 fish this tournament
     const events=[];
-    let t=22000+r()*34000;                        // first attempt finishes ~22-56s in
-    while(t<TOURN_MS-4000){
-      if(r()<(0.26+prowess*0.34)){                // 26-60% hookup rate per attempt
-        const night=t>TOURN_MS*0.5;               // bigger fish bite at night
-        const exp=Math.max(0.22,(night?0.5:0.72)*(1.25-prowess*0.55));
-        const w=+Math.min(cap,a+(b-a)*Math.pow(r(),exp)).toFixed(2);
-        events.push({t:Math.round(t),weight:w,fish:f.name});
-      }
-      t+=20000+r()*30000;                          // 20-50s between attempts
+    for(let i=0;i<n;i++){
+      const t=Math.round(20000+r()*Math.max(1,TOURN_MS-30000)); // after warm-up, before the buzzer
+      const w=+(a+(b-a)*Math.pow(r(),1.7)).toFixed(2);          // full-range random size
+      events.push({t:t,weight:w,fish:f.name});
     }
+    events.sort(function(x,y){return x.t-y.t;});
     activeTournament.botPlan[bot.username]=events;
   });
 }
