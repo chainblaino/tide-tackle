@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.9</title>
+<title>Tide & Tackle: Gulf Coast Fishing Simulator — V 0.9.1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -540,6 +540,10 @@
 .tourn-standings{position:absolute;top:38px;left:50%;transform:translateX(-50%);z-index:8;display:none;background:rgba(12,28,44,.86);border:1.5px solid rgba(255,255,255,.18);border-radius:12px;padding:6px 11px;min-width:172px;pointer-events:none;box-shadow:0 3px 10px rgba(0,0,0,.3);}
 .ts-row{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800;color:#eaf2f8;padding:2px 0;}
 .ts-row.me{color:#ffd24a;}
+.ts-cond{display:flex;align-items:center;gap:5px;justify-content:center;font-size:11px;font-weight:800;color:#cfe0ee;border-bottom:1px solid rgba(255,255,255,.16);padding-bottom:4px;margin-bottom:4px;pointer-events:auto;cursor:pointer;white-space:nowrap;}
+.ts-cond:active{opacity:.7;}
+.ts-cond-sub{font-weight:700;opacity:.7;text-transform:capitalize;}
+.ts-cond-tap{font-weight:800;opacity:.55;font-size:9px;text-transform:uppercase;letter-spacing:.5px;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:1px 4px;}
 .ts-rank{width:18px;text-align:center;font-size:13px;}
 .ts-name{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:112px;}
 .ts-wt{font-variant-numeric:tabular-nums;opacity:.92;}
@@ -611,7 +615,7 @@
     <div class="fps-meter" id="fps-meter" style="display:none"></div>
     <button class="ability-btn" id="ability-btn"><span class="ab-name">Ability</span><span class="ab-uses">3 left</span></button>
     <button class="items-btn" id="items-btn" onclick="openItems()"><span class="ib-icon"></span><span class="ib-label">Items</span></button>
-    <button class="surf-btn" id="surf-btn" onclick="tryEnterSurf()">🏖 Wade into the surf</button>
+    <button class="surf-btn" id="surf-btn" onclick="tryEnterSurf()">Wade into the surf</button>
     <div class="drive-controls" id="drive-controls">
       <div class="joystick" id="joystick"><div class="joy-knob" id="joy-knob"></div></div>
     </div>
@@ -682,7 +686,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.9</div>
+    <div class="auth-sub">Gulf Coast Fishing Simulator &nbsp;·&nbsp; V 0.9.1</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -835,14 +839,14 @@
 <div class="tourn-banner" id="tourn-banner">TOURNAMENT IN PROGRESS</div>
     <div class="tourn-standings" id="tourn-standings"></div>
 <!-- Co-op controls: stacked on the right edge, clear of the Pull Anchor button (top:52) and the joystick (bottom-left). -->
-<button id="map-btn" onclick="openCoopMap()" style="display:none;position:absolute;top:100px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #7fb8e3;background:linear-gradient(135deg,#3a8fd4,#1d5e9c);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #14406c;touch-action:manipulation;white-space:nowrap;">🗺 Map</button>
+<button id="map-btn" onclick="openCoopMap()" style="display:none;position:absolute;top:100px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #7fb8e3;background:linear-gradient(135deg,#3a8fd4,#1d5e9c);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #14406c;touch-action:manipulation;white-space:nowrap;">Map</button>
 <button id="coop-exit" onclick="leaveSession(false)" style="display:none;position:absolute;top:146px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #f2a0ac;background:linear-gradient(135deg,#e0344e,#a3132a);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #6c0a1a;touch-action:manipulation;white-space:nowrap;">Leave World</button>
 
 <!-- Live co-op map overlay -->
 <div id="coop-map-bg" onclick="if(event.target===this)closeCoopMap()" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(8,18,30,.78);align-items:center;justify-content:center;backdrop-filter:blur(2px);">
   <div style="background:var(--cream,#fdf4e3);border:3px solid var(--wood,#8b5a2b);border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.5);padding:14px 14px 12px;max-width:420px;width:92%;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div style="font-family:'Fredoka';font-weight:800;font-size:15px;color:var(--wood-dark,#5a3a16);">🗺 <span id="coop-map-zone">Zone</span> &middot; <span id="coop-map-mode">Friends</span></div>
+      <div style="font-family:'Fredoka';font-weight:800;font-size:15px;color:var(--wood-dark,#5a3a16);"><span id="coop-map-zone">Zone</span> &middot; <span id="coop-map-mode">Friends</span></div>
       <button onclick="closeCoopMap()" style="border:none;background:#d8c6a4;color:#5a3a16;font-weight:900;font-size:16px;width:26px;height:26px;border-radius:50%;cursor:pointer;line-height:1;">×</button>
     </div>
     <canvas id="coop-map-canvas" width="380" height="300" style="width:100%;display:block;border-radius:12px;background:#0d2740;"></canvas>
@@ -1119,7 +1123,7 @@ function tutRender(){
   document.getElementById('tut-npc-say').innerHTML=s.say;
   let html='';
   if(s.btn)html+='<button class="tut-npc-btn" id="tut-npc-next">'+s.btn+'</button>';
-  else html+='<span class="tut-npc-hint">👉 '+(s.hint||'Follow the steps')+'</span>';
+  else html+='<span class="tut-npc-hint">'+(s.hint||'Follow the steps')+'</span>';
   html+='<button class="tut-npc-skip" id="tut-npc-skip">Skip tutorial</button>';
   document.getElementById('tut-npc-actions').innerHTML=html;
   document.getElementById('tut-npc').classList.add('show');
@@ -1334,7 +1338,7 @@ function grantQuestReward(it){
   if(r.rubies){S.rubies=(S.rubies||0)+r.rubies;}
   if(typeof updatePills==='function')updatePills();queueSave();
   const msg=r.gold?('+'+r.gold+' gold'):('+'+r.rubies+' rubies');
-  setTimeout(function(){toast('🏆 Quest complete! '+msg,'#e0a93c');},700);
+  setTimeout(function(){toast('Quest complete! '+msg,'#e0a93c');},700);
 }
 // Context describing the most recent catch, for quest matching.
 function questCatchCtx(f){
@@ -1563,7 +1567,7 @@ function renderFriendRequests(){
 function renderFwfCard(){
   const host=document.getElementById('fwf-host');if(!host)return;
   if(!fbUser){host.innerHTML='';return;}
-  host.innerHTML='<div class="fwf-card"><div class="fwf-h">🎣 Fish with Friends</div>'
+  host.innerHTML='<div class="fwf-card"><div class="fwf-h">'+svgIcon('fish',16)+' Fish with Friends</div>'
     +'<div class="fwf-sub">Invite up to 5 friends into your world, or challenge them for rubies.</div>'
     +'<div class="fwf-btns"><button class="fwf-btn world" onclick="startCoopFlow()">Invite to my world</button>'
     +'<button class="fwf-btn chal" onclick="startChallengeFlow()">Challenge for rubies</button></div></div>';
@@ -1778,7 +1782,7 @@ function renderTournamentPanel(){
   // Tournaments unlock at Level 5.
   if((S.level||1)<5){
     el.innerHTML='<div style="text-align:center;padding:24px 14px 8px;">'
-      +'<div style="font-size:42px;line-height:1;">🔒</div>'
+      +'<div style="font-size:42px;line-height:1;color:#b58b53;">'+svgIcon('lock',40)+'</div>'
       +'<div style="font-family:\'Fredoka\';font-weight:800;font-size:16px;color:var(--wood-dark);margin-top:10px;">Tournaments unlock at Level 5</div>'
       +'<div style="font-size:12.5px;color:var(--text-soft);margin-top:7px;line-height:1.5;">Keep fishing to level up. At Level 5, Captain Clancy shows ye the ropes and the contests open - compete with other anglers for gold &amp; rubies.</div>'
       +'<div style="display:inline-block;margin-top:12px;padding:6px 14px;border-radius:20px;background:var(--parchment);border:1.5px solid #d2b886;font-size:12.5px;font-weight:800;color:var(--accent-dark);">You are Level '+(S.level||1)+'</div>'
@@ -1925,13 +1929,13 @@ function _maybeShowInvite(){
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
   let head,line;
   if(inv.kind==='challenge'){
-    head='⚔️ Challenge Invite';
+    head='Challenge Invite';
     line='<b>'+(inv.from||'A friend')+'</b> challenged you<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">Biggest '+(inv.fishName||'fish')+' wins</div><div style="font-size:13px;color:#d61f3a;font-weight:800;margin-top:4px;"><span class="gem-s"></span> '+(inv.stake||0)+' ruby ante &middot; 6 min</div>';
   }else if(inv.kind==='coop'){
-    head='🎣 World Invite';
+    head='World Invite';
     line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">fish their world</div>';
   }else{
-    head='🎣 Tournament Invite';
+    head='Tournament Invite';
     line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">'+(inv.name||'a tournament')+'</div>';
   }
   modal.innerHTML='<div class="mname" style="text-align:center;color:#e0a93c;">'+head+'</div>'
@@ -2530,6 +2534,7 @@ const ICONS={
 'bolt':'<path d="M13 2L4 14h6l-1 8 9-12h-6l1-8z"/>',
 'anchor':'<circle cx="12" cy="5" r="2"/><line x1="12" y1="7" x2="12" y2="21"/><path d="M5 12a7 7 0 0 0 14 0"/><line x1="3" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="21" y2="12"/>',
 'joystick':'<rect x="6" y="14" width="12" height="6" rx="2"/><line x1="12" y1="14" x2="12" y2="7"/><circle cx="12" cy="5" r="2.5"/>',
+'lock':'<rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>',
 'toolbox':'<rect x="3" y="8" width="18" height="11" rx="1.5"/><path d="M8 8V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="3" y1="12" x2="21" y2="12"/><rect x="10" y="10.5" width="4" height="3" rx="0.5"/>',
 'reel':'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.2"/><line x1="12" y1="4" x2="12" y2="7"/><line x1="20" y1="12" x2="17" y2="12"/><line x1="12" y1="20" x2="12" y2="17"/><path d="M19 5l-2.5 2.5"/>',
 'wave':'<path d="M2 8c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 13c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/><path d="M2 18c2-2 4-2 6 0s4 2 6 0 4-2 6 0"/>',
@@ -2607,10 +2612,10 @@ function renderStructuresGuide(){
     const unknown=total-revealed.length;
     const pills=revealed.map(function(f){
       const c=RARITY_COLORS[f.rarity];
-      if(f.rarity==='ultra')return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";font-weight:800;border:1px solid "+c+";\">✦ "+f.name+"</span>";
+      if(f.rarity==='ultra')return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";font-weight:800;border:1px solid "+c+";\">"+f.name+"</span>";
       return "<span class=\"struct-fish-pill\" style=\"background:"+c+"22;color:"+c+";\">"+f.name+"</span>";
     }).join("")+(unknown>0?"<span class=\"struct-fish-pill\" style=\"background:rgba(0,0,0,.06);color:var(--text-soft);\">+"+unknown+" unknown</span>":"");
-    const wb=info.weather?"<span class=\"struct-fish-pill\" style=\"background:#fff2cf;color:#9a6a18;border:1px solid #e6c772;font-weight:800;\">⛅ "+info.weather+"</span>":"";
+    const wb=info.weather?"<span class=\"struct-fish-pill\" style=\"background:#fff2cf;color:#9a6a18;border:1px solid #e6c772;font-weight:800;\">"+info.weather+"</span>":"";
     return "<div class=\"struct-card\"><div class=\"struct-card-head\"><span class=\"struct-icon\">"+svgIcon(info.icon,20)+"</span><span class=\"struct-sname\">"+info.label+"</span><span class=\"struct-depth\" style=\"color:"+info.depthColor+"\">"+info.depth+" · "+info.zone+"</span></div>"+(total>0?"<div class=\"struct-fish-list\">"+wb+pills+"</div>":"<span style=\"font-size:11px;color:var(--text-soft)\">No fish data</span>")+"</div>";
   }).join("");
 }
@@ -2858,6 +2863,32 @@ const PETS=[
   {id:'bat',     name:'Bat',     prestige:4, buff:'+100% night fish spawn rate'},
   {id:'penguin', name:'Penguin', prestige:5, buff:'+1000% ultra legendary spawn rate'},
 ];
+// Preloaded pet artwork (drawn beside the boat + shown in the shop/stats).
+// The source PNGs have a flat white background; on load we flood-fill the
+// background-connected white to transparent (interior whites like bellies are
+// kept) so the pets sit cleanly on the water.
+const PET_IMG={};      // raw Image (used by <img> tags)
+const PET_SPRITE={};   // background-keyed canvas (used on the game canvas)
+function _keyOutPetBg(im){
+  const w=im.naturalWidth,h=im.naturalHeight;
+  const c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d');g.drawImage(im,0,0);
+  const img=g.getImageData(0,0,w,h),a=img.data;
+  const near=function(i){return a[i]>234&&a[i+1]>234&&a[i+2]>234;};
+  const seen=new Uint8Array(w*h),stack=[];
+  function push(x,y){if(x<0||y<0||x>=w||y>=h)return;const p=y*w+x;if(seen[p])return;seen[p]=1;const i=p*4;if(near(i)){a[i+3]=0;stack.push(x,y);}}
+  for(let x=0;x<w;x++){push(x,0);push(x,h-1);}
+  for(let y=0;y<h;y++){push(0,y);push(w-1,y);}
+  while(stack.length){const y=stack.pop(),x=stack.pop();push(x+1,y);push(x-1,y);push(x,y+1);push(x,y-1);}
+  g.putImageData(img,0,0);
+  return c;
+}
+['cat','dog','pig','tiger','bat','penguin'].forEach(function(id){
+  const im=new Image();
+  im.onload=function(){try{PET_SPRITE[id]=_keyOutPetBg(im);}catch(e){PET_SPRITE[id]=im;}};
+  im.src='pets/'+id+'.png';PET_IMG[id]=im;
+});
+function petImgSrc(id){return 'pets/'+id+'.png';}
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
 function hasPet(id){const p=S.prestige||0;const def=PETS.find(function(x){return x.id===id;});return !!def&&def.prestige<=p;}
 // Coins multiplier: +10% per prestige level, plus +20% if the Pig is owned.
@@ -2943,7 +2974,7 @@ function doPrestige(){
   if(typeof refreshMenu==='function')refreshMenu();
   queueSave();
   const pet=PETS.filter(function(p){return p.prestige===next;}).map(function(p){return p.name;}).join(' & ');
-  toast('✨ PRESTIGE '+next+'! +'+(next*10)+'% coins forever'+(pet?' · '+pet+' joined ye!':'')+'','#ff8a3a');
+  toast('PRESTIGE '+next+'! +'+(next*10)+'% coins forever'+(pet?' · '+pet+' joined ye!':'')+'','#ff8a3a');
   if(typeof AUDIO!=='undefined')AUDIO.sfx('level');
 }
 // Prestige from the Stats tab (player declined Clancy's offer earlier).
@@ -3174,10 +3205,10 @@ const FISH=[
   {id:'pompano',name:'Florida Pompano',zone:0,rarity:'rare',size:[0.5,7],line:12,methods:['cork','jig','bottom'],baits:['shrimp','crab'],leader:'mono',structure:['sand','pass','grass','bridge'],season:['fall','winter','spring'],time:['day','dawn','dusk'],xp:85,gold:50,weight:14,fact:'Ranks among the best food fish. Patrols sandbars and grassflats in bays and channels. World record 8 lbs 1 oz.'},
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow-water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'mono',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
-  {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball','channel'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
+  {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
   {id:'barracuda',name:'Great Barracuda',zone:1,rarity:'epic',size:[5,60],line:40,methods:['troll','jig','livebait'],baits:['pilchard','cutbait'],leader:'wire',structure:['reef','wreck','open','ledge'],season:['all'],time:['day','dawn','dusk'],xp:130,gold:150,weight:4,fact:'Ranks among the most spectacular fighters. Wire leader essential. Razor sharp teeth.'},
-  {id:'tripletail',name:'Tripletail',zone:1,rarity:'epic',size:[2,25],line:30,methods:['cork','livebait','jig'],baits:['shrimp','pilchard'],leader:'mono',structure:['channel','open','weedline','baitball'],season:['spring','summer','fall'],time:['day','dawn'],xp:130,gold:145,weight:5,fact:'Drifts with currents and hides near floating debris and channel markers, resembling a floating leaf.'},
-  {id:'goliath',name:'Goliath Grouper',zone:1,rarity:'legendary',size:[50,400],line:80,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['wreck','reef','ledge','bridge'],season:['all'],time:['day','dawn','dusk'],xp:220,gold:260,weight:2,fact:'The largest grouper in the Atlantic. Federally protected - catch and release only. Can exceed 800 lbs. Ambushes prey from structure.'},
+  {id:'tripletail',name:'Tripletail',zone:1,rarity:'epic',size:[2,25],line:30,methods:['cork','livebait','jig'],baits:['shrimp','pilchard'],leader:'mono',structure:['open','baitball','rip'],season:['spring','summer','fall'],time:['day','dawn'],xp:130,gold:145,weight:5,fact:'Drifts with currents and hides near floating debris and channel markers, resembling a floating leaf.'},
+  {id:'goliath',name:'Goliath Grouper',zone:1,rarity:'legendary',size:[50,400],line:80,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['wreck','reef','ledge'],season:['all'],time:['day','dawn','dusk'],xp:220,gold:260,weight:2,fact:'The largest grouper in the Atlantic. Federally protected - catch and release only. Can exceed 800 lbs. Ambushes prey from structure.'},
   {id:'stripedmarlin',name:'Striped Marlin',zone:2,rarity:'legendary',size:[80,300],line:80,methods:['troll','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','weedline','rip'],season:['summer','fall'],time:['day','dawn','dusk'],xp:260,gold:300,weight:1.2,fact:'One of the most acrobatic billfish, famous for greyhounding across the surface when hooked. Found in warm blue water offshore.'},
   {id:'bonefish',name:'Bonefish',zone:0,rarity:'epic',size:[2,14],line:12,methods:['cork','jig','livebait'],baits:['shrimp','crab'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:140,gold:160,weight:4,fact:'Called the "Gray Ghost" of the flats. One of the fastest fish in the ocean for its size. A trophy catch for sight fishermen. World record 16 lbs.'},
   {id:'roosterfish',name:'Roosterfish',zone:2,rarity:'epic',size:[10,80],line:40,methods:['troll','livebait','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','rip','weedline'],season:['summer','fall'],time:['dawn','day','dusk'],xp:150,gold:175,weight:4,fact:'Named for its distinctive seven-spined dorsal fin that fans out like a rooster’s comb when excited. An aggressive surface feeder.'},
@@ -3614,14 +3645,21 @@ const PNG_FISH={
   snook:{file:'snook.png',alt:'Snook'},
   cobia:{file:'cobia.png',alt:'Cobia'},
   mahi:{file:'mahi-mahi.png',alt:'Mahi-Mahi'},
-  roosterfish:{file:'roosterfish.png',alt:'Roosterfish'}
+  roosterfish:{file:'roosterfish.png',alt:'Roosterfish'},
+  // V0.9.1 new raster art
+  jack:{file:'Crevalle Jack.png',alt:'Crevalle Jack'},
+  ladyfish:{file:'ladyfish.png',alt:'Ladyfish'},
+  pinfish:{file:'pinfish.png',alt:'Pinfish'},
+  trout:{file:'spotted seatrout.png',alt:'Spotted Seatrout'}
 };
+// Fish raster art lives in the fish/ folder; filenames may contain spaces.
+function pngFishSrc(file){return 'fish/'+encodeURIComponent(file);}
 function buildPngFishArt(id,px,mono){
   px=px||240;
   const cfg=PNG_FISH[id];
-  const h=Math.round(px*426/640);
+  const h=Math.round(px*1024/1536); // all art is 3:2 (1536x1024 / 640x426)
   const filt=mono?'filter:grayscale(1) brightness(1.45) opacity(.45);':'';
-  return '<img src="'+cfg.file+'" alt="'+cfg.alt+'" width="'+px+'" height="'+h+'" '
+  return '<img src="'+pngFishSrc(cfg.file)+'" alt="'+cfg.alt+'" width="'+px+'" height="'+h+'" '
     +'style="transform:scaleX(-1);'+filt+'display:inline-block;vertical-align:middle;" '
     +'onerror="this.style.opacity=0"/>';
 }
@@ -4027,9 +4065,9 @@ async function openRecovery(){
   let html='<span class="close-x" onclick="closeModal()">×</span>'
     +'<div style="font-size:16px;font-weight:900;color:#2a7fb4;text-align:center;margin-bottom:3px;">Recover Progress</div>'
     +'<div style="font-size:11.5px;color:var(--text-soft);text-align:center;margin-bottom:12px;">Current game: Lv '+(S.level||1)+' · '+(S.totalCatches||0)+' catches (score '+cur+'). Pick the save to restore.</div>';
-  html+=line('☁️ Cloud save',cloud?progressScore(cloud):-1,sub(cloud),cloud?btn('cloud'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
-  html+=line('📱 This device',local?progressScore(local):-1,sub(local),local?btn('local'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
-  html+=line('🏆 Stats snapshot',-1,lb?('Lv '+(lb.level||1)+' · '+(lb.totalCatches||0)+' catches · '+(lb.goldEarned||0)+'g (partial - gear not included)'):'not found',lb?btn('stats'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+=line('Cloud save',cloud?progressScore(cloud):-1,sub(cloud),cloud?btn('cloud'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+=line('This device',local?progressScore(local):-1,sub(local),local?btn('local'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
+  html+=line('Stats snapshot',-1,lb?('Lv '+(lb.level||1)+' · '+(lb.totalCatches||0)+' catches · '+(lb.goldEarned||0)+'g (partial - gear not included)'):'not found',lb?btn('stats'):'<span style="font-size:11px;color:var(--text-soft);">none</span>');
   html+='<div style="font-size:10.5px;color:var(--text-soft);text-align:center;margin-top:6px;line-height:1.4;">Restoring keeps the highest-progress data and re-saves it to the cloud. The stats snapshot only restores level, gold &amp; catch totals.</div>'
     +'<button onclick="closeModal()" style="width:100%;margin-top:12px;padding:10px;border-radius:9px;border:none;background:#9a8a6a;color:#fff;font-weight:800;cursor:pointer;">Cancel</button>';
   body.innerHTML=html;
@@ -5449,11 +5487,24 @@ function updateTournStandings(){
   const e=tournStandings();
   if(!e.length){el.style.display='none';return;}
   el.style.display='block';
-  const medals=['🥇','🥈','🥉'];
-  const html=e.slice(0,3).map(function(x,i){
-    return '<div class="ts-row'+(x.isPlayer?' me':'')+'"><span class="ts-rank">'+medals[i]+'</span><span class="ts-name">'+x.name+'</span><span class="ts-wt">'+(x.weight>0?x.weight.toFixed(1)+' lb':'-')+'</span></div>';
+  // V0.9.1: surface the live conditions at the top of the standings so weather is
+  // always readable mid-tournament (tap to open the full breakdown).
+  const cond=tournCondLine();
+  const rows=e.slice(0,3).map(function(x,i){
+    return '<div class="ts-row'+(x.isPlayer?' me':'')+'"><span class="ts-rank">'+medalBadge(i)+'</span><span class="ts-name">'+x.name+'</span><span class="ts-wt">'+(x.weight>0?x.weight.toFixed(1)+' lb':'-')+'</span></div>';
   }).join('');
+  const html=cond+rows;
   if(html!==el._last){el._last=html;el.innerHTML=html;}
+}
+// Compact, tappable conditions strip for the tournament standings panel.
+function tournCondLine(){
+  const weather=currentWeather(),wind=currentWind();
+  const ph=phaseOf(hourNow()),season=seasonNow();
+  return '<div class="ts-cond" onclick="openEnvDetails()">'
+    +svgIcon(weather.icon,13)
+    +'<span style="text-transform:capitalize;">'+weather.name+'</span>'
+    +'<span class="ts-cond-sub">· '+season+' · '+ph+' · '+wind.name+'</span>'
+    +'<span class="ts-cond-tap">tap</span></div>';
 }
 // Per-frame ability housekeeping: prune smoke, blind the local player on contact,
 // toggle the white blind overlay.
@@ -6026,19 +6077,26 @@ function drawAnglerCrown(cx,cy,r){
 // ── end angler helpers ──────────────────────────────────────────
 
 // V0.9: pets float beside the boat (earned by prestige).
-const PET_EMOJI={cat:'🐱',dog:'🐶',pig:'🐷',tiger:'🐯',bat:'🦇',penguin:'🐧'};
 function drawPets(){
   const pets=(typeof ownedPets==='function')?ownedPets():[];
   if(!pets.length)return;
   const t=performance.now?performance.now():Date.now();
   const cx=ORIGIN.x,cy=ORIGIN.y;
-  ctx.save();ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='17px "Apple Color Emoji","Segoe UI Emoji",serif';
+  const PW=30,PH=Math.round(PW*1024/1536); // 3:2 art
+  ctx.save();
   for(let i=0;i<pets.length;i++){
     const side=(i%2===0)?-1:1, ring=Math.floor(i/2);
-    const px=cx+side*(44+ring*12);
-    const py=cy-4-ring*16+Math.sin(t*0.003+i*1.6)*4;
-    ctx.globalAlpha=0.16;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px,py+12,8,3,0,0,6.28);ctx.fill();ctx.globalAlpha=1;
-    ctx.fillText(PET_EMOJI[pets[i].id]||'🐾',px,py);
+    const px=cx+side*(46+ring*14);
+    const py=cy-4-ring*18+Math.sin(t*0.003+i*1.6)*4;
+    ctx.globalAlpha=0.16;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px,py+PH*0.55,PW*0.34,3,0,0,6.28);ctx.fill();ctx.globalAlpha=1;
+    const spr=PET_SPRITE[pets[i].id]||PET_IMG[pets[i].id];
+    if(spr&&(spr.tagName==='CANVAS'||(spr.complete&&spr.naturalWidth))){
+      ctx.save();
+      ctx.translate(px,py);
+      if(side<0)ctx.scale(-1,1); // mirror left-side pets to face the boat
+      ctx.drawImage(spr,-PW/2,-PH/2,PW,PH);
+      ctx.restore();
+    }
   }
   ctx.restore();
 }
@@ -7327,7 +7385,7 @@ function ultraGearOK(){return S.reel==='reel4'&&curBraid().line>=130;}
 function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||S.rod==='chainsaw')&&curBraid().line>=130;}
 function surfHookOK(){return S.surfHook||S.toothHook;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
-function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('\uD83D\uDCA5 Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
+function snap(f,w,msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Re-rig and cast again. Check the shop (\u2630).');}},2400);}
 function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Re-baiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
 // Ruby payout for a surf shark: 5-25, set by rarity with a size kicker on top.
@@ -7366,7 +7424,7 @@ function land(f,w,perfect,bullseye){
   S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
   // Surf sharks pay out in RUBIES (5-25), scaled by the shark's rarity and size.
   let rubyReward=0;
-  if(f.surf){rubyReward=sharkRubyReward(f,w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast('🦈 '+f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
+  if(f.surf){rubyReward=sharkRubyReward(f,w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
   recordTournamentCatch(f,w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
@@ -7382,7 +7440,7 @@ function land(f,w,perfect,bullseye){
   // Tutorial: this was the guided target catch - advance Captain Clancy.
   if(tut&&tut.active&&tut.forceTargetActive){tut.forceTargetActive=false;_forcedBiteFish=null;tutNotify('catch');}
 }
-function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('\u2B50 Angler Level '+S.level+'!','#2aa890');}if(typeof maybeTournamentUnlock==='function')maybeTournamentUnlock();}
+function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('Angler Level '+S.level+'!','#2aa890');}if(typeof maybeTournamentUnlock==='function')maybeTournamentUnlock();}
 
 // Ultra legendary catches award a signature piece of gear tied to that species.
 function grantUltraReward(f){
@@ -7398,7 +7456,7 @@ function grantUltraReward(f){
   }
   if(msg){
     updateRigBar();
-    setTimeout(function(){toast('\u2605 '+msg+' unlocked! '+sub,'#ff3df0');},1500);
+    setTimeout(function(){toast(msg+' unlocked! '+sub,'#ff3df0');},1500);
     setTimeout(function(){if(typeof refreshMenu==='function')refreshMenu();},200);
   }
 }
@@ -7406,7 +7464,7 @@ function grantUltraReward(f){
 function showCatch(f,w,o){
   const ultra=f.rarity==='ultra';
   const badges=[];
-  if(ultra)badges.push(['\u2726 ULTRA LEGENDARY \u2726','ultra']);
+  if(ultra)badges.push(['ULTRA LEGENDARY','ultra']);
   if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 GOLD','#2aa890']);
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
@@ -7477,7 +7535,7 @@ function openChooser(type){
   } else if(type==='method'){
     html='<h3>Fishing method</h3><div class="sub">The technique gates which fish are possible.</div>';
     METHODS.filter(m=>m.zones.includes(S.zone)).forEach(m=>{
-      html+='<div class="opt '+(m.id===S.method?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?'\uD83C\uDFA3':'\uD83E\uDE9D')+'</div><div class="oinfo"><div class="on">'+m.name+'</div><div class="od">'+m.blurb+'</div></div></div>';});
+      html+='<div class="opt '+(m.id===S.method?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div><div class="od">'+m.blurb+'</div></div></div>';});
   } else if(type==='tackle'){
     const cat=curMethod().cat;
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
@@ -7499,7 +7557,7 @@ function openChooser(type){
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs; mono is the all-rounder.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
-      html+='<div class="opt '+(S.leader===l.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">\uD83E\uDDF5</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(S.leader===l.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">'+svgIcon('anchor',18)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
   }
   html+='<button class="chooser-close" onclick="closeChooser()">Close</button>';
   c.innerHTML=html;
@@ -7641,7 +7699,7 @@ function refreshMenu(){renderLogbook();renderShop();renderStats();renderTourname
 function renderLogbook(){
   let html='';
   const fishCard=(f,showLock)=>{const c=S.caught[f.id]||0,caught=c>0;
-    const icon=showLock?'<span style="font-size:18px;opacity:.4">\uD83D\uDD12</span>':buildFishArt(f.id,40,!caught);
+    const icon=showLock?'<span style="opacity:.4">'+svgIcon('lock',18)+'</span>':buildFishArt(f.id,40,!caught);
     return '<div class="fish-card '+(caught?'caught':'')+' '+(showLock?'locked':'')+' '+(f.rarity==='ultra'?'ultra':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(showLock?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
   };
   ZONES.forEach((z,zi)=>{const zfish=FISH.filter(f=>f.zone===zi&&!f.surf);const zlock=zi>maxZone();
@@ -7697,7 +7755,7 @@ let lureSubTab=0; // lures shop region tab (0 inshore / 1 nearshore / 2 offshore
 function renderShop(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets'],['pets','🐾 Pets']];
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets'],['pets','Pets']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(function(b,i){
@@ -7807,13 +7865,13 @@ function renderShop(){
     html+=Object.keys(byLvl).map(function(lvlStr){
       const lvl=+lvlStr, group=byLvl[lvlStr], owned=pl>=lvl;
       return group.map(function(p){
-        const emo=(typeof PET_EMOJI!=='undefined'&&PET_EMOJI[p.id])||'🐾';
         const action=owned
           ? '<span class="shop-action equipped-tag">Owned</span>'
           : '<span class="shop-action buy cant" style="white-space:nowrap;">Prestige '+lvl+'</span>';
-        const swatch='<span class="shop-swatch" style="background:'+(owned?'#3a2150':'#2a2f36')+';display:flex;align-items:center;justify-content:center;font-size:18px;'+(owned?'':'filter:grayscale(1);opacity:.5;')+'">'+emo+'</span>';
+        const swatch='<span class="shop-swatch" style="background:#f4f6f8;display:flex;align-items:center;justify-content:center;overflow:hidden;">'
+          +'<img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover;'+(owned?'':'filter:grayscale(1);opacity:.45;')+'" onerror="this.style.display=\'none\'"></span>';
         return '<div class="shop-item '+(owned?'':'locked')+'" style="'+(owned?'':'opacity:.78;')+'">'+swatch
-          +'<div class="shop-info"><div class="shop-name">'+p.name+(owned?'':' <span style="font-size:10px;color:var(--text-soft);">🔒 Prestige '+lvl+'</span>')+'</div>'
+          +'<div class="shop-info"><div class="shop-name">'+p.name+(owned?'':' <span style="font-size:10px;color:var(--text-soft);">Prestige '+lvl+'</span>')+'</div>'
           +'<div class="shop-desc"><b style="color:var(--wood-dark)">Buff:</b> '+p.buff+'</div></div>'
           +action+'</div>';
       }).join('');
@@ -7918,11 +7976,11 @@ function renderStats(){
   const pl=S.prestige||0;
   html+='<div class="stat-line"><span class="sl-label">Prestige</span><span class="sl-val">'+pl+' / '+PRESTIGE_MAX+(pl>0?' (+'+(pl*10)+'% coins)':'')+'</span></div>';
   const pets=ownedPets();
-  if(pets.length)html+='<div class="stat-line"><span class="sl-label">Pets</span><span class="sl-val">'+pets.map(function(p){return (PET_EMOJI[p.id]||'🐾')+' '+p.name;}).join('  ')+'</span></div>';
+  if(pets.length)html+='<div class="stat-line"><span class="sl-label">Pets</span><span class="sl-val" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+pets.map(function(p){return '<img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" title="'+p.name+'" style="width:22px;height:15px;object-fit:cover;border-radius:3px;vertical-align:middle;">';}).join('')+'</span></div>';
   if(prestigeEligible()){
     const caught=nonUltraSpecies().filter(function(f){return S.caught[f.id]>0;}).length;
     html+='<div style="margin-top:10px;padding:11px;border-radius:12px;background:linear-gradient(135deg,#3a2150,#5a2a8a);color:#fff;text-align:center;">'
-      +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">✨ Prestige available!</div>'
+      +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">Prestige available!</div>'
       +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every inshore, nearshore &amp; offshore species ('+caught+'). Reset progress for a permanent +'+((pl+1)*10)+'% coin bonus and a new pet.</div>'
       +'<button onclick="prestigeFromStats()" style="padding:8px 18px;border:none;border-radius:9px;background:#ffb347;color:#3a2a08;font-family:\'Fredoka\';font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #c47f1f;">Prestige '+pl+' → '+(pl+1)+'</button>'
       +'</div>';
@@ -7950,7 +8008,7 @@ function renderSettings(){
   let html='';
   // --- Audio ---
   html+='<div class="set-sec"><div class="set-sec-h">Sound</div>'
-    +'<button class="set-toggle'+(a.muted?' on':'')+'" onclick="toggleMute()">'+(a.muted?'🔇 Muted - tap to unmute':'🔊 Sound on - tap to mute')+'</button>'
+    +'<button class="set-toggle'+(a.muted?' on':'')+'" onclick="toggleMute()">'+(a.muted?'Muted - tap to unmute':'Sound on - tap to mute')+'</button>'
     +'<div class="set-audio'+(a.muted?' dim':'')+'" id="set-audio-group">'
     +slider('music','Music',a.music)
     +slider('sfx','Sound effects',a.sfx)
