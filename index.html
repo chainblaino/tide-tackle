@@ -880,7 +880,7 @@ function showForgotPassword(){
   showAuthTab("forgot");
 }
 function fbErr(code){
-  const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account found.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect login or password."};
+  const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account found.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect login or password.","permission-denied":"Database permission error. Please try again.","auth/network-request-failed":"Network error. Check your connection."};
   return map[code]||"Something went wrong. Try again.";
 }
 // Resolve a username (or pass through an email) to the account email
@@ -931,14 +931,33 @@ async function doSignup(){
   if(!uname||!email||!pass){err.textContent="Please fill in all fields.";return;}
   if(uname.length<3){err.textContent="Username must be at least 3 characters.";return;}
   if(pass.length<6){err.textContent="Password must be at least 6 characters.";return;}
+  // Create the auth account FIRST. The Firestore security rules require a
+  // signed-in user to read/write the usernames directory, so the old
+  // "check if taken" read (done while logged out) was denied with
+  // permission-denied and surfaced as a generic error. Authenticate, then
+  // claim the username; if it's already taken, roll the new account back.
+  let c=null;
   try{
-    const taken=await fbDb.collection("usernames").doc(uname.toLowerCase()).get();
-    if(taken.exists){err.textContent="That username is taken. Try another.";return;}
-    const c=await fbAuth.createUserWithEmailAndPassword(email,pass);
-    await fbDb.collection("usernames").doc(uname.toLowerCase()).set({uid:c.user.uid,email:email});
+    c=await fbAuth.createUserWithEmailAndPassword(email,pass);
+  }catch(e){err.textContent=fbErr(e.code);return;}
+  try{
+    const uref=fbDb.collection("usernames").doc(uname.toLowerCase());
+    const taken=await uref.get();
+    if(taken.exists&&(taken.data()||{}).uid!==c.user.uid){
+      // someone already owns this username - undo the just-created account
+      await c.user.delete().catch(function(){});
+      err.textContent="That username is taken. Try another.";
+      return;
+    }
+    await uref.set({uid:c.user.uid,email:email});
     await fbDb.collection("users").doc(c.user.uid).set({username:uname,email:email,createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false,totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
     await afterAuth(c.user,true);
-  }catch(e){err.textContent=fbErr(e.code);}
+  }catch(e){
+    // Firestore failed after the account was made - don't strand a half-made
+    // account; remove it so the player can simply try again.
+    try{await c.user.delete();}catch(_){}
+    err.textContent=fbErr(e.code);
+  }
 }
 let _pendingNewUser=false;
 async function afterAuth(user,isNew){
