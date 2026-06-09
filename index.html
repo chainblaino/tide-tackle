@@ -3165,7 +3165,7 @@ const BRAIDS=[
   {id:'braid1',name:'20 lb Braid', line:20, color:'#3f8a4a',cost:180, lvl:2, desc:'Reds, snook & small jacks.'},
   {id:'braid2',name:'40 lb Braid', line:40, color:'#2f6fb0',cost:650, lvl:5, desc:'Kings, grouper & snapper.'},
   {id:'braid3',name:'80 lb Braid', line:80, color:'#e0c020',cost:1900,lvl:8, desc:'Amberjack, cobia & sharks.'},
-  {id:'braid4',name:'130 lb Braid',line:130,color:'#e07020',cost:4400,lvl:11,desc:'Marlin, tuna & swords.'},
+  {id:'braid4',name:'130 lb Braid',line:130,color:'#ff5fa2',cost:4400,lvl:11,desc:'Marlin, tuna & swords.'},
 ];
 // V8.5 economy pass (run ONCE at boot, after FISH is defined):
 //  • Bait & lures that can take rarer fish cost more (surcharge by the rarest
@@ -5129,6 +5129,18 @@ function startTournamentSync(){
         tourn._seenActs=tourn._seenActs||{};
         if(!tourn._seenActs[p.act.id]){tourn._seenActs[p.act.id]=1;applyIncomingAct(p.act);}
       }
+      // spawn a rival's smoke cloud locally (deduped). Lifetime is timed from
+      // receipt so device clock skew can't expire it early or late. Once it's in
+      // our cloud list, the normal smoke-touch check blinds us and steals our
+      // last catch if we wander into it.
+      if(p.smoke&&p.smoke.id&&activeTournament){
+        tourn._seenSmoke=tourn._seenSmoke||{};
+        if(!tourn._seenSmoke[p.smoke.id]){
+          tourn._seenSmoke[p.smoke.id]=1;
+          activeTournament.smokeClouds=activeTournament.smokeClouds||[];
+          activeTournament.smokeClouds.push({id:p.smoke.id,wx:p.smoke.wx,wy:p.smoke.wy,until:nowMs+30000,r:58,owner:uid});
+        }
+      }
     });
   },function(){});
 }
@@ -5139,7 +5151,7 @@ function publishMyPosition(ref,force){
   const now=Date.now();
   const moved=Math.hypot(boat.wx-(publishMyPosition._lx||0),boat.wy-(publishMyPosition._ly||0));
   const since=now-(publishMyPosition._lt||0);
-  const pending=!!tourn._pendingAct;
+  const pending=!!tourn._pendingAct||!!tourn._pendingSmoke;
   if(!force&&!pending&&!((moved>4&&since>=280)||since>=1200))return;
   publishMyPosition._lx=boat.wx;publishMyPosition._ly=boat.wy;publishMyPosition._lt=now;
   const upd={};
@@ -5147,7 +5159,7 @@ function publishMyPosition(ref,force){
     cos:{hat:S.cosmetic.hat,shirt:S.cosmetic.shirt,shades:S.cosmetic.shades,crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
     rod:S.rod,reel:S.reel,gen:S.gender||'male',skin:S.skinTone||'medlight',
     best:(activeTournament?(activeTournament.biggestWeight||0):0),bestNm:(activeTournament?(activeTournament.biggestName||''):''),
-    inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null,t:Date.now()};
+    inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null,smoke:tourn._pendingSmoke||null,t:Date.now()};
   ref.set({players:{}},{merge:true}).then(function(){
     return ref.update(upd);
   }).catch(function(){
@@ -5167,7 +5179,7 @@ function stopTournamentSync(){
       ref.update(upd).catch(function(){});
     }catch(e){}
   }
-  tourn.posKey=null;tourn._seen=null;tourn._seenActs=null;
+  tourn.posKey=null;tourn._seen=null;tourn._seenActs=null;tourn._seenSmoke=null;tourn._pendingSmoke=null;
 }
 // ----- Live co-op map: a top-down minimap of the current zone showing every
 // structure plus you and any friends fishing the same zone, updated in real time.
@@ -5654,7 +5666,12 @@ function abilityJeremy(){
 function abilityVanish(){
   const now=Date.now();
   invisibleUntil=now+10000;
-  activeTournament.smokeClouds.push({wx:boat.wx,wy:boat.wy,until:now+30000,r:58,owner:myTournUid()});
+  const cid=myTournUid()+'_'+now;
+  activeTournament.smokeClouds.push({id:cid,wx:boat.wx,wy:boat.wy,until:now+30000,r:58,owner:myTournUid()});
+  // Broadcast the cloud so rivals' clients spawn it too - anyone who walks into
+  // it (on their screen) gets blinded and loses their last target catch.
+  tourn._pendingSmoke={id:cid,wx:Math.round(boat.wx),wy:Math.round(boat.wy)};
+  setTimeout(function(){if(tourn._pendingSmoke&&tourn._pendingSmoke.id===cid)tourn._pendingSmoke=null;},5000);
   toast('Vanished! Smoke dropped - invisible for 10s.','#2aa890');
   spawnAbilityFx(boat.wx,boat.wy,'#cfd2d6','smoke');
   if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
