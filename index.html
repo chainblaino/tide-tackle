@@ -231,6 +231,10 @@
   .shop-item.equipped{border-color:var(--grass);background:#e2f3ef;}
   .shop-item.locked{opacity:.55;cursor:not-allowed;}
   .shop-item .shop-icon{width:30px;flex-shrink:0;text-align:center;font-size:20px;}
+  /* Ultra reward sheen: a slow white glint sweeping across an item's icon. */
+  @keyframes ultraGlint{0%{transform:translateX(-160%) skewX(-18deg);}55%,100%{transform:translateX(260%) skewX(-18deg);}}
+  .ultra-glint{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;overflow:hidden;box-shadow:0 0 7px rgba(255,238,170,.55);}
+  .ultra-glint::after{content:"";position:absolute;top:0;left:0;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:ultraGlint 2.6s ease-in-out infinite;pointer-events:none;}
   .shop-swatch{width:22px;height:22px;border-radius:6px;border:2px solid rgba(0,0,0,.2);flex-shrink:0;}
   .shop-item .shop-info{flex:1;min-width:0;}
   .shop-item .shop-name{font-size:13px;font-weight:800;color:var(--text);}
@@ -2071,7 +2075,10 @@ function startCoopMode(def){
   freezeClockForMatch();   // remember the player's real clock/season
   if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
   tourn.active=false;tourn.coop=true;
-  tourn.seed=(activeSession&&activeSession.seed)||S.worldSeed||1;
+  // Shared structure seed: the session seed (from the host, via the session doc),
+  // or a deterministic seed from the shared session id - never the local world
+  // seed, so every friend's structures land in the exact same spots.
+  tourn.seed=(activeSession&&activeSession.seed)||(activeSession&&activeSession.id?strHash('sess_'+activeSession.id)>>>0:(S.worldSeed||1));
   tourn.structs=[];
   S.zone=def.zone||0;
   initStructures();          // rebuild every zone on the shared seed
@@ -2106,11 +2113,30 @@ function recordTournamentCatch(fish,weight){
   const tgt=activeTournament.def&&activeTournament.def.targetFish;
   // Only the tournament's target species counts toward the standings.
   if(tgt&&fish.id!==tgt.id){toast('Only '+tgt.name+' counts in this tournament.','#b58b53');return;}
-  if(weight>activeTournament.biggestWeight){
-    activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;
-    // Push the new personal best out immediately so rivals' leaderboards update.
-    if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref,true);}
-  }
+  // Keep every target catch so a Vanish smoke steal can remove the most recent
+  // one and the standing falls back to the next-biggest.
+  if(!activeTournament.targetCatches)activeTournament.targetCatches=[];
+  activeTournament.targetCatches.push({w:weight,name:fish.name});
+  const grew=weight>(activeTournament.biggestWeight||0);
+  recomputeTournBest();
+  if(grew&&fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref,true);}
+}
+// Recompute the player's tournament best from their remaining target catches.
+function recomputeTournBest(){
+  if(!activeTournament)return;
+  const list=activeTournament.targetCatches||[];
+  let bw=0,bn='';for(const c of list){if(c.w>bw){bw=c.w;bn=c.name;}}
+  activeTournament.biggestWeight=bw;activeTournament.biggestName=bn;
+}
+// Assassin smoke steal: drop the player's most recent target catch and refresh
+// their standing. Returns true if a fish was actually taken.
+function loseLastTargetCatch(){
+  if(!activeTournament||!activeTournament.targetCatches||!activeTournament.targetCatches.length)return false;
+  const lost=activeTournament.targetCatches.pop();
+  recomputeTournBest();
+  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref,true);}
+  toast('Caught in the smoke! Lost your last '+lost.name+' ('+fmtLb(lost.w)+' lb).','#b3402a');
+  return true;
 }
 function endTournament(){
   if(!activeTournament)return;
@@ -2356,6 +2382,11 @@ function _sessionPlayersList(){
 function enterSessionMatch(){
   if(!activeSession||activeSession.started)return;
   activeSession.started=true;
+  // Guarantee a SHARED structure seed for every participant. Normally the host's
+  // seed rides along in the session doc; if it's ever missing we derive one from
+  // the (shared) session id so host and joiners still agree - never from the
+  // local world seed, which would scatter structures differently per player.
+  if(!activeSession.seed)activeSession.seed=strHash('sess_'+activeSession.id)>>>0;
   if(_sessionUnsub){_sessionUnsub();_sessionUnsub=null;}
   document.getElementById('session-overlay').style.display='none';
   // challenge: ante up
@@ -2879,10 +2910,10 @@ const COSMETICS={
 };
 // ── OUTFIT SETS (bought with rubies; bonus is passive, ability works in tournaments) ──
 const SETS=[
-  {id:'assassin', name:'Assassin Set', cost:500, color:'#111111', cd:45,
+  {id:'assassin', name:'Assassin Set', cost:500, color:'#111111', cd:90,
    pieces:{hat:'assassin_hood',shirt:'assassin_suit',shades:'assassin_mask'},
    bonus:'+50% night fish spawn rate · +20% movement speed at night',
-   ability:'Vanish', abilityDesc:'Turn invisible for 10s and drop a smoke cloud. Any angler who touches the cloud is blinded for 10-15s. The cloud lingers 30s. (45s cooldown)'},
+   ability:'Vanish', abilityDesc:'Turn invisible for 10s and drop a smoke cloud. Any angler who touches it is blinded for 10-15s AND loses their last target-fish catch. The cloud lingers 30s. (90s cooldown)'},
   {id:'pirate', name:'Pirate Set', cost:500, color:'#c62828', cd:45,
    pieces:{hat:'pirate_hat',shirt:'pirate_shirt',shades:'pirate_scar'},
    bonus:'Bad weather is 50% less harsh · +15% movement speed when wind is 10 mph or higher',
@@ -2900,18 +2931,18 @@ const SETS=[
    bonus:'+50% legendary & ultra legendary fish spawn chance',
    ability:'Untouchable', abilityDesc:'Become immune to all other anglers’ abilities for 60 seconds. (60s cooldown)'},
   // ── V0.9 sets (rubies, fixedCost so the boot price-bump leaves them exact) ──
-  {id:'jester', name:'Jester Set', cost:750, fixedCost:true, color:'#5a2a8a', cd:300,
+  {id:'jester', name:'Jester Set', cost:750, fixedCost:true, color:'#5a2a8a', cd:180,
    pieces:{hat:'jester_hat',shirt:'jester_shirt',shades:'jester_mask'},
    bonus:'Each time an opponent uses an ability on you: +5% movement speed and +5% fish spawn rate (stacks all tournament).',
-   ability:'Trick', abilityDesc:'Mark a nearby angler. The next target-species fish they catch counts for YOU instead of them. (300s cooldown)'},
+   ability:'Trick', abilityDesc:'Mark a nearby angler. The next target-species fish they catch counts for YOU instead of them. (180s cooldown)'},
   {id:'astronaut', name:'Astronaut Set', cost:750, fixedCost:true, color:'#eef2f6', cd:35,
    pieces:{hat:'astro_helmet',shirt:'astro_suit',shades:'astro_visor'},
    bonus:'Full moon: +50% luck. New moon: +50% bite rate. Otherwise +15% luck & +15% bite rate.',
    ability:'Lunar Sun', abilityDesc:'Sun out: +20% bite rate for 20s. Moon out: the next catch fights 15% slower. (35s cooldown)'},
-  {id:'robot', name:'Robot Set', cost:250, fixedCost:true, color:'#9aa2aa', cd:360,
+  {id:'robot', name:'Robot Set', cost:250, fixedCost:true, color:'#9aa2aa', cd:180,
    pieces:{hat:'robot_antenna',shirt:'robot_chest',shades:'robot_face'},
    bonus:'Always have a fully-revealed map in tournaments & co-op.',
-   ability:'Hack', abilityDesc:'Radar locks onto the target fish and brings it to the surface to be sight-cast. (360s cooldown)'},
+   ability:'Hack', abilityDesc:'Radar locks onto the target fish and brings it to the surface to be sight-cast. (180s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
 function equippedSetId(){
@@ -2930,7 +2961,7 @@ const PETS=[
   {id:'pig',     name:'Pig',     prestige:2, buff:'+20% coins earned from catches'},
   {id:'tiger',   name:'Tiger',   prestige:3, buff:'+20% tournament winnings'},
   {id:'bat',     name:'Bat',     prestige:4, buff:'+100% night fish spawn rate'},
-  {id:'penguin', name:'Penguin', prestige:5, buff:'+1000% ultra legendary spawn rate'},
+  {id:'penguin', name:'Penguin', prestige:5, buff:'+100% ultra legendary spawn rate'},
 ];
 // Preloaded pet artwork (drawn beside the boat + shown in the shop/stats).
 // The source PNGs have a flat white background; on load we flood-fill the
@@ -2971,7 +3002,7 @@ function petBiteFreqMult(){
   if(hasPet('bat')&&phaseOf(hourNow())==='night')m*=2.0; // +100% at night
   return m;
 }
-function petUltraMult(){return hasPet('penguin')?11:1;}        // +1000% ultra weight
+function petUltraMult(){return hasPet('penguin')?2:1;}         // +100% ultra spawn chance
 function petTournMult(){return hasPet('tiger')?1.20:1;}        // +20% tournament winnings
 
 // ---- Prestige: unlocks once every non-ultra species is in the logbook ----
@@ -3262,7 +3293,7 @@ const FISH=[
   {id:'spanish',name:'Spanish Mackerel',zone:1,rarity:'common',size:[1,5],line:10,methods:['troll','jig'],baits:['cutbait'],leader:'wire',structure:['open'],season:['spring','fall'],time:['day'],xp:24,gold:12,weight:40,fact:'Razor teeth slice mono in a blink. Use a light wire or long fluoro leader; lightning fast.'},
   {id:'trigger',name:'Gray Triggerfish',zone:1,rarity:'uncommon',size:[1,7],line:10,methods:['bottom'],baits:['squid'],leader:'any',structure:['reef','wreck'],season:['all'],time:['day'],xp:32,gold:18,weight:24,fact:'A leathery mouth and beak-like teeth; it locks a dorsal \u201Ctrigger\u201D spine to wedge in reef holes.'},
   {id:'hogfish',name:'Hogfish',zone:1,rarity:'uncommon',size:[1,7],line:10,methods:['livebait','bottom'],baits:['shrimp'],leader:'fluoro',structure:['reef'],season:['all'],time:['day'],xp:38,gold:21,weight:20,fact:'Roots out crustaceans with a pig-like snout; born female, some turn male. A prized table fish.'},
-  {id:'nearmangrove',name:'Mangrove Snapper (offshore)',zone:1,rarity:'uncommon',size:[2,9],line:20,methods:['livebait','bottom'],baits:['pilchard','squid'],leader:'fluoro',structure:['wreck','reef'],season:['summer','fall'],time:['dusk','night'],xp:42,gold:25,weight:16,fact:'Same species as inshore \u201Cmangos,\u201D but wreck fish grow far bigger and warier. Light fluoro is key.'},
+  {id:'nearmangrove',name:'Mangrove Snapper',zone:1,rarity:'uncommon',size:[2,9],line:20,methods:['livebait','bottom'],baits:['pilchard','squid'],leader:'fluoro',structure:['wreck','reef'],season:['summer','fall'],time:['dusk','night'],xp:42,gold:25,weight:16,fact:'Same species as inshore \u201Cmangos,\u201D but wreck fish grow far bigger and warier. Light fluoro is key.'},
   {id:'king',name:'King Mackerel',zone:1,rarity:'epic',size:[8,50],line:40,methods:['troll','livebait'],baits:['cutbait','pinfish'],leader:'wire',structure:['open','wreck'],season:['spring','fall'],time:['day'],xp:90,gold:56,weight:9,fact:'\u201CSmoker kings\u201D scream drag and skyrocket on slow-trolled baits. Always rig a wire stinger.'},
   {id:'gag',name:'Gag Grouper',zone:1,rarity:'rare',size:[5,40],line:40,methods:['livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['reef','ledge'],season:['all'],time:['day'],xp:112,gold:72,weight:8,fact:'The instant it\u2019s hooked it bolts for its hole. Turn its head and crank hard or it\u2019s gone.'},
   {id:'cobia',name:'Cobia',zone:1,rarity:'legendary',size:[15,60],line:40,methods:['livebait','jig'],baits:['pinfish','crab','blue_crab'],leader:'any',structure:['wreck','open','power_plant'],season:['spring'],time:['day'],xp:170,gold:112,weight:3.5,fact:'Curious and shark-like, cobia shadow rays, turtles and buoys, perfect for sight-casting a jig.'},
@@ -3285,14 +3316,15 @@ const FISH=[
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow-water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'mono',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
   {id:'bluefish',name:'Bluefish',zone:1,rarity:'uncommon',size:[1,20],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['rip','open','baitball'],season:['fall','winter','spring'],time:['dawn','dusk','day'],xp:50,gold:40,weight:22,fact:'Ravenous and toothy. Will take virtually any bait. Wire leader a must to prevent cutoffs.'},
+  {id:'bonito',name:'Bonito',zone:1,rarity:'uncommon',size:[2,12],line:20,methods:['troll','jig','livebait'],baits:['cutbait','pilchard'],leader:'any',structure:['open','baitball','rip'],season:['spring','summer','fall'],time:['day','dawn','dusk'],xp:36,gold:20,weight:30,fact:'A lightning-fast schooling tuna relative with dark oblique stripes. Bloody and strong, it is a favorite cut bait for bigger game.'},
   {id:'barracuda',name:'Great Barracuda',zone:1,rarity:'epic',size:[5,60],line:40,methods:['troll','jig','livebait'],baits:['pilchard','cutbait'],leader:'wire',structure:['reef','wreck','open','ledge'],season:['all'],time:['day','dawn','dusk'],xp:130,gold:150,weight:4,fact:'Ranks among the most spectacular fighters. Wire leader essential. Razor sharp teeth.'},
   {id:'tripletail',name:'Tripletail',zone:1,rarity:'epic',size:[2,25],line:30,methods:['cork','livebait','jig'],baits:['shrimp','pilchard'],leader:'mono',structure:['open','baitball','rip'],season:['spring','summer','fall'],time:['day','dawn'],xp:130,gold:145,weight:5,fact:'Drifts with currents and hides near floating debris and channel markers, resembling a floating leaf.'},
   {id:'goliath',name:'Goliath Grouper',zone:1,rarity:'legendary',size:[50,400],line:80,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['wreck','reef','ledge'],season:['all'],time:['day','dawn','dusk'],xp:220,gold:260,weight:2,fact:'The largest grouper in the Atlantic. Federally protected - catch and release only. Can exceed 800 lbs. Ambushes prey from structure.'},
   {id:'stripedmarlin',name:'Striped Marlin',zone:2,rarity:'legendary',size:[80,300],line:80,methods:['troll','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','weedline','rip'],season:['summer','fall'],time:['day','dawn','dusk'],xp:260,gold:300,weight:1.2,fact:'One of the most acrobatic billfish, famous for greyhounding across the surface when hooked. Found in warm blue water offshore.'},
   {id:'bonefish',name:'Bonefish',zone:0,rarity:'epic',size:[2,14],line:12,methods:['cork','jig','livebait'],baits:['shrimp','crab'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:140,gold:160,weight:4,fact:'Called the "Gray Ghost" of the flats. One of the fastest fish in the ocean for its size. A trophy catch for sight fishermen. World record 16 lbs.'},
   {id:'roosterfish',name:'Roosterfish',zone:2,rarity:'epic',size:[10,80],line:40,methods:['troll','livebait','jig'],baits:['pilchard','cutbait'],leader:'mono',structure:['open','rip','weedline'],season:['summer','fall'],time:['dawn','day','dusk'],xp:150,gold:175,weight:4,fact:'Named for its distinctive seven-spined dorsal fin that fans out like a rooster’s comb when excited. An aggressive surface feeder.'},
-  {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
-  {id:'blackmarlin',name:'Black Marlin',zone:2,rarity:'ultra',size:[200,1500],line:130,methods:['troll','livebait','chunk'],baits:['cutbait','pilchard'],leader:'wire',structure:['deep','open','bluhole','oil_rig'],season:['summer','fall'],time:['day','dawn','dusk'],xp:1000,gold:1500,weight:1,fact:'The largest and most powerful billfish on earth. World record 1,560 lbs. Known for violent, unstoppable runs. Only the Big Game reel and Sportfisher can realistically handle one.'},
+  {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,spawnChance:0.0002,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
+  {id:'blackmarlin',name:'Black Marlin',zone:2,rarity:'ultra',size:[200,1500],line:130,methods:['troll','livebait','chunk'],baits:['cutbait','pilchard'],leader:'wire',structure:['deep','open','bluhole','oil_rig'],season:['summer','fall'],time:['day','dawn','dusk'],xp:1000,gold:1500,weight:1,spawnChance:0.0002,fact:'The largest and most powerful billfish on earth. World record 1,560 lbs. Known for violent, unstoppable runs. Only the Big Game reel and Sportfisher can realistically handle one.'},
   // ── SURF SHARKS (caught only from the inshore surf; never appear in normal fishing) ──
   {id:'nurseshark',name:'Nurse Shark',zone:0,surf:true,rarity:'common',size:[20,200],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:160,gold:110,weight:1,fact:'A slow, docile bottom-dweller that suctions prey off the sand. Sluggish but heavy - a dead-weight tug-of-war.'},
   {id:'sandbarshark',name:'Sandbar Shark',zone:0,surf:true,rarity:'uncommon',size:[30,150],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:210,gold:150,weight:1,fact:'A stout, high-finned requiem shark that patrols the bar. The classic surf catch along the beaches.'},
@@ -3300,7 +3332,7 @@ const FISH=[
   {id:'bullshark',name:'Bull Shark',zone:0,surf:true,rarity:'rare',size:[60,400],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:340,gold:240,weight:1,fact:'Pound for pound the most aggressive shark in the surf. Tolerates fresh water and crashes the bar in inches of water.'},
   {id:'hammerhead',name:'Great Hammerhead',zone:0,surf:true,rarity:'epic',size:[100,600],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:520,gold:360,weight:1,fact:'Unmistakable mallet-shaped head and towering dorsal. Blistering first runs that smoke the drag.'},
   {id:'tigershark',name:'Tiger Shark',zone:0,surf:true,rarity:'legendary',size:[150,1000],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:780,gold:520,weight:1,fact:'The "garbage can of the sea" and an apex predator. Enormous, relentless, and one of the hardest fights from the sand.'},
-  {id:'greatwhite',name:'Great White Shark',zone:0,surf:true,rarity:'ultra',size:[400,2500],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:1400,gold:2000,weight:1,fact:'The ocean’s most iconic apex predator. A surf encounter with one is the rarest fishing moment imaginable. Catch, photograph, release.'},
+  {id:'greatwhite',name:'Great White Shark',zone:0,surf:true,rarity:'ultra',size:[400,2500],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:1400,gold:2000,weight:1,spawnChance:0.001,fact:'The ocean’s most iconic apex predator. A surf encounter with one is the rarest fishing moment imaginable. Catch, photograph, release.'},
 ];
 
 // ===================== STATE =====================
@@ -3340,6 +3372,7 @@ const FISH_ART={
   hogfish:{shape:'hog',back:'#b06a5a',body:'#d49a8a',belly:'#f0d8cc',marks:['blotch'],mark:'#8a4a3a'},
   nearmangrove:{shape:'panfish',back:'#6a3f33',body:'#9a5a48',belly:'#caa090',marks:['eyebar'],mark:'#3a201a',snapper:true},
   king:{shape:'torpedo',back:'#45566a',body:'#9aa6b0',belly:'#eef2f4',marks:[],mark:'#3a4654',finlets:true},
+  bonito:{shape:'torpedo',back:'#2c4a64',body:'#7a93a6',belly:'#eef2f4',marks:['bars-blue'],mark:'#1c3047',finlets:true},
   gag:{shape:'grouper',back:'#5f5848',body:'#7a7464',belly:'#a8a290',marks:['mottle'],mark:'#46402e'},
   cobia:{shape:'torpedo',back:'#46423a',body:'#5f5a4e',belly:'#9a9486',marks:['lateral-w'],mark:'#e8e2d2',broadhead:true},
   blacktip:{shape:'shark',back:'#7a808a',body:'#a4aab2',belly:'#eef0f2',marks:['blacktips'],mark:'#1c1c1c'},
@@ -4243,10 +4276,12 @@ function levelNeed(){return XP_CURVE[Math.min(S.level,XP_CURVE.length-1)];}
 
 // ===================== ACHIEVEMENTS =====================
 const TIER_INFO={
-  impressive:{color:'#4a9fd4',label:'Impressive',gold:1000},
-  extraordinary:{color:'#a872d8',label:'Extraordinary',gold:2500},
-  goat:{color:'#e0a93c',label:'GOAT Status',gold:5000},
+  impressive:{color:'#4a9fd4',label:'Impressive',gold:2000},
+  extraordinary:{color:'#a872d8',label:'Extraordinary',ruby:15},
+  goat:{color:'#e0a93c',label:'GOAT Status',ruby:100},
 };
+// Short reward label ("+2000g" / "+15 rubies") for a tier.
+function tierRewardLabel(tier){return tier.ruby?('+'+tier.ruby+' rubies'):('+'+(tier.gold||0)+'g');}
 const CROWNS=[
   {id:'crown_gold',name:'Golden Crown',band:'#e0a93c',gem:'#c93030',jewel:'#fff8b4'},
   {id:'crown_emerald',name:'Emerald Crown',band:'#3a3530',gem:'#2aa890',jewel:'#a8e4c8'},
@@ -4278,8 +4313,8 @@ function checkAchievements(){
     try{if(!a.check())continue;}catch(e){continue;}
     S.achievements[a.id]=Date.now();
     const tier=TIER_INFO[a.tier];
-    S.gold=(S.gold||0)+tier.gold;
-    S.goldEarned=(S.goldEarned||0)+tier.gold;
+    if(tier.ruby){S.rubies=(S.rubies||0)+tier.ruby;}
+    else{S.gold=(S.gold||0)+(tier.gold||0);S.goldEarned=(S.goldEarned||0)+(tier.gold||0);}
     if(a.crownId&&!S.ownedCrowns.includes(a.crownId))S.ownedCrowns.push(a.crownId);
     showAchievementCard(a,tier);
     any=true;
@@ -4289,12 +4324,12 @@ function checkAchievements(){
 function showAchievementCard(a,tier){
   const card=document.getElementById('ach-card');
   const inner=document.getElementById('ach-inner');
-  if(!card||!inner){toast(a.name+' unlocked! +'+tier.gold+'g',tier.color);return;}
+  if(!card||!inner){toast(a.name+' unlocked! '+tierRewardLabel(tier),tier.color);return;}
   const crown=a.crownId?CROWNS.find(c=>c.id===a.crownId):null;
   inner.innerHTML='<div class="ach-tier" style="color:'+tier.color+';border-color:'+tier.color+'">'+tier.label+'</div>'
     +'<div class="ach-title">'+a.name+'</div>'
     +'<div class="ach-desc">'+a.desc+'</div>'
-    +'<div class="ach-reward">+'+tier.gold+' gold</div>'
+    +'<div class="ach-reward">'+tierRewardLabel(tier)+'</div>'
     +(crown?'<div class="ach-crown-note">Unlocked: '+crown.name+'</div>':'')
     +'<button class="ach-ok" onclick="document.getElementById(\'ach-card\').classList.remove(\'show\');">Awesome</button>';
   card.classList.add('show');
@@ -5860,7 +5895,12 @@ function tickAbilityEffects(){
     activeTournament.smokeClouds=activeTournament.smokeClouds.filter(function(sc){return now<sc.until;});
     for(const sc of activeTournament.smokeClouds){
       if(sc.owner===myTournUid())continue;
-      if(now>=immuneUntil&&dist(boat.wx,boat.wy,sc.wx,sc.wy)<sc.r){blindUntil=Math.max(blindUntil,now+(10000+Math.random()*5000));}
+      if(now>=immuneUntil&&dist(boat.wx,boat.wy,sc.wx,sc.wy)<sc.r){
+        blindUntil=Math.max(blindUntil,now+(10000+Math.random()*5000));
+        // Touching an opponent's cloud also costs you your last target catch
+        // (once per cloud).
+        if(!sc._stoleLocal){sc._stoleLocal=true;loseLastTargetCatch();}
+      }
     }
   }
   if(bo)bo.classList.toggle('show',now<blindUntil);
@@ -6946,6 +6986,7 @@ function drawSportfisher(dark){
 // Black Marlin Speedboat: an all-black hull shaped like a black marlin -
 // sharp billed bow, sleek body, dorsal sail fin and a sickle tail.
 function drawMarlinBoat(dark){
+  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
   // wake shadow
   ctx.fillStyle='rgba(0,18,32,.4)';
   ctx.beginPath();ctx.moveTo(0,-44);ctx.quadraticCurveTo(40,4,28,54);ctx.quadraticCurveTo(0,64,-28,54);ctx.quadraticCurveTo(-40,4,0,-44);ctx.closePath();ctx.fill();
@@ -6953,6 +6994,10 @@ function drawMarlinBoat(dark){
   ctx.lineCap='round';
   ctx.strokeStyle='#23262e';ctx.lineWidth=4.5;ctx.beginPath();ctx.moveTo(0,-44);ctx.lineTo(0,-84);ctx.stroke();
   ctx.strokeStyle='#4a5160';ctx.lineWidth=1.6;ctx.beginPath();ctx.moveTo(0,-44);ctx.lineTo(0,-82);ctx.stroke();
+  // a gleam travelling up the bill
+  const gl=( (now/900)%1 );
+  ctx.strokeStyle='rgba(190,210,240,'+(0.7*(1-Math.abs(gl-0.5)*2))+')';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(0,-46-gl*36);ctx.lineTo(0,-50-gl*36);ctx.stroke();
   ctx.lineCap='butt';
   // sleek black hull (marlin body)
   const hull=ctx.createLinearGradient(-30,0,30,0);
@@ -6969,13 +7014,18 @@ function drawMarlinBoat(dark){
   ctx.strokeStyle='#3c4454';ctx.lineWidth=2;ctx.stroke();
   ctx.strokeStyle='rgba(130,160,210,.5)';ctx.lineWidth=1;
   ctx.beginPath();ctx.moveTo(-6,-40);ctx.quadraticCurveTo(-22,-10,-18,28);ctx.stroke();
-  // cobalt lateral stripe (marlin marking)
-  ctx.strokeStyle='rgba(58,112,224,.6)';ctx.lineWidth=2.5;
+  // cobalt lateral stripe (marlin marking) - shimmers as the light catches it
+  const shim=0.45+0.4*Math.abs(Math.sin(now/520));
+  ctx.strokeStyle='rgba(70,128,236,'+shim+')';ctx.lineWidth=2.5;
   ctx.beginPath();ctx.moveTo(0,-34);ctx.quadraticCurveTo(18,-6,12,34);ctx.stroke();
-  // tall dorsal sail fin
+  // tall dorsal sail fin - gently raises and lowers like a tailing marlin
+  const fin=Math.sin(now/780);
   ctx.fillStyle='#111319';
-  ctx.beginPath();ctx.moveTo(-3,-22);ctx.quadraticCurveTo(-22,-32,-28,-6);ctx.quadraticCurveTo(-13,-4,-3,-2);ctx.closePath();ctx.fill();
+  ctx.beginPath();ctx.moveTo(-3,-22);ctx.quadraticCurveTo(-22-fin*3,-32-fin*4,-28-fin*4,-6);ctx.quadraticCurveTo(-13,-4,-3,-2);ctx.closePath();ctx.fill();
   ctx.strokeStyle='#39414f';ctx.lineWidth=1.2;ctx.stroke();
+  // cobalt edge light running along the raised fin
+  ctx.strokeStyle='rgba(90,140,240,'+(0.3+0.3*(fin*0.5+0.5))+')';ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(-3,-21);ctx.quadraticCurveTo(-21-fin*3,-31-fin*4,-27-fin*4,-7);ctx.stroke();
   // dark cockpit
   ctx.fillStyle='rgba(44,52,66,.92)';roundRect(ctx,-13,2,26,22,5);ctx.fill();
   ctx.fillStyle='#262d3a';roundRect(ctx,-10,4,20,9,2);ctx.fill();
@@ -6997,7 +7047,7 @@ function drawRodAndReel(dark){
   const rodIdx=RODS.findIndex(r=>r.id===S.rod);
   const reelIdx=REELS.findIndex(r=>r.id===S.reel);
   const baseX=ORIGIN.x+a.dx,baseY=ORIGIN.y+a.dy;
-  const rodLen=[22,28,33,39,45][rodIdx]||30;
+  const rodLen=[22,28,33,39,45,46][rodIdx]||30;
   const sin=Math.sin(a.ang),cos=Math.cos(a.ang);
   const tipX=baseX+sin*rodLen,tipY=baseY+cos*rodLen;
   lineRig.tipX=tipX;lineRig.tipY=tipY;
@@ -7005,7 +7055,52 @@ function drawRodAndReel(dark){
   drawRod(baseX,baseY,tipX,tipY,rodIdx);
 }
 
+// Ultra reward: the Chainsaw Rod renders as a running chainsaw - an orange motor
+// at the grip and a guide bar whose chain teeth scroll, with a faint engine
+// vibration. Purely cosmetic; drawn whenever the rod is out (anchored).
+function drawChainsawRod(x1,y1,x2,y2){
+  const now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  const ang=Math.atan2(y2-y1,x2-x1);
+  const len=Math.max(20,Math.hypot(x2-x1,y2-y1));
+  ctx.save();
+  ctx.translate(x1,y1);ctx.rotate(ang);
+  ctx.translate(0,Math.sin(now/20)*0.5);   // engine vibration
+  const barH=4.2,bx0=10;
+  // drop shadow under the bar
+  ctx.fillStyle='rgba(0,0,0,.22)';roundRect(ctx,bx0,-barH/2+1.6,len-bx0,barH,barH/2);ctx.fill();
+  // guide bar
+  ctx.fillStyle='#9aa0a6';roundRect(ctx,bx0,-barH/2,len-bx0,barH,barH/2);ctx.fill();
+  ctx.fillStyle='#c6cad0';roundRect(ctx,bx0,-barH/2,len-bx0,1.1,0.6);ctx.fill();
+  // groove the chain rides in
+  ctx.strokeStyle='#5a6068';ctx.lineWidth=0.7;
+  ctx.beginPath();ctx.moveTo(bx0,0);ctx.lineTo(len,0);ctx.stroke();
+  // scrolling chain teeth, both edges (top forward, bottom back), clipped to the bar
+  const step=3,barLen=len-bx0;
+  const sTop=(now/45)%step,sBot=(now/45)%step;
+  ctx.fillStyle='#34383e';
+  for(let d=-(sTop);d<barLen;d+=step){if(d<0)continue;const cx=bx0+d;
+    ctx.beginPath();ctx.moveTo(cx,-barH/2);ctx.lineTo(cx+1.3,-barH/2-1.9);ctx.lineTo(cx+2.4,-barH/2);ctx.closePath();ctx.fill();}
+  for(let d=-((sBot+1.5)%step);d<barLen;d+=step){if(d<0)continue;const cx=bx0+d;
+    ctx.beginPath();ctx.moveTo(cx,barH/2);ctx.lineTo(cx+1.3,barH/2+1.9);ctx.lineTo(cx+2.4,barH/2);ctx.closePath();ctx.fill();}
+  // rounded nose
+  ctx.fillStyle='#7a8088';ctx.beginPath();ctx.arc(len,0,barH/2+0.5,0,6.28);ctx.fill();
+  ctx.fillStyle='#3a3e44';ctx.beginPath();ctx.arc(len,0,1.4,0,6.28);ctx.fill();
+  // sawdust flecks puffing off the tip
+  for(let i=0;i<3;i++){const ph=(now/90+i*0.33)%1;ctx.fillStyle='rgba(232,210,150,'+(0.5*(1-ph))+')';
+    ctx.beginPath();ctx.arc(len+2+ph*6,(i-1)*2.4-ph*3,0.9,0,6.28);ctx.fill();}
+  // motor housing at the grip (orange), drawn last so it sits on top
+  ctx.fillStyle='rgba(0,0,0,.25)';roundRect(ctx,-4,-5.5,15,11,3);ctx.fill();
+  ctx.fillStyle='#c2470a';roundRect(ctx,-4,-6,15,11,3);ctx.fill();
+  ctx.fillStyle='#e8631a';roundRect(ctx,-2.5,-4.6,11,5,2);ctx.fill();
+  ctx.fillStyle='#2a2a2e';roundRect(ctx,8,-5,3.4,10,1.2);ctx.fill();   // front guard / clutch cover
+  ctx.fillStyle='#16161a';roundRect(ctx,-4,-6,3,11,2);ctx.fill();      // rear handle guard
+  // pull-cord knob
+  ctx.strokeStyle='#7a5a30';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(-3,3.5);ctx.lineTo(-7,6.5);ctx.stroke();
+  ctx.fillStyle='#d8b048';ctx.beginPath();ctx.arc(-7,6.5,1.5,0,6.28);ctx.fill();
+  ctx.restore();
+}
 function drawRod(x1,y1,x2,y2,tier){
+  if(tier>=5){drawChainsawRod(x1,y1,x2,y2);return;}   // ultra reward: animated chainsaw
   const colors=['#cdbb8e','#5a6b7a','#7a4a3a','#2c2c30','#1f2a44'];
   const thick=[2.4,2.6,2.9,3.2,3.6][tier]||2.5;
   ctx.lineCap='round';
@@ -7500,6 +7595,7 @@ function poolNow(){
   const tk=tackleById(currentTackleId());const finder=curBoat().perk==='finder';
   const stAlias=st?structKindAlias(st.kind):null;
   const out=[];
+  const ultras=[];   // ultra legendaries roll an independent fixed chance, not pool weight
   for(const f of FISH){
     if(f.surf)continue;            // sharks only bite from the surf
     if(f.zone!==S.zone)continue;
@@ -7518,15 +7614,19 @@ function poolNow(){
     // open-water fish bite anywhere; nothing bites the "wrong" structure.
     if(st){ if(!f.structure.includes(stAlias)&&!f.structure.includes('open'))continue; }
     else { if(!f.structure.includes('open'))continue; }    // open water needs an open-water fish
+    // Ultra legendaries don't sit in the weighted pool. Once the rig qualifies for
+    // one (passed every gate above) it rolls a fixed, exact per-fish spawn chance.
+    if(f.rarity==='ultra'){
+      let ch=(f.spawnChance||0.0002)*petUltraMult()*bloodMoonUltraMult(); // +100% Penguin / +100% Blood Moon
+      if(equippedSetId()==='jeremy')ch*=1.5;                              // Jeremy set: +50%
+      ultras.push({f:f,ch:ch});
+      continue;
+    }
     let w=f.weight;
-    // rarity spawn penalty so epic and legendary are genuinely rare;
-    // Ultra Legendary is vanishingly rare (~0.001% of the pool even at a prime spot).
-    w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04,ultra:0.00003}[f.rarity]||1;
-    // Jeremy set bonus: +50% legendary AND ultra legendary spawn chance
-    if((f.rarity==='legendary'||f.rarity==='ultra')&&equippedSetId()==='jeremy')w*=1.5;
-    // V0.9 Penguin pet: +1000% ultra legendary spawn chance
-    // V0.9.2 Blood Moon: +100% ultra legendary spawn chance
-    if(f.rarity==='ultra')w*=petUltraMult()*bloodMoonUltraMult();
+    // rarity spawn penalty so epic and legendary are genuinely rare
+    w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
+    // Jeremy set bonus: +50% legendary spawn chance
+    if(f.rarity==='legendary'&&equippedSetId()==='jeremy')w*=1.5;
     // V0.9 Astronaut set: luck boost makes rarer/target fish more likely
     if(RARITY_ORDER.indexOf(f.rarity)>=2)w*=playerLuckMult();
     // Chum bag & Underwater LED: boost rarer fish (epic and up) in the cast radius
@@ -7558,7 +7658,7 @@ function poolNow(){
   // Rarity-weighted bite delay: a pool dominated by rare fish is slow to bite.
   let rd=0;for(const o of out)rd+=o.w*(RARITY_BITE_DELAY[o.f.rarity]||1);
   const rarityDelay=strength>0?rd/strength:1;
-  return {out,strength,rarityDelay};
+  return {out,strength,rarityDelay,ultras};
 }
 
 function biteWait(strength,st,rarityDelay){
@@ -7604,15 +7704,22 @@ function triggerBite(){
   let pick;
   if(_forcedBiteFish){pick=_forcedBiteFish;_forcedBiteFish=null;}
   else{
-    const {out,strength}=poolNow();
-    if(out.length===0||strength<=0){
-      phase='done';bobber.active=false;
-      setStatus('No takers. Try a different bait, leader, or spot, or wait for a better bite window.');
-      setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1700);
-      return;
+    const {out,strength,ultras}=poolNow();
+    // Ultra legendaries roll first, on their own fixed odds (independent of the
+    // weighted pool). A hit overrides the normal pick.
+    if(ultras&&ultras.length){
+      for(const u of ultras){if(Math.random()<u.ch){pick=u.f;break;}}
     }
-    let r=Math.random()*strength;pick=out[out.length-1].f;
-    for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
+    if(!pick){
+      if(out.length===0||strength<=0){
+        phase='done';bobber.active=false;
+        setStatus('No takers. Try a different bait, leader, or spot, or wait for a better bite window.');
+        setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1700);
+        return;
+      }
+      let r=Math.random()*strength;pick=out[out.length-1].f;
+      for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
+    }
   }
   hookedFish=pick;hookW=rollWeight(pick);
   sdewRetryUsed=false;sdewSurf=false;
@@ -7971,9 +8078,18 @@ function scheduleSurfTwitch(){
   },4000+Math.random()*6000);
 }
 function pickSurfShark(){
-  const wts={common:60,uncommon:34,rare:16,epic:7,legendary:2,ultra:0.05};
+  // Great White rolls an independent, fixed spawn chance (0.1%, boosted by the
+  // Penguin pet and Blood Moon) so its odds are exact and not pool-dependent.
+  const gw=FISH.find(x=>x.id==='greatwhite');
+  if(gw){
+    let ch=(gw.spawnChance||0.001)*petUltraMult()*bloodMoonUltraMult();
+    if(equippedSetId()==='jeremy')ch*=1.5;
+    if(Math.random()<ch)return gw;
+  }
+  // Otherwise pick from the non-ultra sharks, weighted by rarity.
+  const wts={common:60,uncommon:34,rare:16,epic:7,legendary:2};
   const pool=[];let total=0;
-  for(const id of SURF_SHARKS){const f=FISH.find(x=>x.id===id);if(!f)continue;const w=wts[f.rarity]||1;pool.push({f,w});total+=w;}
+  for(const id of SURF_SHARKS){const f=FISH.find(x=>x.id===id);if(!f||f.rarity==='ultra')continue;const w=wts[f.rarity]||1;pool.push({f,w});total+=w;}
   let r=Math.random()*total,pick=pool[0].f;
   for(const o of pool){r-=o.w;if(r<=0){pick=o.f;break;}}
   return pick;
@@ -8110,7 +8226,7 @@ function land(f,w,perfect,bullseye){
   const prevBest=S.best[f.id]||0;const pb=w>prevBest;if(pb)S.best[f.id]=w;
   if(w>S.biggest){S.biggest=w;S.biggestName=f.name;}
   const[a,b]=f.size;const sizeFrac=(w-a)/Math.max(0.01,(b-a));
-  let xp=Math.round(f.xp*(0.8+sizeFrac*0.5));
+  let xp=Math.round(f.xp*(0.8+sizeFrac*0.5)*0.7); // global 30% xp reduction
   let gold=Math.round(f.gold*(0.8+sizeFrac*0.6)*0.85); // global 15% coin reduction
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
@@ -8240,7 +8356,7 @@ function openChooser(type){
     const cat=curMethod().cat;
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
     TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
-      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+svgIcon(t.icon,20)+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
   } else if(type==='bait'){
     if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
@@ -8453,7 +8569,8 @@ function shopRow(item,kind,owned,equipped,extra,swatch){
   else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
   else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+item.cost+'</span>';
   const locked=!owned&&(!!needPrev||!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
-  const icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
+  let icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
+  if(item.reward&&owned)icon='<span class="ultra-glint">'+icon+'</span>'; // earned ultra item sheen
   return '<div class="shop-item '+(equipped?'equipped':'')+' '+(locked?'locked':'')+'" data-kind="'+kind+'" data-id="'+item.id+'">'+icon+'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+(item.desc||'')+(extra||'')+'</div></div>'+action+'</div>';
 }
 
@@ -8477,7 +8594,7 @@ function renderShop(){
   else if(shopTab==='tackle')html=TACKLE.filter(t=>!(t.id==='hook1440'&&!S.surfUnlocked)).map(t=>{
     if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(S.gold>=t.cost?'':'cant')+'">'+COIN+t.cost+'</span>';
       return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
-    if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
+    if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon"><span class="ultra-glint">'+svgIcon(t.icon)+'</span></div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
     const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>m.cat===t.cat);
     return shopRow(t,'tackle',own,false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
   else if(shopTab==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
@@ -8820,7 +8937,7 @@ function renderAchievementSections(map,self){
       }
       body+='<div class="ach-row '+(earned?'earned':'locked')+'">'
         +'<div class="ach-row-info"><div class="ach-row-name">'+a.name+(crown?' '+svgIcon('crown',12):'')+'</div><div class="ach-row-desc">'+a.desc+'</div>'+progHtml+'</div>'
-        +(earned?'<span class="ach-row-status" style="background:'+info.color+';">Earned</span>':'<span class="ach-row-status locked">+'+info.gold+'g</span>')
+        +(earned?'<span class="ach-row-status" style="background:'+info.color+';">Earned</span>':'<span class="ach-row-status locked">'+tierRewardLabel(info)+'</span>')
         +'</div>';
     }
     return '<div class="ach-section-head"><span style="color:'+info.color+';">'+info.label+'</span><span style="color:var(--text-soft);">'+earnedCount+' / '+list.length+'</span></div>'+body;
@@ -8838,7 +8955,9 @@ function openFish(id){
   const lead=f.leader==='fluoro'?'Fluorocarbon (line-shy)':f.leader==='wire'?'Wire (toothy, will cut you off!)':'Any leader';
   document.getElementById('modal').innerHTML=
     '<span class="close-x" onclick="closeModal()">\u00d7</span>'+
-    '<div class="mhead">'+buildFishArt(f.id,76)+'<div><div class="mname">'+f.name+'</div><div class="mrarity'+(f.rarity==='ultra'?' ultra-rarity':'')+'"'+(f.rarity==='ultra'?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+'</div></div></div>'+
+    // Until the fish is caught its art in the detail view stays a dark silhouette
+    // (matching the logbook card) - the colours are only revealed once discovered.
+    '<div class="mhead">'+(caught?buildFishArt(f.id,76):'<span style="filter:brightness(0) opacity(.42);display:inline-block;line-height:0;">'+buildFishArt(f.id,76)+'</span>')+'<div><div class="mname">'+f.name+'</div><div class="mrarity'+(f.rarity==='ultra'?' ultra-rarity':'')+'"'+(f.rarity==='ultra'?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+'</div></div></div>'+
     '<div class="mrow"><span class="ml">Where</span><span class="mv">'+ZONES[f.zone].name+'</span></div>'+
     '<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methodNames+'</span></div>'+
     '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitNames+'</span></div>'+
