@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Saltwater Fishing Simulator — V 0.9.3</title>
+<title>Tide & Tackle: Saltwater Fishing Simulator — V 0.9.4</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -191,10 +191,19 @@
   .menu-head{display:flex;align-items:center;justify-content:space-between;padding:13px 16px;border-bottom:3px solid var(--wood);background:var(--parchment);}
   .menu-head .mt{font-family:'Fredoka';font-size:20px;font-weight:600;color:var(--wood-dark);}
   .menu-head .x{font-size:26px;font-weight:800;color:var(--text-soft);cursor:pointer;line-height:1;}
-  .menu-tabs{display:flex;border-bottom:3px solid var(--wood);}
+  /* Old horizontal tab row is hidden — navigation is now the menu-button dropdown. */
+  .menu-tabs{display:none;}
   .menu-tab{flex:1;padding:11px 3px;font-family:'Fredoka';font-size:13px;font-weight:500;color:var(--text-soft);background:var(--parchment);border:none;cursor:pointer;white-space:nowrap;}
   .menu-tab.active{background:var(--cream);color:var(--wood-dark);}
   body.tourn-active [data-mtab="shop"]{display:none;}
+  /* Vertical dropdown opened by the top-left menu button */
+  .menu-dropdown{position:fixed;top:54px;left:10px;z-index:150;background:var(--cream);border:2px solid var(--wood);border-radius:13px;box-shadow:0 10px 28px rgba(0,0,0,.30);padding:6px;display:none;flex-direction:column;min-width:176px;}
+  .menu-dropdown.show{display:flex;animation:mddrop .14s ease;}
+  @keyframes mddrop{from{opacity:0;transform:translateY(-7px);}to{opacity:1;transform:none;}}
+  .menu-dd-item{display:flex;align-items:center;gap:11px;padding:10px 12px;font-family:'Fredoka';font-size:14.5px;font-weight:500;color:var(--wood-dark);background:none;border:none;cursor:pointer;border-radius:9px;text-align:left;width:100%;}
+  .menu-dd-item:hover{background:var(--parchment);}
+  .menu-dd-item:active{background:#e9dcc0;}
+  .menu-dd-ic{width:19px;height:19px;display:inline-flex;align-items:center;justify-content:center;color:var(--accent);flex-shrink:0;}
   .menu-body{flex:1;overflow-y:auto;padding:14px 16px;}
   .mpanel{display:none;}
   .mpanel.active{display:block;}
@@ -236,6 +245,7 @@
   .ultra-glint{position:relative;display:inline-flex;align-items:center;justify-content:center;border-radius:7px;overflow:hidden;box-shadow:0 0 7px rgba(255,238,170,.55);}
   .ultra-glint::after{content:"";position:absolute;top:0;left:0;width:55%;height:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent);animation:ultraGlint 2.6s ease-in-out infinite;pointer-events:none;}
   .shop-swatch{width:22px;height:22px;border-radius:6px;border:2px solid rgba(0,0,0,.2);flex-shrink:0;}
+  .shop-swatch.set-portrait{width:46px;height:46px;background:#eef1f4;border-radius:8px;}
   .shop-item .shop-info{flex:1;min-width:0;}
   .shop-item .shop-name{font-size:13px;font-weight:800;color:var(--text);}
   .shop-item .shop-desc{font-size:10.5px;font-weight:600;color:var(--text-soft);line-height:1.35;}
@@ -607,6 +617,15 @@
     <div class="top-bar">
       <div class="hud tl">
       <div class="pill click menu-btn" id="menu-open">&#9776;</div>
+      <div class="menu-dropdown" id="menu-dropdown">
+        <button class="menu-dd-item" data-go="shop"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9h16v10a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1z"/><path d="M9 13h6"/></svg></span>Shop</button>
+        <button class="menu-dd-item" data-go="logbook"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M5 16h14"/><path d="M9 8h6"/></svg></span>Logbook</button>
+        <button class="menu-dd-item" data-go="quests"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg></span>Quests</button>
+        <button class="menu-dd-item" data-go="stats"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span>Stats</button>
+        <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Tournament</button>
+        <button class="menu-dd-item" data-go="friends"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M18 14a6 6 0 0 1 3 5"/></svg></span>Friends</button>
+        <button class="menu-dd-item" data-go="settings"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Settings</button>
+      </div>
       <div class="pill click" id="zone-pill"><span id="zone-icon" style="display:inline-flex;align-items:center;"></span> <span id="zone-name">Inshore</span></div>
       <div class="pill" id="time-pill"><span id="time-icon" style="display:inline-flex;align-items:center;"></span> <span class="sub" id="time-season">Spring</span></div>
       <div class="pill click" id="env-pill" onclick="openEnvDetails()" title="Conditions"><span id="env-icons" style="display:inline-flex;align-items:center;gap:3px;"></span></div>
@@ -615,7 +634,7 @@
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies - won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
-      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='cosmetics';renderShop();},60);}" title="Cosmetics"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
+      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='sets';renderShop();},60);}" title="Sets"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -695,7 +714,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.3</div>
+    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.4</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -994,8 +1013,8 @@ let _selectedGender='';
 function showGenderSelect(){
   _selectedGender='';
   document.getElementById('gender-overlay').style.display='flex';
-  document.getElementById('gender-male-icon').innerHTML=anglerIconSVG('male','#E8B88A',52);
-  document.getElementById('gender-female-icon').innerHTML=anglerIconSVG('female','#E8B88A',52);
+  document.getElementById('gender-male-icon').innerHTML='<img src="skin tone/male 2.png" style="height:60px;width:auto;object-fit:contain;" alt="Male">';
+  document.getElementById('gender-female-icon').innerHTML='<img src="skin tone/female 2.png" style="height:60px;width:auto;object-fit:contain;" alt="Female">';
   document.getElementById('gender-male').style.borderColor='rgba(255,255,255,.15)';
   document.getElementById('gender-female').style.borderColor='rgba(255,255,255,.15)';
   document.getElementById('gender-confirm-btn').style.opacity='.4';
@@ -1021,8 +1040,8 @@ function showSkinSelect(){
   _selectedSkin='';
   const gender=S.gender||'male';
   document.getElementById('skin-options').innerHTML=SKIN_TONES.map(function(t){
-    return '<div id="skin-opt-'+t.id+'" onclick="selectSkin(\''+t.id+'\')" style="cursor:pointer;border:3px solid rgba(255,255,255,.15);border-radius:14px;padding:14px 8px;min-width:64px;transition:border-color .15s;box-sizing:border-box;">'
-      +'<div style="line-height:1;margin-bottom:8px;">'+anglerIconSVG(gender,t.color,42)+'</div>'
+    return '<div id="skin-opt-'+t.id+'" onclick="selectSkin(\''+t.id+'\')" style="cursor:pointer;border:3px solid rgba(255,255,255,.15);border-radius:14px;padding:10px 6px;min-width:72px;transition:border-color .15s;box-sizing:border-box;">'
+      +'<div style="line-height:1;margin-bottom:6px;"><img src="skin tone/'+gender+' '+t.n+'.png" style="height:62px;width:auto;object-fit:contain;" alt="Tone '+t.n+'"></div>'
       +'<div style="width:18px;height:18px;border-radius:50%;background:'+t.color+';margin:0 auto;border:2px solid rgba(0,0,0,.2);"></div>'
       +'</div>';
   }).join('');
@@ -1121,13 +1140,13 @@ function buildTutSteps(){
     {say:"Ahoy! <b>Cap'n Clancy</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
     {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top-left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook'},
     {say:"There she is. See what she wants? <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook tells ye exactly how to catch any fish.",btn:"Got it"},
-    {say:"Can't catch 'em without bait. Here's a few coins on me - now tap the <b>Shop</b> tab and buy a pack of <b>"+baitName+"</b>.",hint:"Shop tab → buy "+baitName,await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
+    {say:"Can't catch 'em without bait. Here's a few coins on me - open the menu <b>☰</b>, tap <b>Shop</b>, and buy a pack of <b>"+baitName+"</b>.",hint:"☰ → Shop → buy "+baitName,await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
     {say:"Stocked up, well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
-    {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". I switched on your <b>fish radar</b>: follow the blue arrow to a spot, drive onto it, then <b>Drop Anchor</b> right on the structure.",hint:"Follow the radar, anchor on the structure",await:'anchor',onEnter:function(){S.radarActive=true;}},
-    {say:"Right on the money. Now <b>tap the water</b> inside your range ring to cast. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Tap water to cast, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
+    {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it - you want to cast TO the structure, not sit on it.",hint:"Anchor a short cast from the spot",await:'anchor',onEnter:function(){S.radarActive=true;}},
+    {say:"Right on the money. Now <b>cast onto the spot</b> - tap the water right on the structure, inside your range ring. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Cast onto the structure, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
     {say:"HAAA! A beauty of a "+tName+"! See how it all comes together - right bait, right spot. That's the whole game.",btn:"Heck yeah"},
     {say:"Your rig matters as much as yer bait. Your <b>ROD</b> and <b>REEL</b> decide how big a fish ye can fight, and your <b>BRAID</b> is the line class - heavier braid lands heavier fish. Upgrade all three in the <b>Shop</b> as ye level up.",btn:"Aye, captain"},
-    {say:"No two fish want the same thing. To fill yer logbook, try different <b>baits</b> and <b>lures</b>, work different <b>structure</b>, and switch yer <b>method</b> - cork, jig, live bait, trolling. The logbook tells ye exactly what each fish wants.",btn:"Got it"},
+    {say:"No two fish want the same thing - and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b> - cork, jig, live bait, trolling - until ye find what's biting. The logbook tells ye what each fish can take.",btn:"Got it"},
     {say:"And there's two kinds o' coin out here. <b>GOLD</b> buys yer everyday gear - boats, rods, bait and lures. <b>RUBIES</b> are the rare stuff - ye win them in tournaments and challenges, and they buy gear sets, abilities and special items.",btn:"Makes sense"},
     {say:"Now listen close. Every so often a <b>LEGEND</b> hits - they don't use the hookset. It's a tug-o'-war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run - no reward, just the feel of it.",btn:"Bring it on"},
     {say:"Here she comes - a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL - keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
@@ -1231,7 +1250,7 @@ function showTournamentIntro(){
   clancyTalk([
     {say:"Look at ye - <b>Level 5!</b> That means the <b>Tournaments</b> are open to ye now. Gather round, let me explain.",btn:"Tell me"},
     {say:"A tournament's a timed contest: <b>6 minutes</b>, one <b>target species</b>. Whoever lands the <b>biggest</b> one of that fish takes it.",btn:"Go on"},
-    {say:"Open the menu <b>☰</b> and find the <b>Tourn.</b> tab. Pay the gold entry and ye're dropped into a big open arena with other anglers and a few of my regulars.",btn:"Okay"},
+    {say:"Open the menu <b>☰</b> and tap <b>Tournament</b>. Pay the gold entry and ye're dropped into a big open arena with other anglers and a few of my regulars.",btn:"Okay"},
     {say:"Top three take home <b>gold AND rubies</b>. Rubies are the good stuff - they buy gear sets, abilities and items ye can't get with coin.",btn:"Nice"},
     {say:"Watch the <b>standings</b> up top, tap the <b>map</b> to uncover the water, and work your spots. Now get out there and win one, angler!",btn:"Let's go!"}
   ]);
@@ -1654,7 +1673,9 @@ async function openFriendProfile(uid,username){
 // ─────────────────────────────────────────────────────────────
 // TOURNAMENTS
 // ─────────────────────────────────────────────────────────────
-const BOT_NAMES=["BigRedDaddy","FlatsFisherman","BayouBob","TarponsRule","SlowRollShrimp","SnookHunter88","PermitChaser","OilRigOllie","WreckDiver","GrouperGary","MangroveManiac","GulfCoastPro","SaltLifeSam","BottomBouncer","ReefRaider","BackwaterBill","PinefishPete","CobiaKing","TideRunner","DockSide_D"];
+// Real-player-looking handles: plain first names, first+initial, and casual
+// gamer-style handles, so the tournament fleet reads like live people.
+const BOT_NAMES=["Jake","Marcus","tyler_f","Sara M.","DiegoR","Hunter","mike_davis","Aaliyah","Noah","ChrisP","Bella","ryan23","Kayla","Brandon","Sophie","DerekW","Mateo","Olivia_","jordan88","Nina","Caleb","Priya","Logan","Maya R","tony_g","Emma","Xavier","Hannah","jdog","Liam","Carlos","Riley","Zoe","Nate_K","Gabby","Owen"];
 const TOURN_DEFS=[
   {id:"i_am",zone:0,name:"Inshore Morning Cup",       openH:10,closeH:12,maxP:10},
   {id:"i_pm",zone:0,name:"Inshore Evening Cast",       openH:17,closeH:18,maxP:10},
@@ -2751,7 +2772,7 @@ const METHODS=[
   {id:'structure',name:'Structure',  cat:'finesse',  bait:true,  zones:[0],     blurb:'Drop bait tight to pilings & bars. The sheepshead game.'},
   {id:'livebait', name:'Live bait',  cat:'livehook', bait:true,  zones:[0,1,2], blurb:'Free-line a lively bait. Hard to beat anywhere.'},
   {id:'bottom',   name:'Bottom rig', cat:'bottomrig',bait:true,  zones:[1,2],   blurb:'A knocker rig parked on reefs & wrecks.'},
-  {id:'troll',    name:'Trolling',   cat:'trolllure',bait:false, zones:[1,2],   blurb:'Pull trolling lures & skirts to cover water for pelagics. Tie one on in the Lures shop.'},
+  {id:'troll',    name:'Trolling',   cat:'trolllure',bait:false, zones:[1,2],   blurb:'Pull skirts & rigged baits behind the boat. Pull anchor and DRIVE - a trolled line only works while you’re moving. Tie a troll lure on in the Lures shop.'},
   {id:'chunk',    name:'Chunk',      cat:'chunkrig', bait:true,  zones:[1,2],   blurb:'Drift a slick of cut bait for tuna & sharks.'},
   {id:'deepdrop', name:'Deep drop',  cat:'deeprig',  bait:true,  zones:[2],     blurb:'Send a weighted rig to the bottom for swordfish.'},
 ];
@@ -2809,10 +2830,10 @@ const LURE_PACK=10; // lures bought per purchase
 const LURES=[
   // ---- INSHORE (zone 0): soft plastics, topwater & plugs on the jig ----
   {id:'paddletail',  cat:'softplastic', zone:0, color:'white',      name:'Pearl Paddletail',     icon:'reel', cost:160, lvl:2, methods:['jig'], baits:['pilchard'], targets:['trout','redfish','snook','jack'],       desc:'A kicking paddle tail with a steady thump. Pearl colour: +5% bite during the day.'},
-  {id:'fluke',       cat:'softplastic', zone:0, color:'purple',     name:'Junebug Jerk Shad',    icon:'reel', cost:180, lvl:2, methods:['jig'], baits:['pilchard'], targets:['trout','snook','ladyfish','redfish'],  desc:'Darts and glides on a slack line. Junebug colour: +5% luck at night.'},
+  {id:'fluke',       cat:'softplastic', zone:0, color:'purple',     name:'Purple Paddletail',    icon:'reel', cost:180, lvl:2, methods:['jig'], baits:['pilchard'], targets:['trout','snook','ladyfish','redfish'],  desc:'A kicking paddle tail in junebug purple. Purple colour: +5% luck at night.'},
   {id:'softshrimp',  cat:'softplastic', zone:0, color:'red',        name:'Rootbeer Shrimp',      icon:'crab', cost:140, lvl:1, methods:['jig'], baits:['shrimp'],   targets:['redfish','pompano','flounder','trout'], desc:'A scented soft shrimp bounced on the bottom. Rootbeer colour: +5% bite on a moving tide.'},
   {id:'chartreuseshad',cat:'softplastic',zone:0,color:'chartreuse', name:'Chartreuse Swimbait',  icon:'reel', cost:180, lvl:3, methods:['jig'], baits:['pilchard'], targets:['trout','jack','ladyfish','redfish'],   desc:'A loud tail that shows up in dirty water. Chartreuse colour: +5% bite in stained or rainy water.'},
-  {id:'goldjerk',    cat:'softplastic', zone:0, color:'gold',       name:'Gold-Flash Jerkbait',  icon:'reel', cost:200, lvl:4, methods:['jig'], baits:['pilchard'], targets:['snook','tarpon','jack','bonefish'],     desc:'A natural gold flash for gin-clear water. Gold colour: +5% luck when it’s clear and calm.'},
+  {id:'goldjerk',    cat:'softplastic', zone:0, color:'gold',       name:'Golden Glitter Swimbait',icon:'reel', cost:200, lvl:4, methods:['jig'], baits:['pilchard'], targets:['snook','tarpon','jack','bonefish'],     desc:'A glittering gold swimbait for gin-clear water. Gold colour: +5% luck when it’s clear and calm.'},
   {id:'popper',      cat:'topwater',    zone:0, name:'Popper',                icon:'fish', cost:220, lvl:3, methods:['jig'], baits:['pilchard'], targets:['snook','trout','jack','ladyfish','tarpon'], desc:'A concave face that spits and splashes for explosive surface strikes.'},
   {id:'walkdog',     cat:'topwater',    zone:0, name:'Walk-the-Dog Plug',     icon:'fish', cost:280, lvl:4, methods:['jig'], baits:['pilchard'], targets:['snook','redfish','trout','jack'],      desc:'Zig-zags across the surface with a rhythmic twitch.'},
   {id:'twitchbait',  cat:'plug',        zone:0, name:'Suspending Twitchbait', icon:'fish', cost:300, lvl:4, methods:['jig'], baits:['pilchard'], targets:['trout','snook','redfish'],             desc:'A slow-sinking plug that darts and pauses over the flats.'},
@@ -2829,6 +2850,27 @@ const LURES=[
   {id:'wahoobomb',   cat:'trolling',    zone:2, name:'High-Speed Wahoo Bomb', icon:'tackle-lure',cost:840,lvl:8,methods:['troll'],baits:['cutbait'], targets:['wahoo'],                               desc:'A heavy bullet head trolled fast on cable - built to draw strikes at speed.'},
   {id:'daisychain',  cat:'trolling',    zone:2, name:'Daisy-Chain Spread',    icon:'tackle-lure',cost:980,lvl:9,methods:['troll'],baits:['ballyhoo'],targets:['mahi','blackfin','stripedmarlin','roosterfish'],desc:'A teaser chain of skirts that mimics a fleeing bait school.'},
 ];
+function lureById(id){return LURES.find(function(l){return l.id===id;});}
+// Lure durability: unlike bait (consumed every cast), a lure survives several
+// catches before it wears out. Soft plastics tear fastest; metal & spoons last
+// longest. A lure's `dur` overrides the per-category default.
+const LURE_DUR_BY_CAT={softplastic:5,topwater:12,plug:12,spoon:14,metaljig:16,trolling:9};
+function lureDurabilityOf(l){if(!l)return 8;return l.dur||LURE_DUR_BY_CAT[l.cat]||10;}
+function lureCurDur(id){if(S.lureDur&&S.lureDur[id]!=null)return S.lureDur[id];return lureDurabilityOf(lureById(id));}
+// Wear the current unit of a lure by one catch; when it's used up, one lure from
+// the stock breaks and a fresh unit's durability begins.
+function wearLure(id){
+  const l=lureById(id);if(!l)return;
+  const base=lureDurabilityOf(l);
+  if(!S.lureDur)S.lureDur={};
+  if(S.lureDur[id]==null)S.lureDur[id]=base;
+  S.lureDur[id]--;
+  if(S.lureDur[id]<=0){
+    S.lureInv[id]=Math.max(0,(S.lureInv[id]||0)-1);
+    if(S.lureInv[id]>0){S.lureDur[id]=base;}
+    else{S.lureDur[id]=0;toast('Your '+l.name+' wore out - restock lures in the shop.','#b58b53');}
+  }
+}
 // Lures shop is organised by region (matches each lure's zone).
 const LURE_CATS=[
   {id:0,name:'Inshore'},
@@ -2951,6 +2993,81 @@ function equippedSetId(){
   return null;
 }
 function setColorOf(id){const s=setById(id);return s?s.color:'#cf7a35';}
+// Some sets have a hand-drawn character portrait in /sets; the rest fall back to
+// the flat color swatch. Keep this list in sync with the PNGs in that folder.
+const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot'];
+function setHasArt(id){return SET_ART_IDS.includes(id);}
+function setImgSrc(id){return 'sets/'+id+'.png';}
+// Progressive-halving downscale to ~target px. Canvas drawImage doesn't
+// area-average on big one-step downscales, so a 1254px sprite crushed straight
+// to ~25px aliases badly; halving with high-quality smoothing keeps it crisp.
+function _downscaleHQ(src,target){
+  let sw=src.naturalWidth||src.width, sh=src.naturalHeight||src.height;
+  let cur=src;
+  while(sw>target*2&&sh>target*2){
+    const nw=Math.round(sw/2), nh=Math.round(sh/2);
+    const c=document.createElement('canvas');c.width=nw;c.height=nh;
+    const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+    g.drawImage(cur,0,0,nw,nh);cur=c;sw=nw;sh=nh;
+  }
+  const sc=Math.min(1,target/Math.max(sw,sh)),fw=Math.max(1,Math.round(sw*sc)),fh=Math.max(1,Math.round(sh*sc));
+  const c=document.createElement('canvas');c.width=fw;c.height=fh;
+  const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+  g.drawImage(cur,0,0,fw,fh);return c;
+}
+// Sprite copies drawn onto the game canvas as the seated avatar when the set is
+// worn. The raw PNGs carry a white sticker halo, so we flood-key the
+// background-connected near-white away (interior whites like the astronaut suit
+// are walled off by the black outline and survive), then pre-downscale to a
+// crisp 256px cache. Falls back to the raw image if keying fails.
+const SET_SPRITE={};
+SET_ART_IDS.forEach(function(id){
+  const im=new Image();
+  im.onload=function(){try{SET_SPRITE[id]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){SET_SPRITE[id]=im;}};
+  im.src=setImgSrc(id);
+});
+// Normalize every blue outfit pixel to one canonical azure. The male and female
+// base avatars ship with slightly different outfit/hat blues; we remap any
+// blue-ish pixel (hue ~188-255, decent saturation) to hue 210 with a clamped
+// saturation while keeping its original lightness, so shading survives but the
+// shade matches across genders. Greys/whites (outline, background) and the tan
+// skin / brown boots fall outside the blue window and are left alone.
+function _normalizeBlue(cnv){
+  const g=cnv.getContext('2d'),w=cnv.width,h=cnv.height;
+  const d=g.getImageData(0,0,w,h),p=d.data;
+  for(let i=0;i<p.length;i+=4){
+    if(p[i+3]<12)continue;
+    const r=p[i]/255,gn=p[i+1]/255,b=p[i+2]/255;
+    const mx=Math.max(r,gn,b),mn=Math.min(r,gn,b),l=(mx+mn)/2,dl=mx-mn;
+    if(dl<0.06)continue;
+    let hh; if(mx===r)hh=((gn-b)/dl)%6; else if(mx===gn)hh=(b-r)/dl+2; else hh=(r-gn)/dl+4;
+    hh*=60; if(hh<0)hh+=360;
+    const s=dl/(1-Math.abs(2*l-1));
+    if(hh>=188&&hh<=255&&s>0.18){
+      const nh=210/360, ns=Math.min(0.66,Math.max(0.5,s));
+      const c=(1-Math.abs(2*l-1))*ns, hp=nh*6, x=c*(1-Math.abs((hp%2)-1)), m=l-c/2;
+      let rr,gg,bb;
+      if(hp<1){rr=c;gg=x;bb=0;}else if(hp<2){rr=x;gg=c;bb=0;}else if(hp<3){rr=0;gg=c;bb=x;}
+      else if(hp<4){rr=0;gg=x;bb=c;}else if(hp<5){rr=x;gg=0;bb=c;}else{rr=c;gg=0;bb=x;}
+      p[i]=Math.round((rr+m)*255);p[i+1]=Math.round((gg+m)*255);p[i+2]=Math.round((bb+m)*255);
+    }
+  }
+  g.putImageData(d,0,0);
+}
+// Base in-boat avatar art (gender × 6 skin tones). White background is keyed
+// out, the blue outfit is normalized to one shade, then cached as a crisp 256px
+// sprite. Keyed 'male_1'..'female_6'. Drawn by drawAnglerFigure when no set is worn.
+const BASE_SPRITE={};
+['male','female'].forEach(function(gen){
+  for(let n=1;n<=6;n++){
+    (function(gen,n){
+      const im=new Image();const key=gen+'_'+n;
+      im.onload=function(){try{const k=_keyOutPetBg(im);_normalizeBlue(k);BASE_SPRITE[key]=_downscaleHQ(k,256);}catch(e){BASE_SPRITE[key]=im;}};
+      im.src='skin tone/'+gen+' '+n+'.png';
+    })(gen,n);
+  }
+});
+function baseAvatarSprite(){return BASE_SPRITE[(S.gender||'male')+'_'+skinIdx(S.skinTone)]||null;}
 
 // ═══════════════════ V0.9: PRESTIGE & PETS ═══════════════════
 const PRESTIGE_MAX=5;
@@ -3066,7 +3183,7 @@ function doPrestige(){
   S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='mono';
   // consumables back to the starter kit
   S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
-  S.baitInv={shrimp:20};S.lureInv={};S.ownedLures=[];
+  S.baitInv={shrimp:20};S.lureInv={};S.lureDur={};S.ownedLures=[];
   S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
   // bump prestige (grants the next pet automatically via ownedPets())
   S.prestige=next;S.prestigeOffered=false;
@@ -3102,14 +3219,20 @@ function clancyFailsafe(){
   return true;
 }
 
+// Six skin tones, matched to the male/female 1-6 avatar PNGs (n = image number).
 const SKIN_TONES=[
-  {id:'light',   color:'#FDDBB4', label:'Light'},
-  {id:'medlight',color:'#E8B88A', label:'Medium-Light'},
-  {id:'medium',  color:'#C68642', label:'Medium'},
-  {id:'meddark', color:'#8D5524', label:'Medium-Dark'},
-  {id:'dark',    color:'#4A2912', label:'Dark'},
+  {id:'tone1',n:1,color:'#FAD9B0', label:'1'},
+  {id:'tone2',n:2,color:'#EFC197', label:'2'},
+  {id:'tone3',n:3,color:'#D89A66', label:'3'},
+  {id:'tone4',n:4,color:'#B06B3C', label:'4'},
+  {id:'tone5',n:5,color:'#7E4E2A', label:'5'},
+  {id:'tone6',n:6,color:'#4F2E18', label:'6'},
 ];
-function skinColorOf(id){const t=SKIN_TONES.find(t=>t.id===id);return t?t.color:'#E8B88A';}
+// Map legacy 5-tone ids onto the new 6-tone scale so existing saves still resolve.
+const _OLD_SKIN={light:'tone1',medlight:'tone2',medium:'tone3',meddark:'tone4',dark:'tone6'};
+function skinId(id){if(_OLD_SKIN[id])return _OLD_SKIN[id];return SKIN_TONES.some(t=>t.id===id)?id:'tone2';}
+function skinIdx(id){const t=SKIN_TONES.find(t=>t.id===skinId(id));return t?t.n:2;}
+function skinColorOf(id){const t=SKIN_TONES.find(t=>t.id===skinId(id));return t?t.color:'#EFC197';}
 // SVG angler portrait: head and shoulders with skin color and gendered hair (replaces emoji)
 function anglerIconSVG(gender,skinColor,size){
   size=size||32;
@@ -3143,7 +3266,7 @@ const RODS=[
   {id:'rod2',name:'Composite Rod', zoneBonus:9,  color:'#7a4a3a',cost:650, lvl:5, desc:'Backbone for bigger fish.'},
   {id:'rod3',name:'Tournament Rod',zoneBonus:13, color:'#2c2c30',cost:1800,lvl:8, desc:'Pro blank, big forgiveness.'},
   {id:'rod4',name:'Bluewater Rod', zoneBonus:17, color:'#1f2a44',cost:4200,lvl:11,desc:'Heavy stand-up power.'},
-  {id:'chainsaw',name:'Chainsaw Rod',zoneBonus:17,color:'#d4500a',cost:0,lvl:1,desc:'A roaring saw blade for a butt. Adds a SLOW-MO button in the fight: −50% fish speed for 3s, once per fight.',reward:'sawfish',rewardName:'a Sawfish'},
+  {id:'chainsaw',name:'Chainsaw Rod',zoneBonus:17,color:'#d4500a',cost:0,lvl:1,desc:'A roaring saw blade for a butt. Fights regular fish with the same power as the Bluewater Rod, and adds a SLOW-MO button in the fight: −50% fish speed for 3s, once per fight.',reward:'sawfish',rewardName:'a Sawfish'},
 ];
 const REELS=[
   {id:'reel0',name:'2500 Spinning',range:145,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
@@ -3346,7 +3469,7 @@ let S={
   boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'mono',
   tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},
   baitInv:{shrimp:20},
-  ownedLures:[],lureInv:{},lureSel:'',
+  ownedLures:[],lureInv:{},lureDur:{},lureSel:'',
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
@@ -3771,7 +3894,19 @@ const PNG_FISH={
   permit:{file:'permit.png',alt:'Permit'},
   sawfish:{file:'sawfish.png',alt:'Sawfish'},
   flounder:{file:'southern flounder.png',alt:'Southern Flounder'},
-  bonefish:{file:'bonefish.png',alt:'Bonefish'}
+  bonefish:{file:'bonefish.png',alt:'Bonefish'},
+  // V0.9.4 new raster art
+  grunt:{file:'white grunt.png',alt:'White Grunt'},
+  lanesnap:{file:'lane snapper.png',alt:'Lane Snapper'},
+  spanish:{file:'spanish mackerel.png',alt:'Spanish Mackerel'},
+  trigger:{file:'grey triggerfish.png',alt:'Gray Triggerfish'},
+  king:{file:'king mackerel.png',alt:'King Mackerel'},
+  blacktip:{file:'blacktip shark.png',alt:'Blacktip Shark'},
+  bluefish:{file:'bluefish.png',alt:'Bluefish'},
+  bonito:{file:'bonito.png',alt:'Bonito'},
+  barracuda:{file:'great barracuda.png',alt:'Great Barracuda'},
+  tripletail:{file:'triple tail.png',alt:'Tripletail'},
+  goliath:{file:'goliath grouper.png',alt:'Goliath Grouper'}
 };
 // Fish raster art lives in the fish/ folder; filenames may contain spaces.
 function pngFishSrc(file){return 'fish/'+encodeURIComponent(file);}
@@ -3938,6 +4073,7 @@ function normalizeState(){
   if(typeof S.surfHook!=='boolean')S.surfHook=false;
   if(typeof S.surfBait!=='number')S.surfBait=0;
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
+  if(!S.lureDur||typeof S.lureDur!=='object')S.lureDur={};
   // migrate legacy one-time lure purchases into consumable stacks
   if(Array.isArray(S.ownedLures)){
     S.ownedLures.forEach(function(id){if(!(S.lureInv[id]>0))S.lureInv[id]=LURE_PACK;});
@@ -4292,7 +4428,7 @@ const CROWNS=[
 // progress bar showing how close the player is.
 const ACHIEVEMENTS=[
   // Impressive
-  {id:'materialistic',tier:'impressive',name:'Materialistic',desc:'Own every boat, rod, and reel.',check:()=>BOATS.every(b=>S.ownedBoats.includes(b.id))&&RODS.every(r=>S.ownedRods.includes(r.id))&&REELS.every(r=>S.ownedReels.includes(r.id)),prog:()=>[BOATS.filter(b=>S.ownedBoats.includes(b.id)).length+RODS.filter(r=>S.ownedRods.includes(r.id)).length+REELS.filter(r=>S.ownedReels.includes(r.id)).length,BOATS.length+RODS.length+REELS.length]},
+  {id:'materialistic',tier:'impressive',name:'Materialistic',desc:'Own every buyable boat, rod, and reel.',check:()=>BOATS.filter(b=>!b.reward).every(b=>S.ownedBoats.includes(b.id))&&RODS.filter(r=>!r.reward).every(r=>S.ownedRods.includes(r.id))&&REELS.filter(r=>!r.reward).every(r=>S.ownedReels.includes(r.id)),prog:()=>{const bs=BOATS.filter(b=>!b.reward),rs=RODS.filter(r=>!r.reward),es=REELS.filter(r=>!r.reward);return [bs.filter(b=>S.ownedBoats.includes(b.id)).length+rs.filter(r=>S.ownedRods.includes(r.id)).length+es.filter(r=>S.ownedReels.includes(r.id)).length,bs.length+rs.length+es.length];}},
   {id:'explorer',tier:'impressive',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k)),prog:()=>{const ks=Object.keys(STRUCT_META);return [ks.filter(k=>(S.fishedStructures||[]).includes(k)).length,ks.length];}},
   {id:'lockedin',tier:'impressive',name:'Locked In',desc:'Hit the bonus section 15 times in a row.',check:()=>(S.bullseyeBest||0)>=15,prog:()=>[Math.min(S.bullseyeBest||0,15),15]},
   // Extraordinary
@@ -4716,6 +4852,22 @@ function activeStructures(){
   if(z.tempStruct&&!surfActive&&currentWeather().id===z.tempStruct.weather)return base.concat([z.tempStruct]);
   return base;
 }
+// During multiplayer (tournaments & co-op challenges) every structure gets a small
+// invisible no-park radius: boats are pushed to its edge so nobody can sit on top
+// of a spot and block its visibility from other anglers. Open world is unaffected.
+const NOPARK_R=46;
+function keepOffStructures(o){
+  if(!mpActive())return;
+  const list=activeStructures();
+  for(const s of list){
+    const dx=o.wx-s.x, dy=o.wy-s.y, d=Math.hypot(dx,dy);
+    if(d<NOPARK_R){
+      if(d>0.01){const k=NOPARK_R/d;o.wx=s.x+dx*k;o.wy=s.y+dy*k;}
+      else{o.wx=s.x+NOPARK_R;o.wy=s.y;}
+      if(o===boat){o.vx*=0.5;o.vy*=0.5;}
+    }
+  }
+}
 let boat={wx:750,wy:1100,heading:0,anchored:true,vx:0,vy:0};
 let camera={x:0,y:0};
 let joy={active:false,dx:0,dy:0,id:null};
@@ -4811,6 +4963,8 @@ function makeBotGhost(p,mseed){
     skinTone:SKIN_TONES[Math.floor(r()*SKIN_TONES.length)].id,
     cosmetic:cosmetic,set:set,_stash:8+Math.floor(r()*15),
     _path:path,_prowess:r(),  // higher prowess => ranks higher => a target for the pack
+    // Half the fleet just roams open water; half park on the target-fish structures.
+    roamer:r()<0.5,
     _homeStruct:home,  // stable spot it works all match (no jitter)
     _leaderPick:Math.floor(r()*3),        // which leader's spot it crowds (pack bots)
     _packFollow:r()<0.5,                  // only half the pack chases the leaders' spot
@@ -4874,6 +5028,7 @@ function botHomeStruct(g){
 // home structure, so it looks like it's working the spot. Purely a function of
 // time, so motion is identical and jitter-free on every screen.
 function botTargetPos(g,tSec){
+  if(g.roamer)return botBasePos(g,tSec);   // roamers just wander the open water
   const st=botHomeStruct(g);
   if(!st)return botBasePos(g,tSec);
   const p=g._path;
@@ -5021,18 +5176,23 @@ function updateGhosts(){
     if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng=(g._confuseAng||0)+(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*1.7*frameScale;g.wy+=Math.sin(g._confuseAng)*1.2*frameScale;clampGhost(g);continue;}
     // blinded by smoke: stall in place
     if(g._blindUntil&&now<g._blindUntil)continue;
-    // Set-bots use their ability: often in daylight (aggressive), less at night
-    // (busy fishing), and relentlessly when the player is leading.
+    // Set-bots use their ability when a player is within their radius. Abilities
+    // are an occasional nuisance, not a lock-out: long cooldowns so the player
+    // keeps control most of the time. Leaders get pestered a little harder.
     if(g.set&&activeTournament){
-      // Abilities are an occasional nuisance, not a lock-out: long cooldowns so
-      // the player keeps control the vast majority of the time.
-      if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?9000:15000)+Math.random()*9000;
-      if(now>g._abilityReadyAt){
-        const s=setById(g.set),dp=dist(g.wx,g.wy,boat.wx,boat.wy);
-        if(botUseAbility(g,s,dp,now)){
-          const cdMul=pTop3?1.1:1.8; // leaders pestered a bit more, but never spammed
-          g._abilityReadyAt=now+((s.cd||30)*1000)*cdMul+Math.random()*8000;
-        }else g._abilityReadyAt=now+5000;
+      const dp=dist(g.wx,g.wy,boat.wx,boat.wy);
+      const inRadius=pVisible&&dp<600;   // only act when a player is nearby & visible
+      if(inRadius){
+        if(!g._abilityReadyAt)g._abilityReadyAt=now+(pTop3?4500:8000)+Math.random()*6000;
+        if(now>g._abilityReadyAt){
+          const s=setById(g.set);
+          if(botUseAbility(g,s,dp,now)){
+            const cdMul=pTop3?1.0:1.6;
+            g._abilityReadyAt=now+((s.cd||30)*1000)*cdMul+Math.random()*7000;
+          }else g._abilityReadyAt=now+3000;  // in radius but this ability's own range fell short
+        }
+      }else{
+        g._abilityReadyAt=0;   // reset so it can fire soon after a player approaches
       }
     }
     // Deterministic destination: leaders roam their seeded path, the pack crowds
@@ -5054,6 +5214,8 @@ function updateGhosts(){
       g.wx+=(tp.x-g.wx)*ease;g.wy+=(tp.y-g.wy)*ease;
     }
     clampGhost(g);
+    keepOffStructures(g);   // bots can't park on a spot either
+
     // face the direction of travel
     const dxh=g.wx-px,dyh=g.wy-py;
     if(dxh*dxh+dyh*dyh>0.2){let ha=Math.atan2(dyh,dxh)-g.heading;while(ha>Math.PI)ha-=6.28;while(ha<-Math.PI)ha+=6.28;g.heading+=ha*Math.min(1,0.3*frameScale);}
@@ -6461,12 +6623,10 @@ function resizeCanvas(){
 window.addEventListener('resize',()=>{clearTimeout(window._rt);window._rt=setTimeout(resizeCanvas,80);});
 
 // ── Angler appearance helpers ──────────────────────────────────
-function anglerSkinColor(){
-  const t=SKIN_TONES.find(t=>t.id===S.skinTone);return t?t.color:'#f0c89a';
-}
+function anglerSkinColor(){return skinColorOf(S.skinTone);}
 function anglerHairColor(){
-  const c={light:'#D4A853',medlight:'#8B5E3C',medium:'#4A2812',meddark:'#2A1208',dark:'#0D0604'};
-  return c[S.skinTone]||'#8B5E3C';
+  const c={tone1:'#7a4a1e',tone2:'#5a3a18',tone3:'#3a2410',tone4:'#2a1808',tone5:'#170d04',tone6:'#0d0604'};
+  return c[skinId(S.skinTone)]||'#5a3a18';
 }
 function anglerShirtColor(){
   const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
@@ -6808,6 +6968,19 @@ function drawPlacedItems(){
 // (cx,cy,r) = head; (tx,ty,tw,th,rad) = the boat's torso box (same coords the
 // set-piece overlays in drawAnglerSetBody were tuned against).
 function drawAnglerFigure(cx,cy,r,tx,ty,tw,th,rad){
+  // A worn set with hand-drawn art replaces the vector angler with its portrait;
+  // otherwise the gender + skin-tone base avatar PNG is the seated angler.
+  const aset=equippedSetId();
+  const spr=(aset&&setHasArt(aset))?SET_SPRITE[aset]:baseAvatarSprite();
+  if(spr){
+    const sw=spr.naturalWidth||spr.width, sh=spr.naturalHeight||spr.height;
+    if(sw&&sh){
+      const top=cy-r*2.2, bottom=ty+th*1.55;
+      const h=bottom-top, w=h*(sw/sh);
+      ctx.drawImage(spr,cx-w/2,top,w,h);
+      return;
+    }
+  }
   const sc=anglerShirtColor(),sk=anglerSkinColor();
   rad=rad||3;
   // arms: relaxed capsules down each side, slightly shaded vs the chest
@@ -7225,9 +7398,12 @@ function render(ts){
     boat.wx+=boat.vx*frameScale;boat.wy+=boat.vy*frameScale;
     boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
+    keepOffStructures(boat);   // can't park on a spot in multiplayer
     const sp=Math.hypot(boat.vx,boat.vy);
     if(sp>0.25)boat.heading=Math.atan2(boat.vy,boat.vx)+Math.PI/2;
     clampCamera();
+    // trolling: drag a line behind the boat while it's moving
+    if(S.method==='troll'&&!surfActive)updateTrolling(sp);
     // gate proximity
     for(const gt of gatesFor()){if(dist(boat.wx,boat.wy,gt.wx,gt.wy)<85){tryGate(gt);break;}}
   }
@@ -7340,6 +7516,15 @@ function render(ts){
     const bob=phase==='biting'?Math.sin(t*16)*4:Math.sin(t*2)*1.3;
     ctx.fillStyle=phase==='biting'?'#e0492c':'#e85d3c';ctx.beginPath();ctx.arc(bobber.x,bobber.y+bob,6,0,6.28);ctx.fill();
     ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(bobber.x,bobber.y+bob,2.6,0,6.28);ctx.fill();
+    if(phase==='biting'){ctx.strokeStyle='rgba(224,73,44,.5)';ctx.lineWidth=1.6;const rr=8+Math.abs(Math.sin(t*8))*9;ctx.beginPath();ctx.arc(bobber.x,bobber.y,rr,0,6.28);ctx.stroke();}
+  }
+  // Trolling line: a line trailing from the boat to the dragged lure while driving
+  if(_trollDrag&&!boat.anchored&&bobber.active){
+    ctx.strokeStyle=curBraid().color;ctx.lineWidth=1.6;ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(ORIGIN.x,ORIGIN.y);ctx.lineTo(bobber.x,bobber.y);ctx.stroke();
+    const bob=phase==='biting'?Math.sin(t*16)*4:0;
+    ctx.fillStyle=phase==='biting'?'#e0492c':'#cfd8e0';
+    ctx.beginPath();ctx.arc(bobber.x,bobber.y+bob,4.5,0,6.28);ctx.fill();
     if(phase==='biting'){ctx.strokeStyle='rgba(224,73,44,.5)';ctx.lineWidth=1.6;const rr=8+Math.abs(Math.sin(t*8))*9;ctx.beginPath();ctx.arc(bobber.x,bobber.y,rr,0,6.28);ctx.stroke();}
   }
 
@@ -7511,11 +7696,17 @@ document.getElementById('anchor-btn').addEventListener('click',()=>{
     boat.anchored=true;joy.dx=0;joy.dy=0;boat.vx=0;boat.vy=0;clampCamera();
     const near=nearestStruct(ORIGIN.x,ORIGIN.y);
     setStatus(near?'Anchored by the '+structLabel(near.kind)+'. Tap the water to cast.':'Anchored over open water. Tap the water to cast.');
-    // Tutorial: only count anchoring on the RIGHT structure for the target.
+    // Tutorial: count anchoring WITHIN A CAST of the right structure - the player
+    // should set up a short cast away from the spot, not park on top of it.
     if(tut&&tut.active&&tut.steps[tut.i]&&tut.steps[tut.i].await==='anchor'){
-      if(near&&tutStructMatches(near)){S.radarActive=false;tutNotify('anchor');}
-      else if(near){toast('Close! '+tut.target.name+' want '+_tutStructText(tut.target)+'. Follow the radar to one.','#b58b53');}
-      else{toast(tut.target.name+' hold tight to structure. Follow the radar and anchor right on a spot.','#b58b53');}
+      let bestD=1e9;
+      for(const s of activeStructures()){
+        if(!tutStructMatches(s))continue;
+        const d=dist(ORIGIN.x,ORIGIN.y,s.x-camera.x,s.y-camera.y);
+        if(d<bestD)bestD=d;
+      }
+      if(bestD<=castRange()*1.05){S.radarActive=false;tutNotify('anchor');}
+      else{toast(tut.target.name+' hold tight to '+_tutStructText(tut.target)+'. Follow the radar and anchor within a cast of the spot.','#b58b53');}
     }
   }
   updateDriveUI();
@@ -7549,6 +7740,8 @@ function cast(x,y){
   if(_snaggedUntil>Date.now()){setStatus('Snagged on a rock - '+Math.ceil((_snaggedUntil-Date.now())/1000)+'s left. Hang tight.');return;}
   // V0.9: casting onto someone's snag rock hangs you up and removes the rock.
   if(placedItems.length&&checkSnagOnCast(x+camera.x,y+camera.y)){return;}
+  // Trolling isn't a stationary cast - you drag a line while driving.
+  if(m.id==='troll'){setStatus('Trolling works on the move - pull anchor and drive to drag your line.');return;}
   const tid=currentTackleId();
   if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
   if(m.bait){if(!S.baitSel||!(S.baitInv[S.baitSel]>0)){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
@@ -7558,6 +7751,12 @@ function cast(x,y){
     if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
     if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure - it won’t draw fish here. Tie on a '+ZONE_LBL[S.zone]+' lure.');return;}
     if(!(S.lureInv[S.lureSel]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
+  }
+  // Tutorial catch step: the lesson is to cast ONTO the spot, so a cast that lands
+  // in open water is nudged back without spending tackle.
+  if(tut&&tut.active&&tut.steps[tut.i]&&tut.steps[tut.i].await==='catch'&&tut.forceTargetActive){
+    const ts=nearestStruct(x,y);
+    if(!(ts&&tutStructMatches(ts))){toast('Cast right ONTO the spot - tap the structure, not open water.','#b58b53');setStatus('Tap the water right on the structure to cast onto it.');return;}
   }
   // consume tackle durability (unless tacklesaver perk; the tooth hook never wears)
   if(tid!=='tooth_hook'&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
@@ -7585,6 +7784,66 @@ function cast(x,y){
   biteTimeout=setTimeout(()=>triggerBite(),wait);
 }
 
+// ── TROLLING ──────────────────────────────────────────────────────────────
+// Unlike anchored fishing, trolling works on the move: while the boat is driving
+// fast enough, a line drags behind it and can draw a strike. Stop the boat and
+// the line goes slack. Offshore trolling is lure-led (the troll lure carries its
+// rigged bait), pulled on the trolling tackle - so it uses lure, bait and tackle.
+let _trollDrag=false;
+const TROLL_MOVE_MIN=0.6;
+let _trollHintAt=0;
+function _trollRigOK(){
+  const lure=S.lureSel?lureById(S.lureSel):null;
+  if(!lure||!lure.methods.includes('troll'))return false;
+  if(typeof lure.zone==='number'&&lure.zone!==S.zone)return false;
+  if(!(S.lureInv[lure.id]>0))return false;
+  if(!currentTackleId())return false;
+  return true;
+}
+function _trollHint(){
+  if(Date.now()-_trollHintAt<2600)return;_trollHintAt=Date.now();
+  const lure=S.lureSel?lureById(S.lureSel):null;
+  if(!lure||!lure.methods.includes('troll'))setStatus('Tie on a trolling lure, then drive to drag a line.');
+  else if(typeof lure.zone==='number'&&lure.zone!==S.zone)setStatus('That lure is a '+ZONE_LBL[lure.zone]+' troll lure - tie on a '+ZONE_LBL[S.zone]+' one.');
+  else if(!(S.lureInv[lure.id]>0))setStatus('Out of '+lure.name+' - restock lures to keep trolling.');
+  else setStatus('Drive to troll - the line only works while you move.');
+}
+function startTrollDrag(){
+  const sp=Math.hypot(boat.vx,boat.vy)||1;
+  const vdx=boat.vx/sp, vdy=boat.vy/sp;
+  const bx=ORIGIN.x-vdx*48, by=ORIGIN.y-vdy*48;
+  // a trolling pass wears the trolling tackle, like a cast
+  const tid=currentTackleId();
+  if(tid&&tid!=='tooth_hook'&&S.tackleInv[tid]&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
+    const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
+  }
+  bobber={x:bx,y:by,active:true,struct:nearestStruct(bx,by)};
+  _trollDrag=true;phase='waiting';S.totalCasts++;
+  maybeCatchDronePart();
+  if(bobber.struct){if(!S.fishedStructures)S.fishedStructures=[];if(!S.fishedStructures.includes(bobber.struct.kind))S.fishedStructures.push(bobber.struct.kind);}
+  updateRigBar();
+  setStatus('Trolling - line out behind the boat. Keep moving...');
+  const pn=poolNow();
+  const wait=biteWait(pn.strength,bobber.struct,pn.rarityDelay);
+  biteTimeout=setTimeout(function(){triggerBite();},wait);
+}
+function cancelTrollDrag(slack){
+  if(!_trollDrag)return;
+  _trollDrag=false;
+  if(phase==='waiting'){clearTimeout(biteTimeout);phase='idle';bobber.active=false;}
+  if(slack)setStatus('Your trolled line went slack - keep the boat moving to troll.');
+}
+// Called every frame while driving in troll mode. sp = current boat speed.
+function updateTrolling(sp){
+  if(_trollDrag&&phase==='idle')_trollDrag=false;   // a finished fight clears the spent drag
+  if(sp>=TROLL_MOVE_MIN){
+    if(phase==='idle'){ if(_trollRigOK())startTrollDrag(); else _trollHint(); }
+    else if(_trollDrag&&phase==='waiting'&&bobber.active){
+      const vdx=boat.vx/sp, vdy=boat.vy/sp;     // trail the strike point behind the moving boat
+      bobber.x=ORIGIN.x-vdx*48; bobber.y=ORIGIN.y-vdy*48;
+    }
+  }else if(_trollDrag&&phase==='waiting'){ cancelTrollDrag(true); }
+}
 function structLabel(k){return {dock:'dock',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'pier',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot',runoff:'storm runoff',frenzy:'bird frenzy',colorchange:'color change'}[k]||k;}
 
 // How much longer each rarity makes you wait for a bite. The rarer the fish your
@@ -7601,6 +7860,32 @@ function activeLure(){
   if(typeof lure.zone==='number'&&lure.zone!==S.zone)return null;
   if(!(S.lureInv[lure.id]>0))return null;
   return lure;
+}
+// ── BAIT vs LURE PREFERENCE ───────────────────────────────────────────────
+// Fish lean toward natural bait or toward lures, and that mood drifts with the
+// light, the weather, the wind, the season and the day. A fish's base lean comes
+// from how it's normally caught (artificial-method species like jacks & mackerel
+// favour lures; structure & bottom feeders favour bait). Presenting what the fish
+// currently wants nudges its bite weight up; the wrong presentation nudges it down
+// (never to zero) - so it always pays to switch baits, lures and methods to see
+// what's biting today. Returns 0 (wants bait) .. 1 (wants lures).
+function _hashId(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;}
+function presentationPref(f){
+  let art=0,nat=0;
+  f.methods.forEach(function(mm){if(mm==='jig'||mm==='troll')art++;else nat++;});
+  let v=(art+nat)?art/(art+nat):0.5;       // base species lean
+  const ph=phaseOf(hourNow());
+  v+=(ph==='day')?-0.10:0.12;              // bright day -> bait; low light -> lures
+  const wx=currentWeather().id;
+  if(wx==='clear')v-=0.10; else if(wx==='overcast'||wx==='rain'||wx==='storm')v+=0.12;
+  const wnd=currentWind().id;
+  if(wnd==='calm')v-=0.08; else if(wnd==='breezy'||wnd==='windy'||wnd==='gale')v+=0.09;
+  const season=seasonNow();
+  if(season==='summer')v+=0.10; else if(season==='winter')v-=0.12;
+  const day=Math.floor((S.clock||0)/1440);  // a lean that holds for a whole in-game day
+  v+=(_envRand(day*131+_hashId(f.id))-0.5)*0.36;
+  v+=(Math.random()-0.5)*0.08;               // small live randomness
+  return Math.max(0.05,Math.min(0.95,v));
 }
 function poolNow(){
   const m=curMethod(),leader=S.leader,st=bobber.struct;
@@ -7669,6 +7954,9 @@ function poolNow(){
     const tier=st?st.tier:(dist(bobber.x,bobber.y,ORIGIN.x,ORIGIN.y)>castRange()*0.62?2:1);
     const ri=RARITY_ORDER.indexOf(f.rarity);
     if(ri>=2){if(tier>=3)w*=1.9;else if(tier>=2)w*=1.4; if(tk)w*=tk.rare; if(finder)w*=1.3;}
+    // bait-vs-lure preference: matching the fish's current mood helps, the wrong
+    // presentation hurts (so switching baits/lures/methods finds what's biting)
+    {const favor=presentationPref(f);const match=lure?favor:(1-favor);w*=0.5+match;}
     if(w>0.0001)out.push({f,w});
   }
   const strength=out.reduce((a,b)=>a+b.w,0);
@@ -8236,7 +8524,7 @@ function land(f,w,perfect,bullseye){
   // consume bait (natural methods) or a lure (artificial methods); surf bait is handled separately
   if(!f.surf){
     if(curMethod().bait){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
-    else if(S.lureSel){S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-1);}
+    else if(S.lureSel){wearLure(S.lureSel);}
   }
   S.caught[f.id]=(S.caught[f.id]||0)+1;
   const isNew=S.caught[f.id]===1;
@@ -8339,7 +8627,7 @@ function updateRigBar(){
     if(baitLabel)baitLabel.textContent='Lure';
     const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
     const lq=lure?(S.lureInv[lure.id]||0):0;
-    if(lure&&lq>0){bEl.textContent=lure.name;bq.textContent='x'+lq;bslot.classList.remove('empty');}
+    if(lure&&lq>0){bEl.textContent=lure.name;bq.textContent='dur '+lureCurDur(lure.id)+' · x'+lq;bslot.classList.remove('empty');}
     else if(lure){bEl.textContent=lure.name;bq.textContent='out - restock';bslot.classList.add('empty');}
     else{bEl.textContent='no lure';bq.textContent='buy a lure';bslot.classList.add('empty');}
   } else {
@@ -8476,7 +8764,7 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   const opt=e.target.closest('.opt');if(!opt||!opt.dataset.pick)return;
   const[type,val]=opt.dataset.pick.split(':');
   if(type==='zone'){const zi=+val;if(zi>maxZone())return;S.zone=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
-  else if(type==='method'){S.method=val;ensureRig();}
+  else if(type==='method'){if(typeof cancelTrollDrag==='function')cancelTrollDrag(false);S.method=val;ensureRig();}
   else if(type==='tackle'){S.tackleSel[curMethod().cat]=val;}
   else if(type==='bait'){S.baitSel=val;}
   else if(type==='lure'){S.lureSel=val;}
@@ -8493,7 +8781,31 @@ document.getElementById('zone-pill').addEventListener('click',()=>{
 // menu
 function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();if(tut&&tut.active)tutPlaceBar();}
 function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');stopQuestCountdown();if(tut&&tut.active)tutPlaceBar();}
-document.getElementById('menu-open').addEventListener('click',openMenu);
+// The menu button opens a vertical dropdown; picking an entry opens that page.
+function closeMenuDropdown(){const dd=document.getElementById('menu-dropdown');if(dd)dd.classList.remove('show');}
+function toggleMenuDropdown(){
+  const dd=document.getElementById('menu-dropdown');if(!dd)return;
+  if(dd.classList.contains('show')){dd.classList.remove('show');return;}
+  // Shop is hidden in non-coop tournaments, matching the old tab rule.
+  const lock=activeTournament&&!(activeTournament.def&&activeTournament.def.coop);
+  const shop=dd.querySelector('.menu-dd-item[data-go="shop"]');if(shop)shop.style.display=lock?'none':'';
+  dd.classList.add('show');AUDIO.sfx('open');
+}
+function openMenuTab(mtab){
+  closeMenuDropdown();
+  if(mtab==='shop'&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');return;}
+  openMenu();
+  const btn=document.querySelector("[data-mtab='"+mtab+"']");
+  if(btn)btn.click();   // reuse the tab's activation + side effects
+}
+document.getElementById('menu-open').addEventListener('click',function(e){e.stopPropagation();toggleMenuDropdown();});
+document.querySelectorAll('#menu-dropdown .menu-dd-item').forEach(function(it){
+  it.addEventListener('click',function(e){e.stopPropagation();openMenuTab(it.dataset.go);});
+});
+document.addEventListener('click',function(e){
+  const dd=document.getElementById('menu-dropdown');
+  if(dd&&dd.classList.contains('show')&&!dd.contains(e.target)&&e.target.id!=='menu-open')closeMenuDropdown();
+});
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
@@ -8596,7 +8908,9 @@ let lureSubTab=0; // lures shop region tab (0 inshore / 1 nearshore / 2 offshore
 function renderShop(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
-  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['cosmetics',svgIcon('fits',13)+' Fits'],['sets',svgIcon('shades-mask',13)+' Sets'],['pets','Pets']];
+  // Fits (hat/shirt/shades/crown customization) is hidden for now — the look is
+  // driven by gender + skin tone and full-body Sets instead.
+  const tabs=[['boats','Boats'],['rods','Rods'],['reels','Reels'],['braid','Braid'],['leaders','Leaders'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['items','Items'],['sets',svgIcon('shades-mask',13)+' Sets'],['pets','Pets']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   let html='';
   if(shopTab==='boats')html=BOATS.map(function(b,i){
@@ -8627,7 +8941,7 @@ function renderShop(){
       if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
       else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+l.cost+'</span>';
       const tieBtn=(q>0&&!equipped)?'<span class="shop-action equip" data-tie="'+l.id+'" style="margin-right:6px;">Tie On</span>':(equipped?'<span class="shop-action equipped-tag" style="margin-right:6px;">Tied On</span>':'');
-      const sub=l.desc+' · '+LURE_PACK+' per pack'+(q>0?' · have x'+q:'');
+      const sub=l.desc+' · durability '+lureDurabilityOf(l)+' · '+LURE_PACK+' per pack'+(q>0?' · have x'+q:'');
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+sub+'</div></div>'+tieBtn+action+'</div>';
     }).join('');
   }
@@ -8691,7 +9005,9 @@ function renderShop(){
       if(equipped)action='<span class="shop-action equipped-tag">Wearing</span>';
       else if(owned)action='<span class="shop-action equip">Equip</span>';
       else action='<span class="shop-action buy '+(canAfford?'':'cant')+'"><span class="gem-s" style="width:11px;height:11px;margin-right:3px;"></span>'+s.cost+'</span>';
-      const swatch='<span class="shop-swatch" style="background:'+s.color+';"></span>';
+      const swatch=setHasArt(s.id)
+        ? '<span class="shop-swatch set-portrait" style="border-color:'+s.color+';display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="'+setImgSrc(s.id)+'" alt="'+s.name+'" style="width:100%;height:100%;object-fit:contain;'+(owned?'':'opacity:.55;')+'" onerror="this.style.display=\'none\'"></span>'
+        : '<span class="shop-swatch" style="background:'+s.color+';"></span>';
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="set" data-id="'+s.id+'">'+swatch
         +'<div class="shop-info"><div class="shop-name">'+s.name+'</div>'
         +'<div class="shop-desc"><b style="color:var(--wood-dark)">Bonus:</b> '+s.bonus+'<br><b style="color:var(--accent)">'+s.ability+':</b> '+s.abilityDesc+'</div></div>'
@@ -8961,6 +9277,22 @@ function renderAchievementSections(map,self){
   }).join('');
 }
 
+// Friendly structure & tackle labels for the fish detail, derived straight from
+// each fish's data so the "how to catch it" info is always accurate to the game.
+const FISH_STRUCT_LABEL={grass:'grass flats',open:'open water',pass:'passes',dock:'docks',mangrove:'mangroves',bridge:'piers & bridges',oyster:'oyster bars',sand:'sandy bottom',reef:'reefs',wreck:'wrecks',ledge:'ledges',rip:'rips & color changes',weedline:'weed lines',deep:'deep dropoffs',baitball:'bait balls',channel:'channels',power_plant:'power-plant outflow',bluhole:'blue holes',oil_rig:'oil rigs',surf:'the surf',runoff:'storm runoff',frenzy:'bird frenzies',colorchange:'color changes'};
+function _fishStructText(f){
+  const list=(f.structure||[]).map(function(s){return FISH_STRUCT_LABEL[s]||s;});
+  return [...new Set(list)].join(', ')||'open water';
+}
+function _fishTackleText(f){
+  const cats=[...new Set((f.methods||[]).map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
+  const names=cats.map(function(cat){
+    if(cat==='jig'||cat==='trolllure')return 'a lure'; // artificial: the lure is the business end
+    const t=TACKLE.find(function(tt){return tt.cat===cat&&!tt.reward&&!tt.surfGear;})||TACKLE.find(function(tt){return tt.cat===cat;});
+    return t?t.name:cat;
+  });
+  return [...new Set(names)].join(', ');
+}
 // fish detail modal
 function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
@@ -8977,6 +9309,8 @@ function openFish(id){
     '<div class="mhead">'+(caught?buildFishArt(f.id,76):'<span style="filter:brightness(0) opacity(.42);display:inline-block;line-height:0;">'+buildFishArt(f.id,76)+'</span>')+'<div><div class="mname">'+f.name+'</div><div class="mrarity'+(f.rarity==='ultra'?' ultra-rarity':'')+'"'+(f.rarity==='ultra'?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+'</div></div></div>'+
     '<div class="mrow"><span class="ml">Where</span><span class="mv">'+ZONES[f.zone].name+'</span></div>'+
     '<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methodNames+'</span></div>'+
+    '<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+_fishTackleText(f)+'</span></div>'+
+    '<div class="mrow"><span class="ml">Structure</span><span class="mv">'+_fishStructText(f)+'</span></div>'+
     '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitNames+'</span></div>'+
     '<div class="mrow"><span class="ml">Leader</span><span class="mv">'+lead+'</span></div>'+
     '<div class="mrow"><span class="ml">Season</span><span class="mv">'+seasons+'</span></div>'+
