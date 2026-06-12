@@ -5740,6 +5740,7 @@ function setupAbilityButton(){
   const setId=equippedSetId();const s=setId?setById(setId):null;
   if(activeTournament&&s){
     btn.querySelector('.ab-name').textContent=s.ability;
+    btn.title='Tap, or press Space / Q to use while driving';
     activeTournament.abilityReadyAt=0;
     updateAbilityButton();
     btn.classList.add('show');
@@ -7687,6 +7688,15 @@ function updateDriveUI(){
   window.addEventListener('pointerup',()=>{if(joy.active)end();});
 })();
 document.getElementById('ability-btn').addEventListener('click',useAbility);
+// Keyboard shortcut so a desktop player can fire their ability WHILE driving - a
+// single mouse can't hold the joystick and click the button at the same time, so
+// Space / Q trigger the ability at any speed. (On touch, two thumbs already work.)
+window.addEventListener('keydown',function(e){
+  if(!activeTournament)return;
+  const t=e.target;
+  if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
+  if(e.code==='Space'||e.key===' '||e.key==='q'||e.key==='Q'){e.preventDefault();useAbility();}
+});
 document.getElementById('anchor-btn').addEventListener('click',()=>{
   if(boat.anchored){
     if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
