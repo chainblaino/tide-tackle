@@ -7687,7 +7687,10 @@ function updateDriveUI(){
   j.addEventListener('pointerup',end);j.addEventListener('pointercancel',end);
   window.addEventListener('pointerup',()=>{if(joy.active)end();});
 })();
-document.getElementById('ability-btn').addEventListener('click',useAbility);
+// Fire on pointerdown rather than click: a second finger taps the button reliably
+// even while the joystick has captured the driving pointer (browsers suppress the
+// synthetic click during a concurrent touch), so abilities work mid-drive on touch.
+document.getElementById('ability-btn').addEventListener('pointerdown',function(e){e.preventDefault();useAbility();});
 // Keyboard shortcut so a desktop player can fire their ability WHILE driving - a
 // single mouse can't hold the joystick and click the button at the same time, so
 // Space / Q trigger the ability at any speed. (On touch, two thumbs already work.)
