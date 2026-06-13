@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Saltwater Fishing Simulator — V 0.9.4</title>
+<title>Tide & Tackle: Saltwater Fishing Simulator — V 0.9.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -37,6 +37,30 @@
   .pill.click:hover{background:rgba(20,33,46,.92);}
   .pill .sub{font-weight:700;font-size:11px;opacity:.8;}
   .menu-btn{width:38px;height:38px;justify-content:center;font-size:18px;padding:0;}
+  .clancy-pill{padding:3px;width:38px;height:38px;justify-content:center;}
+  .clancy-face{width:30px;height:30px;border-radius:50%;overflow:hidden;display:inline-flex;line-height:0;border:1.5px solid var(--accent);}
+  .clancy-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .clancy-head-face{width:42px;height:42px;border-radius:50%;overflow:hidden;line-height:0;border:2px solid var(--accent);flex:0 0 auto;}
+  .clancy-head-name{font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
+  .clancy-tip{font-size:13px;color:var(--ink);line-height:1.55;margin-bottom:12px;}
+  .clancy-fishlist{display:flex;flex-direction:column;gap:7px;max-height:46vh;overflow-y:auto;}
+  .clancy-fishrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1.5px solid #e3d3b0;border-radius:11px;background:var(--parchment);cursor:pointer;text-align:left;width:100%;font-family:'Fredoka';}
+  .clancy-fishrow:hover{border-color:var(--accent);}
+  .clancy-fishrow .cfr-art{flex:0 0 auto;width:40px;height:27px;display:flex;align-items:center;overflow:hidden;}
+  .clancy-fishrow .cfr-name{flex:1;font-size:13.5px;font-weight:700;color:var(--wood-dark);}
+  .clancy-fishrow .cfr-rar{font-size:10.5px;font-weight:800;text-transform:uppercase;}
+  .proj-card{border:2px solid #e3d3b0;border-radius:13px;background:var(--cream);padding:13px;margin-bottom:12px;}
+  .proj-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+  .proj-name{font-size:14.5px;font-weight:900;color:var(--wood-dark);}
+  .proj-status{font-size:11.5px;font-weight:800;color:var(--text-soft);}
+  .proj-status.ready{color:#1f9d57;}
+  .proj-blurb{font-size:11.5px;color:var(--text-soft);line-height:1.5;margin-bottom:9px;}
+  .proj-parts{display:flex;flex-direction:column;gap:6px;}
+  .proj-part{display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:9px;background:var(--parchment);opacity:.6;}
+  .proj-part.got{opacity:1;background:#e7f5ea;}
+  .proj-part-zone{font-size:10px;font-weight:800;text-transform:uppercase;color:var(--accent);width:74px;}
+  .proj-part-name{flex:1;font-size:12.5px;font-weight:700;color:var(--wood-dark);}
+  .proj-part-tick{font-size:13px;font-weight:900;color:#1f9d57;}
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
 
@@ -622,6 +646,7 @@
         <button class="menu-dd-item" data-go="logbook"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2z"/><path d="M5 16h14"/><path d="M9 8h6"/></svg></span>Logbook</button>
         <button class="menu-dd-item" data-go="quests"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg></span>Quests</button>
         <button class="menu-dd-item" data-go="stats"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span>Stats</button>
+        <button class="menu-dd-item" data-go="projects"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v6l9 4 9-4V7"/><path d="M12 11v6"/></svg></span>Projects</button>
         <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Tournament</button>
         <button class="menu-dd-item" data-go="friends"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M18 14a6 6 0 0 1 3 5"/></svg></span>Friends</button>
         <button class="menu-dd-item" data-go="settings"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Settings</button>
@@ -634,7 +659,7 @@
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies - won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
-      <div class="pill click" id="cosmetic-pill" onclick="if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');}else{openMenu();setTimeout(()=>{document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));document.querySelector(&quot;[data-mtab='shop']&quot;).classList.add('active');document.getElementById('mp-shop').classList.add('active');shopTab='sets';renderShop();},60);}" title="Sets"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:middle;"><circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/></svg></div>
+      <div class="pill click clancy-pill" id="clancy-pill" onclick="openClancyInfo()" title="Ask Captain Clancy"><span class="clancy-face" id="clancy-face"></span></div>
     </div>
     </div>
     <canvas id="ocean" width="760" height="560"></canvas>
@@ -674,7 +699,7 @@
     <button class="menu-tab active" data-mtab="shop">Shop</button>
     <button class="menu-tab" data-mtab="logbook">Logbook</button>
     <button class="menu-tab" data-mtab="quests">Quests</button>
-    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="tournament">Tourn.</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
+    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="projects">Projects</button><button class="menu-tab" data-mtab="tournament">Tourn.</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
@@ -699,6 +724,7 @@
     <div class="mpanel" id="mp-quests"><div id="quests-body"></div></div>
     <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Tournaments</div><div id="tournament-list"></div></div>
     <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div id="fwf-host"></div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
+    <div class="mpanel" id="mp-projects"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Projects</div><div style="font-size:11.5px;color:var(--text-soft);margin-bottom:12px;line-height:1.55;">Each part has a 1% chance to turn up on a cast in its region. Collect them all to use the project. Projects don't work in tournaments or challenges.</div><div id="projects-body"></div></div>
     <div class="mpanel" id="mp-settings"><div id="settings-body"></div></div>
   </div>
 </div>
@@ -714,7 +740,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.4</div>
+    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.5</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1139,18 +1165,19 @@ function buildTutSteps(){
   return [
     {say:"Ahoy! <b>Cap'n Clancy</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
     {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top-left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook'},
-    {say:"There she is. See what she wants? <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook tells ye exactly how to catch any fish.",btn:"Got it"},
+    {say:"There she is. She wants <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook keeps yer records - where each fish lives, its seasons, and yer biggest.",btn:"Got it"},
     {say:"Can't catch 'em without bait. Here's a few coins on me - open the menu <b>☰</b>, tap <b>Shop</b>, and buy a pack of <b>"+baitName+"</b>.",hint:"☰ → Shop → buy "+baitName,await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
     {say:"Stocked up, well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
     {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it - you want to cast TO the structure, not sit on it.",hint:"Anchor a short cast from the spot",await:'anchor',onEnter:function(){S.radarActive=true;}},
     {say:"Right on the money. Now <b>cast onto the spot</b> - tap the water right on the structure, inside your range ring. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Cast onto the structure, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
     {say:"HAAA! A beauty of a "+tName+"! See how it all comes together - right bait, right spot. That's the whole game.",btn:"Heck yeah"},
     {say:"Your rig matters as much as yer bait. Your <b>ROD</b> and <b>REEL</b> decide how big a fish ye can fight, and your <b>BRAID</b> is the line class - heavier braid lands heavier fish. Upgrade all three in the <b>Shop</b> as ye level up.",btn:"Aye, captain"},
-    {say:"No two fish want the same thing - and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b> - cork, jig, live bait, trolling - until ye find what's biting. The logbook tells ye what each fish can take.",btn:"Got it"},
+    {say:"No two fish want the same thing - and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b> - cork, jig, live bait, trolling - until ye find what's biting.",btn:"Got it"},
     {say:"And there's two kinds o' coin out here. <b>GOLD</b> buys yer everyday gear - boats, rods, bait and lures. <b>RUBIES</b> are the rare stuff - ye win them in tournaments and challenges, and they buy gear sets, abilities and special items.",btn:"Makes sense"},
     {say:"Now listen close. Every so often a <b>LEGEND</b> hits - they don't use the hookset. It's a tug-o'-war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run - no reward, just the feel of it.",btn:"Bring it on"},
     {say:"Here she comes - a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL - keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
-    {say:"YES!! Ye tamed a legend! Ye're ready for the salt now, angler. Tight lines and good luck out there - I'll see ye on the leaderboard!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
+    {say:"YES!! Ye tamed a legend! Ye're ready for the salt now, angler.",btn:"One last thing"},
+    {say:"And this is the big one: see my face up in the <b>top-right</b>? Cast on any spot, then <b>tap my face</b> - I'll name every fish that bites there, and ye can tap a fish to learn its baits, lures and methods. If ye ever need more help, come find me out in the <b>offshore</b> on my sailboat. Tight lines, angler!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
   ];
 }
 function showTutorial(){
@@ -1426,6 +1453,22 @@ function startQuestCountdown(){
   },1000);
 }
 function stopQuestCountdown(){if(_questCountInt){clearInterval(_questCountInt);_questCountInt=null;}}
+function renderProjectsPanel(){
+  const host=document.getElementById('projects-body');if(!host)return;
+  host.innerHTML=PROJECTS.map(function(proj){
+    const have=projectPartCount(proj),need=proj.parts.length,built=projectBuilt(proj.id);
+    const parts=proj.parts.map(function(pt){
+      const got=!!(S.projectParts&&S.projectParts[pt.id]);
+      return '<div class="proj-part '+(got?'got':'')+'"><span class="proj-part-zone">'+ZONE_LBL[pt.zone]+'</span><span class="proj-part-name">'+pt.name+'</span><span class="proj-part-tick">'+(got?'✓':'—')+'</span></div>';
+    }).join('');
+    let status;
+    if(built)status='<span class="proj-status ready">'+(proj.id==='submarine'?'Built · surfaces offshore daily':'Built &amp; ready')+'</span>';
+    else status='<span class="proj-status">'+have+' / '+need+'</span>';
+    return '<div class="proj-card"><div class="proj-head"><span class="proj-name">'+proj.name+'</span>'+status+'</div>'
+      +'<div class="proj-blurb">'+proj.blurb+'</div>'
+      +'<div class="proj-parts">'+parts+'</div></div>';
+  }).join('');
+}
 function renderQuestsPanel(){
   const body=document.getElementById('quests-body');if(!body)return;
   const q=todaysQuests();
@@ -1996,7 +2039,7 @@ function _maybeShowInvite(){
     line='<b>'+(inv.from||'A friend')+'</b> challenged you<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">Biggest '+(inv.fishName||'fish')+' wins</div><div style="font-size:13px;color:#d61f3a;font-weight:800;margin-top:4px;"><span class="gem-s"></span> '+(inv.stake||0)+' ruby ante &middot; 6 min</div>';
   }else if(inv.kind==='coop'){
     head='World Invite';
-    line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">fish their world</div>';
+    line='<b>'+(inv.from||'A friend')+'</b>'+(inv.fromLevel?' <span style="color:var(--text-soft);">(Lv '+inv.fromLevel+')</span>':'')+' invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">fish their world</div>';
   }else{
     head='Tournament Invite';
     line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">'+(inv.name||'a tournament')+'</div>';
@@ -2057,6 +2100,7 @@ function startTournamentMode(def){
   // Shop is locked during a tournament/challenge - but a co-op friends world is
   // casual, so the shop stays open for everyone.
   closeMenu();
+  if(typeof updateCosmeticHUD==='function')updateCosmeticHUD(); // hide Clancy button in matches
   if(!def.coop){
     document.body.classList.add('tourn-active');
     const shopTabBtn=document.querySelector("[data-mtab='shop']");
@@ -2282,8 +2326,8 @@ function createSession(mode,stake){
   activeSession={id:id,mode:mode,host:fbUser.uid,hostName:fbUsername,stake:stake,zone:zone,seed:seed,
     fishId:fish?fish.id:null,fishName:fish?fish.name:null,isHost:true,started:false,
     players:{}};
-  activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
-  const docPlayers={};docPlayers[fbUser.uid]={username:fbUsername,best:0,bestName:''};
+  activeSession.players[fbUser.uid]={username:fbUsername,level:(S.level||1),best:0,bestName:''};
+  const docPlayers={};docPlayers[fbUser.uid]={username:fbUsername,level:(S.level||1),best:0,bestName:''};
   fbDb.collection('challenges').doc(id).set({
     host:fbUser.uid,hostName:fbUsername,mode:mode,stake:stake,zone:zone,seed:seed,
     fishId:activeSession.fishId,fishName:activeSession.fishName,
@@ -2320,7 +2364,8 @@ function renderSessionPlayers(){
   ul.innerHTML=ids.map(function(uid){
     const p=activeSession.players[uid];
     const tag=uid===activeSession.host?'<span class="bot-tag"> host</span>':'';
-    return '<li class="lobby-player">'+(p.username||'Angler')+tag+'</li>';
+    const lvl='<span style="color:var(--text-soft);font-weight:700;"> · Lv '+(p.level||1)+'</span>';
+    return '<li class="lobby-player">'+(p.username||'Angler')+lvl+tag+'</li>';
   }).join('')+'<li style="list-style:none;">'+waiting+'</li>';
 }
 function _listenSession(){
@@ -2360,7 +2405,7 @@ function openSessionInvite(){
 function sendSessionInvite(uid,username){
   if(!activeSession||!fbUser||!fbDb)return;
   if(Object.keys(activeSession.players||{}).length>=SESSION_MAX){toast('Session is full.','#b58b53');return;}
-  const inv={kind:activeSession.mode,sessionId:activeSession.id,from:fbUsername,fromUid:fbUser.uid,
+  const inv={kind:activeSession.mode,sessionId:activeSession.id,from:fbUsername,fromUid:fbUser.uid,fromLevel:(S.level||1),
     mode:activeSession.mode,stake:activeSession.stake,fishName:activeSession.fishName,zone:activeSession.zone,
     sentAt:Date.now(),id:fbUser.uid+'_'+Date.now()};
   fbDb.collection('tournamentInvites').doc(uid).set({pending:firebase.firestore.FieldValue.arrayUnion(inv)},{merge:true}).then(function(){
@@ -2379,11 +2424,11 @@ function acceptSessionInvite(inv){
     const data=d.data()||{};
     if(data.status!=='lobby'){toast('That challenge already started.','#b58b53');return;}
     if(Object.keys(data.players||{}).length>=SESSION_MAX){toast('Session is full.','#b58b53');return;}
-    const upd={};upd['players.'+fbUser.uid]={username:fbUsername,best:0,bestName:''};
+    const upd={};upd['players.'+fbUser.uid]={username:fbUsername,level:(S.level||1),best:0,bestName:''};
     ref.update(upd).catch(function(){});
     activeSession={id:inv.sessionId,mode:data.mode,host:data.host,hostName:data.hostName,stake:data.stake,
       zone:data.zone,seed:data.seed||null,fishId:data.fishId,fishName:data.fishName,isHost:false,started:false,players:data.players||{}};
-    activeSession.players[fbUser.uid]={username:fbUsername,best:0,bestName:''};
+    activeSession.players[fbUser.uid]={username:fbUsername,level:(S.level||1),best:0,bestName:''};
     openSessionLobby();
   }).catch(function(){toast('Could not join.','#b3402a');});
 }
@@ -2429,8 +2474,8 @@ function recordChallengeBest(fish,weight){
   if(!fish||fish.id!==activeSession.fishId)return;
   const me=activeSession.players[fbUser.uid]||{best:0};
   if(weight<=(me.best||0))return;
-  activeSession.players[fbUser.uid]={username:fbUsername,best:weight,bestName:fish.name};
-  if(fbDb){const upd={};upd['players.'+fbUser.uid]={username:fbUsername,best:weight,bestName:fish.name};
+  activeSession.players[fbUser.uid]={username:fbUsername,level:(S.level||1),best:weight,bestName:fish.name};
+  if(fbDb){const upd={};upd['players.'+fbUser.uid]={username:fbUsername,level:(S.level||1),best:weight,bestName:fish.name};
     fbDb.collection('challenges').doc(activeSession.id).update(upd).catch(function(){});}
 }
 // ---- end / leave ----
@@ -2568,11 +2613,11 @@ const ICONS={
 'shades-sport':'<path d="M1 12Q2 8 6 8H10Q12 9 12 12Q12 15 10 15H6Q2 16 1 12Z"/><path d="M12 12Q12 9 14 8H18Q22 8 23 12Q22 16 18 15H14Q12 15 12 12Z"/>',
 'shades-mask':'<ellipse cx="12" cy="13" rx="9" ry="9.5"/><ellipse cx="8.5" cy="11" rx="2.5" ry="1.5"/><ellipse cx="15.5" cy="11" rx="2.5" ry="1.5"/><path d="M5 17Q12 21 19 17"/><line x1="4" y1="5" x2="20" y2="21" stroke="#cc1a1a" stroke-width="2"/>',
 // bait
-'bait-shrimp':'<path d="M8 5Q4 8 5 13Q6 17 11 18Q16 19 19 15Q21 12 18 8Q15 4 10 5Z"/><path d="M11 18Q10 20 8 21M12 18Q12 21 11 22"/><path d="M12 5L14 3M14 6L16 4"/>',
+'bait-shrimp':'<path d="M17 6.5C10.5 5 6 8.5 6 13.5c0 3.5 2.6 6 6.5 6"/><path d="M12.5 19.5 16 21M12.5 19.5 11.5 22.5M12.5 19.5 15.5 19"/><path d="M9 10.6c1.5 1 3 1 4.6 0M8 14.2c1.7 1 3.5 1 5.3 0"/><circle cx="15.4" cy="8.2" r="0.9"/><path d="M17.5 6.4 20.6 4.4M17.6 7.8 21 6.8"/><path d="M8.2 16.6 7.1 18.1M10.1 18 9.5 19.8M12 18.8 11.8 20.7"/>',
 'bait-crab':'<ellipse cx="12" cy="13" rx="6" ry="4"/><path d="M6 13L3 11M6 13L2 13M6 13L3 15"/><path d="M18 13L21 11M18 13L22 13M18 13L21 15"/><path d="M8 9L7 6M11 8.5L10 5M13 8.5L14 5M16 9L17 6"/><circle cx="9" cy="12" r="1"/><circle cx="15" cy="12" r="1"/>',
 'bait-fish':'<path d="M4 12Q5 8 9 7Q15 6 19 12Q15 18 9 17Q5 16 4 12Z"/><path d="M19 12L23 9L23 15Z"/><circle cx="9" cy="11" r="1"/>',
 'bait-fish-long':'<path d="M2 12Q3 9 6 8Q14 7 20 12Q14 17 6 16Q3 15 2 12Z"/><path d="M20 12L23 10L23 14Z"/><circle cx="7" cy="11" r="1"/>',
-'bait-squid':'<path d="M9 4Q12 3 15 4Q16 9 12 11Q8 9 9 4Z"/><path d="M9 4L7 3M9 4L8 2M15 4L17 3M15 4L16 2"/><path d="M9 11L7 18L8 21M10.5 11L9.5 18M12 11L11 19M13.5 11L14.5 18M15 11L17 18L16 21"/>',
+'bait-squid':'<path d="M12 3C9 3 7.5 5.5 7.5 9c0 1.5 .5 2.6 1.2 3.2h6.6c.7-.6 1.2-1.7 1.2-3.2C16.5 5.5 15 3 12 3Z"/><path d="M7.7 6.5C6 6 5 7 5.2 8.9M16.3 6.5C18 6 19 7 18.8 8.9"/><circle cx="10.3" cy="8.6" r="0.8"/><circle cx="13.7" cy="8.6" r="0.8"/><path d="M9.6 12.4C9.1 15 8.6 17 9.1 20M11.1 12.6c-.3 3-.3 5 .2 8M12.9 12.6c.3 3 .3 5-.2 8M14.4 12.4c.5 2.6 1 4.6 .5 7.6"/><path d="M10 12.5C8.6 16 6.6 18 5.1 19M14 12.5c1.4 3.5 3.4 5.5 4.9 6.5"/>',
 'bait-cutbait':'<rect x="4" y="8" width="16" height="8" rx="2"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="8" x2="8" y2="16"/><line x1="16" y1="8" x2="16" y2="16"/>',
 // tackle
 'tackle-cork':'<circle cx="12" cy="9" r="5"/><line x1="12" y1="14" x2="12" y2="22"/><path d="M9 20Q12 22.5 15 20"/>',
@@ -2616,10 +2661,10 @@ const ICONS={
 'weather-night':'<path d="M21 12.79A9 9 0 1 1 11.21 3a7 7 0 0 0 9.79 9.79z"/>',
 'weather-dawn':'<path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/><path d="M12 8a4 4 0 0 1 0 8" stroke-dasharray="2 2"/><path d="M12 8a4 4 0 0 0 0 8"/>',
 'weather-dusk':'<path d="M12 2v4M4.93 4.93l2.83 2.83M2 12h4"/><circle cx="12" cy="12" r="4"/><path d="M19.07 4.93l-2.83 2.83M22 12h-4M12 18v4M4.93 19.07l2.83-2.83M19.07 19.07l-2.83-2.83"/>',
-'season-spring':'<path d="M12 22V12"/><path d="M12 12C12 8 9 5 5 5"/><path d="M12 12C12 8 15 5 19 5"/><path d="M12 17C12 14 9 12 6 13"/><path d="M12 17C12 14 15 12 18 13"/>',
+'season-spring':'<circle cx="12" cy="8.6" r="1.7"/><circle cx="12" cy="4.5" r="2"/><circle cx="8" cy="7.3" r="2"/><circle cx="9.5" cy="12" r="2"/><circle cx="14.5" cy="12" r="2"/><circle cx="16" cy="7.3" r="2"/><path d="M12 14v7"/><path d="M12 18c1.8 0 3-1.3 3-3"/><path d="M12 16c-1.6 0-2.7-1.1-2.7-2.6"/>',
 'season-summer':'<circle cx="12" cy="12" r="5"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="5.64" y1="5.64" x2="7.05" y2="7.05"/><line x1="16.95" y1="16.95" x2="18.36" y2="18.36"/><line x1="5.64" y1="18.36" x2="7.05" y2="16.95"/><line x1="16.95" y1="7.05" x2="18.36" y2="5.64"/>',
-'season-fall':'<path d="M17 8C8 10 5.9 16.17 3.82 22"/><path d="M9.5 7.5C8 8 7 13 7 16"/><path d="M17 8c1 2 1.5 4 1.5 6.5C18.5 19 15 22 12 22"/>',
-'season-winter':'<line x1="12" y1="2" x2="12" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/><line x1="19.07" y1="4.93" x2="4.93" y2="19.07"/><circle cx="12" cy="12" r="2"/>',
+'season-fall':'<path d="M4.5 20C4.5 11.5 10 5 19 5C19 14.5 12.5 20 4.5 20Z"/><path d="M4.5 20 19 5"/><path d="M10.8 13.2l4.4-1.5M8.6 15.8l5-1.6"/><path d="M4.5 20 2.6 21.9"/>',
+'season-winter':'<line x1="12" y1="2.5" x2="12" y2="21.5"/><line x1="3.8" y1="7.25" x2="20.2" y2="16.75"/><line x1="3.8" y1="16.75" x2="20.2" y2="7.25"/><path d="M9.6 4.7 12 6.4 14.4 4.7"/><path d="M9.6 19.3 12 17.6 14.4 19.3"/><path d="M4.6 11 6.9 10.7 6.6 8.4"/><path d="M19.4 13 17.1 13.3 17.4 15.6"/><path d="M4.6 13 6.9 13.3 6.6 15.6"/><path d="M19.4 11 17.1 10.7 17.4 8.4"/>',
 'zone-pin':'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
 'fits':'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
 // misc UI icons (replacing emojis)
@@ -3106,6 +3151,11 @@ function _keyOutPetBg(im){
   im.src='pets/'+id+'.png';PET_IMG[id]=im;
 });
 function petImgSrc(id){return 'pets/'+id+'.png';}
+// Clancy NPC art: the full figure (drawn in his offshore sailboat) and a
+// background-keyed sprite for the game canvas.
+const CLANCY_IMG=new Image(); let CLANCY_SPRITE=null;
+CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_keyOutPetBg(CLANCY_IMG);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
+CLANCY_IMG.src='npc/clancy.png';
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
 function hasPet(id){const p=S.prestige||0;const def=PETS.find(function(x){return x.id===id;});return !!def&&def.prestige<=p;}
 // Coins multiplier: +10% per prestige level, plus +20% if the Pig is owned.
@@ -3906,7 +3956,28 @@ const PNG_FISH={
   bonito:{file:'bonito.png',alt:'Bonito'},
   barracuda:{file:'great barracuda.png',alt:'Great Barracuda'},
   tripletail:{file:'triple tail.png',alt:'Tripletail'},
-  goliath:{file:'goliath grouper.png',alt:'Goliath Grouper'}
+  goliath:{file:'goliath grouper.png',alt:'Goliath Grouper'},
+  // V0.9.5 - remaining finished art (offshore + surf sharks)
+  vermilion:{file:'vermilion snapper.png',alt:'Vermilion Snapper'},
+  almaco:{file:'almaco jack.png',alt:'Almaco Jack'},
+  blackfin:{file:'blackfin tuna.png',alt:'Blackfin Tuna'},
+  redsnapper:{file:'red snapper.png',alt:'Red Snapper'},
+  amberjack:{file:'greater amberjack.png',alt:'Greater Amberjack'},
+  wahoo:{file:'wahoo.png',alt:'Wahoo'},
+  sailfish:{file:'sailfish.png',alt:'Sailfish'},
+  yellowfin:{file:'yellowfin tuna.png',alt:'Yellowfin Tuna'},
+  swordfish:{file:'swordfish.png',alt:'Swordfish'},
+  marlin:{file:'blue marlin.png',alt:'Blue Marlin'},
+  bluefin:{file:'bluefin tuna.png',alt:'Bluefin Tuna'},
+  stripedmarlin:{file:'striped marlin.png',alt:'Striped Marlin'},
+  blackmarlin:{file:'black marlin.png',alt:'Black Marlin'},
+  nurseshark:{file:'nurse shark.png',alt:'Nurse Shark'},
+  sandbarshark:{file:'sandbar shark.png',alt:'Sandbar Shark'},
+  lemonshark:{file:'lemon shark.png',alt:'Lemon Shark'},
+  bullshark:{file:'bull shark.png',alt:'Bull Shark'},
+  hammerhead:{file:'great hammerhead.png',alt:'Great Hammerhead'},
+  tigershark:{file:'tiger shark.png',alt:'Tiger Shark'},
+  greatwhite:{file:'great white shark.png',alt:'Great White Shark'}
 };
 // Fish raster art lives in the fish/ folder; filenames may contain spaces.
 function pngFishSrc(file){return 'fish/'+encodeURIComponent(file);}
@@ -4063,7 +4134,11 @@ function normalizeState(){
   if(typeof S.chumCasts!=='number')S.chumCasts=0;
   // V0.9.2 drone: parts caught one-per-region, then the drone is built.
   if(!S.droneParts||typeof S.droneParts!=='object')S.droneParts={};
-  if(typeof S.droneBuilt!=='boolean')S.droneBuilt=false;
+  if(!S.projectParts||typeof S.projectParts!=='object')S.projectParts={};
+  // migrate legacy drone parts into the unified project-parts map
+  Object.keys(S.droneParts).forEach(function(k){if(S.droneParts[k])S.projectParts[k]=true;});
+  S.droneBuilt=projectBuilt('drone');
+  if(!S.subState||typeof S.subState!=='object')S.subState={nextAt:0,up:false};
   if(typeof S.ledActive!=='boolean')S.ledActive=false;
   if(typeof S.radarActive!=='boolean')S.radarActive=false;
   if(typeof S.toothHook!=='boolean')S.toothHook=false;
@@ -7463,6 +7538,13 @@ function render(ts){
     if(s.temp){const pr=42+Math.sin(t*2.2)*5;const gg=ctx.createRadialGradient(sx,sy,6,sx,sy,pr);gg.addColorStop(0,'rgba(255,214,120,.22)');gg.addColorStop(1,'rgba(255,214,120,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(sx,sy,pr,0,6.28);ctx.fill();}
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,pierLen:s.pierLen,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
+  // Captain Clancy's sailboat + the Ruby Submarine offshore (open world only)
+  if(S.zone===2&&!mpActive()&&!surfActive){
+    const cp=clancyBoatPos();const cx2=cp.x-camera.x,cy2=cp.y-camera.y;
+    if(cx2>-80&&cx2<CW+80&&cy2>-80&&cy2<CH+80)drawClancyBoat(cx2,cy2,t,sky.darkness);
+    const diving=_subDiveAt&&(Date.now()-_subDiveAt<1600);
+    if(subAvailable()||diving){const sp=subPos();const sx2=sp.x-camera.x,sy2=sp.y-camera.y;if(sx2>-90&&sx2<CW+90&&sy2>-90&&sy2<CH+90)drawSubmarine(sx2,sy2,t,diving?(Date.now()-_subDiveAt)/1600:0);}
+  }
   // other players + ability effects (tournaments AND co-op friends worlds)
   if(mpActive()){
     recordExploreTrail();
@@ -7606,6 +7688,7 @@ function drawGate(gx,gy,gt,t){
 
 // ===================== RIG / CAST / CATCH =====================
 let phase='idle',bobber={x:0,y:0,active:false,struct:null},hookedFish=null,hookW=0;
+let _lureRetrieve=false;   // a lure has been cast and is waiting to be reeled in
 let biteTimeout=null,escapeTimeout=null,catchAnim=null;
 let zoneSel={left:35,width:30,dir:1,speed:1.3},marker={pos:50,dir:1,speed:0.39};
 
@@ -7629,6 +7712,14 @@ canvas.addEventListener('click',e=>{
     placeItemAt(x+camera.x,y+camera.y);
     return;
   }
+  // Tapping offshore world objects: Clancy's sailboat (tip) or the Ruby Submarine
+  if(S.zone===2&&!mpActive()&&!surfActive){
+    const rect=canvas.getBoundingClientRect();
+    const cxp=(e.clientX-rect.left)*(CW/rect.width),cyp=(e.clientY-rect.top)*(CH/rect.height);
+    const cp=clancyBoatPos();
+    if(dist(cxp,cyp,cp.x-camera.x,cp.y-camera.y)<52){clancyBoatTip();return;}
+    if(subAvailable()){const sp=subPos();if(dist(cxp,cyp,sp.x-camera.x,sp.y-camera.y)<52){collectSubmarine();return;}}
+  }
   if(driving()){
     if(mpActive()){
       const rect=canvas.getBoundingClientRect();
@@ -7638,6 +7729,7 @@ canvas.addEventListener('click',e=>{
     }
     setStatus('Drop anchor before you cast.');return;
   }
+  if(phase==='waiting'&&_lureRetrieve){retrieveLure();return;}   // working a lure: reel it in
   if(phase==='waiting'){clearTimeout(biteTimeout);phase='idle';bobber.active=false;setStatus('Reeled in. Cast again.');return;}
   if(phase!=='idle')return;
   const rect=canvas.getBoundingClientRect();
@@ -7703,7 +7795,7 @@ window.addEventListener('keydown',function(e){
 document.getElementById('anchor-btn').addEventListener('click',()=>{
   if(boat.anchored){
     if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
-    boat.anchored=false;phase='idle';bobber.active=false;
+    boat.anchored=false;phase='idle';bobber.active=false;_lureRetrieve=false;
     setStatus('Anchor up. Drive to a new spot with the joystick.');
   }else{
     boat.anchored=true;joy.dx=0;joy.dy=0;boat.vx=0;boat.vy=0;clampCamera();
@@ -7729,24 +7821,44 @@ document.getElementById('anchor-btn').addEventListener('click',()=>{
 // A part hides in each region. Every cast has a 0.1% shot at the part for the
 // region you're fishing; each part can only be found once. Collect all three and
 // the drone builds itself, flying surf baits out (20s shaved per bait, not 10).
-const DRONE_PARTS=[
-  {zone:0,id:'propeller',name:'Drone Propeller'},
-  {zone:1,id:'frame',    name:'Drone Frame'},
-  {zone:2,id:'circuits', name:'Drone Circuits'},
+// ── PROJECTS ──────────────────────────────────────────────────────────────
+// Each project is built from parts, one per region. Every cast in a region has a
+// 1% chance to reel up that region's part for any unfinished project. Collect all
+// parts to use the project. Projects work in the open world only - never in
+// tournaments or challenges. The Surf Drone and the Ruby Submarine are projects.
+const PROJECTS=[
+  {id:'drone', name:'Surf Drone', icon:'drone',
+   blurb:'Flies your surf baits out - each bait shaves 20s off the wait instead of 10.',
+   parts:[{id:'propeller',zone:0,name:'Drone Propeller'},{id:'frame',zone:1,name:'Drone Frame'},{id:'circuits',zone:2,name:'Drone Circuits'}]},
+  {id:'submarine', name:'Ruby Submarine', icon:'submarine',
+   blurb:'Surfaces in the offshore once a day - tap it for 10 free rubies.',
+   parts:[{id:'sub_prop',zone:0,name:'Sub Propeller'},{id:'sub_rudder',zone:1,name:'Sub Rudder'},{id:'sub_periscope',zone:2,name:'Sub Periscope'}]},
 ];
-function droneCount(){if(!S.droneParts)return 0;return DRONE_PARTS.reduce(function(n,p){return n+(S.droneParts[p.id]?1:0);},0);}
-function maybeCatchDronePart(){
-  if(S.droneBuilt)return;
-  if(!S.droneParts)S.droneParts={};
-  const part=DRONE_PARTS.find(function(p){return p.zone===S.zone;});
-  if(!part||S.droneParts[part.id])return;       // wrong region, or already have it
-  if(Math.random()>=0.001)return;               // 0.1% per cast
-  S.droneParts[part.id]=true;
-  try{AUDIO&&AUDIO.sfx&&AUDIO.sfx('coin');}catch(e){}
-  toast('You reeled up a '+part.name+'! Drone parts: '+droneCount()+'/3','#5ad6c0');
-  if(droneCount()>=3){S.droneBuilt=true;setTimeout(function(){toast('You built the Drone! It now flies your surf baits out - each bait shaves 20s off the wait.','#5ad6c0');},1300);}
-  queueSave();
+function projectById(id){return PROJECTS.find(function(p){return p.id===id;});}
+function projectPartCount(proj){if(!S.projectParts)return 0;return proj.parts.reduce(function(n,pt){return n+(S.projectParts[pt.id]?1:0);},0);}
+function projectBuilt(id){const p=projectById(id);return !!p&&projectPartCount(p)>=p.parts.length;}
+// kept for the surf code that toggles the drone overlay
+Object.defineProperty(window,'_droneBuiltCompat',{get:function(){return projectBuilt('drone');},configurable:true});
+function maybeCatchProjectPart(){
+  if(mpActive())return;                 // projects don't progress in matches
+  if(!S.projectParts)S.projectParts={};
+  PROJECTS.forEach(function(proj){
+    if(projectBuilt(proj.id))return;
+    const part=proj.parts.find(function(pt){return pt.zone===S.zone;});
+    if(!part||S.projectParts[part.id])return;   // wrong region, or already have it
+    if(Math.random()>=0.01)return;              // 1% per cast in the matching region
+    S.projectParts[part.id]=true;
+    try{AUDIO&&AUDIO.sfx&&AUDIO.sfx('coin');}catch(e){}
+    toast('You reeled up a '+part.name+'! '+proj.name+': '+projectPartCount(proj)+'/'+proj.parts.length,'#5ad6c0');
+    if(projectBuilt(proj.id)){
+      if(proj.id==='drone')S.droneBuilt=true;
+      setTimeout(function(){toast('Project complete - '+proj.name+' is ready!','#5ad6c0');},1300);
+    }
+    queueSave();
+  });
 }
+// back-compat shim: old call sites still call maybeCatchDronePart()
+function maybeCatchDronePart(){maybeCatchProjectPart();}
 function cast(x,y){
   const m=curMethod();
   // V0.9 Snag Rock: hung up - can't cast until it wears off.
@@ -7776,6 +7888,7 @@ function cast(x,y){
     const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
   }
   bobber={x,y,active:true,struct:nearestStruct(x,y)};
+  noteLastCast(bobber.struct);   // remember the spot so Clancy can advise on it
   ripples.push({x,y,r:3,life:1},{x,y,r:8,life:.7});
   AUDIO.sfx('cast');
   phase='waiting';S.totalCasts++;
@@ -7788,13 +7901,32 @@ function cast(x,y){
   }
   queueSave();updateRigBar();
   const st=bobber.struct;
-  setStatus(st&&st.kind==='crab_trap'?'Checking the crab trap...':st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
   // Tutorial: guarantee the target bites quickly so the lesson never stalls.
   if(tut&&tut.forceTargetActive&&tut.target&&!_forcedBiteFish)_forcedBiteFish=tut.target;
-  const {strength,rarityDelay}=poolNow();
-  let wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength,st,rarityDelay);
-  if(_forcedBiteFish&&tut&&tut.forceTargetActive)wait=900+Math.random()*700;
-  biteTimeout=setTimeout(()=>triggerBite(),wait);
+  if(!m.bait){
+    // Lures must be worked: the player reels the lure in to draw a strike.
+    _lureRetrieve=true;
+    setStatus(st?'Reel it in! Tap the water to retrieve past the '+structLabel(st.kind)+'.':'Reel it in! Tap the water to retrieve the lure.');
+  }else{
+    _lureRetrieve=false;
+    setStatus(st&&st.kind==='crab_trap'?'Checking the crab trap...':st?'Cast by the '+structLabel(st.kind)+'. Waiting...':'Cast over open water. Waiting...');
+    const {strength,rarityDelay}=poolNow();
+    let wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength,st,rarityDelay);
+    if(_forcedBiteFish&&tut&&tut.forceTargetActive)wait=900+Math.random()*700;
+    biteTimeout=setTimeout(()=>triggerBite(),wait);
+  }
+}
+// Reeling a lure in: one retrieve rolls for a strike. The chance scales with the
+// pool strength, the conditions and the reel (better reel = better odds).
+function retrieveLure(){
+  _lureRetrieve=false;
+  const {strength}=poolNow();
+  if(strength<=0){phase='idle';bobber.active=false;setStatus('Reeled it in - nothing was interested. Try another lure or spot.');return;}
+  const reelIdx=Math.max(0,REELS.findIndex(r=>r.id===S.reel));
+  let chance=Math.min(0.94,(0.22+strength/200)*environmentBiteFactor()*(1+reelIdx*0.07));
+  if(_forcedBiteFish&&tut&&tut.forceTargetActive)chance=1;
+  if(Math.random()<chance){triggerBite();}
+  else{phase='idle';bobber.active=false;setStatus('Reeled it in - nothing followed. Cast again.');}
 }
 
 // ── TROLLING ──────────────────────────────────────────────────────────────
@@ -7824,13 +7956,14 @@ function _trollHint(){
 function startTrollDrag(){
   const sp=Math.hypot(boat.vx,boat.vy)||1;
   const vdx=boat.vx/sp, vdy=boat.vy/sp;
-  const bx=ORIGIN.x-vdx*48, by=ORIGIN.y-vdy*48;
+  const bx=ORIGIN.x-vdx*96, by=ORIGIN.y-vdy*96;
   // a trolling pass wears the trolling tackle, like a cast
   const tid=currentTackleId();
   if(tid&&tid!=='tooth_hook'&&S.tackleInv[tid]&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
     const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
   }
   bobber={x:bx,y:by,active:true,struct:nearestStruct(bx,by)};
+  noteLastCast(bobber.struct);
   _trollDrag=true;phase='waiting';S.totalCasts++;
   maybeCatchDronePart();
   if(bobber.struct){if(!S.fishedStructures)S.fishedStructures=[];if(!S.fishedStructures.includes(bobber.struct.kind))S.fishedStructures.push(bobber.struct.kind);}
@@ -7853,7 +7986,7 @@ function updateTrolling(sp){
     if(phase==='idle'){ if(_trollRigOK())startTrollDrag(); else _trollHint(); }
     else if(_trollDrag&&phase==='waiting'&&bobber.active){
       const vdx=boat.vx/sp, vdy=boat.vy/sp;     // trail the strike point behind the moving boat
-      bobber.x=ORIGIN.x-vdx*48; bobber.y=ORIGIN.y-vdy*48;
+      bobber.x=ORIGIN.x-vdx*96; bobber.y=ORIGIN.y-vdy*96;
     }
   }else if(_trollDrag&&phase==='waiting'){ cancelTrollDrag(true); }
 }
@@ -7993,6 +8126,9 @@ function biteWait(strength,st,rarityDelay){
   // V0.9 pets (cat/dog +10% each, bat +100% at night) and set/ability bite buffs
   boatFreq*=petBiteFreqMult();
   boatFreq*=playerBiteMult();
+  // V0.9.5: a better reel works the bait/lure more effectively - higher bite chance.
+  const reelIdx=REELS.findIndex(r=>r.id===S.reel);
+  boatFreq*=(1+Math.max(0,reelIdx)*0.07);   // reel0..reel4 -> +0%..+28% bites
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
   const envMul=environmentBiteFactor();
   // Global bite rate cut: bites come 35% slower across the board so fishing
@@ -8062,7 +8198,12 @@ function triggerBite(){
   escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
 }
 
-function rollWeight(f){const[a,b]=f.size;return +(a+(b-a)*Math.pow(Math.random(),1.7)).toFixed(2);}
+function rollWeight(f){
+  const[a,b]=f.size;
+  // 1% chance of a record-breaker: 1-12% above the species max.
+  if(Math.random()<0.01)return +(b*(1+0.01+Math.random()*0.11)).toFixed(2);
+  return +(a+(b-a)*Math.pow(Math.random(),1.7)).toFixed(2);
+}
 
 const BULLSEYE_FRAC=0.25; // yellow bar is 25% of green zone width
 function setupMiniGame(){
@@ -8669,12 +8810,12 @@ function openChooser(type){
   } else if(type==='method'){
     html='<h3>Fishing method</h3><div class="sub">The technique gates which fish are possible.</div>';
     METHODS.filter(m=>m.zones.includes(S.zone)).forEach(m=>{
-      html+='<div class="opt '+(m.id===S.method?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div><div class="od">'+m.blurb+'</div></div></div>';});
+      html+='<div class="opt '+(m.id===S.method?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
   } else if(type==='tackle'){
     const cat=curMethod().cat;
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
     TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
-      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div><div class="od">'+t.desc+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
   } else if(type==='bait'){
     if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
@@ -8682,12 +8823,12 @@ function openChooser(type){
       const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id)&&(typeof l.zone!=='number'||l.zone===S.zone));
       if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet. Open the Lures shop tab to buy one.</div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
+        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
-      BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const good=FISH.filter(f=>f.zone===S.zone&&f.baits.includes(bt.id)).map(f=>f.name).slice(0,3).join(', ');
-        html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div><div class="od">'+(good?'Here: '+good:bt.desc)+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
+      BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
+        html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs; mono is the all-rounder.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
@@ -8829,6 +8970,7 @@ document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=
     if(t.dataset.mtab!=='quests'){stopQuestCountdown();}
     if(t.dataset.mtab==='friends'){loadFriendRequests();}
     if(t.dataset.mtab==='settings'){renderSettings();}
+    if(t.dataset.mtab==='projects'){renderProjectsPanel();}
     if(t.dataset.mtab==='logbook'){tutNotify('logbook');}
   document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
@@ -8839,18 +8981,14 @@ let shopTab='boats';
 function assassinSetActive(){
   return equippedSetId()==='assassin';
 }
+// Top-right Captain Clancy button: shows his face, hidden in tournaments/challenges.
 function updateCosmeticHUD(){
-  const el=document.getElementById('cosmetic-pill');
-  if(!el)return;
-  const setId=equippedSetId();
-  if(setId){const ic={assassin:'shades-mask',pirate:'hat-straw',princess:'crown',berserker:'hat-beanie',jeremy:'shades-polarized',jester:'hat-beanie',astronaut:'hat-bucket',robot:'shades-mask'}[setId]||'fits';el.innerHTML=svgIcon(ic,18);return;}
-  const hat=COSMETICS.hats.find(x=>x.id===S.cosmetic.hat);
-  const shirt=COSMETICS.shirts.find(x=>x.id===S.cosmetic.shirt);
-  const shades=COSMETICS.shades.find(x=>x.id===S.cosmetic.shades);
-  const equipped=[hat,shirt,shades].filter(x=>x&&x.id!=='none');
-  if(equipped.length>0){el.innerHTML=svgIcon(equipped[0].icon,18);return;}
-  if(S.gender&&S.skinTone){el.innerHTML=anglerIconSVG(S.gender,skinColorOf(S.skinTone),20);return;}
-  el.innerHTML=svgIcon('person',18);
+  const pill=document.getElementById('clancy-pill');
+  if(!pill)return;
+  const face=document.getElementById('clancy-face');
+  if(face&&!face.innerHTML)face.innerHTML=CLANCY_SVG;
+  const inMatch=activeTournament&&!(activeTournament.def&&activeTournament.def.coop);
+  pill.style.display=inMatch?'none':'';
 }
 function refreshMenu(){renderLogbook();renderShop();renderStats();renderTournamentPanel();}
 
@@ -9310,22 +9448,16 @@ function _fishTackleText(f){
 function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
   const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZone())return;
-  const methodNames=f.methods.map(mid=>METHODS.find(m=>m.id===mid).name).join(', ');
-  const baitNames=f.baits.map(bid=>BAIT.find(b=>b.id===bid).name).join(', ');
   const seasons=f.season.includes('all')?'Year-round':f.season.map(s=>SEASON_LABEL[s]).join(', ');
   const times=f.time.includes('all')?'Any time':f.time.map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(', ');
-  const lead=f.leader==='fluoro'?'Fluorocarbon (line-shy)':f.leader==='wire'?'Wire (toothy, will cut you off!)':'Any leader';
   document.getElementById('modal').innerHTML=
     '<span class="close-x" onclick="closeModal()">\u00d7</span>'+
     // Until the fish is caught its art in the detail view stays a dark silhouette
     // (matching the logbook card) - the colours are only revealed once discovered.
     '<div class="mhead">'+(caught?buildFishArt(f.id,76):'<span style="filter:brightness(0) opacity(.42);display:inline-block;line-height:0;">'+buildFishArt(f.id,76)+'</span>')+'<div><div class="mname">'+f.name+'</div><div class="mrarity'+(f.rarity==='ultra'?' ultra-rarity':'')+'"'+(f.rarity==='ultra'?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+'</div></div></div>'+
     '<div class="mrow"><span class="ml">Where</span><span class="mv">'+ZONES[f.zone].name+'</span></div>'+
-    '<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methodNames+'</span></div>'+
-    '<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+_fishTackleText(f)+'</span></div>'+
-    '<div class="mrow"><span class="ml">Structure</span><span class="mv">'+_fishStructText(f)+'</span></div>'+
-    '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitNames+'</span></div>'+
-    '<div class="mrow"><span class="ml">Leader</span><span class="mv">'+lead+'</span></div>'+
+    // How-to-catch info (methods / tackle / structure / bait) now lives on the
+    // Clancy button - the logbook just shows where, when and how big.
     '<div class="mrow"><span class="ml">Season</span><span class="mv">'+seasons+'</span></div>'+
     '<div class="mrow"><span class="ml">Best time</span><span class="mv">'+times+'</span></div>'+
     '<div class="mrow"><span class="ml">Size</span><span class="mv">'+f.size[0]+'-'+f.size[1]+' lb</span></div>'+
@@ -9333,6 +9465,120 @@ function openFish(id){
     '<div class="mrow"><span class="ml">Your best</span><span class="mv">'+(S.best[f.id]?fmtLb(S.best[f.id])+' lb ('+S.caught[f.id]+' caught)':'not yet caught')+'</span></div>'+
     '<div class="mfact">\u201C'+f.fact+'\u201D</div>';
   document.getElementById('modal-bg').classList.add('show');
+}
+// ── CAPTAIN CLANCY: tap his face for fish info about your last-fished spot ──
+function noteLastCast(st){S.lastCastStruct=st?st.kind:'open';S.lastCastZone=S.zone;}
+function clancyFishAtLastCast(){
+  if(!S.lastCastStruct)return null;
+  const zone=(typeof S.lastCastZone==='number')?S.lastCastZone:S.zone;
+  const open=S.lastCastStruct==='open';
+  const alias=open?'open':structKindAlias(S.lastCastStruct);
+  return FISH.filter(function(f){
+    if(f.surf||f.zone!==zone)return false;
+    return open?f.structure.includes('open'):(f.structure.includes(alias)||f.structure.includes('open'));
+  });
+}
+function _clancyHead(){return '<div class="clancy-head"><span class="clancy-head-face">'+CLANCY_SVG+'</span><span class="clancy-head-name">Captain Clancy</span></div>';}
+function openClancyInfo(){
+  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Clancy only helps out in the open water, not mid-match.','#b58b53');return;}
+  const fish=clancyFishAtLastCast();
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  let body;
+  if(!fish){
+    body='<div class="clancy-tip">Cast on a spot first, angler - then tap me and I\'ll tell ye exactly what bites there.</div>';
+  }else if(!fish.length){
+    body='<div class="clancy-tip">Not much holds on that spot. Work some <b>structure</b> - docks, oyster bars, reefs, wrecks - and tap me again.</div>';
+  }else{
+    const where=(S.lastCastStruct==='open')?'open water':(FISH_STRUCT_LABEL[structKindAlias(S.lastCastStruct)]||structLabel(S.lastCastStruct));
+    body='<div class="clancy-tip">At the <b>'+where+'</b> ye last fished, these bite. Tap one and I\'ll tell ye what they want:</div>'
+      +'<div class="clancy-fishlist">'+fish.map(function(f){
+        return '<button class="clancy-fishrow" onclick="clancyFishDetail(\''+f.id+'\')"><span class="cfr-art">'+buildFishArt(f.id,38)+'</span><span class="cfr-name">'+f.name+'</span><span class="cfr-rar" style="color:'+RARITY_COLORS[f.rarity]+'">'+(RAR_LBL[f.rarity]||f.rarity)+'</span></button>';
+      }).join('')+'</div>';
+  }
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+body;
+  bg.classList.add('show');
+}
+function clancyFishDetail(id){
+  const f=FISH.find(x=>x.id===id);if(!f)return;
+  const methods=f.methods.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.name:mid;}).join(', ');
+  const baits=f.baits.map(function(bid){const b=BAIT.find(x=>x.id===bid);return b?b.name:bid;}).join(', ');
+  const lures=LURES.filter(function(l){return l.targets&&l.targets.includes(f.id);}).map(function(l){return l.name;});
+  const lureText=lures.length?lures.join(', '):'no special lure - match the lure to its bait';
+  const modal=document.getElementById('modal');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()
+    +'<div class="clancy-tip"><b>'+f.name+'</b> - here\'s what they fancy:</div>'
+    +'<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methods+'</span></div>'
+    +'<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+_fishTackleText(f)+'</span></div>'
+    +'<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baits+'</span></div>'
+    +'<div class="mrow"><span class="ml">Lures</span><span class="mv">'+lureText+'</span></div>'
+    +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>';
+}
+// Clancy's offshore sailboat: a fixed spot in the bluewater you can sail up to.
+function clancyBoatPos(){return {x:Math.round(WORLD_DIMS[2][0]*0.72), y:Math.round(WORLD_DIMS[2][1]*0.30)};}
+const CLANCY_TIPS=[
+  "Fish feed best at dawn and dusk - low light makes 'em bold.",
+  "Match yer leader to the fish: fluoro for the wary, wire for the toothy.",
+  "Heavier braid lands heavier fish - spool up before ye chase giants.",
+  "Tap my face up top to see what bites the spot ye last fished.",
+  "Switch yer baits and lures often - what they want changes by the hour.",
+  "Trolling only works on the move. Keep that boat drivin'.",
+  "The rarest fish hold on the best structure - reefs, wrecks and ledges.",
+  "Win tournaments for rubies - they buy sets, abilities and rare gear.",
+  "A better reel doesn't just cast farther, it draws more bites too.",
+  "Any fish can be a record-breaker. Keep castin' and ye'll find a giant.",
+];
+function clancyBoatTip(){
+  const tip=CLANCY_TIPS[Math.floor(Math.random()*CLANCY_TIPS.length)];
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+'<div class="clancy-tip">&ldquo;'+tip+'&rdquo;</div>';
+  bg.classList.add('show');try{AUDIO.sfx('open');}catch(e){}
+}
+function drawClancyBoat(sx,sy,t,dark){
+  ctx.save();ctx.translate(sx,sy);ctx.translate(0,Math.sin(t*1.3)*2);
+  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,30,42,10,0,0,6.28);ctx.fill();
+  // mast + mainsail + jib
+  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(2,16);ctx.lineTo(2,-42);ctx.stroke();
+  ctx.fillStyle='#eee6d6';ctx.beginPath();ctx.moveTo(5,-40);ctx.quadraticCurveTo(32,-14,7,10);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(120,90,50,.45)';ctx.lineWidth=1;ctx.stroke();
+  ctx.fillStyle='#e0d6c2';ctx.beginPath();ctx.moveTo(0,-32);ctx.quadraticCurveTo(-20,-10,-2,6);ctx.closePath();ctx.fill();ctx.stroke();
+  // Clancy seated in the hull
+  if(CLANCY_SPRITE){const sw=CLANCY_SPRITE.width||1,sh=CLANCY_SPRITE.height||1;const w=32,h=w*(sh/sw);ctx.drawImage(CLANCY_SPRITE,-w/2,14-h,w,h);}
+  // hull over his legs
+  ctx.fillStyle='#7a4622';ctx.beginPath();ctx.moveTo(-40,15);ctx.quadraticCurveTo(0,42,40,15);ctx.lineTo(33,23);ctx.quadraticCurveTo(0,33,-33,23);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#945427';ctx.beginPath();ctx.moveTo(-40,15);ctx.quadraticCurveTo(0,36,40,15);ctx.lineTo(36,12);ctx.quadraticCurveTo(0,28,-36,12);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='rgba(60,35,12,.5)';ctx.lineWidth=1.4;ctx.stroke();
+  // floating name label so the player knows he's here to tap
+  ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.2)+')';ctx.font='bold 13px Fredoka, sans-serif';ctx.textAlign='center';
+  ctx.fillText('Captain Clancy',0,-52);
+  ctx.restore();
+}
+// ── RUBY SUBMARINE (a project): surfaces offshore, tap for 10 rubies, then dives ──
+let _subDiveAt=0;
+function subAvailable(){return projectBuilt('submarine')&&Date.now()>=((S.subState&&S.subState.nextAt)||0);}
+function subPos(){return {x:Math.round(WORLD_DIMS[2][0]*0.28), y:Math.round(WORLD_DIMS[2][1]*0.64)};}
+function collectSubmarine(){
+  S.rubies=(S.rubies||0)+10;
+  if(!S.subState)S.subState={};
+  S.subState.nextAt=Date.now()+24*3600*1000;   // back in 24 real hours
+  _subDiveAt=Date.now();
+  if(typeof updatePills==='function')updatePills();queueSave();
+  try{AUDIO.sfx('coin');}catch(e){}
+  toast('The submarine surfaced with 10 rubies for ye! Back again tomorrow.','#d61f3a');
+}
+function drawSubmarine(sx,sy,t,dive){
+  ctx.save();ctx.translate(sx,sy);ctx.translate(0,dive*42);ctx.globalAlpha=1-dive*0.92;
+  ctx.translate(0,Math.sin(t*1.1)*2);
+  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,18,44,9,0,0,6.28);ctx.fill();
+  ctx.fillStyle='#e0b73a';ctx.beginPath();ctx.ellipse(0,4,42,16,0,0,6.28);ctx.fill();
+  ctx.fillStyle='#c79a25';ctx.beginPath();ctx.ellipse(0,8,42,12,0,0,Math.PI);ctx.fill();
+  ctx.strokeStyle='#8a6a14';ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(0,4,42,16,0,0,6.28);ctx.stroke();
+  ctx.fillStyle='#d8ab2c';roundRect(ctx,-12,-18,24,16,5);ctx.fill();ctx.stroke();
+  ctx.strokeStyle='#8a6a14';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(3,-18);ctx.lineTo(3,-30);ctx.lineTo(10,-30);ctx.stroke();
+  ctx.fillStyle='#bfe3ff';ctx.strokeStyle='#8a6a14';ctx.lineWidth=1.4;
+  for(let i=-1;i<=1;i++){ctx.beginPath();ctx.arc(i*16,4,4,0,6.28);ctx.fill();ctx.beginPath();ctx.arc(i*16,4,4,0,6.28);ctx.stroke();}
+  if(dive>0){ctx.fillStyle='rgba(255,255,255,'+(0.5*(1-dive))+')';for(let i=0;i<4;i++){ctx.beginPath();ctx.arc((i-1.5)*10,-22-dive*30-i*6,2+i*0.6,0,6.28);ctx.fill();}}
+  if(dive<0.25){ctx.fillStyle='rgba(255,240,200,.85)';ctx.font='bold 12px Fredoka, sans-serif';ctx.textAlign='center';ctx.fillText('Tap for 10 rubies',0,-36);}
+  ctx.restore();
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal();});
