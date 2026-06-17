@@ -37,8 +37,9 @@
   .pill.click:hover{background:rgba(20,33,46,.92);}
   .pill .sub{font-weight:700;font-size:11px;opacity:.8;}
   .menu-btn{width:38px;height:38px;justify-content:center;font-size:18px;padding:0;}
-  .clancy-pill{padding:3px;width:38px;height:38px;justify-content:center;}
-  .clancy-face{width:30px;height:30px;border-radius:50%;overflow:hidden;display:inline-flex;line-height:0;border:1.5px solid var(--accent);}
+  .clancy-pill{padding:0;background:none;border:none;width:auto;height:auto;}
+  .clancy-face{width:34px;height:34px;border-radius:50%;overflow:hidden;display:block;line-height:0;border:2px solid var(--accent);box-shadow:0 1px 3px rgba(0,0,0,.3);}
+  .clancy-face svg{width:100%;height:100%;display:block;}
   .clancy-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
   .clancy-head-face{width:42px;height:42px;border-radius:50%;overflow:hidden;line-height:0;border:2px solid var(--accent);flex:0 0 auto;}
   .clancy-head-name{font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
@@ -175,7 +176,7 @@
   .catch-game .hint{color:#fff;font-size:12px;font-weight:800;text-align:center;text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;}
   .catch-track{position:relative;height:28px;background:linear-gradient(180deg,#bfe0ec,#93c9da);border-radius:9px;border:2px solid var(--sea);overflow:hidden;}
   .catch-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#34c2a8,#34c2a8 6px,#2aa890 6px,#2aa890 12px);border-left:2px solid #1f7a6d;border-right:2px solid #1f7a6d;}
-  .catch-bullseye{position:absolute;top:0;height:100%;background:rgba(255,220,0,.9);border-left:2px solid #c8a800;border-right:2px solid #c8a800;pointer-events:none;}
+  .catch-bullseye{position:absolute;top:0;height:100%;background:#ffd400;box-shadow:inset 0 0 0 1px #d6ad00;pointer-events:none;}
   .catch-ind{position:absolute;top:-2px;width:5px;height:calc(100% + 4px);background:var(--accent-dark);border-radius:3px;box-shadow:0 0 6px rgba(196,111,40,.7);z-index:2;}
   .reel-btn{width:100%;margin-top:9px;padding:10px;font-family:'Fredoka';font-size:16px;font-weight:600;color:#fff;background:var(--accent);border:2px solid var(--accent-dark);border-radius:11px;box-shadow:0 4px 0 var(--accent-dark);cursor:pointer;}
   .reel-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-dark);}
@@ -1177,7 +1178,7 @@ function buildTutSteps(){
     {say:"Now listen close. Every so often a <b>LEGEND</b> hits - they don't use the hookset. It's a tug-o'-war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run - no reward, just the feel of it.",btn:"Bring it on"},
     {say:"Here she comes - a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL - keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
     {say:"YES!! Ye tamed a legend! Ye're ready for the salt now, angler.",btn:"One last thing"},
-    {say:"And this is the big one: see my face up in the <b>top-right</b>? Cast on any spot, then <b>tap my face</b> - I'll name every fish that bites there, and ye can tap a fish to learn its baits, lures and methods. If ye ever need more help, come find me out in the <b>offshore</b> on my sailboat. Tight lines, angler!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
+    {say:"And this is the big one: see my face up in the <b>top-right</b>? Cast on any spot, then <b>tap my face</b> - I'll name every fish that bites there, and ye can tap a fish to learn its baits, lures and methods. If ye ever need more help, come find me out in the <b>inshore</b> on my sailboat. Tight lines, angler!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
   ];
 }
 function showTutorial(){
@@ -2813,7 +2814,7 @@ const TOURN_DAY_START=300;    // ...as one full day->night cycle, starting at da
 // methods: cat = tackle category, bait = needs natural bait
 const METHODS=[
   {id:'cork',     name:'Cork',       cat:'cork',     bait:true,  zones:[0],     blurb:'A popping cork over the flats calls in trout & reds.'},
-  {id:'jig',      name:'Jig',        cat:'jig',      bait:false, zones:[0,1,2], blurb:'Work an artificial lure. No bait needed. Match the lure to your region.'},
+  {id:'jig',      name:'Jig',        cat:'jig',      bait:false, zones:[0,1], blurb:'Work an artificial lure. No bait needed. Match the lure to your region.'},
   {id:'structure',name:'Structure',  cat:'finesse',  bait:true,  zones:[0],     blurb:'Drop bait tight to pilings & bars. The sheepshead game.'},
   {id:'livebait', name:'Live bait',  cat:'livehook', bait:true,  zones:[0,1,2], blurb:'Free-line a lively bait. Hard to beat anywhere.'},
   {id:'bottom',   name:'Bottom rig', cat:'bottomrig',bait:true,  zones:[1,2],   blurb:'A knocker rig parked on reefs & wrecks.'},
@@ -7538,12 +7539,10 @@ function render(ts){
     if(s.temp){const pr=42+Math.sin(t*2.2)*5;const gg=ctx.createRadialGradient(sx,sy,6,sx,sy,pr);gg.addColorStop(0,'rgba(255,214,120,.22)');gg.addColorStop(1,'rgba(255,214,120,0)');ctx.fillStyle=gg;ctx.beginPath();ctx.arc(sx,sy,pr,0,6.28);ctx.fill();}
     drawStructure({kind:s.kind,x:sx,y:sy,tier:s.tier,pierLen:s.pierLen,seedX:s.x,seedY:s.y},t,sky.darkness);
   }
-  // Captain Clancy's sailboat + the Ruby Submarine offshore (open world only)
-  if(S.zone===2&&!mpActive()&&!surfActive){
-    const cp=clancyBoatPos();const cx2=cp.x-camera.x,cy2=cp.y-camera.y;
-    if(cx2>-80&&cx2<CW+80&&cy2>-80&&cy2<CH+80)drawClancyBoat(cx2,cy2,t,sky.darkness);
-    const diving=_subDiveAt&&(Date.now()-_subDiveAt<1600);
-    if(subAvailable()||diving){const sp=subPos();const sx2=sp.x-camera.x,sy2=sp.y-camera.y;if(sx2>-90&&sx2<CW+90&&sy2>-90&&sy2<CH+90)drawSubmarine(sx2,sy2,t,diving?(Date.now()-_subDiveAt)/1600:0);}
+  // Captain Clancy's sailboat (inshore) + the Ruby Submarine (offshore), open world only
+  if(!mpActive()&&!surfActive){
+    if(S.zone===0){const cp=clancyBoatPos();const cx2=cp.x-camera.x,cy2=cp.y-camera.y;if(cx2>-80&&cx2<CW+80&&cy2>-80&&cy2<CH+80)drawClancyBoat(cx2,cy2,t,sky.darkness);}
+    if(S.zone===2){const diving=_subDiveAt&&(Date.now()-_subDiveAt<1600);if(subAvailable()||diving){const sp=subPos();const sx2=sp.x-camera.x,sy2=sp.y-camera.y;if(sx2>-90&&sx2<CW+90&&sy2>-90&&sy2<CH+90)drawSubmarine(sx2,sy2,t,diving?(Date.now()-_subDiveAt)/1600:0);}}
   }
   // other players + ability effects (tournaments AND co-op friends worlds)
   if(mpActive()){
@@ -7712,13 +7711,12 @@ canvas.addEventListener('click',e=>{
     placeItemAt(x+camera.x,y+camera.y);
     return;
   }
-  // Tapping offshore world objects: Clancy's sailboat (tip) or the Ruby Submarine
-  if(S.zone===2&&!mpActive()&&!surfActive){
+  // Tapping world objects: Clancy's inshore sailboat (tip) or the offshore Ruby Submarine
+  if(!mpActive()&&!surfActive){
     const rect=canvas.getBoundingClientRect();
     const cxp=(e.clientX-rect.left)*(CW/rect.width),cyp=(e.clientY-rect.top)*(CH/rect.height);
-    const cp=clancyBoatPos();
-    if(dist(cxp,cyp,cp.x-camera.x,cp.y-camera.y)<52){clancyBoatTip();return;}
-    if(subAvailable()){const sp=subPos();if(dist(cxp,cyp,sp.x-camera.x,sp.y-camera.y)<52){collectSubmarine();return;}}
+    if(S.zone===0){const cp=clancyBoatPos();if(dist(cxp,cyp,cp.x-camera.x,cp.y-camera.y)<52){clancyBoatTip();return;}}
+    if(S.zone===2&&subAvailable()){const sp=subPos();if(dist(cxp,cyp,sp.x-camera.x,sp.y-camera.y)<52){collectSubmarine();return;}}
   }
   if(driving()){
     if(mpActive()){
@@ -8591,21 +8589,23 @@ function updateSurfSky(){
   if(!surfActive)return;
   const h=hourNow(),dk=skyState(h).darkness;
   const night=document.getElementById('surf-night');if(night)night.style.opacity=(dk*0.58).toFixed(2);
-  const HOR=40,ZEN=23; // horizon row % .. zenith row %
+  // BASE sits above the horizon so the disc never dips into the sea; ZEN is the peak.
+  const BASE=33,ZEN=22;
   function place(el,frac,vis){
     if(!el)return;
     frac=Math.max(0,Math.min(1,frac));
-    const top=HOR-Math.sin(frac*Math.PI)*(HOR-ZEN);
-    const aboveHor=(HOR-top)/(HOR-ZEN);            // 0 at the horizon, 1 at the peak
     el.style.left=(15+frac*66)+'%';
-    el.style.top=top+'%';
-    el.style.opacity=(vis*Math.max(0,Math.min(1,aboveHor*1.7))).toFixed(2);
+    el.style.top=(BASE-Math.sin(frac*Math.PI)*(BASE-ZEN))+'%';
+    el.style.opacity=Math.max(0,Math.min(1,vis)).toFixed(2);
   }
-  const dayFrac=Math.min(1,Math.max(0,(h-5)/14));  // 5:00..19:00 across the sky
-  place(document.getElementById('surf-sun'),dayFrac,1-dk);
+  // Sun and moon hand off at dusk/dawn so only one is ever in the sky.
+  const dayFrac=Math.min(1,Math.max(0,(h-5)/14));    // 5:00..19:00 across the sky
+  const sunVis=dk<0.55?(1-dk/0.55):0;
   let nf;if(h>=19)nf=(h-19)/10;else if(h<5)nf=(h+5)/10;else nf=0.5; // night arc 19:00..5:00
+  const moonVis=dk>=0.55?Math.min(1,(dk-0.55)/0.35):0;
+  place(document.getElementById('surf-sun'),dayFrac,sunVis);
   const moon=document.getElementById('surf-moon');
-  place(moon,nf,dk);
+  place(moon,nf,moonVis);
   if(moon){const ic=currentMoonPhase().icon;if(ic!==_surfMoonIcon){_surfMoonIcon=ic;moon.innerHTML=svgIcon(ic,54);}}
 }
 
@@ -9471,12 +9471,27 @@ function noteLastCast(st){S.lastCastStruct=st?st.kind:'open';S.lastCastZone=S.zo
 function clancyFishAtLastCast(){
   if(!S.lastCastStruct)return null;
   const zone=(typeof S.lastCastZone==='number')?S.lastCastZone:S.zone;
-  const open=S.lastCastStruct==='open';
-  const alias=open?'open':structKindAlias(S.lastCastStruct);
+  const alias=S.lastCastStruct==='open'?'open':structKindAlias(S.lastCastStruct);
+  // Match the structures logbook exactly: fish whose structure list includes this
+  // spot, in this region (no open-water-everywhere additions).
   return FISH.filter(function(f){
     if(f.surf||f.zone!==zone)return false;
-    return open?f.structure.includes('open'):(f.structure.includes(alias)||f.structure.includes('open'));
+    return (f.structure||[]).includes(alias);
   });
+}
+// Methods that actually work for this fish in its region: the method must be
+// available in the zone, and artificial methods need a lure that targets the fish.
+function clancyUsableMethods(f){
+  return (f.methods||[]).filter(function(mid){
+    const m=METHODS.find(function(x){return x.id===mid;});
+    if(!m||!m.zones.includes(f.zone))return false;
+    if(!m.bait)return LURES.some(function(l){return l.methods.includes(mid)&&(typeof l.zone!=='number'||l.zone===f.zone)&&l.targets&&l.targets.includes(f.id);});
+    return true;
+  });
+}
+// Lures that target this fish in its region (empty = can't be caught on a lure).
+function clancyLures(f){
+  return LURES.filter(function(l){return l.targets&&l.targets.includes(f.id)&&(typeof l.zone!=='number'||l.zone===f.zone);});
 }
 function _clancyHead(){return '<div class="clancy-head"><span class="clancy-head-face">'+CLANCY_SVG+'</span><span class="clancy-head-name">Captain Clancy</span></div>';}
 function openClancyInfo(){
@@ -9500,21 +9515,26 @@ function openClancyInfo(){
 }
 function clancyFishDetail(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
-  const methods=f.methods.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.name:mid;}).join(', ');
+  const usable=clancyUsableMethods(f);
+  const methods=usable.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.name:mid;}).join(', ')||'—';
   const baits=f.baits.map(function(bid){const b=BAIT.find(x=>x.id===bid);return b?b.name:bid;}).join(', ');
-  const lures=LURES.filter(function(l){return l.targets&&l.targets.includes(f.id);}).map(function(l){return l.name;});
-  const lureText=lures.length?lures.join(', '):'no special lure - match the lure to its bait';
+  const cats=[...new Set(usable.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
+  const tackle=[...new Set(cats.map(function(cat){if(cat==='jig'||cat==='trolllure')return 'a lure';const tk=TACKLE.find(function(tt){return tt.cat===cat&&!tt.reward&&!tt.surfGear;})||TACKLE.find(function(tt){return tt.cat===cat;});return tk?tk.name:cat;}))].join(', ')||'—';
+  const lures=clancyLures(f).map(function(l){return l.name;});
+  const lureRow=lures.length
+    ? '<div class="mrow"><span class="ml">Lures</span><span class="mv">'+lures.join(', ')+'</span></div>'
+    : '<div class="mrow"><span class="ml">Lures</span><span class="mv">None - this one won’t take a lure. Use bait.</span></div>';
   const modal=document.getElementById('modal');
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()
     +'<div class="clancy-tip"><b>'+f.name+'</b> - here\'s what they fancy:</div>'
     +'<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methods+'</span></div>'
-    +'<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+_fishTackleText(f)+'</span></div>'
+    +'<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+tackle+'</span></div>'
     +'<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baits+'</span></div>'
-    +'<div class="mrow"><span class="ml">Lures</span><span class="mv">'+lureText+'</span></div>'
+    +lureRow
     +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>';
 }
 // Clancy's offshore sailboat: a fixed spot in the bluewater you can sail up to.
-function clancyBoatPos(){return {x:Math.round(WORLD_DIMS[2][0]*0.72), y:Math.round(WORLD_DIMS[2][1]*0.30)};}
+function clancyBoatPos(){return {x:Math.round(WORLD_DIMS[0][0]*0.72), y:Math.round(WORLD_DIMS[0][1]*0.28)};}
 const CLANCY_TIPS=[
   "Fish feed best at dawn and dusk - low light makes 'em bold.",
   "Match yer leader to the fish: fluoro for the wary, wire for the toothy.",
@@ -9535,21 +9555,28 @@ function clancyBoatTip(){
 }
 function drawClancyBoat(sx,sy,t,dark){
   ctx.save();ctx.translate(sx,sy);ctx.translate(0,Math.sin(t*1.3)*2);
-  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,30,42,10,0,0,6.28);ctx.fill();
-  // mast + mainsail + jib
-  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(2,16);ctx.lineTo(2,-42);ctx.stroke();
-  ctx.fillStyle='#eee6d6';ctx.beginPath();ctx.moveTo(5,-40);ctx.quadraticCurveTo(32,-14,7,10);ctx.closePath();ctx.fill();
+  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,24,44,10,0,0,6.28);ctx.fill();
+  // mast + mainsail + jib (rise from behind the hull)
+  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(0,-46);ctx.stroke();
+  ctx.fillStyle='#eee6d6';ctx.beginPath();ctx.moveTo(3,-44);ctx.quadraticCurveTo(31,-16,5,4);ctx.closePath();ctx.fill();
   ctx.strokeStyle='rgba(120,90,50,.45)';ctx.lineWidth=1;ctx.stroke();
-  ctx.fillStyle='#e0d6c2';ctx.beginPath();ctx.moveTo(0,-32);ctx.quadraticCurveTo(-20,-10,-2,6);ctx.closePath();ctx.fill();ctx.stroke();
-  // Clancy seated in the hull
-  if(CLANCY_SPRITE){const sw=CLANCY_SPRITE.width||1,sh=CLANCY_SPRITE.height||1;const w=32,h=w*(sh/sw);ctx.drawImage(CLANCY_SPRITE,-w/2,14-h,w,h);}
-  // hull over his legs
-  ctx.fillStyle='#7a4622';ctx.beginPath();ctx.moveTo(-40,15);ctx.quadraticCurveTo(0,42,40,15);ctx.lineTo(33,23);ctx.quadraticCurveTo(0,33,-33,23);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#945427';ctx.beginPath();ctx.moveTo(-40,15);ctx.quadraticCurveTo(0,36,40,15);ctx.lineTo(36,12);ctx.quadraticCurveTo(0,28,-36,12);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#e0d6c2';ctx.beginPath();ctx.moveTo(-2,-34);ctx.quadraticCurveTo(-22,-12,-4,2);ctx.closePath();ctx.fill();ctx.stroke();
+  // back wall of the hull (the inside)
+  ctx.fillStyle='#5e3517';ctx.beginPath();ctx.ellipse(0,10,34,12,0,0,6.28);ctx.fill();
+  // Clancy seated - clipped to the hull interior so the gunwale hides his legs
+  if(CLANCY_SPRITE){
+    const sw=CLANCY_SPRITE.width||1,sh=CLANCY_SPRITE.height||1,w=34,h=w*(sh/sw);
+    ctx.save();ctx.beginPath();ctx.rect(-30,-46,60,60);ctx.clip();   // cut off below y=14
+    ctx.drawImage(CLANCY_SPRITE,-w/2,18-h,w,h);
+    ctx.restore();
+  }
+  // front gunwale over his lap + hull body
+  ctx.fillStyle='#945427';ctx.beginPath();ctx.moveTo(-40,11);ctx.quadraticCurveTo(0,40,40,11);ctx.quadraticCurveTo(0,22,-40,11);ctx.closePath();ctx.fill();
   ctx.strokeStyle='rgba(60,35,12,.5)';ctx.lineWidth=1.4;ctx.stroke();
-  // floating name label so the player knows he's here to tap
+  ctx.strokeStyle='#7a4622';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,10,40,13,0,Math.PI,2*Math.PI);ctx.stroke();
+  // floating name label so the player knows to tap him
   ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.2)+')';ctx.font='bold 13px Fredoka, sans-serif';ctx.textAlign='center';
-  ctx.fillText('Captain Clancy',0,-52);
+  ctx.fillText('Captain Clancy',0,-54);
   ctx.restore();
 }
 // ── RUBY SUBMARINE (a project): surfaces offshore, tap for 10 rubies, then dives ──
