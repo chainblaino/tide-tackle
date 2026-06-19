@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Saltwater Fishing Simulator V 0.9.6</title>
+<title>Tide & Tackle: Saltwater Fishing Simulator V 0.9.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -70,7 +70,7 @@
   .drive-controls.anchored .joystick{opacity:0;pointer-events:none;}
   .joystick{width:108px;height:108px;border-radius:50%;background:rgba(20,33,46,.58);border:2px solid rgba(255,255,255,.28);position:relative;pointer-events:auto;touch-action:none;transition:opacity .2s;}
   .joy-knob{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f3b878,#e08a3c 70%);border:2px solid var(--accent-dark);position:absolute;left:28px;top:28px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
-  .anchor-btn{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 62px);z-index:8;pointer-events:auto;padding:9px 14px;border-radius:11px;border:2px solid var(--wood);background:var(--cream);color:var(--wood-dark);font-family:'Fredoka';font-weight:600;font-size:13.5px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.28);touch-action:manipulation;white-space:nowrap;}
+  .anchor-btn{position:absolute;right:10px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);z-index:8;pointer-events:auto;padding:9px 14px;border-radius:11px;border:2px solid var(--wood);background:var(--cream);color:var(--wood-dark);font-family:'Fredoka';font-weight:600;font-size:13.5px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.28);touch-action:manipulation;white-space:nowrap;}
   .anchor-btn:active{transform:translateY(2px);box-shadow:0 2px 0 rgba(0,0,0,.28);}
   .anchor-btn.is-anchored{background:var(--accent);color:#fff;border-color:var(--accent-dark);box-shadow:0 4px 0 var(--accent-dark);}
   /* tournament ability button (set abilities, 3 uses) */
@@ -172,7 +172,7 @@
   @media (max-width:600px){.ability-btn{bottom:160px;font-size:13px;min-width:86px;}.items-btn{bottom:214px;font-size:13px;padding:9px 13px;}.surf-btn{bottom:158px;font-size:14px;}}
   /* hide the rig bar while driving so the joystick has clear room */
   body.driving .rig-bar{display:none;}
-  @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;bottom:calc(env(safe-area-inset-bottom,0px) + 58px);}}
+  @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);}}
 
   /* status banner */
   .status-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:134px;z-index:6;background:rgba(20,33,46,.9);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 16px;color:#fff;font-weight:700;font-size:13.5px;text-align:center;max-width:86%;line-height:1.4;transition:opacity .2s;}
@@ -654,7 +654,7 @@
         <button class="menu-dd-item" data-go="quests"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg></span>Quests</button>
         <button class="menu-dd-item" data-go="stats"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span>Stats</button>
         <button class="menu-dd-item" data-go="projects"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v6l9 4 9-4V7"/><path d="M12 11v6"/></svg></span>Projects</button>
-        <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Bounty</button>
+        <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Tournament</button>
         <button class="menu-dd-item" data-go="friends"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M18 14a6 6 0 0 1 3 5"/></svg></span>Friends</button>
         <button class="menu-dd-item" data-go="settings"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Settings</button>
       </div>
@@ -707,7 +707,7 @@
     <button class="menu-tab active" data-mtab="shop">Shop</button>
     <button class="menu-tab" data-mtab="logbook">Logbook</button>
     <button class="menu-tab" data-mtab="quests">Quests</button>
-    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="projects">Projects</button><button class="menu-tab" data-mtab="tournament">Bounty</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
+    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="projects">Projects</button><button class="menu-tab" data-mtab="tournament">Tournament</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
@@ -748,7 +748,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.6</div>
+    <div class="auth-sub">Saltwater Fishing Simulator &nbsp;·&nbsp; V 0.9.7</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -874,7 +874,7 @@
 </div>
 <div class="lobby-overlay" id="lobby-overlay">
   <div class="lobby-box">
-    <div class="lobby-title" id="lobby-title">Bounty Lobby</div>
+    <div class="lobby-title" id="lobby-title">Tournament Lobby</div>
     <div class="lobby-sub" id="lobby-sub"></div>
     <div class="lobby-timer" id="lobby-timer">1:00</div>
     <ul class="lobby-players" id="lobby-players"></ul>
@@ -1290,7 +1290,7 @@ function showTournamentIntro(){
   clancyTalk([
     {say:"Look at ye, <b>Level 5!</b> That means the <b>Bounties</b> are open to ye now. Gather round, let me explain.",btn:"Tell me"},
     {say:"A tournament's a timed contest: <b>6 minutes</b>, one <b>target species</b>. Whoever lands the <b>biggest</b> one of that fish takes it.",btn:"Go on"},
-    {say:"Open the menu <b>☰</b> and tap <b>Bounty</b>. Pay the gold entry and ye're dropped into a big open arena with other anglers and a few of my regulars.",btn:"Okay"},
+    {say:"Open the menu <b>☰</b> and tap <b>Tournament</b>. Pay the gold entry and ye're dropped into a big open arena with other anglers and a few of my regulars.",btn:"Okay"},
     {say:"Top three take home <b>gold AND rubies</b>. Rubies are the good stuff, they buy gear sets, abilities and items ye can't get with coin.",btn:"Nice"},
     {say:"Watch the <b>standings</b> up top, tap the <b>map</b> to uncover the water, and work your spots. Now get out there and win one, angler!",btn:"Let's go!"}
   ]);
@@ -1311,7 +1311,7 @@ function _qBuildBig(rarity, frac){return function(it, rng){const p=FISH.filter(f
 const QUEST_TEMPLATES={
   rare:[
     {id:'r_species5', diff:'rare', kind:'unique', goalBase:5, key:function(f){return f.id;}, text:function(){return 'Catch 5 different species of fish';}},
-    {id:'r_tourn',    diff:'rare', kind:'event', evt:'tournEnter', goalBase:1, text:function(){return 'Compete in a daily Bounty';}},
+    {id:'r_tourn',    diff:'rare', kind:'event', evt:'tournEnter', goalBase:1, text:function(){return 'Compete in a daily Tournament';}},
     {id:'r_night10',  diff:'rare', kind:'count', goalBase:10, match:function(f, w, c){return !!c.night;}, text:function(){return 'Catch 10 fish at night';}},
     {id:'r_struct5',  diff:'rare', kind:'unique', goalBase:5, key:function(f, w, c){return c.structKey||null;}, text:function(){return 'Catch a fish at 5 different structures';}},
     {id:'r_zones3',   diff:'rare', kind:'unique', goalBase:3, key:function(f){return 'z'+f.zone;}, text:function(){return 'Catch a fish in inshore, nearshore, and offshore';}},
@@ -1820,14 +1820,32 @@ function updateZonePill(){
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
 }
 
+// A monotonic day counter in US Eastern time, so the bounty's region and species
+// list roll over once per real day and march in a fixed order.
+function etDayIndex(){
+  const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
+  const m=s.match(/(\d+)\D+(\d+)\D+(\d+)/); // month, day, year
+  return m?Math.floor(Date.UTC(+m[3],+m[1]-1,+m[2])/86400000):Math.floor(Date.now()/86400000);
+}
+// The day's bounty: a random ordered list of species from the region (no ultras).
+function bountyDailyList(zone, day){
+  const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&!f.surf&&f.rarity!=='ultra';}):[];
+  const r=mulberry32((strHash('bountylist_'+zone+'_'+day))>>>0);
+  const copy=pool.slice(), picks=[];
+  for(let i=0;i<BOUNTY_GOAL&&copy.length;i++){picks.push(copy.splice(Math.floor(r()*copy.length),1)[0]);}
+  return picks;
+}
+// The Big Cast is the BOUNTY: each real day it rotates region in order (inshore ->
+// nearshore -> offshore) and rolls a fresh ordered list of species to land. Rarity
+// still drives the entry fee and the payout scale.
 function getAlwaysTournament(){
-  const seed=parseInt(etDateSeed());
-  const zone=Math.floor(seededRnd(seed*3)*3);
-  const rarity=TOURN_RARITIES[Math.floor(seededRnd(seed*7+1)*3)];
+  const day=etDayIndex();
+  const zone=((day%3)+3)%3;                                 // one region per day, in order
+  const rarity=TOURN_RARITIES[Math.floor(seededRnd((day+1)*7)*3)];
   const fee=tournFee(zone, rarity);
-  const pool=(typeof FISH!=="undefined")?FISH.filter(function(f){return f.zone===zone&&f.rarity===rarity&&!f.surf;}):[];
-  const targetFish=pool.length?pool[Math.floor(seededRnd(seed*11+2)*pool.length)]:null;
-  return {id:"always",zone:zone, name:"The Big Cast",maxP:50,rarity:rarity, fee:fee, targetFish:targetFish, alwaysOn:true};
+  const list=bountyDailyList(zone, day);
+  return {id:"always",zone:zone, name:"The Big Cast",maxP:50,rarity:rarity, fee:fee,
+          targetFish:list[0]||null, bounty:true, bountyList:list, alwaysOn:true};
 }
 function etDateSeed(){
   const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
@@ -1931,8 +1949,8 @@ function renderTournCard(def){
   if(def.alwaysOn){
     return "<div class=\"tourn-card always-on\">"
       +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"',1.5)\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
-      +"<div class=\"tourn-row\"><span>"+ZONE_LBL[def.zone]+" &middot; Target: "+fishLabel+"</span></div>"
-      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; Resets daily</span></div>"
+      +"<div class=\"tourn-row\"><span><b style=\"color:#e0a93c;\">Bounty</b> &middot; "+ZONE_LBL[def.zone]+" &middot; land "+BOUNTY_GOAL+" species in order</span></div>"
+      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; New list daily</span></div>"
       +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up:"+def.fee+"g entry</button>"
       +"</div>";
   }
@@ -1955,7 +1973,7 @@ function renderTournamentPanel(){
   if((S.level||1)<5){
     el.innerHTML='<div style="text-align:center;padding:24px 14px 8px;">'
       +'<div style="font-size:42px;line-height:1;color:#b58b53;">'+svgIcon('lock',40)+'</div>'
-      +'<div style="font-family:\'Fredoka\';font-weight:800;font-size:16px;color:var(--wood-dark);margin-top:10px;">Bounties unlock at Level 5</div>'
+      +'<div style="font-family:\'Fredoka\';font-weight:800;font-size:16px;color:var(--wood-dark);margin-top:10px;">Tournaments unlock at Level 5</div>'
       +'<div style="font-size:12.5px;color:var(--text-soft);margin-top:7px;line-height:1.5;">Keep fishing to level up. At Level 5, Captain Clancy shows ye the ropes and the contests open, compete with other anglers for gold &amp; rubies.</div>'
       +'<div style="display:inline-block;margin-top:12px;padding:6px 14px;border-radius:20px;background:var(--parchment);border:1.5px solid #d2b886;font-size:12.5px;font-weight:800;color:var(--accent-dark);">You are Level '+(S.level||1)+'</div>'
       +'</div>';
@@ -1979,7 +1997,7 @@ function enterTournament(defId){
   const meEntry={uid:fbUser?fbUser.uid:"guest",username:fbUsername, isBot:false};
   activeLobby={def:def, players:[meEntry],timeLeft:60};
   document.getElementById("lobby-title").textContent=def.name;
-  const fishStr=def.targetFish?def.targetFish.name+" ("+RAR_LBL[def.rarity]+")":RAR_LBL[def.rarity]+" fish";
+  const fishStr=def.bounty?("Bounty · "+BOUNTY_GOAL+" species in order"):(def.targetFish?def.targetFish.name+" ("+RAR_LBL[def.rarity]+")":RAR_LBL[def.rarity]+" fish");
   document.getElementById("lobby-sub").textContent=fishStr+" · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
   document.getElementById("lobby-overlay").style.display="flex";
   document.getElementById("menu-panel").classList.remove("show");
@@ -2152,7 +2170,8 @@ function startTournamentMode(def){
   const tournSeason=_seasonPool[Math.floor(_sr()*_seasonPool.length)];
   activeTournament={def:def, biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now(),
-    species:{},speciesOrder:[],speciesCount:0,cannons:0,cannonHits:{},_ended:false};
+    bountyList:(def.bounty?(def.bountyList||[]).slice():null), bountyIdx:0,
+    speciesCount:0,cannons:0,cannonHits:{},_ended:false};
   cannonsSpawned=0;cannonBalls=[];_cannonArmed=false;_cannonDrag=null;
   if(typeof updateCannonButton==='function')updateCannonButton();
   freezeClockForMatch();   // remember the player's real clock/season
@@ -2181,20 +2200,23 @@ function startTournamentMode(def){
     }
   }
   const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
-  _bn.textContent=def.coop?'FISHING WITH FRIENDS':(def.session?'CHALLENGE IN PROGRESS':'BOUNTY · FIRST TO 5 SPECIES');_bn.classList.remove('leading');
+  _bn.textContent=def.coop?'FISHING WITH FRIENDS':(def.session?'CHALLENGE IN PROGRESS':(isBounty()?'BOUNTY':'TOURNAMENT IN PROGRESS'));_bn.classList.remove('leading');
   // Friends sessions (co op / challenge) skip bots and customise the banner.
   const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display=def.coop?'block':'none';
   // Tournaments & challenges get an EMPTY discovery map you fill in by exploring.
   if(!def.coop){const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';tourn._trail=[];}
   if(def.session){
     toast(def.coop?'Fishing with friends! Catch anything you like.':('Challenge on! Biggest '+(def.targetFish?def.targetFish.name:'fish')+' in 6 minutes wins.'),'#e0a93c');
+  }else if(isBounty()){
+    const first=activeTournament.bountyList&&activeTournament.bountyList[0];
+    toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". 6 minutes.","#e0a93c");
   }else{
-    toast("Bounty on! First to catch 5 different species in the "+ZONE_LBL[def.zone].toLowerCase()+" wins. 6 minutes.","#e0a93c");
+    toast("Tournament on! Land the biggest "+(def.targetFish?def.targetFish.name:'fish')+" in 6 minutes.","#e0a93c");
   }
   // Bots fish like real anglers: they work the spots over the whole match, miss
   // plenty, and only land fish now and then (no instant catch at the buzzer). The
   // schedule is deterministic from the match seed so every screen agrees.
-  if(activeLobby&&!def.session)buildBountyBotPlan();
+  if(activeLobby&&!def.session){if(isBounty())buildBountyBotPlan();else buildBotPlan();}
   // Quest: entering a real (non-coop, non-challenge) tournament.
   if(!def.coop&&!def.session&&typeof questEvent==='function')questEvent('tournEnter');
   // Co op worlds have no timer (leave when you like); everything else runs 6 min.
@@ -2244,17 +2266,25 @@ function initCoopGhosts(){
 function recordTournamentCatch(fish, weight){
   recordChallengeBest(fish, weight);
   if(!activeTournament)return;
-  // BOUNTY: every distinct species counts. First to 5 wins; weight breaks ties.
+  // BOUNTY: a fixed ordered list. Only the species currently listed advances you,
+  // and landing it is what fires the Stardew fight (see triggerBite). First to the
+  // end of the list wins; biggest fish breaks ties.
   if(isBounty()){
-    if(!activeTournament.species)activeTournament.species={};
-    if(!activeTournament.speciesOrder)activeTournament.speciesOrder=[];
-    const isNew=!activeTournament.species[fish.id];
-    if(isNew){activeTournament.species[fish.id]=true;activeTournament.speciesOrder.push(fish.id);activeTournament.speciesCount=(activeTournament.speciesCount||0)+1;}
-    if(weight>(activeTournament.biggestWeight||0)){activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;}
-    if(isNew)toast('New species! '+(activeTournament.speciesCount)+' / '+BOUNTY_GOAL+' for the bounty.','#2aa890');
-    maybeAwardCannon();
-    if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
-    bountyWinCheck();
+    const list=activeTournament.bountyList||[];
+    const idx=activeTournament.bountyIdx||0;
+    const tgt=list[idx];
+    if(tgt && fish.id===tgt.id){
+      activeTournament.bountyIdx=idx+1;
+      activeTournament.speciesCount=activeTournament.bountyIdx;      // synced progress / standings
+      if(weight>(activeTournament.biggestWeight||0)){activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;}
+      const next=list[activeTournament.bountyIdx];
+      if(activeTournament.bountyIdx>=BOUNTY_GOAL)toast('Bounty complete! '+BOUNTY_GOAL+' / '+BOUNTY_GOAL+'!','#2aa890');
+      else toast('Landed the '+fish.name+'! Next up: '+(next?next.name:'?')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#2aa890');
+      maybeAwardCannon();
+      updateTournBanner();
+      if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+      bountyWinCheck();
+    }
     return;
   }
   const tgt=activeTournament.def&&activeTournament.def.targetFish;
@@ -3260,6 +3290,15 @@ const CHALLENGER_SPRITE={};
 [['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png']].forEach(function(p){
   const im=new Image();
   im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_keyOutPetBg(im);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
+  im.src=p[1];
+});
+// V0.9.7: top-down boat art the NPCs sit inside (light backgrounds keyed out).
+// All are 1254x1254 with the boat centred, so we draw the whole square and the
+// boat lands centred for free.
+const NPC_BOAT={};
+[['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png']].forEach(function(p){
+  const im=new Image();
+  im.onload=function(){try{NPC_BOAT[p[0]]=_keyOutPetBg(im);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
 });
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
@@ -5000,32 +5039,37 @@ function drawSightFish(now, t, darkness){
 // a forked tail that wags, and a pectoral fin that sweeps the opposite way. No
 // dorsal fin (it reads as a silhouette glimpsed through the water).
 function drawSightFishBody(size, color, t){
-  const tw=Math.sin(t)*.42, ty=tw*size, edge=(typeof _dk==='function'?_dk(color,0.35):color);
+  // The tail and fin hinge from a point INSIDE the body and are drawn behind it,
+  // so the body always overlaps their bases, no gaps as the tail wags.
+  const wag=Math.sin(t)*0.5, tipY=wag*size*0.55;
+  const edge=(typeof _dk==='function'?_dk(color,0.32):color);
   ctx.save();
-  // forked tail, behind the body, wagging
+  // forked tail, hinged at the rear of the body, wagging up and down
   ctx.fillStyle=edge;
   ctx.beginPath();
-  ctx.moveTo(-size*.78,0);
-  ctx.lineTo(-size*1.5,-size*.5+ty);
-  ctx.quadraticCurveTo(-size*1.18,0+ty*.6,-size*1.5,size*.5+ty);
+  ctx.moveTo(-size*0.66,-size*0.13);
+  ctx.lineTo(-size*1.28,-size*0.5+tipY);
+  ctx.quadraticCurveTo(-size*1.02,tipY,-size*1.28,size*0.5+tipY);
+  ctx.lineTo(-size*0.66,size*0.13);
   ctx.closePath();ctx.fill();
-  // pectoral fin (under the body, sweeps opposite the tail)
+  // pectoral fin under the belly, its base tucked inside the body
   ctx.fillStyle=edge;
   ctx.beginPath();
-  ctx.moveTo(size*.2,size*.14);
-  ctx.quadraticCurveTo(-size*.05,size*.52-ty*.5,-size*.3,size*.18);
+  ctx.moveTo(size*0.30,size*0.15);
+  ctx.quadraticCurveTo(size*0.02,size*0.52,-size*0.22,size*0.20);
+  ctx.quadraticCurveTo(size*0.06,size*0.22,size*0.30,size*0.15);
   ctx.closePath();ctx.fill();
-  // body: a smooth teardrop with a subtle wiggle
-  ctx.fillStyle=color;ctx.strokeStyle=edge;ctx.lineWidth=Math.max(1,size*.05);
+  // body: a smooth teardrop, nose at +x, overlapping the tail/fin bases
+  ctx.fillStyle=color;ctx.strokeStyle=edge;ctx.lineWidth=Math.max(1,size*0.05);
   ctx.beginPath();
-  ctx.moveTo(size*1.02,ty*.18);
-  ctx.quadraticCurveTo(size*.25,-size*.5,-size*.8,-size*.14+ty);
-  ctx.quadraticCurveTo(-size*.95,ty,-size*.8,size*.14+ty);
-  ctx.quadraticCurveTo(size*.25,size*.5,size*1.02,ty*.18);
+  ctx.moveTo(size*1.04,0);
+  ctx.quadraticCurveTo(size*0.30,-size*0.5,-size*0.70,-size*0.12);
+  ctx.quadraticCurveTo(-size*0.84,0,-size*0.70,size*0.12);
+  ctx.quadraticCurveTo(size*0.30,size*0.5,size*1.04,0);
   ctx.closePath();ctx.fill();ctx.stroke();
   // eye
-  ctx.fillStyle='rgba(15,25,35,.7)';
-  ctx.beginPath();ctx.arc(size*.62,-size*.06,Math.max(1,size*.09),0,6.28);ctx.fill();
+  ctx.fillStyle='rgba(15,25,35,.72)';
+  ctx.beginPath();ctx.arc(size*0.66,-size*0.05,Math.max(1,size*0.085),0,6.28);ctx.fill();
   ctx.restore();
 }
 // Underwater LED: a bright green glow ring around the boat at night.
@@ -5326,7 +5370,7 @@ function botBestNow(username){
 // knock one species off their tally.
 const BOUNTY_GOAL=5;
 let cannonsSpawned=0, cannonBalls=[], _cannonArmed=false, _cannonDrag=null, _cannonJustFired=0;
-function isBounty(){return !!(activeTournament&&activeTournament.def&&!activeTournament.def.coop&&!activeTournament.def.session);}
+function isBounty(){return !!(activeTournament&&activeTournament.def&&activeTournament.def.bounty);}
 function buildBountyBotPlan(){
   const def=activeTournament&&activeTournament.def; if(!def||!activeLobby)return;
   const seed=matchSeed();
@@ -6291,13 +6335,15 @@ function applyIncomingAct(act){
   const now=Date.now();
   const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder'||act.type==='trick'||act.type==='cannon');
   if(hostile&&now<immuneUntil){toast('Untouchable, blocked an ability!','#2aa890');return;}
-  // Bounty cannon: a rival's cannonball reset your most recent species.
+  // Bounty cannon: a rival's cannonball knocks you back one species on the list.
   if(act.type==='cannon'){
     if(isBounty()){
-      const ord=activeTournament.speciesOrder||[];
-      if(ord.length){const lost=ord.pop();if(activeTournament.species)delete activeTournament.species[lost];activeTournament.speciesCount=Math.max(0,(activeTournament.speciesCount||0)-1);}
-      toast('A cannonball blasted ye! Lost your last species ('+(activeTournament.speciesCount||0)+'/'+BOUNTY_GOAL+').','#c46f28');
+      activeTournament.bountyIdx=Math.max(0,(activeTournament.bountyIdx||0)-1);
+      activeTournament.speciesCount=activeTournament.bountyIdx;
+      const list=activeTournament.bountyList||[], back=list[activeTournament.bountyIdx];
+      toast('A cannonball blasted ye! Back to '+(back?back.name:'the start')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#c46f28');
       spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');
+      updateTournBanner();
       if(fbUser&&fbDb&&tourn.posKey){publishMyPosition(fbDb.collection('tournament_positions').doc(tourn.posKey),true);}
     }
     return;
@@ -6411,10 +6457,11 @@ function updateTournBanner(){
   const bn=document.getElementById('tourn-banner');if(!bn)return;
   if(activeTournament&&activeTournament.def&&activeTournament.def.coop){bn.textContent='FISHING WITH FRIENDS';bn.classList.remove('leading');return;}
   if(isBounty()){
-    const st=bountyStandings();const place=st.findIndex(function(e){return e.isPlayer;})+1;const me=st.find(function(e){return e.isPlayer;});
-    const n=(me&&me.count)||0;
-    bn.textContent=ordinalNum(place||1)+' of '+st.length+' · '+n+'/'+BOUNTY_GOAL+' species';
-    bn.classList.toggle('leading',place===1&&n>0);
+    const list=activeTournament.bountyList||[], idx=activeTournament.bountyIdx||0;
+    if(idx>=BOUNTY_GOAL||idx>=list.length){bn.textContent='Bounty complete! '+idx+'/'+BOUNTY_GOAL;bn.classList.add('leading');return;}
+    const tgt=list[idx];
+    bn.textContent='Catch: '+(tgt?tgt.name:'?')+'  ·  '+idx+'/'+BOUNTY_GOAL;
+    bn.classList.toggle('leading',false);
     return;
   }
   const p=liveTournPlace();if(!p){bn.textContent='TOURNAMENT IN PROGRESS';return;}
@@ -8451,6 +8498,12 @@ function poolNow(){
     // season, still a strong modifier (the right season makes a fish far more
     // likely). Bounty mode switches this off so any species is fair game.
     if(typeof isBounty!=='function'||!isBounty())w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
+    // Bounty: heavily favour the species CURRENTLY on the list so it bites without
+    // endless waiting. The boost also cancels the rarity penalty above, so an epic
+    // or legendary target still shows up reliably (the rest of the region still
+    // appears so it feels alive).
+    else{const _bl=activeTournament.bountyList||[],_bt=_bl[activeTournament.bountyIdx||0];
+      if(_bt&&f.id===_bt.id)w*=3.5*({common:1,uncommon:1,rare:1.5,epic:9,legendary:26}[f.rarity]||1);}
     // time
     if(f.time.includes('all'))w*=1; else if(f.time.includes(ph))w*=1.8; else w*=0.5;
     // on-structure / matching-bait fish get an extra nudge over the baseline gate
@@ -8547,9 +8600,18 @@ function triggerBite(){
   sdewRetryUsed=false;sdewSurf=false;
   phase='biting';
   AUDIO.sfx('bite');
+  if(activeTournament&&isBounty()){
+    // Bounty: landing the species CURRENTLY listed triggers the Stardew fight and
+    // advances you. Anything else is a normal (uncounted) hookset.
+    const list=activeTournament.bountyList||[], tgt=list[activeTournament.bountyIdx||0];
+    if(tgt&&pick.id===tgt.id){startSdewGame(pick);return;}
+    setStatus('Fish on! Set the hook!');setupMiniGame();
+    escapeTimeout=setTimeout(()=>{if(phase==='biting'){endMiniGame();fail('It threw the hook. Too slow!');}},3700);
+    return;
+  }
   if(activeTournament&&activeTournament.def.targetFish){
-    // During a tournament/challenge ONLY the target species triggers the Stardew
-    // fight, even a legendary that isn't the target uses the normal hookset.
+    // During a classic tournament/challenge ONLY the target species triggers the
+    // Stardew fight, even a legendary that isn't the target uses the normal hookset.
     const tgt=activeTournament.def&&activeTournament.def.targetFish;
     if(tgt&&pick.id===tgt.id){startSdewGame(pick);return;}
     setStatus('Fish on! Set the hook!');setupMiniGame();
@@ -8578,6 +8640,9 @@ function setupMiniGame(){
   document.getElementById('catch-game').style.display='block';
   document.getElementById('rig-bar').style.pointerEvents='none';
   document.getElementById('drive-controls').style.visibility='hidden';
+  // The catch bar sits low and wide; hide the anchor button so they never overlap
+  // (you can't pull anchor mid-fight anyway).
+  {const _ab=document.getElementById('anchor-btn');if(_ab)_ab.style.visibility='hidden';}
   const ri=RARITY_ORDER.indexOf(hookedFish.rarity);
   zoneSel.width=Math.max(12,(22+curRod().zoneBonus)-ri*3);
   zoneSel.left=8+Math.random()*(84-zoneSel.width);
@@ -8613,7 +8678,7 @@ function animateMiniGame(){
   updateMiniGameDOM();
   if(phase==='biting')catchAnim=requestAnimationFrame(animateMiniGame);
 }
-function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';document.getElementById('rig-bar').style.pointerEvents='';document.getElementById('drive-controls').style.visibility='';}
+function endMiniGame(){cancelAnimationFrame(catchAnim);clearTimeout(escapeTimeout);document.getElementById('catch-game').style.display='none';document.getElementById('rig-bar').style.pointerEvents='';document.getElementById('drive-controls').style.visibility='';{const _ab=document.getElementById('anchor-btn');if(_ab)_ab.style.visibility='';}}
 
 // ─────────────────────────────────────────────────────────────
 // LEGENDARY ALERT + STARDEW MINI-GAME
@@ -9959,30 +10024,8 @@ function clancyBoatTip(){
   bg.classList.add('show');try{AUDIO.sfx('open');}catch(e){}
 }
 function drawClancyBoat(sx, sy, t, dark){
-  ctx.save();ctx.translate(sx, sy);ctx.translate(0,Math.sin(t*1.3)*2);
-  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,24,44,10,0,0,6.28);ctx.fill();
-  // mast + mainsail + jib (rise from behind the hull, set off to the LEFT so the
-  // mast never crosses Clancy's face where the keyed-out sprite is transparent)
-  ctx.strokeStyle='#5a3a1a';ctx.lineWidth=2.4;ctx.beginPath();ctx.moveTo(-15,9);ctx.lineTo(-15,-46);ctx.stroke();
-  ctx.fillStyle='#eee6d6';ctx.beginPath();ctx.moveTo(-12,-44);ctx.quadraticCurveTo(16,-18,-10,3);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(120,90,50,.45)';ctx.lineWidth=1;ctx.stroke();
-  ctx.fillStyle='#e0d6c2';ctx.beginPath();ctx.moveTo(-17,-34);ctx.quadraticCurveTo(-37,-13,-19,1);ctx.closePath();ctx.fill();ctx.stroke();
-  // back wall of the hull (the inside)
-  ctx.fillStyle='#5e3517';ctx.beginPath();ctx.ellipse(0,10,34,12,0,0,6.28);ctx.fill();
-  // Clancy seated, clipped to the hull interior so the gunwale hides his legs
-  if(CLANCY_SPRITE){
-    const sw=CLANCY_SPRITE.width||1,sh=CLANCY_SPRITE.height||1,w=34,h=w*(sh/sw);
-    ctx.save();ctx.beginPath();ctx.rect(-30,-46,60,60);ctx.clip();   // cut off below y=14
-    ctx.drawImage(CLANCY_SPRITE,-w/2,18-h, w, h);
-    ctx.restore();
-  }
-  // front gunwale over his lap + hull body
-  ctx.fillStyle='#945427';ctx.beginPath();ctx.moveTo(-40,11);ctx.quadraticCurveTo(0,40,40,11);ctx.quadraticCurveTo(0,22,-40,11);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(60,35,12,.5)';ctx.lineWidth=1.4;ctx.stroke();
-  ctx.strokeStyle='#7a4622';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,10,40,13,0,Math.PI,2*Math.PI);ctx.stroke();
-  // floating name label so the player knows to tap him
-  ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.2)+')';ctx.font='bold 13px Fredoka, sans-serif';ctx.textAlign='center';
-  ctx.fillText('Captain Clancy',0,-54);
+  ctx.save();ctx.translate(sx, sy);
+  drawNpcInBoat(NPC_BOAT.clancy, CLANCY_SPRITE, t, 'Captain Clancy', 'Tap for a tip', '#8a5a2a', 1.3);
   ctx.restore();
 }
 // ── RUBY SUBMARINE (a project): surfaces offshore, tap for 10 rubies, then dives ──
@@ -10035,25 +10078,34 @@ const CHALLENGERS=[
 function challengerById(id){return CHALLENGERS.find(function(c){return c.id===id;});}
 function challengerPos(ch){return {x:Math.round(WORLD_DIMS[ch.zone][0]*ch.posF[0]), y:Math.round(WORLD_DIMS[ch.zone][1]*ch.posF[1])};}
 function challengerImgSrc(ch){return ({marley:'npc/marley.png',trisha:'npc/trisha.png',magellan:'npc/mangellan.png'})[ch.id];}
-function challengerRegionCleared(ch){
-  return FISH.filter(function(f){return !f.surf&&f.zone===ch.zone&&!(ch.excludeUltra&&f.rarity==='ultra');})
-            .every(function(f){return (S.caught[f.id]||0)>0;});
-}
 function challengerState(id){if(!S.challengerState)S.challengerState={};return (S.challengerState[id]=S.challengerState[id]||{beatenYear:-1});}
+// V0.9.7: challengers no longer require clearing the region. Each one simply
+// passes through their home waters ONCE per in-game year, on its own random day
+// (a two in-game day window), and the three never overlap. The year is 20 in-game
+// days; each challenger is assigned a window in a different third of the year.
+const CHAL_BAND={marley:[0,5], trisha:[7,12], magellan:[14,18]}; // [earliest, latest] start day
+function challengerSpawnDay(ch, year){
+  const band=CHAL_BAND[ch.id]||[0,18];
+  const r=mulberry32((strHash('chal_'+ch.id+'_'+year))>>>0)();
+  return band[0]+Math.floor(r*(band[1]-band[0]+1));
+}
+function challengerActiveNow(ch){
+  const day=Math.floor(((S.clock||0)%(1440*20))/1440); // 0..19 day within the year
+  const start=challengerSpawnDay(ch, S.gameYear||0);
+  return day>=start && day<start+2;                    // a two in-game day visit
+}
 // The challenger for the current zone, if it should be present right now.
 function availableChallenger(){
   if(mpActive()||surfActive)return null;
   const ch=CHALLENGERS.find(function(c){return c.zone===S.zone;});
   if(!ch)return null;
-  if(!challengerRegionCleared(ch))return null;
   if(challengerState(ch.id).beatenYear===(S.gameYear||0))return null; // already beaten this in-game year
+  if(!challengerActiveNow(ch))return null;                            // not in their visit window
+  // Announce the visit once, the first time we see them this window.
+  if(ch._seenYear!==(S.gameYear||0)){ch._seenYear=(S.gameYear||0);if(typeof toast==='function')toast(ch.name+' has sailed into the '+ch.region+'! Tap their boat to take the challenge.','#e0a93c');}
   return ch;
 }
-function onNewGameYear(){
-  // A fresh year: any cleared-region challenger is fair game again. A gentle nudge.
-  const ch=CHALLENGERS.find(function(c){return c.zone===S.zone&&challengerRegionCleared(c)&&challengerState(c.id).beatenYear!==(S.gameYear||0);});
-  if(ch&&typeof toast==='function')toast(ch.name+' has returned to the '+ch.region+'! Find them on the water.','#e0a93c');
-}
+function onNewGameYear(){/* challengers re-arm automatically via beatenYear vs gameYear */}
 // ── Challenge difficulty by region (0 inshore .. 2 offshore) ──
 function challengeParams(ch, type){
   const z=ch.zone;
@@ -10181,29 +10233,27 @@ function endChallenge(won, abortMsg){
   }
   bg.classList.add('show');
 }
-// A small motorboat for the challenger, with their sprite seated and a name flag.
-function drawChallengerBoat(ch, sx, sy, t, dark){
-  ctx.save();ctx.translate(sx, sy);ctx.translate(0,Math.sin(t*1.2+ch.zone)*2);
-  ctx.fillStyle='rgba(0,20,40,.18)';ctx.beginPath();ctx.ellipse(0,22,42,9,0,0,6.28);ctx.fill();
-  // back hull wall
-  ctx.fillStyle=_dk(ch.hull,0.28);ctx.beginPath();ctx.ellipse(0,8,32,11,0,0,6.28);ctx.fill();
-  // seated challenger, clipped into the hull
-  const spr=CHALLENGER_SPRITE[ch.id];
-  if(spr&&(spr.tagName==='CANVAS'||(spr.complete&&spr.naturalWidth))){
-    const sw=spr.width||1, sh=spr.height||1, w=36, h=w*(sh/sw);
-    ctx.save();ctx.beginPath();ctx.rect(-30,-50,60,62);ctx.clip();
-    ctx.drawImage(spr,-w/2,16-h,w,h);ctx.restore();
-  }
-  // front gunwale over the lap
-  ctx.fillStyle=ch.hull;ctx.beginPath();ctx.moveTo(-38,10);ctx.quadraticCurveTo(0,38,38,10);ctx.quadraticCurveTo(0,20,-38,10);ctx.closePath();ctx.fill();
-  ctx.strokeStyle='rgba(40,25,8,.45)';ctx.lineWidth=1.4;ctx.stroke();
-  ctx.strokeStyle=_lt(ch.hull,0.12);ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(0,9,38,12,0,Math.PI,2*Math.PI);ctx.stroke();
-  // name flag
-  ctx.fillStyle=ch.tint;roundRect(ctx,-26,-58,52,17,5);ctx.fill();
+// Shared: a top-down boat PNG with an NPC standing near the middle and a name
+// flag above the bow. Both art assets are 1254x1254 squares with the content
+// centred, so drawing each as a centred square lands everything in place.
+function _spriteReady(x){return !!(x&&(x.tagName==='CANVAS'||(x.complete&&x.naturalWidth)));}
+function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed){
+  ctx.save();ctx.translate(0,Math.sin(t*1.2+(bobSeed||0))*2);
+  const BS=100;                                  // boat square draw size
+  ctx.fillStyle='rgba(0,20,40,.16)';ctx.beginPath();ctx.ellipse(0,BS*0.40,BS*0.30,BS*0.10,0,0,6.28);ctx.fill();
+  if(_spriteReady(boatImg))ctx.drawImage(boatImg,-BS/2,-BS/2,BS,BS);
+  // NPC standing near the middle of the deck (feet a touch below boat centre)
+  if(_spriteReady(sprite)){const NS=60;ctx.drawImage(sprite,-NS/2,-NS/2-6,NS,NS);}
+  const flagY=-BS/2-2;
+  ctx.fillStyle=accent;roundRect(ctx,-30,flagY-9,60,17,5);ctx.fill();
   ctx.fillStyle='#fff';ctx.font='bold 12px Fredoka, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(ch.name,0,-49);
-  ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.25)+')';ctx.font='bold 11px Fredoka, sans-serif';ctx.textBaseline='alphabetic';
-  ctx.fillText('Tap to challenge',0,-64);
+  ctx.fillText(label,0,flagY);
+  if(sub){ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.25)+')';ctx.font='bold 11px Fredoka, sans-serif';ctx.textBaseline='alphabetic';ctx.fillText(sub,0,flagY-12);}
+  ctx.restore();
+}
+function drawChallengerBoat(ch, sx, sy, t, dark){
+  ctx.save();ctx.translate(sx, sy);
+  drawNpcInBoat(NPC_BOAT[ch.id], CHALLENGER_SPRITE[ch.id], t, ch.name, 'Tap to challenge', ch.tint, ch.zone);
   ctx.restore();
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;}
