@@ -1844,7 +1844,7 @@ function getAlwaysTournament(){
   const rarity=TOURN_RARITIES[Math.floor(seededRnd((day+1)*7)*3)];
   const fee=tournFee(zone, rarity);
   const list=bountyDailyList(zone, day);
-  return {id:"always",zone:zone, name:"The Big Cast",maxP:50,rarity:rarity, fee:fee,
+  return {id:"always",zone:zone, name:"The Big Cast",maxP:25,rarity:rarity, fee:fee,
           targetFish:list[0]||null, bounty:true, bountyList:list, alwaysOn:true};
 }
 function etDateSeed(){
@@ -2320,12 +2320,22 @@ function endTournament(){
   // Friends sessions settle through their own path (co op teardown / ruby payout).
   if(activeTournament.def&&activeTournament.def.session){if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');return endSession();}
   if(typeof AUDIO!=='undefined')AUDIO.setMood('calm');
+  // Safety: if the match ends while a fight/catch is mid-flight, tear those down
+  // first so the player isn't stranded behind a dead overlay with the world reset
+  // out from under them (the freeze bug).
+  try{
+    if(typeof sdewActive!=='undefined'&&sdewActive){sdewActive=false;if(typeof sdewAnimId!=='undefined'&&sdewAnimId)cancelAnimationFrame(sdewAnimId);const _so=document.getElementById('sdew-overlay');if(_so)_so.classList.remove('show');}
+    if(typeof endMiniGame==='function')endMiniGame();
+    const _cg=document.getElementById('catch-bg');if(_cg)_cg.classList.remove('show');
+    if(typeof phase!=='undefined')phase='idle';
+    if(typeof bobber!=='undefined'&&bobber)bobber.active=false;
+  }catch(_e){}
   restoreClockAfterMatch();   // put the player's real clock/season back
   if(typeof closeMenu==='function')closeMenu(); // don't leave the leaderboard/menu open behind the results
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Reset all ability effects and hide the ability button
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
-  jesterStacks=0;_sunBiteUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
+  jesterStacks=0;_sunBiteUntil=0;_frenzyUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const cbn=document.getElementById('cannon-btn');if(cbn){cbn.classList.remove('show');cbn.classList.remove('armed');}
   cannonBalls=[];_cannonArmed=false;_cannonDrag=null;
@@ -2605,7 +2615,7 @@ function _restoreWorldAfterSession(){
   stopTournamentSync();
   tourn.active=false;tourn.coop=false;tourn.seed=null;tourn.ghosts=[];tourn.structs=[];tourn._leaderBots=null;tourn._trail=null;
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
-  jesterStacks=0;_sunBiteUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
+  jesterStacks=0;_sunBiteUntil=0;_frenzyUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const cbn=document.getElementById('cannon-btn');if(cbn){cbn.classList.remove('show');cbn.classList.remove('armed');}
   cannonBalls=[];_cannonArmed=false;_cannonDrag=null;
@@ -3053,14 +3063,14 @@ const LURE_CATS=[
 
 // ── DISPOSABLE ITEMS (bought with rubies; used from the Items button while fishing) ──
 const ITEMS=[
-  {id:'chum',    name:'Chum Bag',      icon:'bait-cutbait',   cost:40, desc:'+30% bite chance from rarer fish in your cast radius. Lasts 5 casts.'},
-  {id:'castnet', name:'Cast Net',      icon:'struct-baitball',cost:30, desc:'Throw a cast net for a random 20 to 50 mixed live baits.'},
-  {id:'sabiki',  name:'Sabiki Rig',    icon:'tackle-hook',    cost:10, desc:'Jig up a mix of 10 live baitfish.'},
-  {id:'radar',   name:'Fish Radar',    icon:'zone-pin',       cost:50, desc:'A pointer shows the way to the nearest cruising target fish until you land one.'},
-  {id:'led',     name:'Underwater LED',icon:'reel',           cost:70, desc:'A green glow around your boat all night. +20% bite chance from rarer fish. Lasts one night.'},
+  {id:'chum',    name:'Chum Bag',      icon:'bait-cutbait',   cost:200, desc:'+30% bite chance from rarer fish in your cast radius. Lasts 5 casts.'},
+  {id:'castnet', name:'Cast Net',      icon:'struct-baitball',cost:150, desc:'Throw a cast net for a random 20 to 50 mixed live baits.'},
+  {id:'sabiki',  name:'Sabiki Rig',    icon:'tackle-hook',    cost:50, desc:'Jig up a mix of 10 live baitfish.'},
+  {id:'radar',   name:'Fish Radar',    icon:'zone-pin',       cost:250, desc:'A pointer shows the way to the nearest cruising target fish until you land one.'},
+  {id:'led',     name:'Underwater LED',icon:'reel',           cost:350, desc:'A green glow around your boat all night. +20% bite chance from rarer fish. Lasts one night.'},
   // ── V0.9 tap-to-place sabotage items (rubies, fixedCost) ──
-  {id:'snag',    name:'Snag Rock',     icon:'struct-oyster',  cost:20, fixedCost:true, place:true, desc:'Tap the water to drop a hidden snag. Any angler who casts on it is hung up, no casting or catching for 60s. One use, then it’s gone.'},
-  {id:'buoy',    name:'Slow Buoy',     icon:'zone-pin',       cost:50, fixedCost:true, place:true, desc:'Tap the water to anchor a buoy with a very wide field. Anglers inside it crawl at -90% speed for 6 minutes.'},
+  {id:'snag',    name:'Snag Rock',     icon:'struct-oyster',  cost:100, fixedCost:true, place:true, desc:'Tap the water to drop a hidden snag. Any angler who casts on it is hung up, no casting or catching for 60s. One use, then it’s gone.'},
+  {id:'buoy',    name:'Slow Buoy',     icon:'zone-pin',       cost:250, fixedCost:true, place:true, desc:'Tap the water to anchor a buoy with a very wide field. Anglers inside it crawl at -90% speed for 6 minutes.'},
 ];
 function itemById(id){return ITEMS.find(function(x){return x.id===id;});}
 const LIVE_BAITS=['shrimp','pinfish','pilchard'];   // cast-net mix
@@ -3158,6 +3168,10 @@ const SETS=[
    pieces:{hat:'robot_antenna',shirt:'robot_chest',shades:'robot_face'},
    bonus:'Always have a fully revealed map in tournaments & co op.',
    ability:'Hack', abilityDesc:'Radar locks onto the target fish and brings it to the surface to be sight cast. (180s cooldown)'},
+  {id:'mermaid', name:'Mermaid Set', cost:600, fixedCost:true, color:'#2bb6c4', cd:45,
+   pieces:{hat:'mermaid_crown',shirt:'mermaid_top',shades:'mermaid_face'},
+   bonus:'Catch any fish no matter the season. In a tournament or challenge the target species can surface as a sight-fishing fish.',
+   ability:'Fish Frenzy', abilityDesc:'Bite rate soars +200% for 10 seconds. (45s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
 function equippedSetId(){
@@ -3168,7 +3182,7 @@ function equippedSetId(){
 function setColorOf(id){const s=setById(id);return s?s.color:'#cf7a35';}
 // Some sets have a hand-drawn character portrait in /sets; the rest fall back to
 // the flat color swatch. Keep this list in sync with the PNGs in that folder.
-const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot'];
+const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot','mermaid'];
 function setHasArt(id){return SET_ART_IDS.includes(id);}
 function setImgSrc(id){return 'sets/'+id+'.png';}
 // Progressive-halving downscale to ~target px. Canvas drawImage doesn't
@@ -3199,6 +3213,73 @@ SET_ART_IDS.forEach(function(id){
   im.onload=function(){try{SET_SPRITE[id]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){SET_SPRITE[id]=im;}};
   im.src=setImgSrc(id);
 });
+// ── SKINS (V0.9.7) ──────────────────────────────────────────────
+// Alternate looks for an item you already own. A "Customize" button on the
+// instructed items (princess set, mermaid set, sportfisher boat) opens a picker;
+// the base item must be owned before its skins can be bought/equipped. Set skins
+// swap the worn portrait; the boat skin swaps the drawn hull for a top-down PNG.
+const SKINS=[
+  {id:'princess_1', base:'princess', kind:'set',  name:'Princess Skin 1',    cost:100, file:'skins/princess skin 1.png'},
+  {id:'mermaid_1',  base:'mermaid',  kind:'set',  name:'Mermaid Skin 1',     cost:0,   file:'skins/mermaid skin 1.png'},
+  {id:'sport_1',    base:'sport',    kind:'boat', name:'Sportfisher Skin 1', cost:300, file:'skins/sportfisher boat skin 1.png'},
+];
+const SKIN_SPRITE={};
+SKINS.forEach(function(sk){
+  const im=new Image();
+  im.onload=function(){try{SKIN_SPRITE[sk.id]=_downscaleHQ(_keyOutPetBg(im, sk.kind==='boat'?212:234),256);}catch(e){SKIN_SPRITE[sk.id]=im;}};
+  im.src=sk.file;
+});
+function skinById(id){return SKINS.find(function(s){return s.id===id;});}
+function skinsForBase(base){return SKINS.filter(function(s){return s.base===base;});}
+function ownsSkinBase(base){
+  if(base==='sport')return (S.ownedBoats||[]).includes('sport');
+  return (S.ownedSets||[]).includes(base);
+}
+function equippedSkinFor(base){return (S.skins&&S.skins[base])||null;}
+function _skinBaseLabel(base){return base==='sport'?'Sportfisher Boat':((setById(base)&&setById(base).name)||base);}
+function customizeBtn(base){
+  if(!skinsForBase(base).length)return '';
+  return '<button class="shop-action equip" style="border:none;cursor:pointer;margin-left:6px;" onclick="event.stopPropagation();openSkinChooser(\''+base+'\')">Customize</button>';
+}
+function _skinSwatch(src){return '<span class="shop-swatch" style="display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="'+src+'" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display=\'none\'"></span>';}
+function openSkinChooser(base){
+  const owns=ownsSkinBase(base), cur=equippedSkinFor(base);
+  let rows='<div class="shop-item '+(!cur?'equipped':'')+'" onclick="pickSkin(\''+base+'\',\'default\')">'
+    +(base==='sport'?'<div class="shop-icon">'+svgIcon('zone-pin',20)+'</div>':_skinSwatch(setImgSrc(base)))
+    +'<div class="shop-info"><div class="shop-name">Original</div><div class="shop-desc">The default look.</div></div>'
+    +(!cur?'<span class="shop-action equipped-tag">Wearing</span>':'<span class="shop-action equip">Equip</span>')+'</div>';
+  skinsForBase(base).forEach(function(sk){
+    const owned=(S.ownedSkins||[]).includes(sk.id), equipped=cur===sk.id;
+    let act;
+    if(equipped)act='<span class="shop-action equipped-tag">Wearing</span>';
+    else if(owned)act='<span class="shop-action equip">Equip</span>';
+    else if((sk.cost||0)>0)act='<span class="shop-action buy '+(((S.rubies||0)>=sk.cost)?'':'cant')+'"><span class="gem-s" style="width:11px;height:11px;margin-right:3px;"></span>'+sk.cost+'</span>';
+    else act='<span class="shop-action buy">Claim free</span>';
+    rows+='<div class="shop-item '+(equipped?'equipped':'')+'" onclick="pickSkin(\''+base+'\',\''+sk.id+'\')">'+_skinSwatch(sk.file)
+      +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' rubies':'Free')+' · alternate look</div></div>'+act+'</div>';
+  });
+  const note=owns?'':'<div style="font-size:11.5px;color:#b3402a;font-weight:700;margin-bottom:9px;">Buy the '+_skinBaseLabel(base)+' first to unlock its skins.</div>';
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Customize: '+_skinBaseLabel(base)+'</div>'+note+rows;
+  bg.classList.add('show');
+}
+function pickSkin(base, skinId){
+  if(skinId==='default'){if(S.skins)delete S.skins[base];queueSave();if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();openSkinChooser(base);return;}
+  const sk=skinById(skinId);if(!sk)return;
+  if(!ownsSkinBase(base)){toast('Buy the '+_skinBaseLabel(base)+' first.','#b58b53');return;}
+  const owned=(S.ownedSkins||[]).includes(skinId);
+  if(!owned){
+    if((sk.cost||0)>0){
+      if((S.rubies||0)<sk.cost){toast('Not enough rubies.','#b3402a');return;}
+      S.rubies-=sk.cost;if(typeof updatePills==='function')updatePills();
+    }
+    S.ownedSkins=S.ownedSkins||[];S.ownedSkins.push(skinId);
+    toast('Unlocked '+sk.name+'!','#2aa890');try{AUDIO.sfx('coin');}catch(e){}
+  }
+  S.skins=S.skins||{};S.skins[base]=skinId;
+  queueSave();if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();
+  openSkinChooser(base);
+}
 // Normalize every blue outfit pixel to one canonical azure. The male and female
 // base avatars ship with slightly different outfit/hat blues; we remap any
 // blue-ish pixel (hue ~188-255, decent saturation) to hue 210 with a clamped
@@ -3259,12 +3340,13 @@ const PETS=[
 // kept) so the pets sit cleanly on the water.
 const PET_IMG={};      // raw Image (used by <img> tags)
 const PET_SPRITE={};   // background-keyed canvas (used on the game canvas)
-function _keyOutPetBg(im){
-  const w=im.naturalWidth, h=im.naturalHeight;
+function _keyOutPetBg(im, thr){
+  thr=thr||234;
+  const w=im.naturalWidth||im.width, h=im.naturalHeight||im.height;
   const c=document.createElement('canvas');c.width=w;c.height=h;
   const g=c.getContext('2d');g.drawImage(im,0,0);
   const img=g.getImageData(0,0,w, h),a=img.data;
-  const near=function(i){return a[i]>234&&a[i+1]>234&&a[i+2]>234;};
+  const near=function(i){return a[i]>thr&&a[i+1]>thr&&a[i+2]>thr;};
   const seen=new Uint8Array(w*h),stack=[];
   function push(x, y){if(x<0||y<0||x>=w||y>=h)return;const p=y*w+x;if(seen[p])return;seen[p]=1;const i=p*4;if(near(i)){a[i+3]=0;stack.push(x, y);}}
   for(let x=0;x<w;x++){push(x,0);push(x, h-1);}
@@ -3282,23 +3364,24 @@ function petImgSrc(id){return 'pets/'+id+'.png';}
 // Clancy NPC art: the full figure (drawn in his offshore sailboat) and a
 // background-keyed sprite for the game canvas.
 const CLANCY_IMG=new Image(); let CLANCY_SPRITE=null;
-CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_keyOutPetBg(CLANCY_IMG);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
+CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_downscaleHQ(_keyOutPetBg(CLANCY_IMG),160);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
 CLANCY_IMG.src='npc/clancy.png';
 // V0.9.6: NPC challenger art (background keyed for the game canvas). Note the
-// offshore explorer's file is npc/mangellan.png.
+// offshore explorer's file is npc/mangellan.png. Pre-downscaled so the small
+// on-canvas draw stays crisp instead of aliasing from 1254px in one step.
 const CHALLENGER_SPRITE={};
 [['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png']].forEach(function(p){
   const im=new Image();
-  im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_keyOutPetBg(im);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
+  im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_downscaleHQ(_keyOutPetBg(im),160);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
   im.src=p[1];
 });
-// V0.9.7: top-down boat art the NPCs sit inside (light backgrounds keyed out).
-// All are 1254x1254 with the boat centred, so we draw the whole square and the
-// boat lands centred for free.
+// V0.9.7: top-down boat art the NPCs sit inside. A tighter key threshold (212)
+// eats the near-white anti-aliased halo so there's no white line around the hull,
+// then a high-quality downscale keeps the boat crisp on the small canvas draw.
 const NPC_BOAT={};
 [['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png']].forEach(function(p){
   const im=new Image();
-  im.onload=function(){try{NPC_BOAT[p[0]]=_keyOutPetBg(im);}catch(e){NPC_BOAT[p[0]]=im;}};
+  im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),256);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
 });
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
@@ -3599,7 +3682,9 @@ function initStructures(){
   });
 }
 function structKindAlias(k){
-  return {crab_trap:'dock',channel:'pass',baitball:'open',oil_rig:'wreck',bluhole:'deep',power_plant:'wreck',
+  // oil_rig and bluhole are their OWN distinct spots now (no longer folded into
+  // wreck/deep), so only the species that explicitly list them bite there.
+  return {crab_trap:'dock',channel:'pass',baitball:'open',power_plant:'wreck',
           runoff:'pass',frenzy:'open',colorchange:'rip'}[k]||k;
 }
 
@@ -3640,17 +3725,17 @@ const FISH=[
   // ---------- OFFSHORE ----------
   {id:'vermilion',name:'Vermilion Snapper',zone:2,rarity:'common',size:[0.5,2.5],line:40,methods:['bottom'],baits:['squid'],leader:'fluoro',structure:['wreck'],season:['all'],time:['day'],xp:30,gold:18,weight:50,fact:'Bright red \u201Cbeeliners\u201D swarm deep hard bottom; small hooks, fast steady bites.'},
   {id:'almaco',name:'Almaco Jack',zone:2,rarity:'common',size:[5,25],line:40,methods:['jig','bottom'],baits:['squid','pinfish'],leader:'any',structure:['wreck'],season:['all'],time:['day'],xp:46,gold:27,weight:44,fact:'An amberjack cousin that hammers vertical jigs near deep structure.'},
-  {id:'blackfin',name:'Blackfin Tuna',zone:2,rarity:'epic',size:[2,40],line:50,methods:['troll','chunk','jig'],baits:['pilchard','cutbait'],leader:'any',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:140,gold:165,weight:4,fact:'Among the best fighters relative to size. Can be chummed with live pilchards. World record 45 lbs.'},
-  {id:'redsnapper',name:'Red Snapper',zone:2,rarity:'uncommon',size:[5,25],line:40,methods:['bottom','livebait'],baits:['squid','pinfish','cutbait'],leader:'fluoro',structure:['wreck'],season:['summer'],time:['day'],xp:95,gold:62,weight:26,fact:'Famous short federal seasons; a descending device helps them survive release from depth.'},
+  {id:'blackfin',name:'Blackfin Tuna',zone:2,rarity:'epic',size:[2,40],line:50,methods:['troll','chunk','jig'],baits:['pilchard','cutbait'],leader:'any',structure:['open','baitball','deep','oil_rig'],season:['all'],time:['day','dawn','dusk'],xp:140,gold:165,weight:4,fact:'Among the best fighters relative to size. Can be chummed with live pilchards. World record 45 lbs.'},
+  {id:'redsnapper',name:'Red Snapper',zone:2,rarity:'uncommon',size:[5,25],line:40,methods:['bottom','livebait'],baits:['squid','pinfish','cutbait'],leader:'fluoro',structure:['wreck','oil_rig'],season:['summer'],time:['day'],xp:95,gold:62,weight:26,fact:'Famous short federal seasons; a descending device helps them survive release from depth.'},
   {id:'mahi',name:'Mahi Mahi',zone:2,rarity:'rare',size:[5,40],line:40,methods:['troll','livebait'],baits:['ballyhoo','pilchard'],leader:'fluoro',structure:['weedline','rip'],season:['summer','spring'],time:['day'],xp:122,gold:82,weight:9,fact:'Among the fastest growing fish; its neon color fades within minutes out of the water.'},
-  {id:'amberjack',name:'Greater Amberjack',zone:2,rarity:'rare',size:[20,90],line:80,methods:['jig','livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['wreck'],season:['all'],time:['day'],xp:150,gold:100,weight:8,fact:'The \u201Creef donkey\u201D: pound for pound one of the most punishing fights in the ocean.'},
-  {id:'wahoo',name:'Wahoo',zone:2,rarity:'epic',size:[15,70],line:80,methods:['troll'],baits:['ballyhoo'],leader:'wire',structure:['rip','weedline'],season:['fall'],time:['dawn','dusk','day'],xp:220,gold:152,weight:3,fact:'One of the fastest fish alive; its teeth shear leader instantly. High speed trolling on wire only.'},
+  {id:'amberjack',name:'Greater Amberjack',zone:2,rarity:'rare',size:[20,90],line:80,methods:['jig','livebait','bottom'],baits:['pinfish','squid'],leader:'any',structure:['wreck','oil_rig'],season:['all'],time:['day'],xp:150,gold:100,weight:8,fact:'The \u201Creef donkey\u201D: pound for pound one of the most punishing fights in the ocean.'},
+  {id:'wahoo',name:'Wahoo',zone:2,rarity:'epic',size:[15,70],line:80,methods:['troll'],baits:['ballyhoo'],leader:'wire',structure:['rip','weedline','open','oil_rig'],season:['fall'],time:['dawn','dusk','day'],xp:220,gold:152,weight:3,fact:'One of the fastest fish alive; its teeth shear leader instantly. High speed trolling on wire only.'},
   {id:'sailfish',name:'Sailfish',zone:2,rarity:'epic',size:[30,80],line:80,methods:['troll','livebait'],baits:['ballyhoo','pilchard'],leader:'fluoro',structure:['open','rip'],season:['winter','fall'],time:['day'],xp:285,gold:195,weight:3,fact:'The fastest fish in the ocean; it lights up neon and raises its sail. Nearly always released.'},
   {id:'yellowfin',name:'Yellowfin Tuna',zone:2,rarity:'legendary',size:[30,180],line:130,methods:['troll','chunk'],baits:['ballyhoo','cutbait'],leader:'fluoro',structure:['open'],season:['all'],time:['dawn','dusk','night'],xp:400,gold:285,weight:1.5,fact:'Sprints past 40 mph and sounds straight down; among the most prized sashimi fish on Earth.'},
   {id:'swordfish',name:'Swordfish',zone:2,rarity:'legendary',size:[50,350],line:130,methods:['deepdrop'],baits:['squid'],leader:'any',structure:['deep'],season:['all'],time:['night','day'],xp:500,gold:385,weight:1.2,fact:'Daytime sword fishing drops baits over 1,500 ft down; huge eyes gather light in the black depths.'},
   {id:'marlin',name:'Blue Marlin',zone:2,rarity:'legendary',size:[100,600],line:130,methods:['troll'],baits:['ballyhoo'],leader:'any',structure:['open','rip'],season:['summer'],time:['day'],xp:800,gold:600,weight:0.5,fact:'The ultimate trophy; females dwarf males and the biggest break 1,000 lb. Greyhounds, then released.'},
   // ── new fish ──────────────────────────────────────────────────
-  {id:'bluefin',name:'Bluefin Tuna',zone:2,rarity:'legendary',size:[80,400],line:130,methods:['troll','chunk','deepdrop'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','baitball','deep'],season:['all'],time:['day','dawn','dusk'],xp:280,gold:320,weight:0.8,fact:'World record 1,496 lbs. Rated the toughest of all fish to fight and land.'},
+  {id:'bluefin',name:'Bluefin Tuna',zone:2,rarity:'legendary',size:[80,400],line:130,methods:['troll','chunk','deepdrop'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','baitball','deep','bluhole'],season:['all'],time:['day','dawn','dusk'],xp:280,gold:320,weight:0.8,fact:'World record 1,496 lbs. Rated the toughest of all fish to fight and land.'},
   {id:'pompano',name:'Florida Pompano',zone:0,rarity:'rare',size:[0.5,7],line:12,methods:['cork','jig','bottom'],baits:['shrimp','crab'],leader:'any',structure:['sand','pass','grass','bridge'],season:['fall','winter','spring'],time:['day','dawn','dusk'],xp:85,gold:50,weight:14,fact:'Ranks among the best food fish. Patrols sandbars and grassflats in bays and channels. World record 8 lbs 1 oz.'},
   {id:'permit',name:'Permit',zone:0,rarity:'epic',size:[5,45],line:30,methods:['jig','livebait','cork'],baits:['crab','shrimp'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer'],time:['day','dawn'],xp:130,gold:160,weight:4,fact:'Considered by many the best shallow water gamefish in the world. World record 56 lbs.'},
   {id:'jack',name:'Crevalle Jack',zone:0,rarity:'uncommon',size:[2,40],line:20,methods:['jig','livebait','troll'],baits:['pilchard','cutbait','shrimp'],leader:'any',structure:['pass','bridge','channel','open'],season:['all'],time:['dawn','dusk','day'],xp:55,gold:45,weight:18,fact:'None better for strength and stamina. Schools of smaller Jacks can be enormous.'},
@@ -4299,6 +4384,8 @@ function normalizeState(){
   if(typeof S.prestige!=='number')S.prestige=0;
   if(typeof S.prestigeOffered!=='boolean')S.prestigeOffered=false;
   if(!Array.isArray(S.ownedSets))S.ownedSets=[];
+  if(!Array.isArray(S.ownedSkins))S.ownedSkins=[];
+  if(!S.skins||typeof S.skins!=='object')S.skins={};
   if(!S.itemInv||typeof S.itemInv!=='object')S.itemInv={};
   if(typeof S.chumCasts!=='number')S.chumCasts=0;
   // V0.9.2 drone: parts caught one-per-region, then the drone is built.
@@ -4903,6 +4990,7 @@ function playerBiteMult(){
     else if(mp!=='full')m*=1.15;      // neither: +15% bite (full moon is luck-only)
   }
   if(_sunBiteUntil>Date.now())m*=1.20;             // Lunar Sun: +20% bite for 20s
+  if(_frenzyUntil>Date.now())m*=3.0;               // Mermaid Fish Frenzy: +200% bite for 10s
   if(set==='jester'&&jesterStacks>0)m*=(1+0.05*jesterStacks); // +5% spawn / stack
   m*=lureColorBuffs().bite;                         // soft-plastic colour micro-buff
   return m;
@@ -4976,6 +5064,12 @@ const SIGHT_FISH_WEIGHTS={tarpon:5,cobia:5,mahi:12,permit:12,barracuda:12,bonefi
 let _spawnLastHour=-1;
 let _forcedBiteFish=null;
 function trySightFishSpawn(){
+  // Mermaid set: in a tournament/challenge the current target species can surface
+  // as a sight-fishing fish so you can sight-cast straight onto it.
+  if(typeof mermaidOn==='function'&&mermaidOn()&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){
+    const tgt=currentTournTarget();
+    if(tgt&&Math.random()<0.55){spawnSightFish(tgt);return;}
+  }
   if(Math.random()>=0.75)return;
   const cands=[];let total=0;
   for(const f of FISH){
@@ -5420,7 +5514,13 @@ function bountyStandings(){
 function bountyWinCheck(){
   if(!isBounty()||activeTournament._ended)return;
   const lead=bountyStandings()[0];
-  if(lead&&lead.count>=BOUNTY_GOAL){activeTournament._ended=true;endTournament();}
+  if(lead&&lead.count>=BOUNTY_GOAL){
+    activeTournament._ended=true;
+    // Defer the wrap-up so the winning catch's popup (and any fight UI) finishes
+    // cleanly first; ending mid-catch was leaving the world torn down under the
+    // player and freezing the game.
+    setTimeout(function(){if(activeTournament)endTournament();},1600);
+  }
 }
 // ── CANNON (Bounty only) ──
 function cannonCount(){return (activeTournament&&activeTournament.cannons)||0;}
@@ -6201,7 +6301,23 @@ function useAbility(){
   else if(setId==='jester')used=abilityTrick();
   else if(setId==='astronaut')used=abilityLunarSun();
   else if(setId==='robot')used=abilityHack();
+  else if(setId==='mermaid')used=abilityFishFrenzy();
   if(used){AUDIO.sfx('ability');activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
+}
+// Mermaid "Fish Frenzy": bite rate soars +200% for 10 seconds.
+let _frenzyUntil=0;
+function abilityFishFrenzy(){
+  _frenzyUntil=Date.now()+10000;
+  toast('Fish Frenzy! Bites go wild for 10 seconds.','#2bb6c4');
+  spawnAbilityFx(boat.wx, boat.wy,'#5fe0d0','swirl');
+  return true;
+}
+function mermaidOn(){return equippedSetId()==='mermaid';}
+// The species you currently need in the active tournament/challenge, if any.
+function currentTournTarget(){
+  if(!activeTournament||!activeTournament.def)return null;
+  if(typeof isBounty==='function'&&isBounty()){const l=activeTournament.bountyList||[];return l[activeTournament.bountyIdx||0]||null;}
+  return activeTournament.def.targetFish||null;
 }
 function abilityPlunder(){
   const g=nearestGhost(340);
@@ -7413,7 +7529,10 @@ function drawAnglerFigure(cx, cy, r, tx, ty, tw, th, rad){
   // A worn set with hand-drawn art replaces the vector angler with its portrait;
   // otherwise the gender + skin-tone base avatar PNG is the seated angler.
   const aset=equippedSetId();
-  const spr=(aset&&setHasArt(aset))?SET_SPRITE[aset]:baseAvatarSprite();
+  // A skin equipped for the worn set replaces its portrait.
+  const _askin=aset?equippedSkinFor(aset):null;
+  const spr=(_askin&&_spriteReady(SKIN_SPRITE[_askin]))?SKIN_SPRITE[_askin]
+            :((aset&&setHasArt(aset))?SET_SPRITE[aset]:baseAvatarSprite());
   if(spr){
     const sw=spr.naturalWidth||spr.width, sh=spr.naturalHeight||spr.height;
     if(sw&&sh){
@@ -7475,10 +7594,23 @@ function drawBoat(dark){
   else if(b==='bay')drawBayBoat(dark);
   else if(b==='console')drawCenterConsole(dark);
   else if(b==='walk')drawWalkaround(dark);
-  else if(b==='sport')drawSportfisher(dark);
+  else if(b==='sport'){
+    const _bsk=equippedSkinFor('sport');
+    if(_bsk&&_spriteReady(SKIN_SPRITE[_bsk]))drawBoatSkin(SKIN_SPRITE[_bsk],dark);
+    else drawSportfisher(dark);
+  }
   else if(b==='marlinboat')drawMarlinBoat(dark);
   ctx.restore();
   if(boat.anchored)drawRodAndReel(dark);
+}
+// A boat skin: draw the top-down hull PNG (bow up, replacing the vector boat) and
+// seat the angler on the deck. Called from drawBoat within the boat transform.
+function drawBoatSkin(img, dark){
+  const BS=116;
+  ctx.fillStyle='rgba(0,30,45,.18)';ctx.beginPath();ctx.ellipse(0,BS*0.30,BS*0.30,BS*0.11,0,0,6.28);ctx.fill();
+  ctx.drawImage(img,-BS/2,-BS/2+4,BS,BS);
+  drawAnglerFigure(0,16,5,-5,14,10,12,3);
+  if(dark>0.4){ctx.fillStyle='rgba(255,225,140,'+(dark*0.4)+')';ctx.beginPath();ctx.arc(0,-20,12,0,6.28);ctx.fill();}
 }
 
 function drawKayak(dark){
@@ -8496,8 +8628,9 @@ function poolNow(){
       if(ledActive())w*=1.2;
     }
     // season, still a strong modifier (the right season makes a fish far more
-    // likely). Bounty mode switches this off so any species is fair game.
-    if(typeof isBounty!=='function'||!isBounty())w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
+    // likely). Bounty mode and the Mermaid set both switch this off so any species
+    // is fair game regardless of the calendar.
+    if((typeof isBounty!=='function'||!isBounty())&&!(typeof mermaidOn==='function'&&mermaidOn()))w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
     // Bounty: heavily favour the species CURRENTLY on the list so it bites without
     // endless waiting. The boost also cancels the rarity penalty above, so an epic
     // or legendary target still shows up reliably (the rest of the region still
@@ -9552,7 +9685,9 @@ function renderShop(){
   if(leaf==='boats')html=BOATS.map(function(b, i){
     const faster=i>0?Math.round((b.speed/BOATS[i-1].speed-1)*100):0;
     const spd=' · Speed '+b.speed.toFixed(1)+(faster>0?' (+'+faster+'% faster)':'');
-    return shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id, spd+' <i>('+b.perkName+')</i>',false);
+    const row=shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id, spd+' <i>('+b.perkName+')</i>',false);
+    const cust=skinsForBase(b.id).length?'<div style="text-align:right;margin:-4px 0 8px;">'+customizeBtn(b.id)+'</div>':'';
+    return row+cust;
   }).join('');
   else if(leaf==='rods')html=RODS.map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),S.rod===r.id,'',true)).join('');
   else if(leaf==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
@@ -9654,7 +9789,7 @@ function renderShop(){
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="set" data-id="'+s.id+'">'+swatch
         +'<div class="shop-info"><div class="shop-name">'+s.name+'</div>'
         +'<div class="shop-desc"><b style="color:var(--wood-dark)">Bonus:</b> '+s.bonus+'<br><b style="color:var(--accent)">'+s.ability+':</b> '+s.abilityDesc+'</div></div>'
-        +action+'</div>';
+        +action+customizeBtn(s.id)+'</div>';
     }).join('');
   }
   // A short, plain-language intro at the top of each section keeps the shop tidy.
@@ -10025,7 +10160,7 @@ function clancyBoatTip(){
 }
 function drawClancyBoat(sx, sy, t, dark){
   ctx.save();ctx.translate(sx, sy);
-  drawNpcInBoat(NPC_BOAT.clancy, CLANCY_SPRITE, t, 'Captain Clancy', 'Tap for a tip', '#8a5a2a', 1.3);
+  drawNpcInBoat(NPC_BOAT.clancy, CLANCY_SPRITE, t, 'Captain Clancy', 'Tap for a tip', '#8a5a2a', 1.3, {npcScale:0.74});
   ctx.restore();
 }
 // ── RUBY SUBMARINE (a project): surfaces offshore, tap for 10 rubies, then dives ──
@@ -10237,13 +10372,15 @@ function endChallenge(won, abortMsg){
 // flag above the bow. Both art assets are 1254x1254 squares with the content
 // centred, so drawing each as a centred square lands everything in place.
 function _spriteReady(x){return !!(x&&(x.tagName==='CANVAS'||(x.complete&&x.naturalWidth)));}
-function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed){
+function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed, opts){
+  opts=opts||{};
+  const nsc=opts.npcScale||1, ndy=(opts.npcDy!=null?opts.npcDy:-6);
   ctx.save();ctx.translate(0,Math.sin(t*1.2+(bobSeed||0))*2);
   const BS=100;                                  // boat square draw size
   ctx.fillStyle='rgba(0,20,40,.16)';ctx.beginPath();ctx.ellipse(0,BS*0.40,BS*0.30,BS*0.10,0,0,6.28);ctx.fill();
   if(_spriteReady(boatImg))ctx.drawImage(boatImg,-BS/2,-BS/2,BS,BS);
   // NPC standing near the middle of the deck (feet a touch below boat centre)
-  if(_spriteReady(sprite)){const NS=60;ctx.drawImage(sprite,-NS/2,-NS/2-6,NS,NS);}
+  if(_spriteReady(sprite)){const NS=60*nsc;ctx.drawImage(sprite,-NS/2,-NS/2+ndy,NS,NS);}
   const flagY=-BS/2-2;
   ctx.fillStyle=accent;roundRect(ctx,-30,flagY-9,60,17,5);ctx.fill();
   ctx.fillStyle='#fff';ctx.font='bold 12px Fredoka, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
