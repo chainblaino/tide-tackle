@@ -2127,6 +2127,9 @@ function _maybeShowInvite(){
   }else if(inv.kind==='coop'){
     head='World Invite';
     line='<b>'+(inv.from||'A friend')+'</b>'+(inv.fromLevel?' <span style="color:var(--text-soft);">(Lv '+inv.fromLevel+')</span>':'')+' invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">fish their world</div>';
+  }else if(inv.kind==='lobby'){
+    head='Lobby Invite';
+    line='<b>'+(inv.from||'A friend')+'</b>'+(inv.fromLevel?' <span style="color:var(--text-soft);">(Lv '+inv.fromLevel+')</span>':'')+' invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">'+(inv.name||'their lobby')+'</div>';
   }else{
     head='Tournament Invite';
     line='<b>'+(inv.from||'A friend')+'</b> invited you to<div style="font-size:16px;font-weight:900;color:var(--wood-dark);margin-top:6px;">'+(inv.name||'a tournament')+'</div>';
@@ -2158,6 +2161,9 @@ function acceptInvite(){
     document.getElementById('lobby-overlay').style.display='none';
   }
   if(activeSession){leaveSession(false);} // leave any existing friends session first
+  if(gameLobby){leaveLobby();}            // leave any lobby you're already in
+  // Lobby invite: hop straight into the host's lobby room.
+  if(inv&&inv.kind==='lobby'&&inv.lobbyId){setTimeout(function(){joinLobby(inv.lobbyId);},150);return;}
   // Friends sessions (co op world / ruby challenge) vs. classic tournament invites.
   if(inv&&(inv.kind==='challenge'||inv.kind==='coop')&&inv.sessionId){setTimeout(function(){acceptSessionInvite(inv);},150);return;}
   if(inv&&inv.defId)setTimeout(function(){enterTournament(inv.defId);},120);
@@ -2375,6 +2381,7 @@ function endTournament(){
   const _ts=document.getElementById("tourn-standings");if(_ts){_ts.style.display="none";_ts._last=null;}
   const def=activeTournament.def;
   const bounty=isBounty(), variety=_variety, isLobby=!!def.lobby;
+  const _lob=isLobby?gameLobby:null;   // kept alive so everyone returns to the lobby
   // The standings snapshot (player + bots + real-player ghosts), already sorted.
   const entries=_finalStand.length?_finalStand:[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),isPlayer:true}];
   // Daily tournaments pay placement prizes (gold + rubies); lobbies pay only the
@@ -2415,14 +2422,27 @@ function endTournament(){
     }).join("")
     +(pot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#d61f3a;\">You won the pot! <span class=\"gem-s\"></span> +"+pot+" rubies</div>"
        :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
-    +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
+    +"<button onclick=\""+(isLobby?"returnToLobbyRoom()":"document.getElementById('modal-bg').classList.remove('show')")+"\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">"+(isLobby?"Back to lobby":"Done")+"</button>";
   document.getElementById("modal-bg").classList.add("show");
-  // Tidy up the lobby doc so it doesn't linger after the match.
-  if(isLobby&&fbDb&&gameLobby&&gameLobby.isHost&&def.lobbyId){fbDb.collection('lobbies').doc(def.lobbyId).delete().catch(function(){});}
-  gameLobby=null;
+  // Lobby: keep it alive so everyone drops back into the room and the host can run
+  // another round. The host re-opens the lobby (status 'open') and resets scores.
+  if(isLobby&&_lob){
+    _lob.started=false;_lob._counting=false;
+    if(fbUser&&_lob.players&&_lob.players[fbUser.uid]){_lob.players[fbUser.uid].sp=0;_lob.players[fbUser.uid].best=0;}
+    if(_lob.isHost&&fbDb&&def.lobbyId){const _u={};_u.status='open';_u.startAt=firebase.firestore.FieldValue.delete();fbDb.collection(LOBBY_COLL).doc(def.lobbyId).update(_u).catch(function(){});}
+  }else{
+    gameLobby=null;
+  }
   activeTournament=null;activeLobby=null;activeSession=null;
   if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   setTimeout(checkPendingInvites,2500); // surface any invites that arrived mid-match
+}
+// After a lobby match's results, drop everyone back into the waiting room.
+function returnToLobbyRoom(){
+  document.getElementById('modal-bg').classList.remove('show');
+  if(!gameLobby){return;}
+  gameLobby.started=false;gameLobby._counting=false;
+  openLobbyRoom();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2655,7 +2675,7 @@ function _teardownSessionLobby(){
 function leaveSession(fromLobby){
   if(!activeSession)return;
   const id=activeSession.id, isHost=activeSession.isHost, started=activeSession.started, isLobby=activeSession.lobby;
-  const coll=isLobby?'lobbies':'challenges';
+  const coll=isLobby?LOBBY_COLL:'challenges';
   if(fbDb){
     if(isHost&&(!started||isLobby)){fbDb.collection(coll).doc(id).delete().catch(function(){});}
     else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
@@ -2737,6 +2757,11 @@ function _showChallengeResults(sess, ranked, stake, pot, winner, iWon){
 // can browse open lobbies and join; the host starts when ready (10s countdown).
 // ─────────────────────────────────────────────────────────────
 const LOBBY_MAX=25, WAGER_MAX=10;
+// Lobbies ride in the existing `challenges` collection (the brand-new `lobbies`
+// collection isn't covered by the Firestore security rules, so reads/writes there
+// silently fail and nothing shows up in Join). Lobby docs are tagged kind:'lobby'
+// and use status 'open'/'starting', which never collide with old session docs.
+const LOBBY_COLL='challenges';
 let gameLobby=null, _lobbyListUnsub=null, _lobbyDocUnsub=null, _lobbyCountdownInt=null, _lobbyCache=[];
 let _lobbyDraft=null;
 function requireOnlineForLobby(){
@@ -2817,7 +2842,7 @@ function publishLobby(){
   const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
   gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
-  fbDb.collection('lobbies').doc(id).set({ host:fbUser.uid, hostName:fbUsername, name:gameLobby.name, seed:seed,
+  fbDb.collection(LOBBY_COLL).doc(id).set({ kind:'lobby', host:fbUser.uid, hostName:fbUsername, name:gameLobby.name, seed:seed,
     settings:settings, status:'open', createdAt:Date.now(), players:gameLobby.players }).catch(function(){toast('Could not open the lobby.','#b3402a');});
   closeModal();
   openLobbyRoom();
@@ -2842,7 +2867,10 @@ function openLobbyRoom(){
   startBtn.textContent='Start ('+_lobbyCount()+'/'+gameLobby.settings.size+')';
   startBtn.style.display=gameLobby.isHost?'block':'none';
   startBtn.setAttribute('onclick','hostStartLobby()');
-  document.getElementById('session-invite-btn').style.display='none';
+  const invBtn=document.getElementById('session-invite-btn');
+  invBtn.style.display=gameLobby.isHost?'block':'none';
+  invBtn.textContent='Invite Friends';
+  invBtn.setAttribute('onclick','openLobbyInvite()');
   const cancel=document.getElementById('session-cancel-btn');
   cancel.textContent=gameLobby.isHost?'Close lobby':'Leave';
   cancel.setAttribute('onclick','leaveLobby()');
@@ -2851,10 +2879,38 @@ function openLobbyRoom(){
   document.getElementById('session-overlay').style.display='flex';
   _listenLobbyDoc();
 }
+// Host invites a friend straight into the lobby while waiting.
+function openLobbyInvite(){
+  if(!gameLobby||!gameLobby.isHost)return;
+  if(!fbUser||!fbDb){toast('Sign in to invite friends.','#b58b53');return;}
+  if(!fbFriends.length){toast('Add friends first in the Friends tab.','#b58b53');return;}
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:4px;">Invite Friends</div>'
+    +'<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:12px;">Tap to invite a friend to this lobby. They get a pop-up to accept.</div>'
+    +'<div id="linv-list" style="font-size:12px;color:var(--text-soft);">Loading…</div>';
+  bg.classList.add('show');
+  Promise.all(fbFriends.slice(0,20).map(function(uid){return fbDb.collection('users').doc(uid).get();})).then(function(snaps){
+    document.getElementById('linv-list').innerHTML=snaps.map(function(s){
+      const dd=s.data()||{};const uname=(dd.username||'Angler').replace(/'/g,"&#39;");
+      return '<div class="friend-card"><div><div class="friend-name">'+(dd.username||'Angler')+'</div><div class="friend-lvl">Level '+(dd.level||1)+'</div></div>'
+        +'<button class="friend-add-btn" id="linv-'+s.id+'" onclick="sendLobbyInvite(\''+s.id+'\',\''+uname+'\')">Invite</button></div>';
+    }).join('')||'<div class="lb-empty">No friends to invite.</div>';
+  }).catch(function(){const el=document.getElementById('linv-list');if(el)el.innerHTML='<div class="lb-empty">Could not load friends.</div>';});
+}
+function sendLobbyInvite(uid, username){
+  if(!gameLobby||!fbUser||!fbDb)return;
+  if(_lobbyCount()>=gameLobby.settings.size){toast('Lobby is full.','#b58b53');return;}
+  const inv={kind:'lobby', lobbyId:gameLobby.id, from:fbUsername, fromUid:fbUser.uid, fromLevel:(S.level||1),
+    name:gameLobby.name, sentAt:Date.now(), id:fbUser.uid+'_'+Date.now()};
+  fbDb.collection('tournamentInvites').doc(uid).set({pending:firebase.firestore.FieldValue.arrayUnion(inv)},{merge:true}).then(function(){
+    const b=document.getElementById('linv-'+uid);if(b){b.textContent='Invited ✓';b.disabled=true;b.style.opacity=.6;}
+    toast('Invited '+username+'!','#2aa890');
+  }).catch(function(){toast('Could not send invite.','#b3402a');});
+}
 function _listenLobbyDoc(){
   if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
   if(!gameLobby||!fbDb)return;
-  _lobbyDocUnsub=fbDb.collection('lobbies').doc(gameLobby.id).onSnapshot(function(d){
+  _lobbyDocUnsub=fbDb.collection(LOBBY_COLL).doc(gameLobby.id).onSnapshot(function(d){
     if(!gameLobby)return;
     if(!d.exists){ if(!gameLobby.started){toast('The lobby was closed.','#b58b53');_teardownLobbyRoom();} return; }
     const data=d.data()||{};
@@ -2862,17 +2918,21 @@ function _listenLobbyDoc(){
     gameLobby.status=data.status;
     if(document.getElementById('session-overlay').style.display==='flex')_renderLobbyPlayers();
     const sb=document.getElementById('session-start-btn'); if(sb&&gameLobby.isHost)sb.textContent='Start ('+_lobbyCount()+'/'+gameLobby.settings.size+')';
-    if(data.status==='starting'&&!gameLobby._counting&&!gameLobby.started)_beginLobbyCountdown(data.startAt);
+    // Each Start writes a fresh startAt; dedup on it so a stale 'starting' (e.g.
+    // between rounds, before the host resets to 'open') can't re-launch the match.
+    if(data.status==='starting'&&data.startAt&&data.startAt!==gameLobby._lastStartAt&&!gameLobby.started&&!gameLobby._counting)_beginLobbyCountdown(data.startAt);
   },function(){});
 }
 function hostStartLobby(){
   if(!gameLobby||!gameLobby.isHost)return;
-  if(fbDb)fbDb.collection('lobbies').doc(gameLobby.id).update({status:'starting',startAt:Date.now()}).catch(function(){_beginLobbyCountdown(Date.now());});
-  else _beginLobbyCountdown(Date.now());
+  const at=Date.now();
+  if(fbDb)fbDb.collection(LOBBY_COLL).doc(gameLobby.id).update({status:'starting',startAt:at}).catch(function(){_beginLobbyCountdown(at);});
+  else _beginLobbyCountdown(at);
 }
 function _beginLobbyCountdown(startAt){
   if(!gameLobby)return;
   gameLobby._counting=true;
+  gameLobby._lastStartAt=startAt;   // mark this round consumed
   const endAt=(startAt||Date.now())+10000;
   const timerEl=document.getElementById('session-timer');
   const sb=document.getElementById('session-start-btn'); if(sb)sb.style.display='none';
@@ -2895,8 +2955,8 @@ function openJoinLobby(){
   bg.classList.add('show');
   _lobbyCache=[];
   if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;}
-  _lobbyListUnsub=fbDb.collection('lobbies').where('status','==','open').onSnapshot(function(snap){
-    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};dd._id=doc.id;_lobbyCache.push(dd);});
+  _lobbyListUnsub=fbDb.collection(LOBBY_COLL).where('status','==','open').onSnapshot(function(snap){
+    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};if(dd.kind!=='lobby')return;dd._id=doc.id;_lobbyCache.push(dd);});
     _renderLobbyList();
   },function(){const el=document.getElementById('lobby-list');if(el)el.innerHTML='<div class="lb-empty">Could not load lobbies.</div>';});
 }
@@ -2915,7 +2975,7 @@ function _renderLobbyList(){
 function closeJoinLobby(){ if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;} closeModal(); }
 function joinLobby(id){
   if(!requireOnlineForLobby())return;
-  const ref=fbDb.collection('lobbies').doc(id);
+  const ref=fbDb.collection(LOBBY_COLL).doc(id);
   ref.get().then(function(d){
     if(!d.exists){toast('That lobby is gone.','#b58b53');return;}
     const data=d.data()||{};
@@ -2943,8 +3003,8 @@ function leaveLobby(){
   if(!gameLobby)return;
   const id=gameLobby.id, isHost=gameLobby.isHost;
   if(fbDb){
-    if(isHost){fbDb.collection('lobbies').doc(id).delete().catch(function(){});}
-    else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();fbDb.collection('lobbies').doc(id).update(upd).catch(function(){});}
+    if(isHost){fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});}
+    else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();fbDb.collection(LOBBY_COLL).doc(id).update(upd).catch(function(){});}
   }
   _teardownLobbyRoom();
   toast('Left the lobby.','#b58b53');
