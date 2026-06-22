@@ -520,6 +520,9 @@
 .fwf-btn{flex:1;padding:10px 6px;border-radius:10px;border:none;font-size:12.5px;font-weight:800;font-family:'Fredoka';cursor:pointer;}
 .fwf-btn.world{background:#2aa890;color:#fff;}
 .fwf-btn.chal{background:#d61f3a;color:#fff;}
+.lob-lbl{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft);margin:9px 0 5px;}
+.lob-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:4px;}
+.lob-val{font-family:'Fredoka';font-weight:900;font-size:15px;color:var(--ink);min-width:26px;text-align:center;}
 /* FRIENDS */
 .friend-search-row{display:flex;gap:8px;margin-bottom:12px;}
 .friend-input{flex:1;padding:9px 12px;border-radius:9px;border:1.5px solid #d2b886;background:var(--parchment);color:var(--ink);font-size:13px;font-family:inherit;}
@@ -1722,10 +1725,10 @@ function renderFriendRequests(){
 function renderFwfCard(){
   const host=document.getElementById('fwf-host');if(!host)return;
   if(!fbUser){host.innerHTML='';return;}
-  host.innerHTML='<div class="fwf-card"><div class="fwf-h">'+svgIcon('fish',16)+' Fish with Friends</div>'
-    +'<div class="fwf-sub">Invite up to 5 friends into your world, or challenge them for rubies.</div>'
-    +'<div class="fwf-btns"><button class="fwf-btn world" onclick="startCoopFlow()">Invite to my world</button>'
-    +'<button class="fwf-btn chal" onclick="startChallengeFlow()">Challenge for rubies</button></div></div>';
+  host.innerHTML='<div class="fwf-card"><div class="fwf-h">'+svgIcon('fish',16)+' Multiplayer Lobbies</div>'
+    +'<div class="fwf-sub">Host a lobby with your own rules, or join one that\'s open. Friendly or competitive (bounty, tournament, limited casts).</div>'
+    +'<div class="fwf-btns"><button class="fwf-btn world" onclick="openCreateLobby()">Create Lobby</button>'
+    +'<button class="fwf-btn chal" onclick="openJoinLobby()">Join Lobby</button></div></div>';
 }
 function renderFriendsPanel(){
   renderFwfCard();
@@ -2167,10 +2170,12 @@ function startTournamentMode(def){
   const _tf=def.targetFish;
   const _seasonPool=(_tf&&_tf.season&&_tf.season.length&&_tf.season.indexOf('all')<0)?_tf.season:SEASONS;
   const _sr=mulberry32((defSeed(def)^0x13579bdf)>>>0);
-  const tournSeason=_seasonPool[Math.floor(_sr()*_seasonPool.length)];
+  // A lobby host picks the season explicitly; otherwise it's seeded from the match.
+  const tournSeason=def.season||_seasonPool[Math.floor(_sr()*_seasonPool.length)];
   activeTournament={def:def, biggestWeight:0,biggestName:"",botCatches:[],season:tournSeason,
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now(),
     bountyList:(def.bounty?(def.bountyList||[]).slice():null), bountyIdx:0,
+    limited:!!def.limited, limitedSpecies:{}, castLimit:def.castLimit||0, castsUsed:0,
     speciesCount:0,cannons:0,cannonHits:{},_ended:false};
   cannonsSpawned=0;cannonBalls=[];_cannonArmed=false;_cannonDrag=null;
   if(typeof updateCannonButton==='function')updateCannonButton();
@@ -2189,7 +2194,7 @@ function startTournamentMode(def){
   // casual, so the shop stays open for everyone.
   closeMenu();
   if(typeof updateCosmeticHUD==='function')updateCosmeticHUD(); // hide Clancy button in matches
-  if(!def.coop){
+  if(!def.coop&&!(def.lobby&&def.shopOn)){
     document.body.classList.add('tourn-active');
     const shopTabBtn=document.querySelector("[data-mtab='shop']");
     if(shopTabBtn&&shopTabBtn.classList.contains('active')){
@@ -2200,18 +2205,21 @@ function startTournamentMode(def){
     }
   }
   const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
-  _bn.textContent=def.coop?'FISHING WITH FRIENDS':(def.session?'CHALLENGE IN PROGRESS':(isBounty()?'BOUNTY':'TOURNAMENT IN PROGRESS'));_bn.classList.remove('leading');
+  _bn.textContent=def.coop?'FISHING WITH FRIENDS':(def.limited?'LIMITED CASTS':(def.session?'CHALLENGE IN PROGRESS':(isBounty()?'BOUNTY':'TOURNAMENT IN PROGRESS')));_bn.classList.remove('leading');
   // Friends sessions (co op / challenge) skip bots and customise the banner.
   const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display=def.coop?'block':'none';
   // Tournaments & challenges get an EMPTY discovery map you fill in by exploring.
-  if(!def.coop){const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';tourn._trail=[];}
-  if(def.session){
+  if(!def.coop){const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display=(def.lobby&&!def.mapsOn)?'none':'block';tourn._trail=[];}
+  const _tmin=def.timeLimitMin||6;
+  if(def.limited){
+    toast("Limited Casts! "+activeTournament.castLimit+" casts to land the most DIFFERENT species. "+_tmin+" min.","#e0a93c");
+  }else if(def.session){
     toast(def.coop?'Fishing with friends! Catch anything you like.':('Challenge on! Biggest '+(def.targetFish?def.targetFish.name:'fish')+' in 6 minutes wins.'),'#e0a93c');
   }else if(isBounty()){
     const first=activeTournament.bountyList&&activeTournament.bountyList[0];
-    toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". 6 minutes.","#e0a93c");
+    toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". "+_tmin+" min.","#e0a93c");
   }else{
-    toast("Tournament on! Land the biggest "+(def.targetFish?def.targetFish.name:'fish')+" in 6 minutes.","#e0a93c");
+    toast("Tournament on! Land the biggest "+(def.targetFish?def.targetFish.name:'fish')+" in "+_tmin+" min.","#e0a93c");
   }
   // Bots fish like real anglers: they work the spots over the whole match, miss
   // plenty, and only land fish now and then (no instant catch at the buzzer). The
@@ -2219,8 +2227,9 @@ function startTournamentMode(def){
   if(activeLobby&&!def.session){if(isBounty())buildBountyBotPlan();else buildBotPlan();}
   // Quest: entering a real (non-coop, non-challenge) tournament.
   if(!def.coop&&!def.session&&typeof questEvent==='function')questEvent('tournEnter');
-  // Co op worlds have no timer (leave when you like); everything else runs 6 min.
-  if(!def.coop)setTimeout(endTournament,6*60*1000);
+  // Co op worlds have no timer (leave when you like); everything else runs for the
+  // configured time limit (lobbies) or the default 6 minutes.
+  if(!def.coop)setTimeout(endTournament,(def.timeLimitMin||6)*60*1000);
 }
 // Co op friends world: the normal multi-zone world (with working zone gates),
 // shared with friends via live position sync, on the host's seed so structures
@@ -2287,6 +2296,18 @@ function recordTournamentCatch(fish, weight){
     }
     return;
   }
+  // LIMITED CASTS: score is how many DIFFERENT species you land; biggest breaks ties.
+  if(activeTournament.limited){
+    if(!activeTournament.limitedSpecies)activeTournament.limitedSpecies={};
+    const isNew=!activeTournament.limitedSpecies[fish.id];
+    if(isNew){activeTournament.limitedSpecies[fish.id]=true;activeTournament.speciesCount=(activeTournament.speciesCount||0)+1;}
+    if(weight>(activeTournament.biggestWeight||0)){activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;}
+    if(isNew)toast('New species! '+activeTournament.speciesCount+' different so far.','#2aa890');
+    if(cannonsEnabled())maybeAwardCannon();
+    updateTournBanner();
+    if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+    return;
+  }
   const tgt=activeTournament.def&&activeTournament.def.targetFish;
   // Only the tournament's target species counts toward the standings.
   if(tgt&&fish.id!==tgt.id){toast('Only '+tgt.name+' counts in this tournament.','#b58b53');return;}
@@ -2296,6 +2317,7 @@ function recordTournamentCatch(fish, weight){
   activeTournament.targetCatches.push({w:weight, name:fish.name});
   const grew=weight>(activeTournament.biggestWeight||0);
   recomputeTournBest();
+  if(cannonsEnabled())maybeAwardCannon();
   if(grew&&fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
 }
 // Recompute the player's tournament best from their remaining target catches.
@@ -2330,6 +2352,10 @@ function endTournament(){
     if(typeof phase!=='undefined')phase='idle';
     if(typeof bobber!=='undefined'&&bobber)bobber.active=false;
   }catch(_e){}
+  // Snapshot the final standings BEFORE the world teardown wipes the ghosts, so
+  // real-player rivals still appear in the results (lobbies have no bots).
+  const _variety=isBounty()||!!activeTournament.limited;
+  const _finalStand=(_variety?bountyStandings():tournStandings()).map(function(e){return {username:e.name,weight:e.weight||0,count:e.count||0,isPlayer:!!e.isPlayer};});
   restoreClockAfterMatch();   // put the player's real clock/season back
   if(typeof closeMenu==='function')closeMenu(); // don't leave the leaderboard/menu open behind the results
   document.body.classList.remove('tourn-active'); // shop unlocked again
@@ -2348,65 +2374,53 @@ function endTournament(){
   document.getElementById("tourn-banner").style.display="none";
   const _ts=document.getElementById("tourn-standings");if(_ts){_ts.style.display="none";_ts._last=null;}
   const def=activeTournament.def;
-  const bounty=isBounty();
-  // The player's own result is always in the list, even with no catch.
-  const entries=[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),name:activeTournament.biggestName||'',isPlayer:true}];
-  // Every bot that entered appears with their final tally. Their results come from
-  // the same time-spread plan that drove the live leaderboard.
-  if(activeLobby){
-    activeLobby.players.filter(function(p){return p.isBot;}).forEach(function(p){
-      if(bounty){const b=botBountyNow(p.username);entries.push({username:p.username, weight:b.biggest, count:b.count, name:'',isPlayer:false});}
-      else{const w=botBestNow(p.username);entries.push({username:p.username, weight:w, count:0, name:w>0?(botBestNow._lastName||''):'',isPlayer:false});}
-    });
-  }
-  // Bounty ranks by species count then biggest fish; classic ranks by biggest fish.
-  entries.sort(function(a, b){
-    if(bounty&&b.count!==a.count)return b.count-a.count;
-    if(b.weight!==a.weight)return b.weight-a.weight;
-    return (b.isPlayer?1:0)-(a.isPlayer?1:0);
-  });
-  // Top 3 are paid in BOTH gold and rubies. Harder target rarities pay more.
-  // The Big Cast (always-on) pays 1.5x.
+  const bounty=isBounty(), variety=_variety, isLobby=!!def.lobby;
+  // The standings snapshot (player + bots + real-player ghosts), already sorted.
+  const entries=_finalStand.length?_finalStand:[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),isPlayer:true}];
+  // Daily tournaments pay placement prizes (gold + rubies); lobbies pay only the
+  // host-set ruby wager pot, settled below.
   const boost=def.alwaysOn?1.5:1;
-  const prizes=tournPrizes(def.rarity, boost);
-  const goldPrizes=tournGoldPrizes(def.rarity, boost);
+  const prizes=isLobby?[0,0,0]:tournPrizes(def.rarity, boost);
+  const goldPrizes=isLobby?[0,0,0]:tournGoldPrizes(def.rarity, boost);
   const rank=entries.findIndex(function(e){return e.isPlayer;});
-  // Did the player put up a real result? (a species in bounty, a catch in classic)
-  const playerHasResult=bounty?((activeTournament.speciesCount||0)>0):((activeTournament.biggestWeight||0)>0);
-  // Quest: tournament finishing place (1-based). 1st place needs a real result.
-  if(rank>=0&&typeof questEvent==='function'){
-    const place=rank+1;
-    if(!(place===1&&!playerHasResult))questEvent('tournPlace',{place:place});
-  }
-  // Prize only if the player genuinely placed top 3 with a real result.
+  // Did the player put up a real result? (a species in variety modes, a catch in classic)
+  const playerHasResult=variety?((activeTournament.speciesCount||0)>0):((activeTournament.biggestWeight||0)>0);
+  if(rank>=0&&typeof questEvent==='function'){const place=rank+1;if(!(place===1&&!playerHasResult))questEvent('tournPlace',{place:place});}
   const placed=(rank>=0&&rank<3&&playerHasResult);
   let winnings=placed?prizes[rank]:0;
   let goldWin=placed?goldPrizes[rank]:0;
-  if(winnings>0||goldWin>0){S.rubies=(S.rubies||0)+winnings;S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;updatePills();queueSave();}
+  // Lobby wager: the winner (1st with a real result) scoops the whole ante pot.
+  let pot=0;
+  if(isLobby&&(def.wager||0)>0&&rank===0&&playerHasResult)pot=(def.wager||0)*entries.length;
+  if(winnings>0||goldWin>0||pot>0){S.rubies=(S.rubies||0)+winnings+pot;S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;updatePills();queueSave();}
   if(rank===0&&playerHasResult){
     S.tournamentWins=(S.tournamentWins||0)+1;
     if(def.alwaysOn)S.bigCastWins=(S.bigCastWins||0)+1;
     queueSave();checkAchievements();
   }
+  const title=isBounty()?"Bounty Over!":(activeTournament.limited?"Limited Casts Over!":"Tournament Over!");
   const body=document.getElementById("modal");
-  body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">"+(bounty?"Bounty Over!":"Tournament Over!")+"</div>"
+  body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">"+title+"</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
     +entries.slice(0,10).map(function(e, i){
-      // Top 3 with a real catch get a medal badge and the rubies they won.
       const placeIcon=(i<3)?medalBadge(i):"<span style=\"font-size:13px;width:22px;text-align:center;font-weight:800;color:var(--text-soft);\">"+(i+1)+"</span>";
-      const hasRes=bounty?(e.count>0):(e.weight>0);
-      const prizeTag=(i<3&&hasRes)?"<span style=\"font-size:12px;font-weight:900;white-space:nowrap;margin-left:6px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> "+goldPrizes[i]+"</span> <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> "+prizes[i]+"</span></span>":"";
-      const resTxt=bounty?((e.count||0)+"/"+BOUNTY_GOAL+" species"+(e.weight>0?" · "+e.weight.toFixed(1)+"lb":"")):(e.weight?e.weight.toFixed(1)+"lb "+e.name:"No catch");
+      const hasRes=variety?(e.count>0):(e.weight>0);
+      const prizeTag=(!isLobby&&i<3&&hasRes)?"<span style=\"font-size:12px;font-weight:900;white-space:nowrap;margin-left:6px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> "+goldPrizes[i]+"</span> <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> "+prizes[i]+"</span></span>":"";
+      const resTxt=variety?((e.count||0)+(isBounty()?"/"+BOUNTY_GOAL+" species":" species")+(e.weight>0?" · "+e.weight.toFixed(1)+"lb":"")):(e.weight?e.weight.toFixed(1)+"lb":"No catch");
       return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#d2b886")+";margin-bottom:5px;\">"
         +placeIcon
         +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);min-width:0;\">"+e.username+"</span>"
         +"<span style=\"font-size:12px;color:var(--text-soft);white-space:nowrap;\">"+resTxt+"</span>"
         +prizeTag+"</div>";
     }).join("")
-    +(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":"")
+    +(pot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#d61f3a;\">You won the pot! <span class=\"gem-s\"></span> +"+pot+" rubies</div>"
+       :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
     +"<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>";
   document.getElementById("modal-bg").classList.add("show");
-  activeTournament=null;activeLobby=null;
+  // Tidy up the lobby doc so it doesn't linger after the match.
+  if(isLobby&&fbDb&&gameLobby&&gameLobby.isHost&&def.lobbyId){fbDb.collection('lobbies').doc(def.lobbyId).delete().catch(function(){});}
+  gameLobby=null;
+  activeTournament=null;activeLobby=null;activeSession=null;
   if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   setTimeout(checkPendingInvites,2500); // surface any invites that arrived mid-match
 }
@@ -2640,15 +2654,17 @@ function _teardownSessionLobby(){
 }
 function leaveSession(fromLobby){
   if(!activeSession)return;
-  const id=activeSession.id, isHost=activeSession.isHost, started=activeSession.started;
+  const id=activeSession.id, isHost=activeSession.isHost, started=activeSession.started, isLobby=activeSession.lobby;
+  const coll=isLobby?'lobbies':'challenges';
   if(fbDb){
-    if(isHost&&!started){fbDb.collection('challenges').doc(id).delete().catch(function(){});}
+    if(isHost&&(!started||isLobby)){fbDb.collection(coll).doc(id).delete().catch(function(){});}
     else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
-      fbDb.collection('challenges').doc(id).update(upd).catch(function(){});}
+      fbDb.collection(coll).doc(id).update(upd).catch(function(){});}
   }
   if(started){_restoreWorldAfterSession();activeTournament=null;activeLobby=null;}
   _teardownSessionLobby();
-  toast('Left the session.','#b58b53');
+  gameLobby=null;
+  toast('Left the '+(isLobby?'lobby':'session')+'.','#b58b53');
 }
 // Called from endTournament when the match is a session.
 function endSession(){
@@ -2711,6 +2727,258 @@ function _showChallengeResults(sess, ranked, stake, pot, winner, iWon){
     +'<button onclick="closeModal()" style="width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-weight:800;cursor:pointer;">Done</button>';
   document.getElementById('modal-bg').classList.add('show');
   if(typeof AUDIO!=='undefined')AUDIO.sfx(iWon?'win':'open');
+}
+
+// ─────────────────────────────────────────────────────────────
+// MULTIPLAYER LOBBIES (V0.9.7)
+// Host-created, publicly discoverable lobbies replace the old invite-only
+// "fish with friends" + challenges. A host sets the rules (friendly, or a
+// competitive bounty / tournament / limited-casts match) and clicks Open; anyone
+// can browse open lobbies and join; the host starts when ready (10s countdown).
+// ─────────────────────────────────────────────────────────────
+const LOBBY_MAX=25, WAGER_MAX=10;
+let gameLobby=null, _lobbyListUnsub=null, _lobbyDocUnsub=null, _lobbyCountdownInt=null, _lobbyCache=[];
+let _lobbyDraft=null;
+function requireOnlineForLobby(){
+  if(!fbUser||!fbDb){toast('Sign in to use lobbies.','#b58b53');return false;}
+  if(activeTournament){toast('Finish your current match first.','#b58b53');return false;}
+  if(activeLobby||gameLobby){toast('Leave your current lobby first.','#b58b53');return false;}
+  return true;
+}
+function _modeLabel(m){return {bounty:'Bounty',tournament:'Tournament',limited:'Limited Casts',friendly:'Friendly'}[m]||m;}
+function _lobbySummary(s){
+  if(!s)return '';
+  if(s.type==='friendly')return 'Friendly · fish '+ZONE_LBL[s.zone||0]+' together · no stakes';
+  let bits=[_modeLabel(s.mode), ZONE_LBL[s.zone||0]];
+  if(s.mode==='tournament'&&s.targetFishId){const f=FISH.find(function(x){return x.id===s.targetFishId;});if(f)bits.push('target '+f.name);}
+  if(s.mode==='limited')bits.push(s.castLimit+' casts');
+  bits.push((SEASON_LABEL[s.season]||s.season));
+  if(s.timeLimitMin)bits.push(s.timeLimitMin+' min');
+  if(s.wager>0)bits.push(s.wager+' ruby wager');
+  return bits.join(' · ');
+}
+// ── Create Lobby form ──
+function openCreateLobby(){
+  if(!requireOnlineForLobby())return;
+  _lobbyDraft={name:'', type:'competitive', mode:'bounty', zone:S.zone||0, targetFishId:null,
+    season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, wager:0, castLimit:10};
+  _renderLobbyForm();
+}
+function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='wager'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
+  if(k==='zone')_lobbyDraft.targetFishId=null; _renderLobbyForm(); }
+function lobbyToggle(k){ if(!_lobbyDraft)return; _lobbyDraft[k]=!_lobbyDraft[k]; _renderLobbyForm(); }
+function _lchip(label, on, set){return '<button onclick="'+set+'" style="padding:6px 11px;border-radius:9px;border:2px solid '+(on?'var(--accent)':'#d2b886')+';background:'+(on?'var(--accent)':'var(--parchment)')+';color:'+(on?'#fff':'var(--ink)')+';font-family:Fredoka;font-weight:800;font-size:12px;cursor:pointer;">'+label+'</button>';}
+function _renderLobbyForm(){
+  const d=_lobbyDraft, comp=d.type==='competitive';
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  let h='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Create Lobby</div>';
+  h+='<div style="max-height:62vh;overflow-y:auto;padding-right:4px;">';
+  h+='<div class="lob-lbl">Lobby name</div><input id="lobby-name" class="friend-input" maxlength="22" placeholder="My lobby" value="'+(d.name||'').replace(/"/g,'&quot;')+'" oninput="_lobbyDraft.name=this.value" style="width:100%;margin-bottom:11px;">';
+  h+='<div class="lob-lbl">Type</div><div class="lob-row">'+_lchip('Friendly',d.type==='friendly',"lobbySet('type','friendly')")+_lchip('Competitive',comp,"lobbySet('type','competitive')")+'</div>';
+  if(comp){
+    h+='<div class="lob-lbl">Mode</div><div class="lob-row">'+_lchip('Bounty',d.mode==='bounty',"lobbySet('mode','bounty')")+_lchip('Tournament',d.mode==='tournament',"lobbySet('mode','tournament')")+_lchip('Limited Casts',d.mode==='limited',"lobbySet('mode','limited')")+'</div>';
+  }
+  // region (friendly + all competitive modes pick a zone)
+  h+='<div class="lob-lbl">Region</div><div class="lob-row">'+[0,1,2].map(function(z){return _lchip(ZONE_LBL[z],d.zone===z,"lobbySet('zone','"+z+"')");}).join('')+'</div>';
+  if(comp&&d.mode==='tournament'){
+    const pool=FISH.filter(function(f){return f.zone===d.zone&&!f.surf&&f.rarity!=='ultra';});
+    if(!d.targetFishId&&pool.length)d.targetFishId=pool[0].id;
+    h+='<div class="lob-lbl">Target fish</div><select onchange="lobbySet(\'targetFishId\',this.value)" style="width:100%;padding:8px;border-radius:9px;border:2px solid #d2b886;background:var(--parchment);font-family:Fredoka;font-weight:700;margin-bottom:11px;">'
+      +pool.map(function(f){return '<option value="'+f.id+'"'+(d.targetFishId===f.id?' selected':'')+'>'+f.name+' ('+(RAR_LBL[f.rarity]||f.rarity)+')</option>';}).join('')+'</select>';
+  }
+  if(comp&&d.mode==='limited'){
+    h+='<div class="lob-lbl">Casts per angler</div><div class="lob-row">'+[5,10,15,20].map(function(n){return _lchip(n+'',d.castLimit===n,"lobbySet('castLimit','"+n+"')");}).join('')+'</div>';
+  }
+  h+='<div class="lob-lbl">Season</div><div class="lob-row">'+SEASONS.map(function(se){return _lchip(SEASON_LABEL[se]||se,d.season===se,"lobbySet('season','"+se+"')");}).join('')+'</div>';
+  h+='<div class="lob-lbl">Lobby size: '+d.size+' max</div><div class="lob-row">'+_lchip('−',false,"lobbyStep('size',-1,2,"+LOBBY_MAX+")")+'<span class="lob-val">'+d.size+'</span>'+_lchip('+',false,"lobbyStep('size',1,2,"+LOBBY_MAX+")")+'</div>';
+  h+='<div class="lob-lbl">Shop during match</div><div class="lob-row">'+_lchip(d.shopOn?'On':'Off',d.shopOn,"lobbyToggle('shopOn')")+'</div>';
+  h+='<div class="lob-lbl">Maps</div><div class="lob-row">'+_lchip(d.mapsOn?'On':'Off',d.mapsOn,"lobbyToggle('mapsOn')")+'</div>';
+  if(comp){
+    h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
+    h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
+    h+='<div class="lob-lbl">Ruby wager (each): '+d.wager+'</div><div class="lob-row">'+_lchip('−',false,"lobbyStep('wager',-1,0,"+WAGER_MAX+")")+'<span class="lob-val">'+d.wager+'</span>'+_lchip('+',false,"lobbyStep('wager',1,0,"+WAGER_MAX+")")+'</div>';
+  }
+  h+='</div>';
+  h+='<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button onclick="publishLobby()" style="padding:11px 30px;border-radius:11px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 0 var(--grass-dark,#1c7a64);">Open</button></div>';
+  modal.innerHTML=h;
+  bg.classList.add('show');
+}
+function lobbyStep(k, delta, min, max){ if(!_lobbyDraft)return; _lobbyDraft[k]=Math.max(min,Math.min(max,(+_lobbyDraft[k]||0)+delta)); _renderLobbyForm(); }
+function publishLobby(){
+  const d=_lobbyDraft; if(!d)return;
+  if(!d.name||!d.name.trim()){toast('Give your lobby a name.','#b58b53');return;}
+  const comp=d.type==='competitive';
+  const settings={ type:d.type, mode:(comp?d.mode:'friendly'), zone:d.zone,
+    targetFishId:(comp&&d.mode==='tournament')?d.targetFishId:null, season:d.season,
+    size:Math.max(2,Math.min(LOBBY_MAX,d.size)), cannonsOn:(comp&&d.cannonsOn), cannonCount:d.cannonCount,
+    timeLimitMin:(comp?d.timeLimitMin:0), shopOn:!!d.shopOn, mapsOn:!!d.mapsOn,
+    wager:(comp?Math.max(0,Math.min(WAGER_MAX,d.wager)):0), castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
+  if(settings.wager>0&&(S.rubies||0)<settings.wager){toast('You need '+settings.wager+' rubies to host this wager.','#b3402a');return;}
+  const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
+  gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
+  gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
+  fbDb.collection('lobbies').doc(id).set({ host:fbUser.uid, hostName:fbUsername, name:gameLobby.name, seed:seed,
+    settings:settings, status:'open', createdAt:Date.now(), players:gameLobby.players }).catch(function(){toast('Could not open the lobby.','#b3402a');});
+  closeModal();
+  openLobbyRoom();
+}
+// ── Lobby waiting room (reuses the session overlay) ──
+function _lobbyCount(){return Object.keys((gameLobby&&gameLobby.players)||{}).length;}
+function _renderLobbyPlayers(){
+  const ul=document.getElementById('session-players');if(!ul||!gameLobby)return;
+  const ids=Object.keys(gameLobby.players||{});
+  const waiting=gameLobby.isHost?'<div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:2px;">Players can join until you start.</div>'
+    :'<div style="text-align:center;font-size:11px;color:var(--text-soft);margin-top:2px;">Waiting for '+(gameLobby.hostName||'the host')+' to start…</div>';
+  ul.innerHTML=ids.map(function(uid){const p=gameLobby.players[uid];const tag=uid===gameLobby.host?'<span class="bot-tag"> host</span>':'';
+    return '<li class="lobby-player">'+(p.username||'Angler')+'<span style="color:var(--text-soft);font-weight:700;"> · Lv '+(p.level||1)+'</span>'+tag+'</li>';}).join('')+'<li style="list-style:none;">'+waiting+'</li>';
+}
+function openLobbyRoom(){
+  if(!gameLobby)return;
+  document.getElementById('menu-panel').classList.remove('show');
+  document.getElementById('menu-bg').classList.remove('show');
+  document.getElementById('session-title').textContent=gameLobby.name;
+  document.getElementById('session-sub').innerHTML=_lobbySummary(gameLobby.settings);
+  const startBtn=document.getElementById('session-start-btn');
+  startBtn.textContent='Start ('+_lobbyCount()+'/'+gameLobby.settings.size+')';
+  startBtn.style.display=gameLobby.isHost?'block':'none';
+  startBtn.setAttribute('onclick','hostStartLobby()');
+  document.getElementById('session-invite-btn').style.display='none';
+  const cancel=document.getElementById('session-cancel-btn');
+  cancel.textContent=gameLobby.isHost?'Close lobby':'Leave';
+  cancel.setAttribute('onclick','leaveLobby()');
+  document.getElementById('session-timer').textContent='';
+  _renderLobbyPlayers();
+  document.getElementById('session-overlay').style.display='flex';
+  _listenLobbyDoc();
+}
+function _listenLobbyDoc(){
+  if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
+  if(!gameLobby||!fbDb)return;
+  _lobbyDocUnsub=fbDb.collection('lobbies').doc(gameLobby.id).onSnapshot(function(d){
+    if(!gameLobby)return;
+    if(!d.exists){ if(!gameLobby.started){toast('The lobby was closed.','#b58b53');_teardownLobbyRoom();} return; }
+    const data=d.data()||{};
+    gameLobby.players=data.players||gameLobby.players;
+    gameLobby.status=data.status;
+    if(document.getElementById('session-overlay').style.display==='flex')_renderLobbyPlayers();
+    const sb=document.getElementById('session-start-btn'); if(sb&&gameLobby.isHost)sb.textContent='Start ('+_lobbyCount()+'/'+gameLobby.settings.size+')';
+    if(data.status==='starting'&&!gameLobby._counting&&!gameLobby.started)_beginLobbyCountdown(data.startAt);
+  },function(){});
+}
+function hostStartLobby(){
+  if(!gameLobby||!gameLobby.isHost)return;
+  if(fbDb)fbDb.collection('lobbies').doc(gameLobby.id).update({status:'starting',startAt:Date.now()}).catch(function(){_beginLobbyCountdown(Date.now());});
+  else _beginLobbyCountdown(Date.now());
+}
+function _beginLobbyCountdown(startAt){
+  if(!gameLobby)return;
+  gameLobby._counting=true;
+  const endAt=(startAt||Date.now())+10000;
+  const timerEl=document.getElementById('session-timer');
+  const sb=document.getElementById('session-start-btn'); if(sb)sb.style.display='none';
+  const cb=document.getElementById('session-cancel-btn'); if(cb)cb.style.display='none';
+  try{AUDIO.sfx('level');}catch(e){}
+  if(_lobbyCountdownInt)clearInterval(_lobbyCountdownInt);
+  _lobbyCountdownInt=setInterval(function(){
+    const left=Math.max(0,Math.ceil((endAt-Date.now())/1000));
+    if(timerEl)timerEl.textContent='Starting in '+left+'…';
+    if(left<=0){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;enterLobbyMatch();}
+  },200);
+}
+// ── Join Lobby (browse open lobbies) ──
+function openJoinLobby(){
+  if(!requireOnlineForLobby())return;
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeJoinLobby()">×</span><div class="mname" style="margin-bottom:8px;">Join a Lobby</div>'
+    +'<div style="margin-bottom:10px;"><input id="lobby-search" class="friend-input" placeholder="Search by name…" oninput="_renderLobbyList()" style="width:100%;"></div>'
+    +'<div id="lobby-list" style="font-size:12px;color:var(--text-soft);">Loading…</div>';
+  bg.classList.add('show');
+  _lobbyCache=[];
+  if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;}
+  _lobbyListUnsub=fbDb.collection('lobbies').where('status','==','open').onSnapshot(function(snap){
+    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};dd._id=doc.id;_lobbyCache.push(dd);});
+    _renderLobbyList();
+  },function(){const el=document.getElementById('lobby-list');if(el)el.innerHTML='<div class="lb-empty">Could not load lobbies.</div>';});
+}
+function _renderLobbyList(){
+  const el=document.getElementById('lobby-list');if(!el)return;
+  const q=((document.getElementById('lobby-search')||{}).value||'').toLowerCase().trim();
+  const list=(_lobbyCache||[]).filter(function(d){return !q||(d.name||'').toLowerCase().indexOf(q)>=0;});
+  if(!list.length){el.innerHTML='<div class="lb-empty">No open lobbies'+(q?' match “'+q+'”':' right now')+'. Create one!</div>';return;}
+  el.innerHTML=list.map(function(d){
+    const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
+    const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+' · host '+(d.hostName||'Angler')+'</div></div>'
+      +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
+  }).join('');
+}
+function closeJoinLobby(){ if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;} closeModal(); }
+function joinLobby(id){
+  if(!requireOnlineForLobby())return;
+  const ref=fbDb.collection('lobbies').doc(id);
+  ref.get().then(function(d){
+    if(!d.exists){toast('That lobby is gone.','#b58b53');return;}
+    const data=d.data()||{};
+    if(data.status!=='open'){toast('That lobby already started.','#b58b53');return;}
+    const cap=(data.settings&&data.settings.size)||25;
+    if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
+    const w=(data.settings&&data.settings.wager)||0;
+    if(w>0&&(S.rubies||0)<w){toast('You need '+w+' rubies to join this wager.','#b3402a');return;}
+    const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
+    ref.update(upd).catch(function(){});
+    gameLobby={id:id, name:data.name, host:data.host, hostName:data.hostName, seed:data.seed||(strHash('lobby_'+id)>>>0),
+      isHost:false, started:false, settings:data.settings||{}, players:data.players||{}};
+    gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
+    closeJoinLobby();
+    openLobbyRoom();
+  }).catch(function(){toast('Could not join.','#b3402a');});
+}
+function _teardownLobbyRoom(){
+  if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
+  if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
+  const so=document.getElementById('session-overlay');if(so)so.style.display='none';
+  gameLobby=null;
+}
+function leaveLobby(){
+  if(!gameLobby)return;
+  const id=gameLobby.id, isHost=gameLobby.isHost;
+  if(fbDb){
+    if(isHost){fbDb.collection('lobbies').doc(id).delete().catch(function(){});}
+    else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();fbDb.collection('lobbies').doc(id).update(upd).catch(function(){});}
+  }
+  _teardownLobbyRoom();
+  toast('Left the lobby.','#b58b53');
+}
+// ── Launch the match from the lobby settings ──
+function enterLobbyMatch(){
+  if(!gameLobby||gameLobby.started)return;
+  gameLobby.started=true;
+  if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
+  if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
+  const so=document.getElementById('session-overlay');if(so)so.style.display='none';
+  const s=gameLobby.settings;
+  if(s.wager>0){S.rubies=Math.max(0,(S.rubies||0)-s.wager);updatePills();queueSave();}
+  const players=Object.keys(gameLobby.players||{}).map(function(uid){return {uid:uid, username:(gameLobby.players[uid]||{}).username||'Angler',isBot:false};});
+  // Friendly lobby = the old co op free-roam world (shared seed via the lobby doc).
+  if(s.type==='friendly'){
+    activeSession={id:gameLobby.id, mode:'coop', host:gameLobby.host, hostName:gameLobby.hostName, seed:gameLobby.seed, isHost:gameLobby.isHost, started:true, players:gameLobby.players, lobby:true};
+    const def={id:'lobby_'+gameLobby.id, name:gameLobby.name, zone:s.zone||0, season:s.season, coop:true,
+      mode:'coop', lobby:true, lobbyId:gameLobby.id, shopOn:s.shopOn, mapsOn:s.mapsOn, sessId:gameLobby.id};
+    activeLobby={def:def, players:players};
+    startCoopMode(def);
+    return;
+  }
+  // Competitive: build a tournament-style def carrying the host's rules.
+  const fish=(s.mode==='tournament'&&s.targetFishId)?FISH.find(function(f){return f.id===s.targetFishId;}):null;
+  const def={id:'lobby_'+gameLobby.id, name:gameLobby.name, zone:s.zone||0, rarity:fish?fish.rarity:'rare',
+    targetFish:fish, bounty:(s.mode==='bounty'), limited:(s.mode==='limited'), castLimit:s.castLimit||10,
+    season:s.season, maxP:s.size, cannonsOn:s.cannonsOn, cannonCount:s.cannonCount||0,
+    timeLimitMin:s.timeLimitMin||6, shopOn:s.shopOn, mapsOn:s.mapsOn, wager:s.wager||0,
+    lobby:true, lobbyId:gameLobby.id };
+  if(s.mode==='bounty')def.bountyList=bountyDailyList(def.zone, strHash('lobby_'+gameLobby.id));
+  activeSession={id:gameLobby.id, mode:s.mode, host:gameLobby.host, hostName:gameLobby.hostName, seed:gameLobby.seed, isHost:gameLobby.isHost, started:true, players:gameLobby.players, lobby:true, settings:s};
+  activeLobby={def:def, players:players};
+  startTournamentMode(def);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -5524,8 +5792,12 @@ function bountyWinCheck(){
 }
 // ── CANNON (Bounty only) ──
 function cannonCount(){return (activeTournament&&activeTournament.cannons)||0;}
+// Cannons are always on in the daily Big Cast bounty; in a lobby the host decides
+// whether they're active and how many can spawn.
+function cannonsEnabled(){if(!activeTournament||!activeTournament.def)return false;const d=activeTournament.def;if(d.lobby)return !!d.cannonsOn;return isBounty();}
+function cannonCap(){if(!activeTournament||!activeTournament.def)return 0;const d=activeTournament.def;if(d.lobby)return d.cannonsOn?(d.cannonCount||0):0;return isBounty()?10:0;}
 function maybeAwardCannon(){
-  if(!isBounty()||cannonsSpawned>=10)return;
+  if(!cannonsEnabled()||cannonsSpawned>=cannonCap())return;
   if(Math.random()<0.20){
     cannonsSpawned++;activeTournament.cannons=(activeTournament.cannons||0)+1;
     toast('You hauled up a CANNON! Tap the cannon button to aim and fire.','#e0a93c');
@@ -5535,7 +5807,7 @@ function maybeAwardCannon(){
 }
 function updateCannonButton(){
   const b=document.getElementById('cannon-btn');if(!b)return;
-  const show=isBounty()&&cannonCount()>0&&!(typeof surfActive!=='undefined'&&surfActive);
+  const show=cannonsEnabled()&&cannonCount()>0&&!(typeof surfActive!=='undefined'&&surfActive);
   b.classList.toggle('show',!!show);
   if(show)b.innerHTML='<span class="cb-ic"></span>Cannon ×'+cannonCount();
   else _cannonArmed=false;
@@ -5843,7 +6115,7 @@ function publishMyPosition(ref, force){
     cos:{hat:S.cosmetic.hat, shirt:S.cosmetic.shirt, shades:S.cosmetic.shades, crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
     rod:S.rod, reel:S.reel, gen:S.gender||'male',skin:S.skinTone||'medlight',
     best:(activeTournament?(activeTournament.biggestWeight||0):0),bestNm:(activeTournament?(activeTournament.biggestName||''):''),
-    sp:(activeTournament&&isBounty())?(activeTournament.speciesCount||0):0,
+    sp:(activeTournament&&(isBounty()||activeTournament.limited))?(activeTournament.speciesCount||0):0,
     inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null, smoke:tourn._pendingSmoke||null, t:Date.now()};
   ref.set({players:{}},{merge:true}).then(function(){
     return ref.update(upd);
@@ -6580,6 +6852,13 @@ function updateTournBanner(){
     bn.classList.toggle('leading',false);
     return;
   }
+  if(activeTournament&&activeTournament.limited){
+    const st=bountyStandings(),place=st.findIndex(function(e){return e.isPlayer;})+1;
+    const left=Math.max(0,(activeTournament.castLimit||0)-(activeTournament.castsUsed||0));
+    bn.textContent=(activeTournament.speciesCount||0)+' species · '+left+' casts left · '+ordinalNum(place||1)+' of '+st.length;
+    bn.classList.toggle('leading',place===1&&(activeTournament.speciesCount||0)>0);
+    return;
+  }
   const p=liveTournPlace();if(!p){bn.textContent='TOURNAMENT IN PROGRESS';return;}
   bn.textContent=ordinalNum(p.place)+' of '+p.total+(p.myW>0?' · '+p.myW.toFixed(1)+' lb':' · no catch yet');
   bn.classList.toggle('leading',p.place===1&&p.myW>0);
@@ -6596,12 +6875,14 @@ function tournStandings(){
   entries.sort(function(a, b){if(b.weight!==a.weight)return b.weight-a.weight;return (b.isPlayer?1:0)-(a.isPlayer?1:0);});
   return entries;
 }
+// Bounty and Limited Casts both rank by distinct-species count (via bountyStandings).
+function speciesMode(){return isBounty()||!!(activeTournament&&activeTournament.limited);}
 // Names of who currently sits 1st/2nd/3rd (used to mark bot targets).
-function topThreeUids(){const b=isBounty();return (b?bountyStandings():tournStandings()).slice(0,3).filter(function(e){return b?(e.count>0):(e.weight>0);}).map(function(e){return e.uid;});}
+function topThreeUids(){const b=speciesMode();return (b?bountyStandings():tournStandings()).slice(0,3).filter(function(e){return b?(e.count>0):(e.weight>0);}).map(function(e){return e.uid;});}
 function updateTournStandings(){
   const el=document.getElementById('tourn-standings');if(!el)return;
   if(activeTournament&&activeTournament.def&&activeTournament.def.coop){el.style.display='none';return;}
-  const bounty=isBounty();
+  const bounty=speciesMode();
   const e=bounty?bountyStandings():tournStandings();
   if(!e.length){el.style.display='none';return;}
   el.style.display='block';
@@ -6609,7 +6890,7 @@ function updateTournStandings(){
   // always readable mid-tournament (tap to open the full breakdown).
   const cond=tournCondLine();
   const rows=e.slice(0,3).map(function(x, i){
-    const val=bounty?((x.count||0)+'/'+BOUNTY_GOAL):(x.weight>0?x.weight.toFixed(1)+' lb':'-');
+    const val=bounty?((x.count||0)+(isBounty()?'/'+BOUNTY_GOAL:' sp')):(x.weight>0?x.weight.toFixed(1)+' lb':'-');
     return '<div class="ts-row'+(x.isPlayer?' me':'')+'"><span class="ts-rank">'+medalBadge(i)+'</span><span class="ts-name">'+x.name+'</span><span class="ts-wt">'+val+'</span></div>';
   }).join('');
   const html=cond+rows;
@@ -8052,7 +8333,7 @@ function render(ts){
     drawStructBeacons(t);
     drawAbilityFx();
     // Bounty cannon: move/draw the balls and the slingshot aim line
-    if(isBounty()){updateCannonBalls();drawCannonBalls();drawCannonAim();}
+    if(cannonsEnabled()){updateCannonBalls();drawCannonBalls();drawCannonAim();}
   }
   // transition gates
   for(const gt of gatesFor()){
@@ -8392,6 +8673,8 @@ function maybeCatchProjectPart(){
 function maybeCatchDronePart(){maybeCatchProjectPart();}
 function cast(x, y){
   const m=curMethod();
+  // Limited Casts lobby: each angler gets a fixed number of casts.
+  if(activeTournament&&activeTournament.limited&&(activeTournament.castsUsed||0)>=(activeTournament.castLimit||0)){setStatus('Out of casts! Sit tight — most species when time runs out wins.');return;}
   // V0.9 Snag Rock: hung up, can't cast until it wears off.
   if(_snaggedUntil>Date.now()){setStatus('Snagged on a rock,'+Math.ceil((_snaggedUntil-Date.now())/1000)+'s left. Hang tight.');return;}
   // V0.9: casting onto someone's snag rock hangs you up and removes the rock.
@@ -8423,6 +8706,7 @@ function cast(x, y){
   ripples.push({x, y, r:3,life:1},{x, y, r:8,life:.7});
   AUDIO.sfx('cast');
   phase='waiting';S.totalCasts++;
+  if(activeTournament&&activeTournament.limited){activeTournament.castsUsed=(activeTournament.castsUsed||0)+1;updateTournBanner();}
   if(typeof activeChallenge!=='undefined'&&activeChallenge)challengeOnCast();
   maybeCatchDronePart();   // 0.1%/cast shot at this region's drone part
   if(S.chumCasts>0){S.chumCasts--;if(S.chumCasts===0)setTimeout(function(){toast('Your chum slick washed out.','#8b5a2b');},300);}
