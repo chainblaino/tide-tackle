@@ -2422,7 +2422,9 @@ function endTournament(){
     }).join("")
     +(pot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#d61f3a;\">You won the pot! <span class=\"gem-s\"></span> +"+pot+" rubies</div>"
        :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
-    +"<button onclick=\""+(isLobby?"returnToLobbyRoom()":"document.getElementById('modal-bg').classList.remove('show')")+"\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">"+(isLobby?"Back to lobby":"Done")+"</button>";
+    +(isLobby
+      ? "<div style=\"display:flex;gap:8px;margin-top:14px;\"><button onclick=\"returnToLobbyRoom()\" style=\"flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Back to lobby</button><button onclick=\"leaveLobbyFromResults()\" style=\"flex:1;padding:11px;border-radius:10px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;\">Leave lobby</button></div>"
+      : "<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>");
   document.getElementById("modal-bg").classList.add("show");
   // Lobby: keep it alive so everyone drops back into the room and the host can run
   // another round. The host re-opens the lobby (status 'open') and resets scores.
@@ -2443,6 +2445,11 @@ function returnToLobbyRoom(){
   if(!gameLobby){return;}
   gameLobby.started=false;gameLobby._counting=false;
   openLobbyRoom();
+}
+// Leave the lobby entirely from the post-match results, back to the open world.
+function leaveLobbyFromResults(){
+  document.getElementById('modal-bg').classList.remove('show');
+  if(typeof leaveLobby==='function')leaveLobby();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2874,6 +2881,7 @@ function openLobbyRoom(){
   const cancel=document.getElementById('session-cancel-btn');
   cancel.textContent=gameLobby.isHost?'Close lobby':'Leave';
   cancel.setAttribute('onclick','leaveLobby()');
+  cancel.style.display='block';   // a countdown hides it; make sure it's back
   document.getElementById('session-timer').textContent='';
   _renderLobbyPlayers();
   document.getElementById('session-overlay').style.display='flex';
@@ -5107,7 +5115,7 @@ const ACHIEVEMENTS=[
   {id:'explorer',tier:'impressive',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k)),prog:()=>{const ks=Object.keys(STRUCT_META);return [ks.filter(k=>(S.fishedStructures||[]).includes(k)).length, ks.length];}},
   {id:'lockedin',tier:'impressive',name:'Locked In',desc:'Hit the bonus section 15 times in a row.',check:()=>(S.bullseyeBest||0)>=15,prog:()=>[Math.min(S.bullseyeBest||0,15),15]},
   // Extraordinary
-  {id:'legendaryangler',tier:'extraordinary',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',check:()=>FISH.filter(f=>f.rarity==='legendary').every(f=>(S.caught[f.id]||0)>0),prog:()=>{const L=FISH.filter(f=>f.rarity==='legendary');return [L.filter(f=>(S.caught[f.id]||0)>0).length, L.length];}},
+  {id:'legendaryangler',tier:'extraordinary',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',check:()=>FISH.filter(f=>f.rarity==='legendary'&&!f.surf).every(f=>(S.caught[f.id]||0)>0),prog:()=>{const L=FISH.filter(f=>f.rarity==='legendary'&&!f.surf);return [L.filter(f=>(S.caught[f.id]||0)>0).length, L.length];}},
   {id:'perfecttiming',tier:'extraordinary',name:'Perfect Timing',desc:'Hit the bonus section 500 times total.',check:()=>(S.bullseyeTotal||0)>=500,prog:()=>[Math.min(S.bullseyeTotal||0,500),500]},
   // GOAT Status
   {id:'bigwinner',tier:'goat',name:'Big Winner',desc:'Place 1st in The Big Cast tournament.',crownId:'crown_gold',check:()=>(S.bigCastWins||0)>=1,prog:()=>[Math.min(S.bigCastWins||0,1),1]},
@@ -6786,17 +6794,28 @@ function applyIncomingAct(act){
   const now=Date.now();
   const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder'||act.type==='trick'||act.type==='cannon');
   if(hostile&&now<immuneUntil){toast('Untouchable, blocked an ability!','#2aa890');return;}
-  // Bounty cannon: a rival's cannonball knocks you back one species on the list.
+  // A rival's cannonball costs you progress. The penalty fits the mode: bounty
+  // knocks you back one species on the list, limited drops a species off your
+  // variety count, and a classic tournament loses your most recent target catch.
   if(act.type==='cannon'){
+    if(!activeTournament)return;
     if(isBounty()){
       activeTournament.bountyIdx=Math.max(0,(activeTournament.bountyIdx||0)-1);
       activeTournament.speciesCount=activeTournament.bountyIdx;
       const list=activeTournament.bountyList||[], back=list[activeTournament.bountyIdx];
       toast('A cannonball blasted ye! Back to '+(back?back.name:'the start')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#c46f28');
-      spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');
-      updateTournBanner();
-      if(fbUser&&fbDb&&tourn.posKey){publishMyPosition(fbDb.collection('tournament_positions').doc(tourn.posKey),true);}
+    }else if(activeTournament.limited){
+      const ks=Object.keys(activeTournament.limitedSpecies||{});
+      if(ks.length)delete activeTournament.limitedSpecies[ks[ks.length-1]];
+      activeTournament.speciesCount=Math.max(0,(activeTournament.speciesCount||0)-1);
+      toast('A cannonball blasted ye! Lost a species ('+(activeTournament.speciesCount||0)+').','#c46f28');
+    }else{
+      if(activeTournament.targetCatches&&activeTournament.targetCatches.length){activeTournament.targetCatches.pop();if(typeof recomputeTournBest==='function')recomputeTournBest();}
+      toast('A cannonball blasted ye! Lost your last catch.','#c46f28');
     }
+    spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');
+    updateTournBanner();
+    if(fbUser&&fbDb&&tourn.posKey){publishMyPosition(fbDb.collection('tournament_positions').doc(tourn.posKey),true);}
     return;
   }
   // Jester set bonus: every ability used against you ramps your speed & spawn.
