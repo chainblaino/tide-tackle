@@ -2804,7 +2804,7 @@ function _renderLobbyForm(){
   const d=_lobbyDraft, comp=d.type==='competitive';
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
   let h='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Create Lobby</div>';
-  h+='<div style="max-height:62vh;overflow-y:auto;padding-right:4px;">';
+  h+='<div id="lob-scroll" style="max-height:62vh;overflow-y:auto;padding-right:4px;">';
   h+='<div class="lob-lbl">Lobby name</div><input id="lobby-name" class="friend-input" maxlength="22" placeholder="My lobby" value="'+(d.name||'').replace(/"/g,'&quot;')+'" oninput="_lobbyDraft.name=this.value" style="width:100%;margin-bottom:11px;">';
   h+='<div class="lob-lbl">Type</div><div class="lob-row">'+_lchip('Friendly',d.type==='friendly',"lobbySet('type','friendly')")+_lchip('Competitive',comp,"lobbySet('type','competitive')")+'</div>';
   if(comp){
@@ -2832,8 +2832,10 @@ function _renderLobbyForm(){
   }
   h+='</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:12px;"><button onclick="publishLobby()" style="padding:11px 30px;border-radius:11px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:900;font-size:15px;cursor:pointer;box-shadow:0 4px 0 var(--grass-dark,#1c7a64);">Open</button></div>';
+  const _prev=document.getElementById('lob-scroll');const _sy=_prev?_prev.scrollTop:0;
   modal.innerHTML=h;
   bg.classList.add('show');
+  const _now=document.getElementById('lob-scroll');if(_now)_now.scrollTop=_sy;
 }
 function lobbyStep(k, delta, min, max){ if(!_lobbyDraft)return; _lobbyDraft[k]=Math.max(min,Math.min(max,(+_lobbyDraft[k]||0)+delta)); _renderLobbyForm(); }
 function publishLobby(){
@@ -3549,7 +3551,7 @@ function _downscaleHQ(src, target){
 const SET_SPRITE={};
 SET_ART_IDS.forEach(function(id){
   const im=new Image();
-  im.onload=function(){try{SET_SPRITE[id]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){SET_SPRITE[id]=im;}};
+  im.onload=function(){try{SET_SPRITE[id]=_downscaleHQ(_keyOutPetBg(im),384);}catch(e){SET_SPRITE[id]=im;}};
   im.src=setImgSrc(id);
 });
 // ── SKINS (V0.9.7) ──────────────────────────────────────────────
@@ -3565,7 +3567,7 @@ const SKINS=[
 const SKIN_SPRITE={};
 SKINS.forEach(function(sk){
   const im=new Image();
-  im.onload=function(){try{SKIN_SPRITE[sk.id]=_downscaleHQ(_keyOutPetBg(im, sk.kind==='boat'?212:234),256);}catch(e){SKIN_SPRITE[sk.id]=im;}};
+  im.onload=function(){try{SKIN_SPRITE[sk.id]=_downscaleHQ(_keyOutPetBg(im, sk.kind==='boat'?212:234),sk.kind==='boat'?512:384);}catch(e){SKIN_SPRITE[sk.id]=im;}};
   im.src=sk.file;
 });
 function skinById(id){return SKINS.find(function(s){return s.id===id;});}
@@ -3703,7 +3705,7 @@ function petImgSrc(id){return 'pets/'+id+'.png';}
 // Clancy NPC art: the full figure (drawn in his offshore sailboat) and a
 // background-keyed sprite for the game canvas.
 const CLANCY_IMG=new Image(); let CLANCY_SPRITE=null;
-CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_downscaleHQ(_keyOutPetBg(CLANCY_IMG),160);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
+CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_downscaleHQ(_keyOutPetBg(CLANCY_IMG),256);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
 CLANCY_IMG.src='npc/clancy.png';
 // V0.9.6: NPC challenger art (background keyed for the game canvas). Note the
 // offshore explorer's file is npc/mangellan.png. Pre-downscaled so the small
@@ -3711,7 +3713,7 @@ CLANCY_IMG.src='npc/clancy.png';
 const CHALLENGER_SPRITE={};
 [['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png']].forEach(function(p){
   const im=new Image();
-  im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_downscaleHQ(_keyOutPetBg(im),160);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
+  im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
   im.src=p[1];
 });
 // V0.9.7: top-down boat art the NPCs sit inside. A tighter key threshold (212)
@@ -3720,7 +3722,7 @@ const CHALLENGER_SPRITE={};
 const NPC_BOAT={};
 [['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png']].forEach(function(p){
   const im=new Image();
-  im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),256);}catch(e){NPC_BOAT[p[0]]=im;}};
+  im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),384);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
 });
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
@@ -7970,7 +7972,6 @@ function drawBoat(dark){
 // seat the angler on the deck. Called from drawBoat within the boat transform.
 function drawBoatSkin(img, dark){
   const BS=116;
-  ctx.fillStyle='rgba(0,30,45,.18)';ctx.beginPath();ctx.ellipse(0,BS*0.30,BS*0.30,BS*0.11,0,0,6.28);ctx.fill();
   ctx.drawImage(img,-BS/2,-BS/2+4,BS,BS);
   drawAnglerFigure(0,16,5,-5,14,10,12,3);
   if(dark>0.4){ctx.fillStyle='rgba(255,225,140,'+(dark*0.4)+')';ctx.beginPath();ctx.arc(0,-20,12,0,6.28);ctx.fill();}
@@ -10752,7 +10753,6 @@ function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed, opts){
   const nsc=opts.npcScale||1, ndy=(opts.npcDy!=null?opts.npcDy:-6);
   ctx.save();ctx.translate(0,Math.sin(t*1.2+(bobSeed||0))*2);
   const BS=100;                                  // boat square draw size
-  ctx.fillStyle='rgba(0,20,40,.16)';ctx.beginPath();ctx.ellipse(0,BS*0.40,BS*0.30,BS*0.10,0,0,6.28);ctx.fill();
   if(_spriteReady(boatImg))ctx.drawImage(boatImg,-BS/2,-BS/2,BS,BS);
   // NPC standing near the middle of the deck (feet a touch below boat centre)
   if(_spriteReady(sprite)){const NS=60*nsc;ctx.drawImage(sprite,-NS/2,-NS/2+ndy,NS,NS);}
