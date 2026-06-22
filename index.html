@@ -2932,8 +2932,11 @@ function hostStartLobby(){
 function _beginLobbyCountdown(startAt){
   if(!gameLobby)return;
   gameLobby._counting=true;
-  gameLobby._lastStartAt=startAt;   // mark this round consumed
-  const endAt=(startAt||Date.now())+10000;
+  gameLobby._lastStartAt=startAt;   // round id (host's timestamp), for dedup only
+  // Count down a fixed 10s on EACH device's own clock. Using the host's absolute
+  // startAt made the countdown (and therefore the match start/end) drift apart by
+  // however far the devices' clocks were off.
+  const endAt=Date.now()+10000;
   const timerEl=document.getElementById('session-timer');
   const sb=document.getElementById('session-start-btn'); if(sb)sb.style.display='none';
   const cb=document.getElementById('session-cancel-btn'); if(cb)cb.style.display='none';
@@ -9881,13 +9884,22 @@ function toggleMenuDropdown(){
   const dd=document.getElementById('menu-dropdown');if(!dd)return;
   if(dd.classList.contains('show')){dd.classList.remove('show');return;}
   // Shop is hidden in non-coop tournaments, matching the old tab rule.
-  const lock=activeTournament&&!(activeTournament.def&&activeTournament.def.coop);
+  const lock=shopLockedNow();
   const shop=dd.querySelector('.menu-dd-item[data-go="shop"]');if(shop)shop.style.display=lock?'none':'';
   dd.classList.add('show');AUDIO.sfx('open');
 }
+// The shop is open in the open world, in co op worlds, and in a lobby whose host
+// turned the shop on; it's locked in every other live match.
+function shopLockedNow(){
+  if(!activeTournament)return false;
+  const d=activeTournament.def;
+  if(d&&d.coop)return false;
+  if(d&&d.lobby&&d.shopOn)return false;
+  return true;
+}
 function openMenuTab(mtab){
   closeMenuDropdown();
-  if(mtab==='shop'&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');return;}
+  if(mtab==='shop'&&shopLockedNow()){toast('Shop is locked during the match.','#b58b53');return;}
   openMenu();
   const btn=document.querySelector("[data-mtab='"+mtab+"']");
   if(btn)btn.click();   // reuse the tab's activation + side effects
@@ -9903,7 +9915,7 @@ document.addEventListener('click',function(e){
 document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
-    if(t.dataset.mtab==='shop'&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){toast('Shop is locked during the tournament.','#b58b53');return;}
+    if(t.dataset.mtab==='shop'&&shopLockedNow()){toast('Shop is locked during the match.','#b58b53');return;}
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
     if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
     if(t.dataset.mtab==='quests'){renderQuestsPanel();setTimeout(startQuestCountdown,0);}
