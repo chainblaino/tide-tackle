@@ -551,6 +551,13 @@
 .lb-uname{font-size:13px;font-weight:800;color:var(--ink);flex:1;}
 .lb-stat{font-size:12px;color:var(--text-soft);}
 .lb-empty{text-align:center;color:var(--text-soft);font-size:13px;padding:20px 0;}
+.mp-lobbies-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0 9px;font-family:'Fredoka';font-weight:800;font-size:13px;color:var(--wood-dark);}
+.mp-create-btn{font-family:'Fredoka';font-weight:700;font-size:12.5px;padding:7px 14px;border-radius:11px;border:none;background:var(--grass);color:#fff;cursor:pointer;box-shadow:0 3px 12px rgba(47,167,149,.35);}
+.mp-create-btn:active{transform:translateY(1px);}
+.mp-pager{display:flex;align-items:center;justify-content:center;gap:14px;margin-top:10px;}
+.mp-arrow{width:34px;height:34px;border-radius:11px;border:none;background:var(--parchment);color:var(--wood-dark);font-family:'Fredoka';font-weight:800;font-size:19px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:inset 0 0 0 1px var(--wood);}
+.mp-arrow:disabled{opacity:.4;cursor:default;box-shadow:inset 0 0 0 1px rgba(37,49,58,.08);}
+.mp-pageinfo{font-family:'Fredoka';font-weight:700;font-size:12.5px;color:var(--text-soft);font-variant-numeric:tabular-nums;min-width:78px;text-align:center;}
 /* LOGBOOK SUB-TABS */
 .lb-subtabs{display:flex;gap:6px;margin-bottom:10px;}
 .lb-subtab{flex:1;padding:6px;border-radius:8px;border:1.5px solid #e7dcc7;background:var(--parchment);color:var(--text-soft);font-size:12px;font-weight:700;cursor:pointer;}
@@ -658,7 +665,7 @@
         <button class="menu-dd-item" data-go="quests"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l2 2 4-4"/><rect x="4" y="4" width="16" height="16" rx="2.5"/></svg></span>Quests</button>
         <button class="menu-dd-item" data-go="stats"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 20V10"/><path d="M12 20V4"/><path d="M19 20v-7"/></svg></span>Stats</button>
         <button class="menu-dd-item" data-go="projects"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v6l9 4 9-4V7"/><path d="M12 11v6"/></svg></span>Projects</button>
-        <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Tournament</button>
+        <button class="menu-dd-item" data-go="tournament"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 0 1-12 0z"/><path d="M6 6H3v1a3 3 0 0 0 3 3"/><path d="M18 6h3v1a3 3 0 0 1-3 3"/><path d="M10 14h4l-1 4h-2z"/><path d="M8 20h8"/></svg></span>Multiplayer</button>
         <button class="menu-dd-item" data-go="friends"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M18 14a6 6 0 0 1 3 5"/></svg></span>Friends</button>
         <button class="menu-dd-item" data-go="settings"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Settings</button>
       </div>
@@ -711,7 +718,7 @@
     <button class="menu-tab active" data-mtab="shop">Shop</button>
     <button class="menu-tab" data-mtab="logbook">Logbook</button>
     <button class="menu-tab" data-mtab="quests">Quests</button>
-    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="projects">Projects</button><button class="menu-tab" data-mtab="tournament">Tournament</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
+    <button class="menu-tab" data-mtab="stats">Stats</button><button class="menu-tab" data-mtab="projects">Projects</button><button class="menu-tab" data-mtab="tournament">Multiplayer</button><button class="menu-tab" data-mtab="friends">Friends</button><button class="menu-tab" data-mtab="settings">&#9881;</button>
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
@@ -734,7 +741,7 @@
       <button class="reset-btn" id="reset-btn">Reset all progress</button>
     </div>
     <div class="mpanel" id="mp-quests"><div id="quests-body"></div></div>
-    <div class="mpanel" id="mp-tournament"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Daily Bounties</div><div id="tournament-list"></div></div>
+    <div class="mpanel" id="mp-tournament"><div id="tournament-list"></div></div>
     <div class="mpanel" id="mp-friends"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Friends</div><div id="fwf-host"></div><div class="friend-search-row"><input class="friend-input" id="friend-search" placeholder="Search by username..." maxlength="16"><button class="friend-add-btn" onclick="searchFriend()">Add</button></div><div class="friend-msg" id="friend-err"></div><div id="friend-requests-section"></div><div id="friends-list"></div></div>
     <div class="mpanel" id="mp-projects"><div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin-bottom:10px;">Projects</div><div style="font-size:11.5px;color:var(--text-soft);margin-bottom:12px;line-height:1.55;">Each part has a 1% chance to turn up on a cast in its region. Collect them all to use the project. Projects don't work in tournaments or challenges.</div><div id="projects-body"></div></div>
     <div class="mpanel" id="mp-settings"><div id="settings-body"></div></div>
@@ -1981,16 +1988,57 @@ function renderTournamentPanel(){
       +'<div style="font-size:12.5px;color:var(--text-soft);margin-top:7px;line-height:1.5;">Keep fishing to level up. At Level 5, Captain Clancy shows ye the ropes and the contests open, compete with other anglers for gold &amp; rubies.</div>'
       +'<div style="display:inline-block;margin-top:12px;padding:6px 14px;border-radius:20px;background:var(--parchment);border:1.5px solid #e7dcc7;font-size:12.5px;font-weight:800;color:var(--accent-dark);">You are Level '+(S.level||1)+'</div>'
       +'</div>';
+    stopLobbyBrowse();
     return;
   }
+  // Build the shell ONCE. The panel is re-run on a timer (for live data); rebuilding
+  // it every tick would nuke the live lobby list, so bail if it's already built.
+  if(document.getElementById('mp-lobby-list'))return;
   const always=getAlwaysTournament();
-  const daily=getDailyTournaments();
   el.innerHTML=renderTournCard(always)
-    +"<div style=\"font-size:11px;font-weight:800;color:var(--text-soft);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px;\">Daily Time Windows</div>"
-    +daily.map(function(def){
-    return renderTournCard(def);
-  }).join("");
+    +"<div class=\"mp-lobbies-head\"><span>Open Lobbies</span><button class=\"mp-create-btn\" onclick=\"openCreateLobby()\">Create Lobby</button></div>"
+    +"<div id=\"mp-lobby-list\"><div class=\"lb-empty\">Loading…</div></div>";
+  const panel=el.closest('.mpanel');
+  if(panel&&panel.classList.contains('active'))startLobbyBrowse();
 }
+// Live browser of open lobbies shown right on the Multiplayer tab, 5 per page.
+const MP_LOBBIES_PER_PAGE=5;
+let _mpLobbyPage=0;
+function startLobbyBrowse(){
+  const el=document.getElementById('mp-lobby-list');if(!el)return;
+  if(!fbDb||!fbUser){el.innerHTML='<div class="lb-empty">Sign in to see open lobbies.</div>';return;}
+  if(_lobbyListUnsub){renderMpLobbyList();return;}   // already live — just repaint from cache
+  el.innerHTML='<div class="lb-empty">Loading…</div>';
+  _lobbyCache=[];
+  _lobbyListUnsub=fbDb.collection(LOBBY_COLL).where('status','==','open').onSnapshot(function(snap){
+    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};if(dd.kind!=='lobby')return;dd._id=doc.id;_lobbyCache.push(dd);});
+    renderMpLobbyList();
+  },function(){const e2=document.getElementById('mp-lobby-list');if(e2)e2.innerHTML='<div class="lb-empty">Could not load lobbies.</div>';});
+}
+function renderMpLobbyList(){
+  const el=document.getElementById('mp-lobby-list');if(!el)return;
+  const list=_lobbyCache||[];
+  if(!list.length){el.innerHTML='<div class="lb-empty">No open lobbies right now. Create one!</div>';return;}
+  const per=MP_LOBBIES_PER_PAGE, pages=Math.ceil(list.length/per);
+  if(_mpLobbyPage>=pages)_mpLobbyPage=pages-1;if(_mpLobbyPage<0)_mpLobbyPage=0;
+  const slice=list.slice(_mpLobbyPage*per,_mpLobbyPage*per+per);
+  let h=slice.map(function(d){
+    const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
+    const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
+    const wag=(d.settings&&d.settings.wager)||0;
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+(wag?' · '+wag+' rubies':'')+' · host '+(d.hostName||'Angler')+'</div></div>'
+      +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
+  }).join('');
+  if(pages>1){
+    h+='<div class="mp-pager">'
+      +'<button class="mp-arrow" '+(_mpLobbyPage<=0?'disabled':'')+' onclick="mpLobbyPageStep(-1)">&lsaquo;</button>'
+      +'<span class="mp-pageinfo">Page '+(_mpLobbyPage+1)+' / '+pages+'</span>'
+      +'<button class="mp-arrow" '+(_mpLobbyPage>=pages-1?'disabled':'')+' onclick="mpLobbyPageStep(1)">&rsaquo;</button></div>';
+  }
+  el.innerHTML=h;
+}
+function mpLobbyPageStep(d){_mpLobbyPage+=d;renderMpLobbyList();}
+function stopLobbyBrowse(){if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;}}
 function enterTournament(defId){
   if((S.level||1)<5){toast("Tournaments unlock at Level 5.","#b58b53");return;}
   const def=defId==="always"?getAlwaysTournament():getDailyTournaments().find(function(d){return d.id===defId;});
@@ -2764,7 +2812,7 @@ function _showChallengeResults(sess, ranked, stake, pot, winner, iWon){
 // competitive bounty / tournament / limited-casts match) and clicks Open; anyone
 // can browse open lobbies and join; the host starts when ready (10s countdown).
 // ─────────────────────────────────────────────────────────────
-const LOBBY_MAX=25, WAGER_MAX=10;
+const LOBBY_MAX=25, WAGER_MAX=50;
 // Lobbies ride in the existing `challenges` collection (the brand-new `lobbies`
 // collection isn't covered by the Firestore security rules, so reads/writes there
 // silently fail and nothing shows up in Join). Lobby docs are tagged kind:'lobby'
@@ -2829,7 +2877,7 @@ function _renderLobbyForm(){
   if(comp){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
-    h+='<div class="lob-lbl">Ruby wager (each): '+d.wager+'</div><div class="lob-row">'+_lchip('−',false,"lobbyStep('wager',-1,0,"+WAGER_MAX+")")+'<span class="lob-val">'+d.wager+'</span>'+_lchip('+',false,"lobbyStep('wager',1,0,"+WAGER_MAX+")")+'</div>';
+    h+='<div class="lob-lbl">Ruby wager (each)</div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
   }
   h+='</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button onclick="publishLobby()" style="padding:12px 32px;border-radius:13px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(47,167,149,.4);">Open</button></div>';
@@ -9906,7 +9954,7 @@ document.getElementById('zone-pill').addEventListener('click',()=>{
 
 // menu
 function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();if(tut&&tut.active)tutPlaceBar();}
-function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');stopQuestCountdown();if(tut&&tut.active)tutPlaceBar();}
+function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');stopQuestCountdown();if(typeof stopLobbyBrowse==='function')stopLobbyBrowse();if(tut&&tut.active)tutPlaceBar();}
 // The menu button opens a vertical dropdown; picking an entry opens that page.
 function closeMenuDropdown(){const dd=document.getElementById('menu-dropdown');if(dd)dd.classList.remove('show');}
 function toggleMenuDropdown(){
@@ -9945,8 +9993,9 @@ document.getElementById('menu-close').addEventListener('click',closeMenu);
 document.getElementById('menu-bg').addEventListener('click',closeMenu);
 document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=>{
     if(t.dataset.mtab==='shop'&&shopLockedNow()){toast('Shop is locked during the match.','#b58b53');return;}
+    if(t.dataset.mtab!=='tournament'&&typeof stopLobbyBrowse==='function')stopLobbyBrowse();
     if(t.dataset.mtab==='friends'){renderFriendsPanel();}
-    if(t.dataset.mtab==='tournament'){renderTournamentPanel();}
+    if(t.dataset.mtab==='tournament'){renderTournamentPanel();startLobbyBrowse();}
     if(t.dataset.mtab==='quests'){renderQuestsPanel();setTimeout(startQuestCountdown,0);}
     if(t.dataset.mtab!=='quests'){stopQuestCountdown();}
     if(t.dataset.mtab==='friends'){loadFriendRequests();}
