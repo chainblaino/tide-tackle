@@ -3581,7 +3581,7 @@ function equippedSkinFor(base){return (S.skins&&S.skins[base])||null;}
 function _skinBaseLabel(base){return base==='sport'?'Sportfisher Boat':((setById(base)&&setById(base).name)||base);}
 function customizeBtn(base){
   if(!skinsForBase(base).length)return '';
-  return '<button class="shop-action equip" style="border:none;cursor:pointer;margin-left:6px;" onclick="event.stopPropagation();openSkinChooser(\''+base+'\')">Customize</button>';
+  return '<button class="shop-action" style="background:transparent;color:var(--sea);box-shadow:inset 0 0 0 1.5px rgba(30,123,176,.5);cursor:pointer;margin-left:6px;" onclick="event.stopPropagation();openSkinChooser(\''+base+'\')">Customize</button>';
 }
 function _skinSwatch(src){return '<span class="shop-swatch" style="display:flex;align-items:center;justify-content:center;overflow:hidden;"><img src="'+src+'" style="width:100%;height:100%;object-fit:contain;" onerror="this.style.display=\'none\'"></span>';}
 function openSkinChooser(base){
@@ -10071,7 +10071,7 @@ function renderShop(){
     const faster=i>0?Math.round((b.speed/BOATS[i-1].speed-1)*100):0;
     const spd=' · Speed '+b.speed.toFixed(1)+(faster>0?' (+'+faster+'% faster)':'');
     const row=shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id, spd+' <i>('+b.perkName+')</i>',false);
-    const cust=skinsForBase(b.id).length?'<div style="text-align:right;margin:-4px 0 8px;">'+customizeBtn(b.id)+'</div>':'';
+    const cust=(S.ownedBoats.includes(b.id)&&skinsForBase(b.id).length)?'<div style="text-align:right;margin:-9px 2px 9px;">'+customizeBtn(b.id)+'</div>':'';
     return row+cust;
   }).join('');
   else if(leaf==='rods')html=RODS.map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),S.rod===r.id,'',true)).join('');
@@ -10545,7 +10545,7 @@ function clancyBoatTip(){
 }
 function drawClancyBoat(sx, sy, t, dark){
   ctx.save();ctx.translate(sx, sy);
-  drawNpcInBoat(NPC_BOAT.clancy, CLANCY_SPRITE, t, 'Captain Clancy', 'Tap for a tip', '#8a5a2a', 1.3, {npcScale:0.74});
+  drawNpcInBoat(NPC_BOAT.clancy, CLANCY_SPRITE, t, '', '', '#8a5a2a', 1.3, {npcScale:0.74});
   ctx.restore();
 }
 // ── RUBY SUBMARINE (a project): surfaces offshore, tap for 10 rubies, then dives ──
@@ -10765,11 +10765,14 @@ function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed, opts){
   if(_spriteReady(boatImg))ctx.drawImage(boatImg,-BS/2,-BS/2,BS,BS);
   // NPC standing near the middle of the deck (feet a touch below boat centre)
   if(_spriteReady(sprite)){const NS=60*nsc;ctx.drawImage(sprite,-NS/2,-NS/2+ndy,NS,NS);}
-  const flagY=-BS/2-2;
-  ctx.fillStyle=accent;roundRect(ctx,-30,flagY-9,60,17,5);ctx.fill();
-  ctx.fillStyle='#fff';ctx.font='bold 12px Fredoka, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(label,0,flagY);
-  if(sub){ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.25)+')';ctx.font='bold 11px Fredoka, sans-serif';ctx.textBaseline='alphabetic';ctx.fillText(sub,0,flagY-12);}
+  // Name flag above the bow — skipped entirely when no label is given.
+  if(label){
+    const flagY=-BS/2-2;
+    ctx.fillStyle=accent;roundRect(ctx,-30,flagY-9,60,17,5);ctx.fill();
+    ctx.fillStyle='#fff';ctx.font='bold 12px Fredoka, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(label,0,flagY);
+    if(sub){ctx.fillStyle='rgba(255,240,200,'+(0.6+Math.sin(t*3)*0.25)+')';ctx.font='bold 11px Fredoka, sans-serif';ctx.textBaseline='alphabetic';ctx.fillText(sub,0,flagY-12);}
+  }
   ctx.restore();
 }
 function drawChallengerBoat(ch, sx, sy, t, dark){
