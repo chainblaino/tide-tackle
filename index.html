@@ -2346,7 +2346,7 @@ function recordTournamentCatch(fish, weight){
       else toast('Landed the '+fish.name+'! Next up: '+(next?next.name:'?')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#2aa890');
       maybeAwardCannon();
       updateTournBanner();
-      if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+      publishMyPosition(true);
       bountyWinCheck();
     }
     return;
@@ -2360,7 +2360,7 @@ function recordTournamentCatch(fish, weight){
     if(isNew)toast('New species! '+activeTournament.speciesCount+' different so far.','#2aa890');
     if(cannonsEnabled())maybeAwardCannon();
     updateTournBanner();
-    if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+    publishMyPosition(true);
     return;
   }
   const tgt=activeTournament.def&&activeTournament.def.targetFish;
@@ -2373,7 +2373,7 @@ function recordTournamentCatch(fish, weight){
   const grew=weight>(activeTournament.biggestWeight||0);
   recomputeTournBest();
   if(cannonsEnabled())maybeAwardCannon();
-  if(grew&&fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+  if(grew)publishMyPosition(true);
 }
 // Recompute the player's tournament best from their remaining target catches.
 function recomputeTournBest(){
@@ -2388,7 +2388,7 @@ function loseLastTargetCatch(){
   if(!activeTournament||!activeTournament.targetCatches||!activeTournament.targetCatches.length)return false;
   const lost=activeTournament.targetCatches.pop();
   recomputeTournBest();
-  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref, true);}
+  publishMyPosition(true);
   toast('Caught in the smoke! Lost your last '+lost.name+' ('+fmtLb(lost.w)+' lb).','#b3402a');
   return true;
 }
@@ -6136,25 +6136,33 @@ function updateGhosts(){
 }
 
 // ----- Real-time multiplayer position sync over Firestore -----
+// Each angler owns ONE small doc keyed posKey__uid. Previously every angler wrote
+// a field into a single shared doc, which a full lobby pushed past Firestore's
+// sustained per-document write limit: writes queued and rivals drifted. These are
+// sibling docs (NOT a subcollection) so the existing /tournament_positions/{id}
+// security rule still covers them with no rules change.
+function myPosRef(){
+  if(!fbUser||!fbDb||!tourn.posKey)return null;
+  return fbDb.collection('tournament_positions').doc(tourn.posKey+'__'+fbUser.uid);
+}
 function startTournamentSync(){
   stopTournamentSync();
   if(!fbUser||!fbDb||!activeTournament)return;
   const today=new Date().toISOString().slice(0,10);
   tourn.posKey=activeTournament.def.id+'_'+today;
-  const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);
   // Publish my position a few times a second
-  publishMyPosition(ref, true);
+  publishMyPosition(true);
   // Poll often, but only WRITE when we've actually moved (or as an idle heartbeat).
-  // This keeps motion smooth without hammering the shared position document.
-  tourn.posInterval=setInterval(function(){publishMyPosition(ref);},150);
-  // Listen for everyone else's position
-  tourn.posUnsub=ref.onSnapshot(function(snap){
-    const data=(snap.data()||{}).players||{};
+  tourn.posInterval=setInterval(function(){publishMyPosition();},150);
+  // Listen for everyone else. docChanges() hands us only the anglers who actually
+  // changed, instead of reprocessing the whole field on every tick.
+  tourn.posUnsub=fbDb.collection('tournament_positions').where('posKey','==',tourn.posKey).onSnapshot(function(snap){
     const nowMs=Date.now();
-    Object.keys(data).forEach(function(uid){
-      if(uid===myTournUid())return;
-      const p=data[uid];
-      if(!p)return;
+    snap.docChanges().forEach(function(ch){
+      if(ch.type==='removed')return;   // leavers linger as before, so standings stay stable
+      const p=ch.doc.data()||{};
+      const uid=p.uid;
+      if(!uid||uid===myTournUid())return;
       // Skew-proof staleness: NEVER compare the sender's clock to ours (two phones
       // can be minutes apart, which would wrongly drop a perfectly live friend and
       // wipe them off the leaderboard). Instead track, on OUR clock, when each
@@ -6220,10 +6228,11 @@ function startTournamentSync(){
     });
   },function(){});
 }
-function publishMyPosition(ref, force){
-  if(!ref||!fbUser)return;
-  // Throttle writes: send when moved >4px and >=280ms since the last write, an
-  // ability/vanish event needs to go out, or as a ~1.2s idle heartbeat.
+function publishMyPosition(force){
+  const ref=myPosRef();
+  if(!ref)return;
+  // Throttle writes: send when we've actually moved, an ability/vanish event needs
+  // to go out, or as a ~1s idle heartbeat.
   const now=Date.now();
   const moved=Math.hypot(boat.wx-(publishMyPosition._lx||0),boat.wy-(publishMyPosition._ly||0));
   const since=now-(publishMyPosition._lt||0);
@@ -6232,32 +6241,22 @@ function publishMyPosition(ref, force){
   // heartbeat keeps you alive on others' screens.
   if(!force&&!pending&&!((moved>3&&since>=150)||since>=1000))return;
   publishMyPosition._lx=boat.wx;publishMyPosition._ly=boat.wy;publishMyPosition._lt=now;
-  const upd={};
-  upd['players.'+fbUser.uid]={wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat, name:fbUsername, zone:S.zone,
+  // We own this doc outright, so a plain set() replaces it: no read-modify-write,
+  // no nested field paths, and no contention with the other anglers.
+  ref.set({posKey:tourn.posKey, uid:fbUser.uid,
+    wx:Math.round(boat.wx),wy:Math.round(boat.wy),heading:+boat.heading.toFixed(2),boat:S.boat, name:fbUsername, zone:S.zone,
     cos:{hat:S.cosmetic.hat, shirt:S.cosmetic.shirt, shades:S.cosmetic.shades, crown:S.cosmetic.crown||'none'},set:equippedSetId()||null,
     rod:S.rod, reel:S.reel, gen:S.gender||'male',skin:S.skinTone||'medlight',
     best:(activeTournament?(activeTournament.biggestWeight||0):0),bestNm:(activeTournament?(activeTournament.biggestName||''):''),
     sp:(activeTournament&&(isBounty()||activeTournament.limited))?(activeTournament.speciesCount||0):0,
-    inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null, smoke:tourn._pendingSmoke||null, t:Date.now()};
-  ref.set({players:{}},{merge:true}).then(function(){
-    return ref.update(upd);
-  }).catch(function(){
-    // fallback: merge-set the whole nested map
-    const players={};players[fbUser.uid]=upd['players.'+fbUser.uid];
-    ref.set({players:players},{merge:true}).catch(function(){});
-  });
+    inv:invisibleUntil>Date.now(),act:tourn._pendingAct||null, smoke:tourn._pendingSmoke||null, t:Date.now()}).catch(function(){});
 }
 function stopTournamentSync(){
   if(tourn.posInterval){clearInterval(tourn.posInterval);tourn.posInterval=null;}
   if(tourn.posUnsub){try{tourn.posUnsub();}catch(e){}tourn.posUnsub=null;}
-  // Best effort: remove my position entry so I vanish for others
-  if(fbUser&&fbDb&&tourn.posKey){
-    try{
-      const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);
-      const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
-      ref.update(upd).catch(function(){});
-    }catch(e){}
-  }
+  // Best effort: drop my position doc so I vanish for others
+  const ref=myPosRef();
+  if(ref){try{ref.delete().catch(function(){});}catch(e){}}
   tourn.posKey=null;tourn._seen=null;tourn._seenActs=null;tourn._seenSmoke=null;tourn._pendingSmoke=null;
 }
 // ----- Live co op map: a top-down minimap of the current zone showing every
@@ -6770,7 +6769,7 @@ function abilityVanish(){
   setTimeout(function(){if(tourn._pendingSmoke&&tourn._pendingSmoke.id===cid)tourn._pendingSmoke=null;},5000);
   toast('Vanished! Smoke dropped, invisible for 10s.','#2aa890');
   spawnAbilityFx(boat.wx, boat.wy,'#cfd2d6','smoke');
-  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
+  publishMyPosition();
   return true;
 }
 // ── V0.9 set abilities ──
@@ -6830,7 +6829,7 @@ function abilityHack(){
 }
 function broadcastAbility(type, targetUid, data){
   tourn._pendingAct={id:Date.now()+'_'+Math.floor(Math.random()*1e6),type:type, target:targetUid, data:data||{},t:Date.now()};
-  if(fbUser&&fbDb&&tourn.posKey){const ref=fbDb.collection('tournament_positions').doc(tourn.posKey);publishMyPosition(ref);}
+  publishMyPosition();
   setTimeout(function(){tourn._pendingAct=null;},5000);
 }
 // A confuse/punch must move you even while anchored: pull the anchor so the
@@ -6866,7 +6865,7 @@ function applyIncomingAct(act){
     }
     spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');
     updateTournBanner();
-    if(fbUser&&fbDb&&tourn.posKey){publishMyPosition(fbDb.collection('tournament_positions').doc(tourn.posKey),true);}
+    publishMyPosition(true);
     return;
   }
   // Jester set bonus: every ability used against you ramps your speed & spawn.
