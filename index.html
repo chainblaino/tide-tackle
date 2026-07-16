@@ -2779,7 +2779,9 @@ function endSession(){
         const dd=s.data()||{};if(dd.settled)return false;tx.update(ref,{settled:true, winner:fbUser.uid});return true;});
       }).then(function(didCredit){finish(!!didCredit);
         setTimeout(function(){ref.delete().catch(function(){});},8000);
-      }).catch(function(){finish(true);}); // offline: still pay the winner locally
+      }).catch(function(){finish(false);}); // never pay out on a failed settle: the
+      // transaction IS the guard against double-crediting, so crediting when it
+      // fails hands out the pot to anyone who can make the write fail.
     }else{finish(false);}
   }).catch(function(){
     _showChallengeResults(sess, Object.keys(sess.players||{}).map(function(uid){return {uid:uid, username:sess.players[uid].username, best:sess.players[uid].best||0,bestName:sess.players[uid].bestName||''};}).sort(function(a, b){return b.best-a.best;}),sess.stake,0,null, false);
@@ -10388,7 +10390,8 @@ function renderSettings(){
       +'<button class="set-btn" onclick="settingsSaveNow()">Save to cloud now</button>'
       +'<button class="set-btn" onclick="settingsReloadCloud()">Reload from cloud</button>'
       +'<button class="set-btn" onclick="openRecovery()">Recover lost progress</button>'
-      +'<button class="set-btn danger" onclick="showUserMenu()">Log out</button>';
+      +'<button class="set-btn danger" onclick="showUserMenu()">Log out</button>'
+      +'<button class="set-btn danger" onclick="openDeleteAccount()">Delete my account</button>';
   }else{
     html+='<div class="gfx-sub">Playing as a guest, progress is saved on this device only. Create an account to sync, add friends and join tournaments.</div>';
   }
@@ -10827,6 +10830,75 @@ function drawChallengerBoat(ch, sx, sy, t, dark){
   ctx.save();ctx.translate(sx, sy);
   drawNpcInBoat(NPC_BOAT[ch.id], CHALLENGER_SPRITE[ch.id], t, ch.name, 'Tap to challenge', ch.tint, ch.zone);
   ctx.restore();
+}
+// ── Account deletion (App Store guideline 5.1.1(v): accounts must be deletable
+// from inside the app). Wipes every doc keyed to this player, then the auth
+// account itself. Firebase demands a recent sign-in before delete(), so we
+// re-authenticate with the password, which doubles as the confirmation. ──
+function openDeleteAccount(){
+  if(!fbUser||!fbDb){toast('You are not signed in.','#b58b53');return;}
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:8px;">Delete account</div>'
+    +'<div style="font-size:12.5px;color:var(--text-soft);line-height:1.55;margin-bottom:4px;">This permanently deletes <b>'+(fbUsername||'your account')+'</b> and everything in it: your cloud save, logbook, gold and rubies, achievements, friends and leaderboard entry.</div>'
+    +'<div style="font-size:12.5px;color:#c0392b;font-weight:800;line-height:1.5;margin-bottom:10px;">This cannot be undone. Your progress cannot be recovered.</div>'
+    +'<div class="lob-lbl">Confirm your password</div>'
+    +'<input id="del-pass" type="password" class="friend-input" style="width:100%;" placeholder="Password">'
+    +'<div class="lob-lbl">Type DELETE to confirm</div>'
+    +'<input id="del-word" class="friend-input" style="width:100%;" placeholder="DELETE">'
+    +'<div id="del-err" style="color:#c0392b;font-size:12px;font-weight:700;margin-top:8px;min-height:15px;"></div>'
+    +'<div style="display:flex;gap:8px;margin-top:6px;">'
+      +'<button class="chooser-close" style="flex:1;margin:0;" onclick="closeModal()">Cancel</button>'
+      +'<button id="del-go" style="flex:1;padding:11px;border-radius:12px;border:none;background:#c0392b;color:#fff;font-family:Fredoka;font-weight:800;font-size:14px;cursor:pointer;" onclick="confirmDeleteAccount()">Delete forever</button>'
+    +'</div>';
+  bg.classList.add('show');
+}
+async function confirmDeleteAccount(){
+  const err=document.getElementById('del-err'), btn=document.getElementById('del-go');
+  const pass=((document.getElementById('del-pass')||{}).value)||'';
+  const word=(((document.getElementById('del-word')||{}).value)||'').trim().toUpperCase();
+  if(word!=='DELETE'){err.textContent='Type DELETE to confirm.';return;}
+  if(!pass){err.textContent='Enter your password.';return;}
+  if(!fbUser||!fbUser.email){err.textContent='You are not signed in.';return;}
+  if(btn){btn.disabled=true;btn.textContent='Deleting…';}
+  err.textContent='';
+  try{
+    const uid=fbUser.uid;
+    const cred=firebase.auth.EmailAuthProvider.credential(fbUser.email, pass);
+    await fbUser.reauthenticateWithCredential(cred);
+    await purgeUserData(uid);
+    await fbUser.delete();               // auth account last: rules need us signed in above
+    try{localStorage.removeItem(SAVE_KEY);}catch(e){}
+    try{if(window.storage&&window.storage.delete)window.storage.delete(SAVE_KEY);}catch(e){}
+    location.reload();
+  }catch(e){
+    if(btn){btn.disabled=false;btn.textContent='Delete forever';}
+    err.textContent=fbErr(e&&e.code);
+  }
+}
+// Remove every doc this player owns. Best effort per doc: one failure must not
+// strand the rest, or we would delete the auth account and orphan the data.
+async function purgeUserData(uid){
+  const FV=firebase.firestore.FieldValue;
+  // Take myself off my friends' lists first, while I can still read my own.
+  try{
+    const fdoc=await fbDb.collection('friends').doc(uid).get();
+    const list=((fdoc.data()||{}).list)||[];
+    await Promise.all(list.map(function(fid){
+      return fbDb.collection('friends').doc(fid).set({list:FV.arrayRemove(uid)},{merge:true}).catch(function(){});
+    }));
+  }catch(e){}
+  const jobs=[
+    fbDb.collection('friends').doc(uid).delete(),
+    fbDb.collection('friendRequests').doc(uid).delete(),
+    fbDb.collection('tournamentInvites').doc(uid).delete(),
+    fbDb.collection('leaderboard').doc(uid).delete(),
+    fbDb.collection('users').doc(uid).delete(),
+    fbDb.collection('saves').doc(uid).delete()
+  ];
+  const uname=(fbUsername||'').toLowerCase();
+  if(uname&&uname!=='guest'&&uname!=='angler')jobs.push(fbDb.collection('usernames').doc(uname).delete());
+  await Promise.all(jobs.map(function(p){return p.catch(function(){});}));
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal();});

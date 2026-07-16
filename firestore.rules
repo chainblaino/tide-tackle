@@ -34,10 +34,16 @@ service cloud.firestore {
     }
 
     // ---- Username directory (login-by-username + friend search). Readable by
-    //      any signed-in user; you may only point a username at YOUR OWN uid. ----
+    //      any signed-in user; you may only point a username at YOUR OWN uid.
+    //      Delete is split out because request.resource is null on a delete, so a
+    //      single `write` rule would block you releasing your own username when
+    //      you delete your account. ----
     match /usernames/{name} {
-      allow read:  if signedIn();
-      allow write: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read:   if signedIn();
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if signedIn() && request.resource.data.uid == request.auth.uid
+                                  && resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     // ---- Social + multiplayer docs need cross-account writes (sending a friend
@@ -47,7 +53,19 @@ service cloud.firestore {
     match /friendRequests/{uid}      { allow read, write: if signedIn(); }
     match /tournamentInvites/{uid}   { allow read, write: if signedIn(); }
     match /tournament_lobbies/{id}   { allow read, write: if signedIn(); }
-    match /tournament_positions/{id} { allow read, write: if signedIn(); }
     match /challenges/{id}           { allow read, write: if signedIn(); }
+
+    // ---- Live positions: every angler owns exactly ONE doc per match, named
+    //      "<posKey>__<uid>". Anyone signed in may READ the field (that's how you
+    //      see rivals), but you may only write the doc that carries your own uid,
+    //      and the uid inside it must be yours, so nobody can shove a rival around
+    //      the map or impersonate them. ----
+    match /tournament_positions/{id} {
+      allow read:   if signedIn();
+      allow create, update: if signedIn()
+                    && request.resource.data.uid == request.auth.uid
+                    && id == request.resource.data.posKey + '__' + request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
   }
 }
