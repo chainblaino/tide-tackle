@@ -65,6 +65,7 @@
   .proj-part-tick{font-size:13px;font-weight:900;color:#1f9d57;}
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
+  .pearl-s{width:13px;height:13px;border-radius:50%;display:inline-block;vertical-align:-2px;background:radial-gradient(circle at 34% 30%,#ffffff,#eaf6fb 42%,#a8c9da 100%);border:1.5px solid #dcecf4;box-shadow:0 0 5px rgba(168,201,218,.7);}
 
   /* drive controls (open world) */
   .drive-controls{position:absolute;left:14px;bottom:16px;display:flex;align-items:flex-end;pointer-events:none;z-index:7;}
@@ -677,6 +678,7 @@
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies, won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
+      <div class="pill" id="pearls-pill" title="Pearls, the competitive stake. Earned only, never for sale."><span class="pearl-s"></span> <span id="pearls-count">0</span></div>
       <div class="pill click clancy-pill" id="clancy-pill" onclick="openClancyInfo()" title="Ask Captain Clancy"><span class="clancy-face" id="clancy-face"></span></div>
     </div>
     </div>
@@ -2026,7 +2028,7 @@ function renderMpLobbyList(){
     const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
     const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
     const wag=(d.settings&&d.settings.wager)||0;
-    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+(wag?' · '+wag+' rubies':'')+' · host '+(d.hostName||'Angler')+'</div></div>'
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+(wag?' · '+wag+' pearls':'')+' · host '+(d.hostName||'Angler')+'</div></div>'
       +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
   }).join('');
   if(pages>1){
@@ -2433,11 +2435,14 @@ function endTournament(){
   const _lob=isLobby?gameLobby:null;   // kept alive so everyone returns to the lobby
   // The standings snapshot (player + bots + real-player ghosts), already sorted.
   const entries=_finalStand.length?_finalStand:[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),isPlayer:true}];
-  // Daily tournaments pay placement prizes (gold + rubies); lobbies pay only the
-  // host-set ruby wager pot, settled below.
+  // Tournaments pay placement prizes (gold + rubies + pearls); lobbies pay only
+  // the host-set PEARL wager pot, settled below. Pearls are the sole stakeable
+  // currency: see the CURRENCIES note, they are never purchasable, so staking
+  // them stays a game mechanic and not real-money gaming.
   const boost=def.alwaysOn?1.5:1;
   const prizes=isLobby?[0,0,0]:tournPrizes(def.rarity, boost);
   const goldPrizes=isLobby?[0,0,0]:tournGoldPrizes(def.rarity, boost);
+  const pearlPrizes=isLobby?[0,0,0]:PEARL_PRIZES.map(function(p){return Math.round(p*boost);});
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Did the player put up a real result? (a species in variety modes, a catch in classic)
   const playerHasResult=variety?((activeTournament.speciesCount||0)>0):((activeTournament.biggestWeight||0)>0);
@@ -2445,10 +2450,17 @@ function endTournament(){
   const placed=(rank>=0&&rank<3&&playerHasResult);
   let winnings=placed?prizes[rank]:0;
   let goldWin=placed?goldPrizes[rank]:0;
+  let pearlWin=placed?pearlPrizes[rank]:0;
   // Lobby wager: the winner (1st with a real result) scoops the whole ante pot.
+  // The pot is PEARLS, never rubies: rubies will be purchasable with real money.
   let pot=0;
   if(isLobby&&(def.wager||0)>0&&rank===0&&playerHasResult)pot=(def.wager||0)*entries.length;
-  if(winnings>0||goldWin>0||pot>0){S.rubies=(S.rubies||0)+winnings+pot;S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;updatePills();queueSave();}
+  if(winnings>0||goldWin>0||pearlWin>0||pot>0){
+    S.rubies=(S.rubies||0)+winnings;
+    S.pearls=(S.pearls||0)+pearlWin+pot;
+    S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;
+    updatePills();queueSave();
+  }
   if(rank===0&&playerHasResult){
     S.tournamentWins=(S.tournamentWins||0)+1;
     if(def.alwaysOn)S.bigCastWins=(S.bigCastWins||0)+1;
@@ -2879,7 +2891,7 @@ function _renderLobbyForm(){
   if(comp){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
-    h+='<div class="lob-lbl">Ruby wager (each)</div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
+    h+='<div class="lob-lbl">Pearl wager (each)</div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
   }
   h+='</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button onclick="publishLobby()" style="padding:12px 32px;border-radius:13px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(47,167,149,.4);">Open</button></div>';
@@ -3047,7 +3059,7 @@ function joinLobby(id){
     const cap=(data.settings&&data.settings.size)||25;
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
     const w=(data.settings&&data.settings.wager)||0;
-    if(w>0&&(S.rubies||0)<w){toast('You need '+w+' rubies to join this wager.','#b3402a');return;}
+    if(w>0&&(S.pearls||0)<w){toast('You need '+w+' pearls to join this wager.','#b3402a');return;}
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
     ref.update(upd).catch(function(){});
     gameLobby={id:id, name:data.name, host:data.host, hostName:data.hostName, seed:data.seed||(strHash('lobby_'+id)>>>0),
@@ -3081,7 +3093,7 @@ function enterLobbyMatch(){
   if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
   const s=gameLobby.settings;
-  if(s.wager>0){S.rubies=Math.max(0,(S.rubies||0)-s.wager);updatePills();queueSave();}
+  if(s.wager>0){S.pearls=Math.max(0,(S.pearls||0)-s.wager);updatePills();queueSave();}
   const players=Object.keys(gameLobby.players||{}).map(function(uid){return {uid:uid, username:(gameLobby.players[uid]||{}).username||'Angler',isBot:false};});
   // Friendly lobby = the old co op free-roam world (shared seed via the lobby doc).
   if(s.type==='friendly'){
@@ -4151,9 +4163,24 @@ const FISH=[
   {id:'greatwhite',name:'Great White Shark',zone:0,surf:true, rarity:'ultra',size:[400,2500],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:1400,gold:2000,weight:1,spawnChance:0.001,fact:'The ocean’s most iconic apex predator. A surf encounter with one is the rarest fishing moment imaginable. Catch, photograph, release.'},
 ];
 
+// ===================== CURRENCIES =====================
+// Three currencies, deliberately kept apart:
+//   GOLD   soft. Earned only. Buys gear.
+//   RUBIES premium. Earned AND (later) purchasable with real money. Buys sets,
+//          skins, items and second chances. NEVER stakeable.
+//   PEARLS competitive. Earned ONLY, never for sale and never convertible to or
+//          from gold/rubies. The ONLY currency anglers can stake against each
+//          other. Because pearls can't be bought or cashed out they carry no
+//          real-world value, which keeps player-vs-player wagering a game
+//          mechanic rather than real-money gaming (App Store 5.3.4).
+// If you ever add a way to buy pearls, or to trade pearls for rubies, that wall
+// comes down and the wagering becomes a licensing problem. Don't.
+const PEARL_START=25;              // enough to enter the low-stake lobbies
+const PEARL_PRIZES=[12,6,3];       // competitive placement payout (1st/2nd/3rd)
+
 // ===================== STATE =====================
 let S={
-  xp:0,level:1,gold:0,rubies:0,clock:360, // start 6:00 spring
+  xp:0,level:1,gold:0,rubies:0,pearls:PEARL_START,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['fluoro','wire'],
   ownedCosmetics:[],ownedSets:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
@@ -4771,6 +4798,9 @@ async function loadGame(){
 // Ensure new V6 fields exist and migrate legacy data after any load.
 function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
+  // Existing saves predate pearls: grant the same starter bankroll a new angler
+  // gets, so nobody is locked out of wagering by having played earlier.
+  if(typeof S.pearls!=='number')S.pearls=PEARL_START;
   if(typeof S.bigCastWins!=='number')S.bigCastWins=0;
   // V0.9 prestige
   if(typeof S.prestige!=='number')S.prestige=0;
@@ -9801,6 +9831,7 @@ function updateRigBar(){
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
   document.getElementById('gold-pill').textContent=S.gold;
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
+  var pc=document.getElementById('pearls-count');if(pc)pc.textContent=S.pearls||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
   const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!(typeof surfActive!=='undefined'&&surfActive));
