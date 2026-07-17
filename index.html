@@ -2027,8 +2027,9 @@ function renderMpLobbyList(){
   let h=slice.map(function(d){
     const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
     const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
-    const wag=(d.settings&&d.settings.wager)||0;
-    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+(wag?' · '+wag+' pearls':'')+' · host '+(d.hostName||'Angler')+'</div></div>'
+    const wag=(d.settings&&d.settings.wager)||0, gb=(d.settings&&d.settings.goldBuyIn)||0;
+    const stake=(wag?' · '+wag+' pearls':'')+(gb?' · '+(gb>=1000?(gb/1000)+'k':gb)+' gold':'');
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+stake+' · host '+(d.hostName||'Angler')+'</div></div>'
       +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
   }).join('');
   if(pages>1){
@@ -2440,25 +2441,36 @@ function endTournament(){
   // currency: see the CURRENCIES note, they are never purchasable, so staking
   // them stays a game mechanic and not real-money gaming.
   const boost=def.alwaysOn?1.5:1;
-  const prizes=isLobby?[0,0,0]:tournPrizes(def.rarity, boost);
-  const goldPrizes=isLobby?[0,0,0]:tournGoldPrizes(def.rarity, boost);
+  // Competitive lobbies pay their own fixed HOUSE placement rewards (rubies +
+  // gold), but only when a real opponent turned up, so a solo lobby can't be
+  // farmed. Daily tournaments keep their rarity-scaled prizes.
+  const houseOk=isLobby&&entries.length>=2;
+  const prizes=isLobby?(houseOk?LOBBY_RUBY_PRIZES:[0,0,0]):tournPrizes(def.rarity, boost);
+  const goldPrizes=isLobby?(houseOk?LOBBY_GOLD_PRIZES:[0,0,0]):tournGoldPrizes(def.rarity, boost);
   const pearlPrizes=isLobby?[0,0,0]:PEARL_PRIZES.map(function(p){return Math.round(p*boost);});
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Did the player put up a real result? (a species in variety modes, a catch in classic)
   const playerHasResult=variety?((activeTournament.speciesCount||0)>0):((activeTournament.biggestWeight||0)>0);
   if(rank>=0&&typeof questEvent==='function'){const place=rank+1;if(!(place===1&&!playerHasResult))questEvent('tournPlace',{place:place});}
   const placed=(rank>=0&&rank<3&&playerHasResult);
-  let winnings=placed?prizes[rank]:0;
+  let winnings=placed?prizes[rank]:0;   // rubies
   let goldWin=placed?goldPrizes[rank]:0;
   let pearlWin=placed?pearlPrizes[rank]:0;
-  // Lobby wager: the winner (1st with a real result) scoops the whole ante pot.
-  // The pot is PEARLS, never rubies: rubies will be purchasable with real money.
-  let pot=0;
-  if(isLobby&&(def.wager||0)>0&&rank===0&&playerHasResult)pot=(def.wager||0)*entries.length;
-  if(winnings>0||goldWin>0||pearlWin>0||pot>0){
+  // Lobby winner (1st with a real result) scoops the whole ante pots. The pearl
+  // wager pot and the gold buy-in pot are both player-funded but earned-only, so
+  // winner-take-all carries no cash value. Rubies are NEVER pooled from players.
+  let pot=0, goldPot=0;
+  if(isLobby&&rank===0&&playerHasResult){
+    if((def.wager||0)>0)pot=(def.wager||0)*entries.length;
+    if((def.goldBuyIn||0)>0)goldPot=(def.goldBuyIn||0)*entries.length;
+  }
+  // Lobby rubies pass through the daily cap; tournament rubies are uncapped.
+  if(isLobby)winnings=grantLobbyRubies(winnings);
+  const goldTotal=goldWin+goldPot;
+  if(winnings>0||goldTotal>0||pearlWin>0||pot>0){
     S.rubies=(S.rubies||0)+winnings;
     S.pearls=(S.pearls||0)+pearlWin+pot;
-    S.gold=(S.gold||0)+goldWin;S.goldEarned=(S.goldEarned||0)+goldWin;
+    S.gold=(S.gold||0)+goldTotal;S.goldEarned=(S.goldEarned||0)+goldTotal;
     updatePills();queueSave();
   }
   if(rank===0&&playerHasResult){
@@ -2856,10 +2868,10 @@ function _lobbySummary(s){
 function openCreateLobby(){
   if(!requireOnlineForLobby())return;
   _lobbyDraft={name:'', type:'competitive', mode:'bounty', zone:S.zone||0, targetFishId:null,
-    season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, wager:0, castLimit:10};
+    season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, wager:0, goldBuyIn:0, castLimit:10};
   _renderLobbyForm();
 }
-function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='wager'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
+function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='wager'||k==='goldBuyIn'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
   if(k==='zone')_lobbyDraft.targetFishId=null; _renderLobbyForm(); }
 function lobbyToggle(k){ if(!_lobbyDraft)return; _lobbyDraft[k]=!_lobbyDraft[k]; _renderLobbyForm(); }
 function _lchip(label, on, set){return '<button onclick="'+set+'" style="padding:8px 14px;border-radius:11px;border:none;background:'+(on?'var(--accent)':'var(--parchment)')+';color:'+(on?'#fff':'var(--ink)')+';font-family:Fredoka;font-weight:700;font-size:12.5px;cursor:pointer;'+(on?'box-shadow:0 2px 8px rgba(234,148,64,.34);':'')+'">'+label+'</button>';}
@@ -2892,6 +2904,7 @@ function _renderLobbyForm(){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
     h+='<div class="lob-lbl">Pearl wager (each)</div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
+    h+='<div class="lob-lbl">Gold buy-in (each)</div><div class="lob-row">'+GOLD_BUYIN_TIERS.map(function(g){return _lchip(g===0?'None':(g>=1000?(g/1000)+'k':g+''),d.goldBuyIn===g,"lobbySet('goldBuyIn','"+g+"')");}).join('')+'</div>';
   }
   h+='</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button onclick="publishLobby()" style="padding:12px 32px;border-radius:13px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(47,167,149,.4);">Open</button></div>';
@@ -2909,8 +2922,11 @@ function publishLobby(){
     targetFishId:(comp&&d.mode==='tournament')?d.targetFishId:null, season:d.season,
     size:Math.max(2,Math.min(LOBBY_MAX,d.size)), cannonsOn:(comp&&d.cannonsOn), cannonCount:d.cannonCount,
     timeLimitMin:(comp?d.timeLimitMin:0), shopOn:!!d.shopOn, mapsOn:!!d.mapsOn,
-    wager:(comp?Math.max(0,Math.min(WAGER_MAX,d.wager)):0), castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
-  if(settings.wager>0&&(S.rubies||0)<settings.wager){toast('You need '+settings.wager+' rubies to host this wager.','#b3402a');return;}
+    wager:(comp?Math.max(0,Math.min(WAGER_MAX,d.wager)):0),
+    goldBuyIn:(comp&&GOLD_BUYIN_TIERS.indexOf(d.goldBuyIn)>=0)?d.goldBuyIn:0,
+    castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
+  if(settings.wager>0&&(S.pearls||0)<settings.wager){toast('You need '+settings.wager+' pearls to host this wager.','#b3402a');return;}
+  if(settings.goldBuyIn>0&&(S.gold||0)<settings.goldBuyIn){toast('You need '+settings.goldBuyIn+' gold to host this buy-in.','#b3402a');return;}
   const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
   gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
@@ -3060,6 +3076,8 @@ function joinLobby(id){
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
     const w=(data.settings&&data.settings.wager)||0;
     if(w>0&&(S.pearls||0)<w){toast('You need '+w+' pearls to join this wager.','#b3402a');return;}
+    const gb=(data.settings&&data.settings.goldBuyIn)||0;
+    if(gb>0&&(S.gold||0)<gb){toast('You need '+gb+' gold to join this buy-in.','#b3402a');return;}
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
     ref.update(upd).catch(function(){});
     gameLobby={id:id, name:data.name, host:data.host, hostName:data.hostName, seed:data.seed||(strHash('lobby_'+id)>>>0),
@@ -3093,7 +3111,11 @@ function enterLobbyMatch(){
   if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
   const s=gameLobby.settings;
-  if(s.wager>0){S.pearls=Math.max(0,(S.pearls||0)-s.wager);updatePills();queueSave();}
+  if(s.wager>0||s.goldBuyIn>0){
+    if(s.wager>0)S.pearls=Math.max(0,(S.pearls||0)-s.wager);
+    if(s.goldBuyIn>0)S.gold=Math.max(0,(S.gold||0)-s.goldBuyIn);
+    updatePills();queueSave();
+  }
   const players=Object.keys(gameLobby.players||{}).map(function(uid){return {uid:uid, username:(gameLobby.players[uid]||{}).username||'Angler',isBot:false};});
   // Friendly lobby = the old co op free-roam world (shared seed via the lobby doc).
   if(s.type==='friendly'){
@@ -3109,7 +3131,7 @@ function enterLobbyMatch(){
   const def={id:'lobby_'+gameLobby.id, name:gameLobby.name, zone:s.zone||0, rarity:fish?fish.rarity:'rare',
     targetFish:fish, bounty:(s.mode==='bounty'), limited:(s.mode==='limited'), castLimit:s.castLimit||10,
     season:s.season, maxP:s.size, cannonsOn:s.cannonsOn, cannonCount:s.cannonCount||0,
-    timeLimitMin:s.timeLimitMin||6, shopOn:s.shopOn, mapsOn:s.mapsOn, wager:s.wager||0,
+    timeLimitMin:s.timeLimitMin||6, shopOn:s.shopOn, mapsOn:s.mapsOn, wager:s.wager||0, goldBuyIn:s.goldBuyIn||0,
     lobby:true, lobbyId:gameLobby.id };
   if(s.mode==='bounty')def.bountyList=bountyDailyList(def.zone, strHash('lobby_'+gameLobby.id));
   activeSession={id:gameLobby.id, mode:s.mode, host:gameLobby.host, hostName:gameLobby.hostName, seed:gameLobby.seed, isHost:gameLobby.isHost, started:true, players:gameLobby.players, lobby:true, settings:s};
@@ -4177,6 +4199,37 @@ const FISH=[
 // comes down and the wagering becomes a licensing problem. Don't.
 const PEARL_START=25;              // enough to enter the low-stake lobbies
 const PEARL_PRIZES=[12,6,3];       // competitive placement payout (1st/2nd/3rd)
+
+// Competitive-lobby rewards. These are HOUSE funded (paid by the game, fixed by
+// placement) and independent of any pot, so they read as "a reward for winning
+// the match", not "a prize pool built from players' money". Rubies are the
+// premium currency, so the lobby payout is deliberately small and daily-capped:
+// a free ruby handed out is a ruby someone didn't buy, and an uncapped faucet
+// would be farmable. A real result from >=2 anglers is required (no solo farming).
+const LOBBY_RUBY_PRIZES=[3,1,0];      // 1st/2nd/3rd rubies
+const LOBBY_GOLD_PRIZES=[600,300,150];// 1st/2nd/3rd gold
+const LOBBY_RUBY_DAILY_CAP=15;        // max rubies earnable from lobbies per ET day
+// Optional GOLD buy-in: an ante the host sets, winner takes the pot. Safe to make
+// winner-take-all because gold is soft, earned only and never purchasable, so the
+// pot carries no cash value. (Contrast the pearl wager, also earned-only.)
+const GOLD_BUYIN_TIERS=[0,500,1000,2500,5000];
+
+// Eastern-time calendar day, "YYYY-MM-DD", so the lobby ruby cap resets on the
+// same clock the daily quests use, regardless of the player's own timezone.
+function etDayKey(){
+  try{return new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});}
+  catch(e){return new Date().toISOString().slice(0,10);}
+}
+// Award up to the remaining daily headroom of lobby rubies; returns how many were
+// actually granted (0 once the cap is hit). Rolls the tally over at ET midnight.
+function grantLobbyRubies(n){
+  if(!(n>0))return 0;
+  const day=etDayKey();
+  if(S.lobbyRubyDay!==day){S.lobbyRubyDay=day;S.lobbyRubyToday=0;}
+  const grant=Math.max(0,Math.min(n, LOBBY_RUBY_DAILY_CAP-(S.lobbyRubyToday||0)));
+  S.lobbyRubyToday=(S.lobbyRubyToday||0)+grant;
+  return grant;
+}
 
 // ===================== STATE =====================
 let S={
