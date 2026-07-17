@@ -3679,10 +3679,10 @@ function openSkinChooser(base){
     let act;
     if(equipped)act='<span class="shop-action equipped-tag">Wearing</span>';
     else if(owned)act='<span class="shop-action equip">Equip</span>';
-    else if((sk.cost||0)>0)act='<span class="shop-action buy '+(((S.rubies||0)>=sk.cost)?'':'cant')+'"><span class="gem-s" style="width:11px;height:11px;margin-right:3px;"></span>'+sk.cost+'</span>';
+    else if((sk.cost||0)>0)act='<span class="shop-action buy '+(((S.pearls||0)>=sk.cost)?'':'cant')+'"><span class="pearl-s" style="width:11px;height:11px;margin-right:3px;"></span>'+sk.cost+'</span>';
     else act='<span class="shop-action buy">Claim free</span>';
     rows+='<div class="shop-item '+(equipped?'equipped':'')+'" onclick="pickSkin(\''+base+'\',\''+sk.id+'\')">'+_skinSwatch(sk.file)
-      +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' rubies':'Free')+' · alternate look</div></div>'+act+'</div>';
+      +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' pearls':'Free')+' · alternate look</div></div>'+act+'</div>';
   });
   const note=owns?'':'<div style="font-size:11.5px;color:#b3402a;font-weight:700;margin-bottom:9px;">Buy the '+_skinBaseLabel(base)+' first to unlock its skins.</div>';
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
@@ -3696,8 +3696,8 @@ function pickSkin(base, skinId){
   const owned=(S.ownedSkins||[]).includes(skinId);
   if(!owned){
     if((sk.cost||0)>0){
-      if((S.rubies||0)<sk.cost){toast('Not enough rubies.','#b3402a');return;}
-      S.rubies-=sk.cost;if(typeof updatePills==='function')updatePills();
+      if((S.pearls||0)<sk.cost){toast('Not enough pearls.','#b3402a');return;}
+      S.pearls-=sk.cost;if(typeof updatePills==='function')updatePills();
     }
     S.ownedSkins=S.ownedSkins||[];S.ownedSkins.push(skinId);
     toast('Unlocked '+sk.name+'!','#2aa890');try{AUDIO.sfx('coin');}catch(e){}
