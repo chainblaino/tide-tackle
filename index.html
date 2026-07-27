@@ -7952,7 +7952,7 @@ function confirmWorldSwap(){
       wipe.classList.remove('show');
       _worldSwapping=false;
       toast('Welcome to the '+WORLDS[to].name+'.','#2aa890');
-      setStatus('Now in the '+ZONES[S.zone].name.toLowerCase()+'. '+(ZONES[S.zone].walk?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
+      setStatus('Now in the '+ZONES[S.zone].name.toLowerCase()+'. '+(onFoot()?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
     },420);
   },620);
 }
@@ -7963,7 +7963,7 @@ function enterWorld(tz, arriveDir){
   initWorld(arriveDir, false);
   ensureRig();initStructures();clearSightFish();updateRigBar();updateZonePill();refreshMenu();queueSave();
   toast('Entered '+ZONES[tz].name,'#2aa890');
-  setStatus('Now in the '+ZONES[tz].name.toLowerCase()+'. '+(ZONES[tz].walk?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
+  setStatus('Now in the '+ZONES[tz].name.toLowerCase()+'. '+(onFoot()?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
 }
 // Why a gate is closed, or '' when it's open. Covers both the craft requirement
 // (boat / waders) and any extra per-zone requirement such as the fly combo.
@@ -10059,7 +10059,11 @@ function render(ts){
   if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x, st.y, st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(480,0,240,210);}
   else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,350,250);}
   // whitecaps
-  for(let _wi=0;_wi<WHITECAPS.length;_wi+=(gfxLow?2:1)){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5);ctx.fillStyle='#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r, w.r*.38,0,0,6.28);ctx.fill();}
+  // Freshwater has chop, not ocean swell: fewer caps, smaller, and much fainter.
+  // A reservoir covered in whitecaps is the single loudest 'this is still the
+  // sea' tell left in the freshwater world.
+  const _fw=isFresh(), _wStep=(gfxLow?2:1)*(_fw?2:1), _wAlpha=_fw?0.38:1, _wSize=_fw?0.55:1;
+  for(let _wi=0;_wi<WHITECAPS.length;_wi+=_wStep){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5)*_wAlpha;ctx.fillStyle=_fw?'#dff2ea':'#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r*_wSize, w.r*.38*_wSize,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
 
   // Beach at the south edge of the inshore, drive here to surf fish.
