@@ -1449,7 +1449,7 @@ function questCatchCtx(f){
     night:night, moon:moon,
     structKey:st?(st.kind+':'+st.x+','+st.y):null,
     structTemp:!!(st&&st.temp),
-    method:(typeof S!=='undefined')?S.method:null,
+    method:(typeof S!=='undefined')?gearGet('method'):null,
     tournTarget:!!(tgt&&f.id===tgt.id)
   };
 }
@@ -1812,10 +1812,48 @@ const TOURN_FEES=[
   {rare:300, epic:500,  legendary:1200}, // zone 0 inshore
   {rare:400, epic:700,  legendary:1500}, // zone 1 nearshore
   {rare:500, epic:800,  legendary:2000}, // zone 2 offshore
+  {rare:300, epic:500,  legendary:1200}, // zone 3 lake
+  {rare:400, epic:700,  legendary:1500}, // zone 4 river
+  {rare:500, epic:800,  legendary:2000}, // zone 5 mountains
 ];
 function tournFee(zone, rarity){return (TOURN_FEES[zone]||TOURN_FEES[0])[rarity]||300;}
 const ALWAYS_TOURN_NAMES=["Open Saltwater Challenge","Coastal Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
-const ZONE_LBL=["Inshore","Nearshore","Offshore"];
+const ZONE_LBL=["Inshore","Nearshore","Offshore","Lake","River","Mountains"];
+
+// ===================== WORLDS (V0.9.8) =====================
+// The game has TWO worlds the player swaps between, Clash-of-Clans style. Each
+// owns a contiguous run of zone indices, so S.zone stays a single flat integer
+// 0-5 and every existing `f.zone===S.zone` / `ZONES[S.zone]` / `WORLD_DIMS[S.zone]`
+// lookup keeps working untouched. That flat numbering is also what lets the
+// multiplayer position wire format (which already tags `zone:S.zone`) separate
+// the two worlds with no change at all.
+const WORLDS={
+  salt:{id:'salt', name:'Saltwater', sub:'Gulf & Coast',   zones:[0,1,2], icon:'zone-pin'},
+  fresh:{id:'fresh',name:'Freshwater',sub:'Lakes & Rivers',zones:[3,4,5], icon:'zone-pin'},
+};
+const WORLD_IDS=['salt','fresh'];
+// zone index -> world id. Built from WORLDS so the two never drift apart.
+const ZONE_WORLD=(function(){const m=[];WORLD_IDS.forEach(function(w){WORLDS[w].zones.forEach(function(z){m[z]=w;});});return m;})();
+function worldOf(zone){return ZONE_WORLD[zone]||'salt';}
+// Structure kinds belonging to each world, used by the Explorer achievements and
+// the structures guide so neither one mixes the two worlds together.
+function saltStructKinds(){return Object.keys(STRUCT_META).filter(function(k){return (STRUCT_META[k].world||'salt')==='salt';});}
+function freshStructKinds(){return Object.keys(STRUCT_META).filter(function(k){return STRUCT_META[k].world==='fresh';});}
+// DERIVED from S.zone, never stored independently. S.zone is already persisted
+// and is what tournaments/lobbies overwrite, so deriving keeps the two from ever
+// disagreeing — a stale S.world would silently point the whole gear layer at the
+// wrong catalog.
+function curWorldId(){return (typeof S!=='undefined'&&S)?worldOf(S.zone|0):'salt';}
+function curWorld(){return WORLDS[curWorldId()];}
+function isFresh(){return curWorldId()==='fresh';}
+// The zone-index range of a world, used everywhere a hard-coded 0..2 used to be.
+function worldZones(w){return WORLDS[w||curWorldId()].zones;}
+function worldZoneLo(w){const z=worldZones(w);return z[0];}
+function worldZoneHi(w){const z=worldZones(w);return z[z.length-1];}
+// A zone's position WITHIN its world (0=starter, 1=mid, 2=far). Lets logic that
+// used to key off the literal 0/1/2 keep working in either world.
+function zoneTier(zone){const z=worldZones(worldOf(zone));const i=z.indexOf(zone);return i<0?0:i;}
+function zoneAtTier(tier, w){const z=worldZones(w);return z[Math.max(0,Math.min(z.length-1,tier))];}
 const RAR_LBL={common:"Common",uncommon:"Uncommon",rare:"Rare",epic:"Epic",legendary:"Legendary",ultra:"Ultra Legendary"};
 let activeLobby=null, lobbyInt=null, activeTournament=null;
 // Tournaments/co op/challenges drive their own 6-minute day-night cycle off
@@ -3295,6 +3333,37 @@ const STRUCT_META={
   runoff:{icon:"struct-pass",label:"Storm Runoff",zone:"Inshore",depth:"Deep",depthColor:"#8060c8",alias:"pass",weather:"Light Rain only"},
   frenzy:{icon:"struct-baitball",label:"Bird Frenzy",zone:"Nearshore",depth:"Deep",depthColor:"#8060c8",alias:"open",weather:"Overcast only"},
   colorchange:{icon:"struct-rip",label:"Color Change",zone:"Offshore",depth:"Deep",depthColor:"#8060c8",alias:"rip",weather:"Partly Cloudy only"},
+  // ---- Freshwater (V0.9.8) ----
+  lilypad:{icon:"struct-grass",label:"Lily Pads",zone:"Lake",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  weedbed:{icon:"struct-grass",label:"Hydrilla Bed",zone:"Lake",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  boatdock:{icon:"struct-dock",label:"Boat Dock",zone:"Lake",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  laydown:{icon:"struct-mangrove",label:"Laydown Timber",zone:"Lake",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  brushpile:{icon:"struct-reef",label:"Brush Pile",zone:"Lake",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  riprap:{icon:"struct-oyster",label:"Riprap Bank",zone:"Lake",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  point:{icon:"struct-sand",label:"Main-Lake Point",zone:"Lake",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  timber:{icon:"struct-mangrove",label:"Standing Timber",zone:"Lake",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  creekchan:{icon:"struct-channel",label:"Creek Channel",zone:"Lake",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  dam:{icon:"struct-bridge",label:"The Dam",zone:"Lake",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  tailrace:{icon:"struct-powerplant",label:"Tailrace",zone:"River",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  wingdam:{icon:"struct-oyster",label:"Wing Dam",zone:"River",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  eddy:{icon:"struct-rip",label:"Eddy",zone:"River",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  seam:{icon:"struct-rip",label:"Current Seam",zone:"River",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  pilings:{icon:"struct-bridge",label:"Bridge Pilings",zone:"River",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  gravelbar:{icon:"struct-sand",label:"Gravel Bar",zone:"River",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  logjam:{icon:"struct-wreck",label:"Log Jam",zone:"River",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  deephole:{icon:"struct-deep",label:"Deep Hole",zone:"River",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  rockledge:{icon:"struct-ledge",label:"Rock Ledge",zone:"River",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  confluence:{icon:"struct-pass",label:"Confluence",zone:"River",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  riffle:{icon:"struct-rip",label:"Riffle",zone:"Mountains",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  run:{icon:"struct-channel",label:"Run",zone:"Mountains",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  plungepool:{icon:"struct-bluhole",label:"Plunge Pool",zone:"Mountains",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  undercut:{icon:"struct-mangrove",label:"Undercut Bank",zone:"Mountains",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  tailout:{icon:"struct-sand",label:"Tailout",zone:"Mountains",depth:"Near",depthColor:"#2aa890",world:"fresh"},
+  boulders:{icon:"struct-reef",label:"Boulder Garden",zone:"Mountains",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  beaverpond:{icon:"struct-grass",label:"Beaver Pond",zone:"Mountains",depth:"Mid",depthColor:"#4a9fd4",world:"fresh"},
+  springcreek:{icon:"struct-grass",label:"Spring Creek",zone:"Mountains",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  alpinelake:{icon:"struct-deep",label:"Alpine Lake",zone:"Mountains",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
+  waterfall:{icon:"struct-pass",label:"Waterfall",zone:"Mountains",depth:"Deep",depthColor:"#8060c8",world:"fresh"},
 };
 // Which zones each structure kind actually exists in (derived from the world
 // layout). Used to keep the structures guide from listing a fish under a spot
@@ -3314,7 +3383,13 @@ function renderStructuresGuide(){
   FISH.forEach(function(f){(f.structure||[]).forEach(function(sk){if(!sMap[sk])sMap[sk]=[];if(!sMap[sk].find(function(x){return x.id===f.id;}))sMap[sk].push(f);});});
   const rarOrder=["common","uncommon","rare","epic","legendary","ultra"];
   const zoneMap=structKindZones();
-  el.innerHTML=Object.keys(STRUCT_META).map(function(k){
+  // Clancy only talks about the water you're standing in — the guide lists the
+  // current world's spots. Shared "Any"-zone spots appear in both.
+  const _w=curWorldId();
+  el.innerHTML=Object.keys(STRUCT_META).filter(function(k){
+    const iw=STRUCT_META[k].world||'salt';
+    return iw===_w||STRUCT_META[k].zone==='Any';
+  }).map(function(k){
     const info=STRUCT_META[k];
     const ak=info.alias||k;
     const zoneSet=zoneMap[ak];
@@ -3373,14 +3448,35 @@ const TOURN_DAY_START=300;    // ...as one full day->night cycle, starting at da
 // methods: cat = tackle category, bait = needs natural bait
 const METHODS=[
   {id:'cork',     name:'Cork',       cat:'cork',     bait:true,  zones:[0],     blurb:'A popping cork over the flats calls in trout & reds.'},
-  {id:'jig',      name:'Jig',        cat:'jig',      bait:false, zones:[0,1,2], blurb:'Work an artificial lure. No bait needed. Match the lure to your region.'},
+  {id:'jig',      name:'Jig',        cat:'jig',      fwcat:'fwjig', bait:false, zones:[0,1,2,3,4,5], blurb:'Work an artificial lure. No bait needed. Match the lure to your region.'},
   {id:'structure',name:'Structure',  cat:'finesse',  bait:true,  zones:[0],     blurb:'Drop bait tight to pilings & bars. The sheepshead game.'},
   {id:'livebait', name:'Live bait',  cat:'livehook', bait:true,  zones:[0,1,2], blurb:'Free line a lively bait. Hard to beat anywhere.'},
-  {id:'bottom',   name:'Bottom rig', cat:'bottomrig',bait:true,  zones:[1,2],   blurb:'A knocker rig parked on reefs & wrecks.'},
-  {id:'troll',    name:'Trolling',   cat:'trolllure',bait:false, zones:[1,2],   blurb:'Pull skirts & rigged baits behind the boat. Pull anchor and DRIVE, a trolled line only works while you’re moving. Tie a troll lure on in the Lures shop.'},
+  {id:'bottom',   name:'Bottom rig', cat:'bottomrig',fwcat:'fwbottom',bait:true,  zones:[1,2,3,4,5], blurb:'A knocker rig parked on reefs & wrecks. In freshwater it soaks bait on the bottom for catfish, sturgeon and carp.'},
+  {id:'troll',    name:'Trolling',   cat:'trolllure',fwcat:'fwtroll', bait:false, zones:[1,2,3,4,5], blurb:'Pull skirts & rigged baits behind the boat. Pull anchor and DRIVE, a trolled line only works while you’re moving. Tie a troll lure on in the Lures shop.'},
   {id:'chunk',    name:'Chunk',      cat:'chunkrig', bait:true,  zones:[1,2],   blurb:'Drift a slick of cut bait for tuna & sharks.'},
   {id:'deepdrop', name:'Deep drop',  cat:'deeprig',  bait:true,  zones:[2],     blurb:'Send a weighted rig to the bottom for swordfish.'},
+  // ---- Freshwater (V0.9.8). `jig`, `bottom` and `troll` above are shared: they
+  //      are the same real technique in both worlds, and their tackle/lures are
+  //      split by the catalog's world tag rather than by a duplicate method id.
+  {id:'cast',     name:'Casting',    cat:'fwcast',   bait:false, zones:[3,4,5], world:'fresh', blurb:'Fan-cast a spinnerbait, crank or topwater and work it back. No bait needed, tie a casting lure on in the Lures shop.'},
+  {id:'bobber',   name:'Float',      cat:'fwbobber', bait:true,  zones:[3,4,5], world:'fresh', blurb:'A slip float over the weeds and timber. The panfish and crappie game, and it will hold a big live shiner too.'},
+  {id:'fly',      name:'Fly',        cat:'fwfly',    bait:false, zones:[3,4,5], world:'fresh', fly:true,
+   blurb:'Match the hatch and drift a fly drag-free. Needs a fly rod and fly reel; its own casting rhythm, not a normal cast.'},
 ];
+// A method's TACKLE category depends on which world you're in: `bottom`, `troll`
+// and `jig` are the same technique in both worlds and keep one id (the fish
+// tables reference them), but a knocker rig is not a Carolina rig, so freshwater
+// resolves to the fwcat and gets its own terminal tackle.
+function methodCat(m){m=m||curMethod();return (isFresh()&&m&&m.fwcat)?m.fwcat:(m?m.cat:null);}
+// Methods legal in a zone. A method tagged `fly` also needs the fly combo in hand,
+// which is what keeps fly water off the rig bar until you have actually bought one.
+function methodsForZone(z){
+  return METHODS.filter(function(m){
+    if(!m.zones.includes(z))return false;
+    if(m.fly&&!hasFlyCombo())return false;
+    return true;
+  });
+}
 
 const TACKLE=[
   {id:'cork_b', cat:'cork', name:'Foam Cork Rig', icon:'tackle-cork', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Basic popping cork.'},
@@ -3401,6 +3497,21 @@ const TACKLE=[
   {id:'dd_p',   cat:'deeprig', name:'Electric Deep Rig', icon:'tackle-anchor', cost:520, pack:3, dur:12, rare:1.35, lvl:9, desc:'Lighted bait, 1,500 ft+.'},
   {id:'tooth_hook',cat:'special',name:'Great White Tooth Hook',icon:'tackle-circle',cost:0,pack:0,dur:9999,rare:1.5,lvl:1,desc:'Carved from a great white tooth. Never breaks, works as a jighead or a circle hook.',reward:'greatwhite',rewardName:'a Great White'},
   {id:'hook1440',cat:'surf',name:'14/0 Circle Hook',icon:'tackle-circle',cost:600,pack:1,dur:9999,lvl:11,surfGear:true, desc:'A giant 14/0 circle hook, the only hook big enough to hold a surf shark. One time buy.'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater terminal tackle, two per method category.
+  {id:'fwbob_b', cat:'fwbobber', name:'Red & White Float Rig',    icon:'tackle-cork',   cost:35,  pack:4, dur:7,  rare:1,    lvl:1, desc:'A clip-on float, a split shot and an Aberdeen hook.',world:'fresh',fixedCost:true},
+  {id:'fwbob_p', cat:'fwbobber', name:'Slip Float Rig',           icon:'tackle-cork',   cost:155, pack:4, dur:16, rare:1.25, lvl:3, desc:'Bobber stop and a slip float. Fish any depth you like, and it casts a mile.',world:'fresh',fixedCost:true},
+  {id:'fwcast_b',cat:'fwcast',   name:'Snap Swivel Pack',         icon:'tackle-hook',   cost:45,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Barrel swivel and a snap for quick lure changes.',world:'fresh',fixedCost:true},
+  {id:'fwcast_p',cat:'fwcast',   name:'Ball-Bearing Snap Kit',    icon:'tackle-hook',   cost:175, pack:4, dur:16, rare:1.25, lvl:4, desc:'Bearing swivels kill line twist and hold up to hard-charging fish.',world:'fresh',fixedCost:true},
+  {id:'fwbot_b', cat:'fwbottom', name:'Carolina Rig',             icon:'tackle-weight', cost:60,  pack:4, dur:6,  rare:1,    lvl:2, desc:'Egg sinker, bead and a leader dragged along the bottom.',world:'fresh',fixedCost:true},
+  {id:'fwbot_p', cat:'fwbottom', name:'Santee Cooler Rig',        icon:'tackle-weight', cost:240, pack:4, dur:14, rare:1.3,  lvl:5, desc:'A peg float lifts the bait off the mud. The catfish rig.',world:'fresh',fixedCost:true},
+  {id:'fwjig_b', cat:'fwjig',    name:'Round Ball Jighead',       icon:'tackle-jig',    cost:40,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Plain lead heads for plastics and hair jigs.',world:'fresh',fixedCost:true},
+  {id:'fwjig_p', cat:'fwjig',    name:'Tungsten Football Head',   icon:'tackle-jig',    cost:165, pack:4, dur:16, rare:1.25, lvl:4, desc:'Dense tungsten telegraphs every rock, and better odds on rare fish.',world:'fresh',fixedCost:true},
+  {id:'fwtrl_b', cat:'fwtroll',  name:'Planer Board & Snap Weight',icon:'tackle-lure',  cost:130, pack:3, dur:8,  rare:1,    lvl:4, desc:'A board and a snap weight to spread a trolling pass wide.',world:'fresh',fixedCost:true},
+  {id:'fwtrl_p', cat:'fwtroll',  name:'Lead Core & Dipsy Spread', icon:'tackle-lure',   cost:450, pack:3, dur:18, rare:1.35, lvl:7, desc:'Lead core line and diving discs put lures right on the thermocline.',world:'fresh',fixedCost:true},
+  {id:'fwfly_b', cat:'fwfly',    name:'Tapered Leader & Tippet',  icon:'tackle-circle', cost:70,  pack:4, dur:7,  rare:1,    lvl:5, desc:'A 9 ft tapered leader and a spool of 4x tippet. The fly angler\u2019s terminal end.',world:'fresh',fixedCost:true},
+  {id:'fwfly_p', cat:'fwfly',    name:'Furled Leader & Fluoro Tippet',icon:'tackle-circle',cost:280,pack:4,dur:16,rare:1.3,  lvl:8, desc:'A hand-furled butt section turns over big streamers and still lands soft.',world:'fresh',fixedCost:true},
+  {id:'iceauger', cat:'ice', name:'Hand Ice Auger', icon:'tackle-anchor', cost:700, pack:1, dur:9999, lvl:12, iceGear:true, desc:'A 8 in hand auger and a skimmer. The only way through the ice on a high mountain lake. One time buy.',world:'fresh',fixedCost:true},
 ];
 
 const BAIT=[
@@ -3413,6 +3524,20 @@ const BAIT=[
   {id:'cutbait', name:'Cut Bait', icon:'bait-cutbait', cost:40, pack:12, lvl:2, desc:'Bloody chunks that pull fish from far off.'},
   {id:'ballyhoo',name:'Rigged Ballyhoo', icon:'bait-fish-long', cost:90, pack:8, lvl:3, desc:'The classic offshore trolling bait.'},
   {id:'menhaden',name:'Menhaden', icon:'bait-fish', cost:60, pack:12, lvl:4, desc:'Oily chunk bait for the chum slick.'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater bait — exactly the 12 ids the fish tables reference.
+  {id:'corn',        name:'Canned Corn',      icon:'bait-shrimp',   cost:25,  pack:20, lvl:1, desc:'A handful of sweet corn on a small hook. Carp, buffalo and stocked trout.',world:'fresh',fixedCost:true},
+  {id:'cricket',     name:'Live Crickets',    icon:'bait-crab',     cost:40,  pack:20, lvl:1, desc:'A tub of chirping crickets. Panfish cannot leave them alone.',world:'fresh',fixedCost:true},
+  {id:'worm',        name:'Nightcrawlers',    icon:'bait-squid',    cost:45,  pack:20, lvl:1, desc:'The universal freshwater bait. Everything in fresh water eats a worm.',world:'fresh',fixedCost:true},
+  {id:'stinkbait',   name:'Dip Stinkbait',    icon:'bait-cutbait',  cost:55,  pack:15, lvl:2, desc:'A tub of soured dough on a ribbed worm. Channel cats smell it a long way off.',world:'fresh',fixedCost:true},
+  {id:'powerbait',   name:'Dough Bait',       icon:'bait-shrimp',   cost:60,  pack:15, lvl:2, desc:'Scented floating dough moulded on a treble. Made for stocked and hatchery fish.',world:'fresh',fixedCost:true},
+  {id:'chickenliver',name:'Chicken Liver',    icon:'bait-cutbait',  cost:65,  pack:15, lvl:3, desc:'A bloody tub of liver. Messy, and the best catfish bait there is.',world:'fresh',fixedCost:true},
+  {id:'minnow',      name:'Live Minnows',     icon:'bait-fish',     cost:95,  pack:15, lvl:3, desc:'A bucket of lively fatheads. Nearly everything with teeth eats them.',world:'fresh',fixedCost:true},
+  {id:'salmonegg',   name:'Salmon Eggs',      icon:'bait-shrimp',   cost:75,  pack:15, lvl:4, desc:'A jar of cured single eggs. Trout, char and steelhead key on them hard.',world:'fresh',fixedCost:true},
+  {id:'leech',       name:'Ribbon Leeches',   icon:'bait-squid',    cost:90,  pack:12, lvl:4, desc:'Squirming leeches on a slow-death hook. Walleye and big trout candy.',world:'fresh',fixedCost:true},
+  {id:'crawfish',    name:'Live Crawfish',    icon:'crab',          cost:105, pack:12, lvl:5, desc:'Soft-shell crawdads. Smallmouth, drum and sturgeon hunt nothing else in summer.',world:'fresh',fixedCost:true},
+  {id:'shad',        name:'Gizzard Shad',     icon:'bait-fish-long',cost:130, pack:12, lvl:6, desc:'Cast-netted shad, whole or cut. The forage every open-water predator follows.',world:'fresh',fixedCost:true},
+  {id:'shiner',      name:'Wild Shiners',     icon:'bait-fish',     cost:140, pack:12, lvl:6, desc:'Big hand-picked golden shiners. The premium bait for trophy bass, pike and muskie.',world:'fresh',fixedCost:true},
 ];
 
 // Players own both leaders from the start; you swap between them on the rig bar
@@ -3458,6 +3583,51 @@ const LURES=[
   // ---- OFFSHORE (zone 2): vertical jigs worked on the jig over deep wrecks ----
   {id:'speedjig',    cat:'metaljig',    zone:2, name:'Vertical Speed Jig',    icon:'reel', cost:760, lvl:7, methods:['jig'], baits:['squid'], targets:['almaco','amberjack','blackfin'], desc:'A long knife jig ripped vertically off deep wrecks for jacks and tuna.'},
   {id:'flutterjig',  cat:'metaljig',    zone:2, name:'Flutter Jig',          icon:'reel', cost:820, lvl:8, methods:['jig'], baits:['squid'], targets:['amberjack','almaco','blackfin'], desc:'A wide flutter jig that flashes on the fall over offshore structure.'},
+  // ---- Freshwater (V0.9.8). zone 3 Lake / 4 River / 5 Mountains. ----
+  // ---- LAKE (zone 3) ----
+  {id:'fw_spinnerbait',cat:'spinnerbait',zone:3,color:'white',      name:'Double-Willow Spinnerbait', icon:'reel',       cost:190,lvl:2, methods:['cast'],         baits:['shiner'],  targets:['largemouth','spottedbass','chainpickerel','whitebass'],              desc:'Twin willow blades flashing through grass. White colour: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_curlytail', cat:'softplastic',zone:3,color:'chartreuse',  name:'Chartreuse Curly Tail Grub',icon:'reel',       cost:150,lvl:1, methods:['jig'],          baits:['minnow'],  targets:['blackcrappie','whitebass','freshdrum','spottedbass'],                desc:'A 2 in curl tail on a ball head. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_squarebill',cat:'crankbait', zone:3,                      name:'Squarebill Crankbait',      icon:'fish',       cost:220,lvl:3, methods:['cast'],         baits:['crawfish'],targets:['largemouth','spottedbass','whitebass','bowfin'],                     desc:'A square lip that deflects off wood and rock instead of hanging up.',world:'fresh',fixedCost:true},
+  {id:'fw_senko',     cat:'softplastic',zone:3,color:'purple',      name:'Junebug Stick Worm',        icon:'reel',       cost:200,lvl:3, methods:['jig','cast'],   baits:['worm'],    targets:['largemouth','spottedbass','bowfin'],                                 desc:'A salted stick bait on a slow fall. Junebug purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fw_lipless',   cat:'crankbait', zone:3,                      name:'Lipless Crankbait',         icon:'fish',       cost:260,lvl:4, methods:['cast','troll'], baits:['shad'],    targets:['whitebass','hybridstriper','largemouth','chainpickerel'],            desc:'A rattling shad body you can burn over hydrilla or pull on a long line.',world:'fresh',fixedCost:true},
+  {id:'fw_craw',      cat:'softplastic',zone:3,color:'red',         name:'Rootbeer Craw Trailer',     icon:'crab',       cost:210,lvl:4, methods:['jig'],          baits:['crawfish'],targets:['largemouth','spottedbass','freshdrum','hybridstriper'],              desc:'A flapping craw on a football head. Rootbeer: +5% bite while water is moving.',world:'fresh',fixedCost:true},
+  {id:'fw_frog',      cat:'topwater',  zone:3,                      name:'Hollow-Body Frog',          icon:'fish',       cost:300,lvl:5, methods:['cast'],         baits:['shiner'],  targets:['largemouth','bowfin','chainpickerel','longnosegar'],                 desc:'Walked across matted pads for the loudest blow-ups in fresh water.',world:'fresh',fixedCost:true},
+  {id:'fw_deepdiver', cat:'crankbait', zone:3,                      name:'Deep-Diving Crankbait',     icon:'fish',       cost:340,lvl:6, methods:['troll','cast'], baits:['shad'],    targets:['hybridstriper','whitebass','bluecat','longnosegar'],                 desc:'A long lip that digs to twenty feet and stays there on a troll pass.',world:'fresh',fixedCost:true},
+  {id:'fw_walkbait',  cat:'topwater',  zone:3,                      name:'Walking Topwater Bait',     icon:'fish',       cost:330,lvl:6, methods:['cast'],         baits:['shad'],    targets:['largemouth','hybridstriper','whitebass','chainpickerel'],            desc:'Zig-zags across a slick surface with a rhythmic twitch.',world:'fresh',fixedCost:true},
+  {id:'fw_umbrella',  cat:'trolling',  zone:3,                      name:'Umbrella Rig',              icon:'tackle-lure',cost:560,lvl:8, methods:['troll'],        baits:['shad'],    targets:['hybridstriper','whitebass','bluecat','chainpickerel'],               desc:'Five wire arms of swimbaits pulled as a fleeing shad school.',world:'fresh',fixedCost:true},
+  {id:'fw_glidebait', cat:'plug',      zone:3,color:'gold',         name:'Gold Glide Bait',           icon:'fish',       cost:620,lvl:9, methods:['cast','troll'], baits:['shiner'],  targets:['muskie','largemouth','chainpickerel','longnosegar'],                 desc:'A jointed 8 in glider that S-tracks on a slow pull. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_bucktail10',cat:'spinnerbait',zone:3,                     name:'Double-10 Bucktail',        icon:'reel',       cost:700,lvl:10,methods:['cast','troll'], baits:['shad'],    targets:['muskie','chainpickerel','hybridstriper','longnosegar'],              desc:'Two size-10 blades and a fistful of hair. The muskie bait, and it is brutal to throw.',world:'fresh',fixedCost:true},
+  // Lake flies
+  {id:'fly_popper',   cat:'fly',       zone:3,                      name:'Foam Bluegill Popper',      icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['bluegill','goldenshiner','largemouth','spottedbass'],                desc:'A tiny foam popper on a 4x leader. Bluegill will eat it until the foam is gone.',world:'fresh',fixedCost:true},
+  {id:'fly_clouser',  cat:'fly',       zone:3,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['largemouth','spottedbass','bluegill','goldenshiner'],                desc:'Dumbbell eyes and bucktail, jigging on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
+  // ---- RIVER (zone 4) ----
+  {id:'fw_inlinespin',   cat:'spinnerbait',zone:4,                  name:'Inline Spinner',            icon:'reel',       cost:170,lvl:2, methods:['cast'],        baits:['minnow'],  targets:['smallmouth','spottedbass','whitebass','longearsunfish'],             desc:'A #3 blade thumping in current. Nothing in a river ignores it.',world:'fresh',fixedCost:true},
+  {id:'fw_tubejig',      cat:'softplastic',zone:4,color:'red',      name:'Rootbeer Tube Jig',         icon:'reel',       cost:190,lvl:3, methods:['jig'],         baits:['crawfish'],targets:['smallmouth','spottedbass','sauger','walleye'],                       desc:'A hollow tube dragged over gravel. Rootbeer: +5% bite while the current is moving.',world:'fresh',fixedCost:true},
+  {id:'fw_hairjig',      cat:'hairjig',   zone:4,color:'white',     name:'White Hair Jig',            icon:'reel',       cost:210,lvl:4, methods:['jig'],         baits:['minnow'],  targets:['sauger','walleye','whitebass','skipjack'],                           desc:'Craft-fur hair breathing in a seam. White: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_blade',        cat:'metaljig',  zone:4,                   name:'Chrome Blade Bait',         icon:'anchor',     cost:240,lvl:4, methods:['jig','cast'],  baits:['shad'],    targets:['skipjack','whitebass','stripedbass','hybridstriper'],                desc:'A thin chrome blade that vibrates hard on the lift. Made for a tailrace.',world:'fresh',fixedCost:true},
+  {id:'fw_swimjig',      cat:'softplastic',zone:4,color:'chartreuse',name:'Swim Jig & Trailer',       icon:'reel',       cost:260,lvl:5, methods:['jig','cast'],  baits:['shiner'],  targets:['spottedbass','smallmouth','whitebass','stripedbass'],                desc:'A pointed head swum through wood. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_jerkbait',     cat:'plug',      zone:4,                   name:'Suspending Jerkbait',       icon:'fish',       cost:320,lvl:6, methods:['cast'],        baits:['minnow'],  targets:['smallmouth','walleye','spottedbass','stripedbass'],                  desc:'Darts and hangs dead in the current. Cold-water smallmouth cannot stand it.',world:'fresh',fixedCost:true},
+  {id:'fw_topwalker',    cat:'topwater',  zone:4,color:'gold',      name:'Gold Topwater Walker',      icon:'fish',       cost:400,lvl:7, methods:['cast'],        baits:['shiner'],  targets:['stripedbass','smallmouth','whitebass','longnosegar'],                desc:'Walked over a boiling wing dam at first light. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_shadrap',      cat:'crankbait', zone:4,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','cast'],baits:['shad'],    targets:['walleye','sauger','stripedbass','hybridstriper'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
+  {id:'fw_trollbucktail',cat:'trolling',  zone:4,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['stripedbass','hybridstriper','longnosegar','walleye'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
+  // River flies
+  {id:'fly_woolly',      cat:'fly',       zone:4,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['smallmouth','spottedbass','longearsunfish','whitebass'],             desc:'Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
+  {id:'fly_crawfly',     cat:'fly',       zone:4,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['smallmouth','spottedbass','longearsunfish'],                         desc:'Rubber-leg claws crawled over a gravel bar. River smallmouth candy.',world:'fresh',fixedCost:true},
+  // ---- MOUNTAINS (zone 5) ----
+  {id:'fw_troutspinner',cat:'spinnerbait',zone:5,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['cast'],        baits:['worm'],    targets:['rainbowtrout','browntrout','cutthroattrout','brooktrout','grayling','tigertrout','goldentrout','cuttbow'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['cast','troll'],baits:['minnow'],  targets:['bulltrout','laketrout','browntrout','arcticchar'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
+  {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','kokanee'],                                               desc:'A 4 in white tube jigged over an alpine lake shelf. White: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['kokanee','landlockedsalmon','laketrout','rainbowtrout'],             desc:'A flashing dodger ahead of a tipped squid. The kokanee troll, corn and all.',world:'fresh',fixedCost:true},
+  {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['landlockedsalmon','arcticchar','laketrout','kokanee'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['cast','troll'],baits:['minnow'],  targets:['taimen','bulltrout','browntrout','landlockedsalmon','arcticchar'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
+  {id:'fly_adams',      cat:'fly',       zone:5,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cuttbow'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
+  {id:'fly_hopper',     cat:'fly',       zone:5,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','browntrout','goldentrout','grayling','cuttbow'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
+  {id:'fly_pheasant',   cat:'fly',       zone:5,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout','goldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
+  {id:'fly_stonefly',   cat:'fly',       zone:5,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['browntrout','steelhead','mtnwhitefish','tigertrout','cuttbow'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
+  {id:'fly_softhackle', cat:'fly',       zone:5,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['browntrout','cutthroattrout','grayling','mtnwhitefish','tigertrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
+  {id:'fly_globug',     cat:'fly',       zone:5,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['steelhead','rainbowtrout','arcticchar','mtnwhitefish','brooktrout'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
+  {id:'fly_sculpin',    cat:'fly',       zone:5,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['browntrout','bulltrout','tigertrout','taimen','landlockedsalmon'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fly_mouse',      cat:'fly',       zone:5,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['taimen','bulltrout','browntrout','arcticchar'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
 ];
 function lureById(id){return LURES.find(function(l){return l.id===id;});}
 // Lure durability: unlike bait (consumed every cast), a lure survives several
@@ -3833,7 +4003,12 @@ function petTournMult(){return petActive('tiger')?1.20:1;}        // +20% tourna
 // ---- Prestige: unlocks once every non-ultra species is in the logbook ----
 // Prestige requires every inshore/nearshore/offshore species, excluding ultra
 // legendaries AND surf-only sharks.
-function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra'&&!f.surf;});}
+// DELIBERATELY still saltwater-only after V0.9.8. This is a live check, not a
+// stored flag, so folding the 53 freshwater species in here would instantly
+// un-qualify every player who had already completed the saltwater dex and yank
+// their "ready to prestige" state away. Freshwater completion is recognised by
+// its own achievements instead.
+function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra'&&!f.surf&&!f.ice&&worldOf(f.zone)==='salt';});}
 function prestigeEligible(){
   if((S.prestige||0)>=PRESTIGE_MAX)return false;
   return nonUltraSpecies().every(function(f){return (S.caught[f.id]||0)>0;});
@@ -3889,10 +4064,14 @@ function doPrestige(){
   S.ownedRods=['rod0'].concat(keepChainsaw?['chainsaw']:[]);
   S.ownedReels=['reel0'];S.ownedBraids=['braid0'];S.ownedLeaders=['fluoro','wire'];
   S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='fluoro';
+  S.ownedBoats.push('bank');S.ownedRods.push('frod0');S.ownedReels.push('freel0');S.ownedBraids.push('fline0');
+  S.fboat='bank';S.frod='frod0';S.freel='freel0';S.fbraid='fline0';S.fleader='fluoro';
   // consumables back to the starter kit
   S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
   S.baitInv={shrimp:20};S.lureInv={};S.lureDur={};S.ownedLures=[];
   S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
+  S.fmethod='bobber';S.fbaitSel='worm';S.fLureSel='';S.lastZone={salt:0,fresh:3};
+  S.baitInv.worm=20;
   // bump prestige (grants the next pet automatically via ownedPets())
   S.prestige=next;S.prestigeOffered=false;
   // auto-equip the freshly earned pet if no companion is currently equipped
@@ -3968,6 +4147,17 @@ const BOATS=[
   {id:'walk',   name:'Walkaround',   icon:'boat-walk',    cost:3600, lvl:7,  maxZone:2, range:30, speed:5.1, perk:'nightowl',  perkName:'Night Owl: no night bite penalty'},
   {id:'sport',  name:'Sportfisher',  icon:'boat-sport',   cost:7000, lvl:10, maxZone:2, range:70, speed:6.2, perk:'finder',    perkName:'Fish Finder: +range & better odds'},
   {id:'marlinboat',name:'Black Marlin Speedboat',icon:'boat-sport',cost:0,lvl:1,maxZone:2,range:90,speed:9.8,perk:'finder',perkName:'Fish Finder: +range & better odds',reward:'blackmarlin',rewardName:'a Black Marlin'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater craft. `bank` is the free starter (you wade the lake from
+  // shore) and `waders` is the Mountains gate — a walking 'boat' with walker:true
+  // so the render layer knows to draw a hiker instead of a hull.
+  {id:'bank',      name:'Bank & Wade',        icon:'person',      cost:0,     lvl:1,  maxZone:3, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Lake bites',world:'fresh',fixedCost:true},
+  {id:'canoe',     name:'Canoe',              icon:'boat-kayak',  cost:280,   lvl:2,  maxZone:3, range:0,  speed:2.6, perk:'baitsaver',   perkName:'Bait Saver: 12% bait not used',world:'fresh',fixedCost:true},
+  {id:'jonboat',   name:'Jon Boat',           icon:'boat-jon',    cost:900,   lvl:3,  maxZone:3, range:15, speed:3.3, perk:'tacklesaver', perkName:'Tackle Saver: 12% no wear per cast',world:'fresh',fixedCost:true},
+  {id:'bassboat',  name:'Bass Boat',          icon:'boat-bay',    cost:2600,  lvl:5,  maxZone:4, range:35, speed:4.6, perk:'fastbite',    perkName:'Fast Bites: bites come 15% sooner',world:'fresh',fixedCost:true},
+  {id:'jetsled',   name:'Jet Sled',           icon:'boat-console',cost:5400,  lvl:7,  maxZone:4, range:55, speed:5.8, perk:'nightowl',    perkName:'Night Owl: no night bite penalty',world:'fresh',fixedCost:true},
+  {id:'driftboat', name:'Drift Boat',         icon:'boat-walk',   cost:8600,  lvl:9,  maxZone:4, range:80, speed:6.4, perk:'finder',      perkName:'Fish Finder: +range & better odds',world:'fresh',fixedCost:true},
+  {id:'waders',    name:'Breathable Waders',  icon:'shirt-waders',cost:12500, lvl:11, maxZone:5, range:25, speed:1.6, perk:'finder',      perkName:'Fish Finder: +range & better odds', walker:true,world:'fresh',fixedCost:true},
 ];
 function boatSpeed(id){const b=BOATS.find(x=>x.id===id);return b?b.speed:3;}
 
@@ -3978,6 +4168,14 @@ const RODS=[
   {id:'rod3',name:'Tournament Rod',zoneBonus:13, color:'#2c2c30',cost:1800,lvl:8, desc:'Pro blank, big forgiveness.'},
   {id:'rod4',name:'Bluewater Rod', zoneBonus:17, color:'#1f2a44',cost:4200,lvl:11,desc:'Heavy stand up power.'},
   {id:'chainsaw',name:'Chainsaw Rod',zoneBonus:17,color:'#d4500a',cost:0,lvl:1,desc:'A roaring saw blade for a butt. Fights regular fish with the same power as the Bluewater Rod, and adds a SLOW MO button in the fight: −50% fish speed for 3s, once per fight.',reward:'sawfish',rewardName:'a Sawfish'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater rods. fly:true marks half of the fly combo.
+  {id:'ul_rod',   name:'Ultralight Rod',     zoneBonus:0,  color:'#d8cfa8', cost:0,    lvl:1,  desc:'A limber 5 ft ultralight. Fun on panfish, outgunned by anything else.',world:'fresh',fixedCost:true},
+  {id:'spin_rod', name:'Spinning Rod',       zoneBonus:5,  color:'#4a6b52', cost:160,  lvl:2,  desc:'A 7 ft medium spinning stick. Crisper hooksets, wider catch window.',world:'fresh',fixedCost:true},
+  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
+  {id:'cast_rod', name:'Baitcasting Rod',    zoneBonus:13, color:'#6b3f2a', cost:1800, lvl:8,  desc:'A heavy-power casting rod with real backbone for timber and current.',world:'fresh',fixedCost:true},
+  {id:'flyrod_p', name:'8wt Fly Rod',        zoneBonus:15, color:'#2e4a3a', cost:3600, lvl:10, desc:'A fast 8-weight that turns over streamers and stops steelhead.', fly:true,world:'fresh',fixedCost:true},
+  {id:'flipstick',name:'Flipping Stick',     zoneBonus:17, color:'#1f2b22', cost:6400, lvl:12, desc:'An 8 ft heavy flipping stick. Maximum forgiveness on the hookset.',world:'fresh',fixedCost:true},
 ];
 const REELS=[
   {id:'reel0',name:'2500 Spinning',range:145,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
@@ -3985,6 +4183,14 @@ const REELS=[
   {id:'reel2',name:'6000 Spinning',range:298,drag:25,color:'#c9a24a',cost:650, lvl:5, desc:'Reach the mid structure.'},
   {id:'reel3',name:'8000 Conventional',range:387,drag:35,color:'#5a5e64',cost:1800,lvl:8,desc:'Long bombs offshore.'},
   {id:'reel4',name:'Big Game Two Speed',range:476,drag:50,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater reels.
+  {id:'spin1000', name:'1000 Ultralight Spinning', range:140, drag:8,  color:'#d0d4d8', cost:0,    lvl:1,  desc:'Tiny spool, short accurate flips to the bank.',world:'fresh',fixedCost:true},
+  {id:'spin3000', name:'3000 Spinning',            range:210, drag:14, color:'#9aa0a6', cost:160,  lvl:2,  desc:'More line, more reach across the flat.',world:'fresh',fixedCost:true},
+  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
+  {id:'baitcast', name:'Low-Profile Baitcaster',   range:370, drag:34, color:'#2b3a2f', cost:1800, lvl:8,  desc:'Cranking power for heavy cover and hard current.',world:'fresh',fixedCost:true},
+  {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',fixedCost:true},
+  {id:'roundcast',name:'Round Baitcaster 300',     range:480, drag:55, color:'#4a4e54', cost:6400, lvl:12, desc:'Big round reel, maximum range and cranking torque.',world:'fresh',fixedCost:true},
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
 // gates which fish it can land: 2500(12)->small, ... BigGame(50)->everything.
@@ -4000,6 +4206,14 @@ const BRAIDS=[
   {id:'braid2',name:'40 lb Braid', line:40, color:'#2f6fb0',cost:650, lvl:5, desc:'Kings, grouper & snapper.'},
   {id:'braid3',name:'80 lb Braid', line:80, color:'#e0c020',cost:1900,lvl:8, desc:'Amberjack, cobia & sharks.'},
   {id:'braid4',name:'130 lb Braid',line:130,color:'#ff5fa2',cost:4400,lvl:11,desc:'Marlin, tuna & swords.'},
+  // ---- Freshwater (V0.9.8) ----
+  // Freshwater line classes: 4 lb to 40 lb, plus two fly lines.
+  {id:'mono4',    name:'4 lb Mono',              line:4,  color:'#f2efe6', cost:0,    lvl:1,  desc:'Limp clear mono. Panfish and small trout only.',world:'fresh',fixedCost:true},
+  {id:'mono6',    name:'6 lb Copolymer',         line:6,  color:'#cfe0c8', cost:160,  lvl:2,  desc:'A little more stretch and abrasion resistance.',world:'fresh',fixedCost:true},
+  {id:'flyline5', name:'5wt Floating Fly Line',  line:10, color:'#e8b23a', cost:620,  lvl:5,  desc:'Weight-forward floating taper on a 4x leader. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
+  {id:'braid20',  name:'20 lb Braid',            line:20, color:'#2f6fb0', cost:1800, lvl:8,  desc:'No stretch through timber, hydrilla and riprap.',world:'fresh',fixedCost:true},
+  {id:'flyline8', name:'8wt Sink-Tip Fly Line',  line:20, color:'#3f8a4a', cost:3600, lvl:10, desc:'A sinking-tip 8-weight head. Every Mountains fish is a 20 lb class or under.', fly:true,world:'fresh',fixedCost:true},
+  {id:'braid40',  name:'40 lb Braid',            line:40, color:'#e0c020', cost:6400, lvl:12, desc:'Flatheads, sturgeon and blue cats in heavy river current.',world:'fresh',fixedCost:true},
 ];
 // V8.5 economy pass (run ONCE at boot, after FISH is defined):
 //  • Bait & lures that can take rarer fish cost more (surcharge by the rarest
@@ -4040,6 +4254,24 @@ const ZONE_STRUCTS=[
    {kind:'deep',xF:.68,yF:.53,tier:3},{kind:'baitball',xF:.26,yF:.61,tier:3},
    {kind:'oil_rig',xF:.62,yF:.69,tier:3},{kind:'bluhole',xF:.22,yF:.76,tier:3},
    {kind:'weedline',xF:.74,yF:.82,tier:3},{kind:'deep',xF:.40,yF:.88,tier:3}],
+  // ---- zone 3: LAKE ----
+  [{kind:'lilypad',xF:.20,yF:.14,tier:1},{kind:'weedbed',xF:.56,yF:.18,tier:1},
+   {kind:'boatdock',xF:.82,yF:.16,tier:1},{kind:'laydown',xF:.33,yF:.29,tier:1},
+   {kind:'brushpile',xF:.69,yF:.34,tier:2},{kind:'riprap',xF:.17,yF:.47,tier:2},
+   {kind:'point',xF:.72,yF:.52,tier:2},{kind:'timber',xF:.41,yF:.61,tier:2},
+   {kind:'creekchan',xF:.24,yF:.75,tier:3},{kind:'dam',xF:.70,yF:.81,tier:3}],
+  // ---- zone 4: RIVER ----
+  [{kind:'gravelbar',xF:.23,yF:.15,tier:1},{kind:'wingdam',xF:.68,yF:.21,tier:2},
+   {kind:'eddy',xF:.44,yF:.31,tier:2},{kind:'pilings',xF:.08,yF:.42,tier:2},
+   {kind:'seam',xF:.61,yF:.49,tier:2},{kind:'rockledge',xF:.30,yF:.58,tier:2},
+   {kind:'logjam',xF:.78,yF:.64,tier:3},{kind:'deephole',xF:.20,yF:.72,tier:3},
+   {kind:'confluence',xF:.55,yF:.80,tier:3},{kind:'tailrace',xF:.80,yF:.92,tier:3}],
+  // ---- zone 5: MOUNTAINS ----
+  [{kind:'riffle',xF:.26,yF:.13,tier:1},{kind:'tailout',xF:.62,yF:.19,tier:1},
+   {kind:'run',xF:.40,yF:.30,tier:2},{kind:'boulders',xF:.78,yF:.35,tier:2},
+   {kind:'undercut',xF:.14,yF:.44,tier:2},{kind:'beaverpond',xF:.68,yF:.52,tier:2},
+   {kind:'plungepool',xF:.34,yF:.62,tier:3},{kind:'springcreek',xF:.80,yF:.70,tier:3},
+   {kind:'alpinelake',xF:.22,yF:.79,tier:3},{kind:'waterfall',xF:.58,yF:.89,tier:3}],
 ];
 // Deterministic RNG so a given worldSeed always lays out the same map.
 function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return ((t^t>>>14)>>>0)/4294967296;};}
@@ -4121,6 +4353,13 @@ const ZONES=[
    structures:[]},
   {id:'offshore', name:'Offshore', sub:'Bluewater', depth:'100+ ft', baseWater:['#1f5f96','#103f6e','#06203f'],
    structures:[]},
+  // ---- Freshwater (V0.9.8). Tannin-stained green water, not tropical blue. ----
+  {id:'lake', name:'Lake', sub:'Pads & Timber', depth:'2-30 ft', baseWater:['#6fae86','#3d8470','#1d5352'],
+   world:'fresh', structures:[]},
+  {id:'river', name:'River', sub:'Current & Tailraces', depth:'5-60 ft', baseWater:['#7fae9a','#3f7d74','#17414a'],
+   world:'fresh', structures:[]},
+  {id:'mountains', name:'Mountains', sub:'Freestone & Alpine', depth:'1-20 ft', baseWater:['#a6dcd0','#57ab9d','#1f6058'],
+   world:'fresh', walk:true, structures:[]},
 ];
 
 // FISH: zone, rarity, color used by art (FISH_ART keyed by id), size[lb], line(needed),
@@ -4183,6 +4422,68 @@ const FISH=[
   {id:'hammerhead',name:'Great Hammerhead',zone:0,surf:true, rarity:'epic',size:[100,600],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:520,gold:360,weight:1,fact:'Unmistakable mallet shaped head and towering dorsal. Blistering first runs that smoke the drag.'},
   {id:'tigershark',name:'Tiger Shark',zone:0,surf:true, rarity:'legendary',size:[150,1000],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:780,gold:520,weight:1,fact:'The "garbage can of the sea" and an apex predator. Enormous, relentless, and one of the hardest fights from the sand.'},
   {id:'greatwhite',name:'Great White Shark',zone:0,surf:true, rarity:'ultra',size:[400,2500],line:130,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:1400,gold:2000,weight:1,spawnChance:0.001,fact:'The ocean’s most iconic apex predator. A surf encounter with one is the rarest fishing moment imaginable. Catch, photograph, release.'},
+
+  // ================= FRESHWATER (V0.9.8) =================
+  // zone 3 Lake / 4 River / 5 Mountains. Species that occur in BOTH the lake
+  // and the river carry distinct ids (rivercat, riverwhite, ...) because f.id
+  // is the logbook / sprite / S.caught key — same convention as the two
+  // mangrove snappers in saltwater.
+  // ---------- LAKE ----------
+  {id:'goldenshiner',name:'Golden Shiner',zone:3,rarity:'common',size:[0.05,0.6],line:4,methods:['bobber','fly'],baits:['worm','cricket'],leader:'any',structure:['lilypad','weedbed','boatdock','open'],season:['all'],time:['all'],xp:4,gold:1,weight:55,fact:'The most widely farmed baitfish in North America, and wild ones drift over the weed beds in glittering brassy schools.'},
+  {id:'bluegill',name:'Bluegill',zone:3,rarity:'common',size:[0.1,2],line:4,methods:['bobber','fly','cast'],baits:['worm','cricket'],leader:'any',structure:['lilypad','boatdock','laydown','brushpile'],season:['all'],time:['day','dawn','dusk'],xp:6,gold:2,weight:52,fact:'Male bluegill fan saucer-shaped nests into the shallows in dense colonies and guard the eggs alone until they hatch.'},
+  {id:'redear',name:'Redear Sunfish',zone:3,rarity:'common',size:[0.3,4],line:6,methods:['bobber','bottom'],baits:['worm','leech','crawfish'],leader:'fluoro',structure:['weedbed','lilypad','point'],season:['spring','summer'],time:['day'],xp:10,gold:4,weight:44,fact:'Nicknamed the shellcracker for the grinding throat teeth it uses to crush snails and small clams other sunfish cannot touch.'},
+  {id:'yellowbullhead',name:'Yellow Bullhead',zone:3,rarity:'common',size:[0.3,3],line:6,methods:['bottom','bobber'],baits:['worm','chickenliver','stinkbait'],leader:'any',structure:['laydown','brushpile','creekchan','boatdock'],season:['all'],time:['dusk','night'],xp:11,gold:5,weight:42,fact:'A catfish tastes with its whole body, and a bullhead carries taste buds all the way down its skin to the tail.'},
+  {id:'whitebass',name:'White Bass',zone:3,rarity:'common',size:[0.4,4],line:6,methods:['cast','jig','troll'],baits:['minnow','shad'],leader:'any',structure:['point','open','riprap','dam'],season:['spring','fall'],time:['dawn','dusk','day'],xp:14,gold:7,weight:38,fact:'Spring sends white bass surging up the feeder creeks by the thousands to broadcast their eggs; they build no nest at all.'},
+  {id:'blackcrappie',name:'Black Crappie',zone:3,rarity:'uncommon',size:[0.3,4],line:6,methods:['bobber','jig','cast'],baits:['minnow','shiner'],leader:'fluoro',structure:['brushpile','timber','boatdock','laydown'],season:['winter','spring'],time:['dawn','dusk','night'],xp:22,gold:12,weight:28,fact:'They are called papermouths for good reason: the mouth membrane tears easily, so steady pressure lands more of them than a hard hookset.'},
+  {id:'channelcat',name:'Channel Catfish',zone:3,rarity:'uncommon',size:[1,20],line:10,methods:['bottom','bobber'],baits:['chickenliver','stinkbait','worm','shad'],leader:'any',structure:['creekchan','riprap','dam','open'],season:['summer','fall'],time:['dusk','night'],xp:26,gold:14,weight:26,fact:'Channel cats hunt almost entirely by smell and taste, carrying well over a hundred thousand taste buds across their barbels and skin.'},
+  {id:'spottedbass',name:'Spotted Bass',zone:3,rarity:'uncommon',size:[0.5,7],line:10,methods:['cast','jig','fly'],baits:['crawfish','minnow','shiner'],leader:'fluoro',structure:['riprap','point','laydown','dam'],season:['all'],time:['dawn','day','dusk'],xp:28,gold:16,weight:22,fact:'A rough patch of teeth on the tongue is the quickest way to tell one from a largemouth, whose tongue is smooth.'},
+  {id:'chainpickerel',name:'Chain Pickerel',zone:3,rarity:'uncommon',size:[1,8],line:10,methods:['cast','bobber','troll'],baits:['shiner','minnow'],leader:'any',structure:['lilypad','weedbed','laydown'],season:['fall','winter'],time:['day','dawn'],xp:30,gold:17,weight:19,fact:'Named for the chain-link pattern down its flanks, it is one of the few gamefish that keeps feeding hard through the coldest weeks of the year.'},
+  {id:'commoncarp',name:'Common Carp',zone:3,rarity:'uncommon',size:[2,35],line:10,methods:['bottom'],baits:['corn','worm','powerbait'],leader:'fluoro',structure:['riprap','boatdock','weedbed','point'],season:['spring','summer'],time:['day','dawn'],xp:32,gold:18,weight:17,fact:'Brought over from Europe and stocked across the country by the U.S. Fish Commission in the 1880s as a food fish for settlers.'},
+  {id:'largemouth',name:'Largemouth Bass',zone:3,rarity:'rare',size:[1,14],line:10,methods:['cast','jig','bobber','fly'],baits:['shiner','crawfish','minnow','worm'],leader:'fluoro',structure:['lilypad','laydown','weedbed','boatdock','brushpile'],season:['spring','summer','fall'],time:['dawn','dusk','day'],xp:68,gold:36,weight:10,fact:'George Perry\'s 22 lb 4 oz Georgia bass from 1932 stood alone for seventy-seven years until a Japanese angler tied it in 2009.'},
+  {id:'freshdrum',name:'Freshwater Drum',zone:3,rarity:'rare',size:[1,25],line:10,methods:['bottom','jig'],baits:['crawfish','worm','minnow'],leader:'any',structure:['creekchan','riprap','dam','point'],season:['all'],time:['all'],xp:66,gold:34,weight:9,fact:'Males drum by vibrating muscles against the swim bladder, and their oversized ear stones are the polished lucky stones kids find along the shore.'},
+  {id:'bowfin',name:'Bowfin',zone:3,rarity:'rare',size:[2,16],line:20,methods:['cast','bobber','bottom'],baits:['shiner','crawfish','minnow'],leader:'any',structure:['lilypad','weedbed','laydown'],season:['summer'],time:['dawn','dusk','night'],xp:78,gold:42,weight:8,fact:'A living fossil with a lung-like gas bladder, the bowfin gulps air at the surface and survives water too stagnant for anything else to breathe.'},
+  {id:'hybridstriper',name:'Hybrid Striped Bass',zone:3,rarity:'rare',size:[2,22],line:20,methods:['troll','cast','jig'],baits:['shad','minnow','shiner'],leader:'fluoro',structure:['open','point','dam','creekchan'],season:['fall','winter','spring'],time:['dawn','dusk'],xp:84,gold:48,weight:7,fact:'A hatchery-made cross between a striped bass and a white bass, stocked into reservoirs specifically to chase open-water shad schools.'},
+  {id:'longnosegar',name:'Longnose Gar',zone:3,rarity:'epic',size:[3,40],line:20,methods:['cast','bobber','troll'],baits:['shiner','minnow','shad'],leader:'wire',structure:['weedbed','open','creekchan','lilypad'],season:['summer'],time:['day','dusk','night'],xp:120,gold:74,weight:7,fact:'Its interlocking ganoid scales are so hard that Native peoples used gar hide as armor plating and the scales as arrow points.'},
+  {id:'flathead',name:'Flathead Catfish',zone:3,rarity:'epic',size:[5,70],line:20,methods:['bobber','bottom'],baits:['shiner','minnow','crawfish'],leader:'any',structure:['timber','laydown','dam','creekchan'],season:['summer','fall'],time:['night','dusk'],xp:132,gold:90,weight:6,fact:'Flatheads want live fish and almost nothing else, which is why the stinkbaits that pile up channel cats will sit untouched all night.'},
+  {id:'bluecat',name:'Blue Catfish',zone:3,rarity:'epic',size:[5,90],line:20,methods:['bottom','troll'],baits:['shad','chickenliver','crawfish'],leader:'any',structure:['creekchan','dam','open','point'],season:['fall','winter'],time:['night','dawn'],xp:140,gold:105,weight:5,fact:'The all-tackle record is a 143 lb blue pulled out of Kerr Lake, Virginia, the largest catfish ever landed in North America.'},
+  {id:'muskie',name:'Muskellunge',zone:3,rarity:'legendary',size:[10,55],line:20,methods:['cast','troll'],baits:['shiner','shad'],leader:'wire',structure:['weedbed','point','timber','creekchan'],season:['fall'],time:['dawn','dusk','night'],xp:320,gold:190,weight:2.2,fact:'The fish of ten thousand casts, and the reason guides sweep a figure-eight beside the boat: muskies will follow a lure all the way to the transom before committing.'},
+  // ---------- RIVER ----------
+  {id:'longearsunfish',name:'Longear Sunfish',zone:4,rarity:'common',size:[0.15,0.9],line:10,methods:['bobber','fly','cast'],baits:['worm','cricket'],leader:'any',structure:['gravelbar','eddy','logjam'],season:['all'],time:['dawn','day','dusk'],xp:14,gold:6,weight:55,fact:'Males fan out a saucer-shaped gravel nest in the shallows and guard it, and the longear\'s black ear flap is edged in a pale white margin.'},
+  {id:'skipjack',name:'Skipjack Herring',zone:4,rarity:'common',size:[0.5,3],line:10,methods:['cast','jig'],baits:['minnow','shad'],leader:'any',structure:['tailrace','seam','confluence'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:16,gold:7,weight:50,fact:'Skipjack chase shad through the tailrace boil and are the preferred cut bait of trophy blue catfish anglers.'},
+  {id:'rivercat',name:'Channel Catfish',zone:4,rarity:'common',size:[1,15],line:20,methods:['bottom','bobber'],baits:['worm','chickenliver','stinkbait','shad','crawfish'],leader:'any',structure:['deephole','logjam','pilings','wingdam'],season:['all'],time:['day','dusk','night'],xp:22,gold:11,weight:46,fact:'Catfish taste with their whole body — their skin carries well over a hundred thousand taste buds, which is how they find bait in muddy water.'},
+  {id:'redhorse',name:'Golden Redhorse',zone:4,rarity:'common',size:[1,8],line:10,methods:['bottom','bobber'],baits:['worm','crawfish'],leader:'any',structure:['gravelbar','seam','rockledge'],season:['all'],time:['day','dawn'],xp:18,gold:8,weight:44,fact:'Redhorse suckers vacuum insect larvae off clean gravel and biologists count a healthy run of them as a sign of clear, well-oxygenated river.'},
+  {id:'riverwhite',name:'White Bass',zone:4,rarity:'common',size:[0.5,4],line:10,methods:['cast','jig','troll','fly'],baits:['minnow','shad','shiner'],leader:'any',structure:['tailrace','confluence','seam','open'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:20,gold:10,weight:42,fact:'Every spring white bass swarm out of the reservoirs and run far up the river to spawn, scattering their eggs over gravel with no nest and no parental care.'},
+  {id:'riverspot',name:'Spotted Bass',zone:4,rarity:'uncommon',size:[0.5,5],line:10,methods:['cast','fly','jig'],baits:['crawfish','minnow','shiner'],leader:'fluoro',structure:['rockledge','wingdam','gravelbar','eddy'],season:['all'],time:['dawn','day','dusk'],xp:34,gold:18,weight:28,fact:'A spotted bass has a rough patch of tiny teeth on its tongue that a largemouth lacks — the fastest way to tell the two apart in hand.'},
+  {id:'smallmouth',name:'Smallmouth Bass',zone:4,rarity:'uncommon',size:[1,7],line:10,methods:['cast','fly','jig'],baits:['crawfish','minnow','shiner'],leader:'fluoro',structure:['gravelbar','rockledge','seam','eddy'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:42,gold:24,weight:24,fact:'River smallmouth feed heavily on crayfish, and their color shifts from bright bronze to near-black depending on the bottom they are sitting over.'},
+  {id:'sauger',name:'Sauger',zone:4,rarity:'uncommon',size:[0.5,4],line:10,methods:['jig','bottom','troll'],baits:['minnow','shiner','worm'],leader:'fluoro',structure:['tailrace','deephole','wingdam','seam'],season:['fall','winter','spring'],time:['dawn','dusk','night'],xp:38,gold:20,weight:26,fact:'Sauger handle muddy, fast water far better than walleye do, which is why they pile into the tailraces below dams and stay all winter.'},
+  {id:'riverhybrid',name:'Hybrid Striped Bass',zone:4,rarity:'uncommon',size:[2,15],line:20,methods:['cast','troll','jig','bottom'],baits:['shad','minnow','shiner'],leader:'any',structure:['tailrace','confluence','seam','open'],season:['all'],time:['dawn','day','dusk'],xp:55,gold:34,weight:20,fact:'The wiper is a cross between a white bass and a striped bass, and you can tell one by its broken, offset side stripes.'},
+  {id:'smallbuffalo',name:'Smallmouth Buffalo',zone:4,rarity:'uncommon',size:[3,25],line:20,methods:['bottom','bobber'],baits:['corn','worm','powerbait'],leader:'any',structure:['deephole','eddy','wingdam'],season:['spring','summer','fall'],time:['dawn','day'],xp:48,gold:28,weight:18,fact:'Buffalo are native suckers rather than carp, and aging studies have found individual buffalofish more than a hundred years old.'},
+  {id:'walleye',name:'Walleye',zone:4,rarity:'rare',size:[1,12],line:10,methods:['jig','troll','bottom','cast'],baits:['minnow','shiner','leech','worm'],leader:'fluoro',structure:['wingdam','deephole','tailrace','rockledge'],season:['fall','winter','spring'],time:['dawn','dusk','night'],xp:95,gold:58,weight:12,fact:'A mirror-like layer behind the walleye\'s eye gathers light and lets it hunt in near darkness, which is why the bite turns on at dusk.'},
+  {id:'stripedbass',name:'Striped Bass',zone:4,rarity:'rare',size:[5,40],line:20,methods:['cast','troll','bottom','jig'],baits:['shad','shiner','minnow'],leader:'any',structure:['tailrace','confluence','pilings','open'],season:['spring','fall','winter'],time:['dawn','dusk','night'],xp:130,gold:82,weight:10,fact:'Stripers are born to run upriver to spawn, and landlocked populations still stack against the dam every spring trying to keep going.'},
+  {id:'rivergar',name:'Longnose Gar',zone:4,rarity:'rare',size:[2,25],line:20,methods:['cast','bobber','troll'],baits:['minnow','shiner','shad'],leader:'wire',structure:['eddy','logjam','confluence','open'],season:['spring','summer','fall'],time:['day','dusk'],xp:88,gold:52,weight:13,fact:'Gar gulp air at the surface using a lung-like swim bladder, letting them live in water so warm and starved of oxygen that other fish die.'},
+  {id:'shovelnose',name:'Shovelnose Sturgeon',zone:4,rarity:'rare',size:[1,8],line:20,methods:['bottom'],baits:['worm','crawfish','stinkbait'],leader:'any',structure:['gravelbar','wingdam','deephole','tailrace'],season:['all'],time:['dawn','dusk','night'],xp:105,gold:66,weight:11,fact:'The smallest sturgeon in North America feels for insect larvae on sand and gravel with four fringed barbels ahead of a toothless, extendable mouth.'},
+  {id:'riverflat',name:'Flathead Catfish',zone:4,rarity:'epic',size:[5,60],line:40,methods:['bottom','bobber'],baits:['shiner','minnow','crawfish'],leader:'any',structure:['logjam','deephole','pilings','rockledge'],season:['spring','summer','fall'],time:['dusk','night'],xp:160,gold:110,weight:7,fact:'Flatheads want their prey alive and will ignore cut bait — a lively baitfish dropped into a log jam after dark is the classic presentation.'},
+  {id:'paddlefish',name:'American Paddlefish',zone:4,rarity:'epic',size:[20,100],line:40,methods:['jig','bottom'],baits:['shad','minnow'],leader:'any',structure:['tailrace','deephole','confluence','open'],season:['winter','spring'],time:['dawn','day'],xp:210,gold:150,weight:4,fact:'A paddlefish filters plankton and never bites a bait — its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
+  {id:'lakesturgeon',name:'Lake Sturgeon',zone:4,rarity:'epic',size:[10,80],line:40,methods:['bottom'],baits:['worm','crawfish','leech'],leader:'any',structure:['deephole','gravelbar','rockledge','confluence'],season:['spring','summer','fall'],time:['dawn','dusk','night'],xp:195,gold:140,weight:4.5,fact:'Lake sturgeon can live past a hundred years and do not spawn until their teens, so nearly every river fishery for them is catch-and-release or limited-tag only.'},
+  {id:'riverblue',name:'Blue Catfish',zone:4,rarity:'legendary',size:[20,120],line:40,methods:['bottom'],baits:['shad','chickenliver','minnow'],leader:'any',structure:['deephole','tailrace','wingdam','confluence'],season:['fall','winter','spring'],time:['dawn','dusk','night'],xp:260,gold:200,weight:2.2,fact:'The largest catfish in North America — the rod-and-reel record is a 143-pound fish from Virginia, and the giants hold in the deepest winter holes below the dams.'},
+  // ---------- MOUNTAINS ----------
+  {id:'brooktrout',name:'Brook Trout',zone:5,rarity:'common',size:[0.2,4],line:4,methods:['fly','cast','bobber'],baits:['worm','cricket','salmonegg'],leader:'fluoro',structure:['riffle','plungepool','springcreek','open'],season:['spring','summer','fall'],time:['all'],xp:34,gold:20,weight:48,fact:'Not a true trout but a char, and the pale worm-track vermiculation across its back and the white-edged fins give it away.'},
+  {id:'mtnsucker',name:'Mountain Sucker',zone:5,rarity:'common',size:[0.3,3],line:6,methods:['bottom','bobber'],baits:['worm','corn','stinkbait'],leader:'any',structure:['run','tailout','open'],season:['all'],time:['day','dusk'],xp:26,gold:14,weight:52,fact:'Cartilage-edged ridges inside its lips let it scrape algae straight off the rocks, and a notch at each corner of the mouth separates it from every other sucker.'},
+  {id:'mtnwhitefish',name:'Mountain Whitefish',zone:5,rarity:'common',size:[0.5,5],line:6,methods:['fly','bottom','bobber'],baits:['worm','salmonegg','leech'],leader:'fluoro',structure:['run','riffle','tailout','open'],season:['all'],time:['day','dawn'],xp:32,gold:19,weight:46,fact:'A small downturned sucker-like mouth lets it hoover nymphs off the streambed, which is why it keeps feeding hard all winter long.'},
+  {id:'rainbowtrout',name:'Rainbow Trout',zone:5,rarity:'common',size:[0.5,12],line:6,methods:['fly','cast','bobber','troll'],baits:['powerbait','worm','salmonegg','minnow'],leader:'fluoro',structure:['run','riffle','boulders','open'],season:['all'],time:['dawn','day','dusk'],xp:40,gold:26,weight:44,fact:'Native only to Pacific drainages, it has since been stocked onto every continent except Antarctica.'},
+  {id:'cutthroattrout',name:'Cutthroat Trout',zone:5,rarity:'common',size:[0.5,10],line:6,methods:['fly','cast','bobber'],baits:['cricket','worm','leech'],leader:'fluoro',structure:['run','undercut','boulders','open'],season:['spring','summer','fall'],time:['day','dawn'],xp:42,gold:28,weight:40,fact:'Named for the red-orange slash under each side of the lower jaw, and it hybridizes so readily with stocked rainbows that pure strains are now hard to find.'},
+  {id:'browntrout',name:'Brown Trout',zone:5,rarity:'uncommon',size:[1,20],line:10,methods:['fly','cast','bobber'],baits:['leech','minnow','worm','crawfish'],leader:'fluoro',structure:['undercut','logjam','run'],season:['spring','summer','fall'],time:['dusk','night','dawn'],xp:78,gold:52,weight:24,fact:'A European import that first reached American water in 1883, and the most nocturnal and hardest to fool of the stream trout.'},
+  {id:'grayling',name:'Arctic Grayling',zone:5,rarity:'uncommon',size:[0.3,4],line:4,methods:['fly','cast'],baits:['cricket','worm'],leader:'fluoro',structure:['riffle','run','tailout'],season:['spring','summer'],time:['day','dusk'],xp:62,gold:44,weight:26,fact:'That enormous sail of a dorsal fin flares like a flag, and in the lower 48 native river grayling now survive only in Montana.'},
+  {id:'kokanee',name:'Kokanee Salmon',zone:5,rarity:'uncommon',size:[0.5,6],line:6,methods:['troll','jig','bobber'],baits:['corn','salmonegg','shad'],leader:'fluoro',structure:['alpinelake','open'],season:['summer','fall'],time:['dawn','day'],xp:70,gold:48,weight:22,fact:'A sockeye salmon landlocked for life, it turns blood red and hook-jawed to spawn and then dies at about four years old.'},
+  {id:'tigertrout',name:'Tiger Trout',zone:5,rarity:'uncommon',size:[1,12],line:10,methods:['fly','cast'],baits:['minnow','leech','worm'],leader:'any',structure:['beaverpond','springcreek','undercut'],season:['spring','fall'],time:['dawn','dusk'],xp:84,gold:58,weight:18,fact:'A sterile cross between a female brown trout and a male brook trout, and the maze-like vermiculation across its whole body is what earns it the name.'},
+  {id:'cuttbow',name:'Cuttbow',zone:5,rarity:'uncommon',size:[0.5,9],line:6,methods:['fly','cast','bobber'],baits:['cricket','worm','powerbait'],leader:'fluoro',structure:['run','boulders','riffle','open'],season:['summer','fall'],time:['day','dawn','dusk'],xp:66,gold:45,weight:28,fact:'A fertile cutthroat-rainbow hybrid, which is exactly why stocking rainbows over native cutthroat water is so controversial.'},
+  {id:'goldentrout',name:'Golden Trout',zone:5,rarity:'rare',size:[0.3,5],line:4,methods:['fly','cast'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:130,gold:95,weight:8,fact:'California\'s state fish lives above 10,000 feet in the Sierra, and almost every population sits at the end of a long hike.'},
+  {id:'bulltrout',name:'Bull Trout',zone:5,rarity:'rare',size:[3,30],line:20,methods:['cast','fly','troll'],baits:['minnow','shiner','leech'],leader:'any',structure:['plungepool','logjam','boulders'],season:['summer','fall'],time:['dawn','dusk','night'],xp:145,gold:100,weight:8,fact:'A char that demands the coldest, cleanest water of any salmonid in the West, which is why it sits on the federal threatened list.'},
+  {id:'laketrout',name:'Lake Trout',zone:5,rarity:'rare',size:[5,60],line:20,methods:['troll','jig','bottom'],baits:['shiner','shad','minnow'],leader:'any',structure:['alpinelake','open'],season:['spring','fall','winter'],time:['day','dawn'],xp:150,gold:108,weight:7,fact:'The slowest-growing char in fresh water, a thirty-pounder out of a cold northern lake can be well over forty years old.'},
+  {id:'landlockedsalmon',name:'Landlocked Salmon',zone:5,rarity:'rare',size:[2,20],line:10,methods:['troll','fly','cast'],baits:['shiner','minnow','leech'],leader:'fluoro',structure:['alpinelake','tailout','waterfall'],season:['spring','fall'],time:['dawn','dusk'],xp:138,gold:96,weight:9,fact:'The same species as the Atlantic salmon, simply cut off from the sea and living out its whole life chasing smelt in cold lakes.'},
+  {id:'steelhead',name:'Steelhead',zone:5,rarity:'epic',size:[4,35],line:20,methods:['fly','cast','bobber'],baits:['salmonegg','worm','leech'],leader:'fluoro',structure:['run','tailout','plungepool','waterfall'],season:['fall','winter','spring'],time:['dawn','day','dusk'],xp:250,gold:185,weight:4.5,fact:'Genetically identical to a rainbow trout — the only difference is that a steelhead ran to the ocean and came back.'},
+  {id:'arcticchar',name:'Arctic Char',zone:5,rarity:'epic',size:[2,25],line:10,methods:['fly','cast','troll'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['alpinelake','springcreek','plungepool'],season:['fall','winter'],time:['dawn','dusk'],xp:230,gold:170,weight:3.5,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
+  {id:'taimen',name:'Taimen',zone:5,rarity:'legendary',size:[10,120],line:20,methods:['fly','cast','troll'],baits:['shiner','minnow','crawfish'],leader:'wire',structure:['logjam','undercut','plungepool','boulders'],season:['summer','fall'],time:['dusk','night','dawn'],xp:520,gold:430,weight:1.2,fact:'The largest salmonid alive: the biggest verified fish topped 230 lb, and they can live past fifty years.'},
 ];
 
 // ===================== CURRENCIES =====================
@@ -4244,6 +4545,11 @@ let S={
   baitInv:{shrimp:20},
   ownedLures:[],lureInv:{},lureDur:{},lureSel:'',
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
+  // ---- Freshwater world (V0.9.8). Equipped gear is per world; ownership lists
+  //      and inventories above stay shared because ids never collide. ----
+  lastZone:{salt:0,fresh:3},
+  fboat:'bank',frod:'frod0',freel:'freel0',fbraid:'fline0',fleader:'fluoro',
+  fmethod:'bobber',fbaitSel:'worm',fLureSel:'',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
 
@@ -4303,6 +4609,60 @@ const FISH_ART={
   roosterfish:{shape:'torpedo',back:'#586068',body:'#9aa2aa',belly:'#eef2f4',marks:['bars-faint'],mark:'#2a2e34'},
   sawfish:{shape:'billfish',back:'#7a7e74',body:'#a8aa9e',belly:'#dedcd2',marks:[],mark:'#5a5e54',sword:true, bill:true},
   blackmarlin:{shape:'billfish',back:'#1a2230',body:'#2c3c50',belly:'#98a4b0',marks:['bars-cobalt'],mark:'#3a5a78',bill:true, dorsal:true},
+  // ---- Freshwater (V0.9.8) ----
+  goldenshiner:{shape:'panfish',back:'#8a8a4a',body:'#d9cf7a',belly:'#f2ecc8',marks:['lateral'],mark:'#b0a860'},
+  bluegill:{shape:'panfish',back:'#2f5a52',body:'#5f9a86',belly:'#e8a24a',marks:['bars','gillflap'],mark:'#243f3a'},
+  redear:{shape:'panfish',back:'#4a5a44',body:'#8a9a72',belly:'#e0d8b0',marks:['bars-faint','gillflap'],mark:'#c4502a'},
+  yellowbullhead:{shape:'catfish',back:'#5a4a2a',body:'#8a7440',belly:'#e4dcb0',marks:['barbels'],mark:'#3a2e18'},
+  whitebass:{shape:'torpedo',back:'#4a6a7a',body:'#c8d2d8',belly:'#f0f4f6',marks:['stripes'],mark:'#3a4650'},
+  blackcrappie:{shape:'panfish',back:'#3a4a44',body:'#7a8a80',belly:'#d8ded6',marks:['mottle'],mark:'#243029'},
+  channelcat:{shape:'catfish',back:'#4a5a5a',body:'#8a9a96',belly:'#eae4d4',marks:['spots','barbels'],mark:'#2e3a3a'},
+  spottedbass:{shape:'elongated',back:'#3f5a34',body:'#7fa05e',belly:'#e6e2c4',marks:['blotch','rowspots'],mark:'#2a3d22'},
+  chainpickerel:{shape:'gar',back:'#3f5a30',body:'#8aa85e',belly:'#e0dcb0',marks:['chain'],mark:'#2a3a20'},
+  commoncarp:{shape:'drum',back:'#5a4a26',body:'#a8894a',belly:'#ddd0a0',marks:['bigscale','barbels'],mark:'#3d3018'},
+  largemouth:{shape:'elongated',back:'#2f5230',body:'#6f9a52',belly:'#e8e6c8',marks:['lateral'],mark:'#1f3a20'},
+  freshdrum:{shape:'drum',back:'#5a5a52',body:'#a8a89c',belly:'#e4e2d6',marks:['bigscale'],mark:'#3c3c34'},
+  bowfin:{shape:'grouper',back:'#3a4a2a',body:'#6a7a4a',belly:'#c8c8a0',marks:['tailspot','vermic'],mark:'#22301a'},
+  hybridstriper:{shape:'torpedo',back:'#3a5a6a',body:'#b8c6ce',belly:'#f0f4f6',marks:['stripes'],mark:'#2a3a44'},
+  longnosegar:{shape:'gar',back:'#4a5a3a',body:'#9aa06a',belly:'#e0dcc0',marks:['spots'],mark:'#2e3a22'},
+  flathead:{shape:'catfish',back:'#5a4a1e',body:'#a08a3a',belly:'#e8e0a8',marks:['mottle','barbels'],mark:'#3a3014'},
+  bluecat:{shape:'catfish',back:'#44525e',body:'#8fa0ac',belly:'#f0f2f4',marks:['barbels'],mark:'#2c363f'},
+  muskie:{shape:'gar',back:'#3a4a34',body:'#8a9a68',belly:'#e4e0c0',marks:['bars'],mark:'#26301f'},
+  longearsunfish:{shape:'panfish',back:'#3a5a4a',body:'#7aaa74',belly:'#e8a83a',marks:['halos','gillflap'],mark:'#c4502a'},
+  skipjack:{shape:'torpedo',back:'#46606e',body:'#c2ccd4',belly:'#f2f4f6',marks:['lateral'],mark:'#36444e'},
+  rivercat:{shape:'catfish',back:'#4a5a5a',body:'#8a9a96',belly:'#eae4d4',marks:['spots','barbels'],mark:'#2e3a3a'},
+  redhorse:{shape:'drum',back:'#6a5a2a',body:'#b09a52',belly:'#e6dcb4',marks:['bigscale'],mark:'#463a18'},
+  riverwhite:{shape:'torpedo',back:'#4a6a7a',body:'#c8d2d8',belly:'#f0f4f6',marks:['stripes'],mark:'#3a4650'},
+  riverspot:{shape:'elongated',back:'#3f5a34',body:'#7fa05e',belly:'#e6e2c4',marks:['blotch','rowspots'],mark:'#2a3d22'},
+  smallmouth:{shape:'elongated',back:'#5a4a24',body:'#a08a4a',belly:'#e8e0bc',marks:['bars'],mark:'#3c3016'},
+  sauger:{shape:'elongated',back:'#5a4a2a',body:'#a89a5a',belly:'#e4dcb0',marks:['mottle'],mark:'#3c3018'},
+  riverhybrid:{shape:'torpedo',back:'#3a5a6a',body:'#b8c6ce',belly:'#f0f4f6',marks:['stripes'],mark:'#2a3a44'},
+  smallbuffalo:{shape:'drum',back:'#4a4a3a',body:'#8a8a70',belly:'#d8d4c0',marks:['bigscale'],mark:'#303026'},
+  walleye:{shape:'elongated',back:'#6a5a24',body:'#c0a850',belly:'#f0e8bc',marks:['mottle','bigeye'],mark:'#463a14'},
+  stripedbass:{shape:'torpedo',back:'#3a4a5a',body:'#c0cad2',belly:'#f2f4f6',marks:['stripes'],mark:'#2a3440'},
+  rivergar:{shape:'gar',back:'#4a5a3a',body:'#9aa06a',belly:'#e0dcc0',marks:['spots'],mark:'#2e3a22'},
+  shovelnose:{shape:'sturgeon',back:'#6a604a',body:'#a89a7a',belly:'#ded6c0',marks:['scutes'],mark:'#463f30'},
+  riverflat:{shape:'catfish',back:'#5a4a1e',body:'#a08a3a',belly:'#e8e0a8',marks:['mottle','barbels'],mark:'#3a3014'},
+  paddlefish:{shape:'paddle',back:'#4a5460',body:'#8a94a0',belly:'#dde2e6',marks:[],mark:'#323a44'},
+  lakesturgeon:{shape:'sturgeon',back:'#4a443a',body:'#8a8070',belly:'#ccc4b0',marks:['scutes'],mark:'#302c24'},
+  riverblue:{shape:'catfish',back:'#44525e',body:'#8fa0ac',belly:'#f0f2f4',marks:['barbels'],mark:'#2c363f'},
+  brooktrout:{shape:'trout',back:'#2c4a3a',body:'#5f8a5a',belly:'#e8894a',marks:['vermic','halos'],mark:'#e04a3a'},
+  mtnsucker:{shape:'drum',back:'#4a443a',body:'#8a8070',belly:'#d0c8b4',marks:['lateral'],mark:'#302c24'},
+  mtnwhitefish:{shape:'panfish',back:'#5a6068',body:'#a8b0b8',belly:'#eef0f2',marks:[],mark:'#3e444a'},
+  rainbowtrout:{shape:'trout',back:'#4a6a70',body:'#9ab0b0',belly:'#f0f0ec',marks:['rainbow','spots'],mark:'#3a4a4e'},
+  cutthroattrout:{shape:'trout',back:'#5a6a58',body:'#b0b48a',belly:'#efe8d0',marks:['spots','throat'],mark:'#c43a2a'},
+  browntrout:{shape:'trout',back:'#5a4a24',body:'#b09a4a',belly:'#f0e6bc',marks:['halos','spots'],mark:'#3c3016'},
+  grayling:{shape:'trout',back:'#46505e',body:'#95a2b0',belly:'#e8ecf0',marks:['sail','spots'],mark:'#8a5ac4'},
+  kokanee:{shape:'trout',back:'#5a3a34',body:'#b04a3a',belly:'#e0c8a0',marks:[],mark:'#3a2420'},
+  tigertrout:{shape:'trout',back:'#4a4a2a',body:'#8a8a4a',belly:'#e4dcac',marks:['vermic'],mark:'#2e2e18'},
+  cuttbow:{shape:'trout',back:'#4a6060',body:'#a0b0a4',belly:'#f0ecdc',marks:['spots','rainbow'],mark:'#c43a2a'},
+  goldentrout:{shape:'trout',back:'#6a5a1a',body:'#e0b83a',belly:'#f0d060',marks:['parr','halos'],mark:'#c43a2a'},
+  bulltrout:{shape:'trout',back:'#3a5a54',body:'#7a9a90',belly:'#e4e8e0',marks:['palespots'],mark:'#e0904a'},
+  laketrout:{shape:'trout',back:'#3a4a48',body:'#7a8a86',belly:'#dee2de',marks:['wormspots'],mark:'#e8eae4'},
+  landlockedsalmon:{shape:'trout',back:'#46545e',body:'#a8b4bc',belly:'#f0f2f2',marks:['xspots'],mark:'#36424a'},
+  steelhead:{shape:'trout',back:'#4a5c66',body:'#b8c4c8',belly:'#f4f4f2',marks:['rainbow','spots'],mark:'#c04a5a'},
+  arcticchar:{shape:'trout',back:'#3a4a5a',body:'#7a8a9a',belly:'#e08a5a',marks:['palespots'],mark:'#f0a070'},
+  taimen:{shape:'trout',back:'#4a4a34',body:'#9a9a68',belly:'#e4dcb4',marks:['xspots','spots'],mark:'#c4502a'},
 };
 
 function _hx(h){h=h.replace('#','');if(h.length===3)h=h.split('').map(c=>c+c).join('');return [parseInt(h.substr(0,2),16),parseInt(h.substr(2,2),16),parseInt(h.substr(4,2),16)];}
@@ -4421,6 +4781,59 @@ function buildFishArt(id, px, mono){
     eye=[96,24,3,'#15202a'];gillX=0;
     extras=_eye(104,28,2.8,'#15202a');
     tailRays=[[29,30,12,18],[29,30,18,30],[29,30,12,42]];
+  }else if(s.shape==='trout'){
+    // Soft-rayed salmonid: fusiform body, small head, square-ish tail, and the
+    // adipose fin between dorsal and tail that gives the family away.
+    bodyD='M26,30 C26,17 48,13 76,15 C98,17 108,24 114,30 C108,36 98,43 76,45 C48,47 26,43 26,30 Z';
+    tailD='M30,30 L9,19 L16,30 L9,41 Z';
+    finsB=[['M52,15 L64,6 L78,16 Z',1],['M60,45 L74,52 L82,44 Z',0.95]];
+    extras+='<path d="M38,19 L46,15 L47,20 Z" fill="'+_lt(s.back,0.02)+'" stroke="'+_dk(s.back,0.4)+'" stroke-width="0.4"/>'; // adipose fin
+    if(s.marks&&s.marks.indexOf('sail')>=0)                                      // grayling's banner dorsal
+      finsB[0]=['M46,16 C56,-1 84,0 90,14 C76,8 58,9 48,17 Z',0.96,_lt(s.mark,0.1)];
+    pect='M84,34 L96,41 L82,42 Z';
+    eye=[104,28,3.6];gillX=92;
+    tailRays=[[29,30,10,20],[29,30,16,30],[29,30,10,40]];
+  }else if(s.shape==='catfish'){
+    // Broad flat head, no scales, deeply forked tail, and the barbels are drawn
+    // in the marks pass so each species can tune their colour.
+    bodyD='M24,31 C24,20 44,17 70,18 C92,19 106,23 115,31 C106,39 92,44 70,45 C44,46 24,42 24,31 Z';
+    tailD='M28,31 L6,18 L17,31 L6,44 Z';
+    finsB=[['M50,18 L60,7 L72,19 Z',1],['M56,45 L70,53 L80,44 Z',0.95],
+           ['M40,20 L48,16 L49,21 Z',0.9]];                                       // adipose
+    pect='M92,36 L106,45 L90,45 Z';
+    eye=[104,26,3];gillX=94;
+    tailRays=[[27,31,7,19],[27,31,15,31],[27,31,7,43]];
+  }else if(s.shape==='gar'){
+    // Needle-nosed ambush predator: very long body, beak, fins crowded far back
+    // toward the tail. Also used for pickerel and muskie.
+    bodyD='M22,30 C22,23 50,21 84,23 C98,24 104,27 108,30 C104,33 98,36 84,37 C50,39 22,37 22,30 Z';
+    tailD='M26,30 L8,21 L15,30 L8,39 Z';
+    finsB=[['M34,23 L44,15 L54,24 Z',1],['M36,37 L48,45 L56,36 Z',0.95]];
+    extras+='<path d="M106,28 L'+(s.shape==='gar'?132:126)+',28.6 L'+(s.shape==='gar'?132:126)+',31.4 L106,32 Z" fill="'+_dk(s.back,0.12)+'"/>'
+           +'<path d="M108,30 L128,30" stroke="'+_dk(s.back,0.45)+'" stroke-width="0.6"/>';
+    pect='M92,32 L102,38 L90,38 Z';
+    eye=[101,27,3];gillX=94;
+    tailRays=[[25,30,9,22],[25,30,14,30],[25,30,9,38]];
+  }else if(s.shape==='sturgeon'){
+    // Ancient bottom fish: shovel snout, ventral mouth, bony scutes along the
+    // back, and a shark-like heterocercal tail with a long upper lobe.
+    bodyD='M22,30 C22,24 46,22 74,24 C94,25 104,27 112,31 C104,35 94,38 74,39 C46,41 22,36 22,30 Z';
+    tailD='M26,30 L4,14 L14,30 L8,40 Z';
+    finsB=[['M44,24 L54,16 L64,25 Z',1],['M48,39 L60,47 L68,38 Z',0.95]];
+    extras+='<path d="M104,28 Q116,29 120,32 Q114,34 104,33 Z" fill="'+_lt(s.body,0.05)+'" stroke="'+_dk(s.back,0.4)+'" stroke-width="0.5"/>'
+           +'<path d="M96,35 Q100,38 106,37" stroke="'+_dk(s.back,0.35)+'" stroke-width="1" fill="none"/>';
+    pect='M88,35 L102,43 L86,42 Z';
+    eye=[98,27,2.6];gillX=90;
+    tailRays=[[25,30,6,16],[25,30,13,30],[25,30,8,39]];
+  }else if(s.shape==='paddle'){
+    // Paddlefish: the rostrum IS the silhouette — nearly a third of the animal.
+    bodyD='M24,30 C24,19 44,16 66,18 C82,19 90,23 96,30 C90,37 82,41 66,42 C44,44 24,41 24,30 Z';
+    tailD='M28,30 L5,16 L15,30 L7,44 Z';
+    finsB=[['M46,18 L56,7 L68,19 Z',1],['M52,42 L66,50 L74,41 Z',0.95]];
+    extras+='<path d="M94,27 Q112,28 126,30.5 Q112,33 94,34 Z" fill="'+_lt(s.body,0.06)+'" stroke="'+_dk(s.back,0.4)+'" stroke-width="0.5"/>';
+    pect='M84,34 L96,43 L82,42 Z';
+    eye=[91,28,2.4];gillX=84;
+    tailRays=[[27,30,6,17],[27,30,14,30],[27,30,8,43]];
   }
 
   // colors / strokes
@@ -4460,6 +4873,36 @@ function buildFishArt(id, px, mono){
     else if(m==='barbels')extras+='<path d="M106,38 Q108,45 104,48 M101,40 Q102,47 98,49" stroke="'+_dk(s.back,0.2)+'" stroke-width="1.1" fill="none"/>';
     else if(m==='finlets'||m==='finlets-dk'||m==='yellowfins'){const fc=(m==='finlets-dk'||m==='yellowfins')?s.mark:_dk(s.back,0.1);for(let i=0;i<4;i++){const x=32+i*4.5;extras+='<path d="M'+x+',20 l3.4,-2 l-1,3 Z" fill="'+fc+'"/><path d="M'+x+',40 l3.4,2 l-1,-3 Z" fill="'+fc+'"/>';}}
     else if(m==='blacktips')extras+='<path d="M64,16 L70,12 L74,17 Z" fill="'+s.mark+'"/><path d="M80,42 L84,48 L86,43 Z" fill="'+s.mark+'"/><path d="M14,18 L19,22 L17,16 Z" fill="'+s.mark+'"/>';
+    // ---- Freshwater markings (V0.9.8) ----
+    // Brook/tiger trout vermiculation: wandering worm-track lines over the back.
+    else if(m==='vermic'){for(let i=0;i<9;i++){const x=32+i*9,y=13+((i*5)%6);mk+='<path d="M'+x+','+y+' q4,3 0,6 q-4,3 0,6" stroke="'+s.mark+'" stroke-width="1.3" fill="none" opacity="0.55" stroke-linecap="round"/>';}}
+    // Brown trout / golden trout: coloured spots ringed with a pale halo.
+    else if(m==='halos'){for(let i=0;i<11;i++){const x=34+(i%6)*13+(i%2)*5,y=20+Math.floor(i/6)*11+((i*3)%5);
+      mk+='<circle cx="'+x+'" cy="'+y+'" r="3.1" fill="none" stroke="#f2f0e2" stroke-width="1.5" opacity="0.6"/><circle cx="'+x+'" cy="'+y+'" r="1.9" fill="'+s.mark+'" opacity="0.9"/>';}}
+    // Char (bull trout, arctic char): PALE spots on a dark flank, the giveaway.
+    else if(m==='palespots'){for(let i=0;i<13;i++){const x=32+(i%7)*11+(i%2)*4,y=18+Math.floor(i/7)*12+((i*7)%6);mk+='<circle cx="'+x+'" cy="'+y+'" r="'+(2+(i%3)*0.4)+'" fill="'+s.mark+'" opacity="0.85"/>';}}
+    // Lake trout: dense pale worm-like vermiculation over the whole flank.
+    else if(m==='wormspots'){for(let i=0;i<16;i++){const x=30+(i%8)*11,y=16+Math.floor(i/8)*13+((i*5)%7);mk+='<path d="M'+x+','+y+' q3,-2 6,0 q3,2 5,0" stroke="'+s.mark+'" stroke-width="1.6" fill="none" opacity="0.55" stroke-linecap="round"/>';}}
+    // Atlantic/landlocked salmon: sparse black X- and V-shaped marks.
+    else if(m==='xspots'){for(let i=0;i<8;i++){const x=36+(i%5)*15,y=18+Math.floor(i/5)*12+((i*3)%4);mk+='<path d="M'+(x-2.4)+','+(y-2.4)+' l4.8,4.8 M'+(x+2.4)+','+(y-2.4)+' l-4.8,4.8" stroke="'+s.mark+'" stroke-width="1.3" opacity="0.75" stroke-linecap="round"/>';}}
+    // Rainbow / steelhead / cuttbow: the pink-magenta lateral stripe.
+    else if(m==='rainbow')mk+='<path d="M28,31 Q70,27 114,30 L114,35 Q70,33 28,36 Z" fill="'+(s.mark)+'" opacity="0.42"/>';
+    // Juvenile parr marks: soft oval thumbprints along the lateral line.
+    else if(m==='parr'){for(let i=0;i<7;i++){mk+='<ellipse cx="'+(36+i*11)+'" cy="30" rx="4" ry="6.5" fill="'+_dk(s.back,0.25)+'" opacity="0.4"/>';}}
+    // Cutthroat: the orange-red slash under the jaw.
+    else if(m==='throat')extras+='<path d="M96,37 Q102,40 108,39" stroke="'+s.mark+'" stroke-width="2.6" fill="none" opacity="0.9" stroke-linecap="round"/>';
+    // Bass: the broken blotch row down the side, plus rows of spots below it.
+    else if(m==='rowspots'){for(let i=0;i<8;i++){mk+='<ellipse cx="'+(34+i*10)+'" cy="'+(29+((i*3)%3))+'" rx="'+(3.6-(i%2)*0.8)+'" ry="3" fill="'+s.mark+'" opacity="0.5"/>';}
+      for(let i=0;i<10;i++){mk+='<circle cx="'+(32+i*9)+'" cy="'+(40+((i*5)%5))+'" r="1.1" fill="'+s.mark+'" opacity="0.45"/>';}}
+    // Pickerel / muskie chain-link reticulation.
+    else if(m==='chain'){for(let i=0;i<7;i++){const x=32+i*11;mk+='<path d="M'+x+',18 q6,6 0,12 q-6,6 0,12" stroke="'+s.mark+'" stroke-width="1.5" fill="none" opacity="0.55"/>';}}
+    // Sunfish gill flap (the "ear") — sits behind the operculum.
+    else if(m==='gillflap')extras+='<ellipse cx="'+(gillX-2)+'" cy="30" rx="4.6" ry="6.4" fill="'+s.mark+'" opacity="0.95"/>';
+    // Sturgeon scutes: the bony ridge plates along the back and flank.
+    else if(m==='scutes'){for(let i=0;i<9;i++){const x=30+i*9;mk+='<path d="M'+x+',23 l4,-2.6 l1.4,3 Z" fill="'+s.mark+'" opacity="0.75"/>';}
+      for(let i=0;i<7;i++){const x=34+i*10;mk+='<path d="M'+x+',31 l3.4,-2 l1,2.4 Z" fill="'+s.mark+'" opacity="0.5"/>';}}
+    // Walleye's big reflective eye, the tapetum that makes it a night feeder.
+    else if(m==='bigeye')eye=[eye[0],eye[1],eye[2]+1.4,'#d8c86a'];
   }
   // gill plate + specular highlight (clipped)
   let inside='';
@@ -4886,11 +5329,38 @@ function normalizeState(){
   if(!S.ownedLeaders.includes('fluoro'))S.ownedLeaders.push('fluoro');
   if(!S.ownedLeaders.includes('wire'))S.ownedLeaders.push('wire');
   if(S.leader!=='fluoro'&&S.leader!=='wire')S.leader='fluoro';
+  if(S.fleader!=='fluoro'&&S.fleader!=='wire')S.fleader='fluoro';
   if(S.gfx!=='high'&&S.gfx!=='smooth'&&S.gfx!=='auto')S.gfx='auto';
   if(typeof S.showFps!=='boolean')S.showFps=false;
   if(typeof S.surfUnlocked!=='boolean')S.surfUnlocked=false;
   if(typeof S.surfHook!=='boolean')S.surfHook=false;
   if(typeof S.surfBait!=='number')S.surfBait=0;
+  // ---- Freshwater world (V0.9.8) save migration. Every pre-0.9.8 save has none
+  //      of these; without the backfill curBoat() returns undefined the first time
+  //      a player crosses into the Lake and the whole rig layer throws.
+  if(!S.lastZone||typeof S.lastZone!=='object')S.lastZone={salt:0,fresh:3};
+  if(typeof S.lastZone.salt!=='number')S.lastZone.salt=0;
+  if(typeof S.lastZone.fresh!=='number')S.lastZone.fresh=3;
+  if(!S.fboat)S.fboat='bank';
+  if(!S.frod)S.frod='frod0';
+  if(!S.freel)S.freel='freel0';
+  if(!S.fbraid)S.fbraid='fline0';
+  if(!S.fleader)S.fleader='fluoro';
+  if(!S.fmethod)S.fmethod='bobber';
+  if(!S.fbaitSel)S.fbaitSel='worm';
+  if(typeof S.fLureSel!=='string')S.fLureSel='';
+  if(typeof S.iceUnlocked!=='boolean')S.iceUnlocked=false;
+  if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
+  // Freshwater starter gear is free and implicit, exactly like the Kayak: you can
+  // always bank-fish the lake. Grant it rather than making the shop the only path.
+  ['bank','frod0','freel0','fline0'].forEach(function(id, i){
+    const arr=[S.ownedBoats, S.ownedRods, S.ownedReels, S.ownedBraids][i];
+    if(arr&&arr.indexOf(id)<0)arr.push(id);
+  });
+  if(typeof S.baitInv.worm!=='number')S.baitInv.worm=20;
+  // A save that ended in a zone the player can no longer reach (or an out-of-range
+  // index from a future build) must land somewhere valid IN ITS OWN WORLD.
+  if(!(S.zone>=0&&S.zone<ZONES.length))S.zone=0;
   if(!S.lureInv||typeof S.lureInv!=='object')S.lureInv={};
   if(!S.lureDur||typeof S.lureDur!=='object')S.lureDur={};
   // migrate legacy one-time lure purchases into consumable stacks
@@ -5219,14 +5689,59 @@ function applyRecovery(key){
 }
 
 // ===================== HELPERS =====================
-function curBoat(){return BOATS.find(b=>b.id===S.boat);}
-function curRod(){return RODS.find(r=>r.id===S.rod);}
-function curReel(){return REELS.find(r=>r.id===S.reel);}
-function curBraid(){return BRAIDS.find(b=>b.id===S.braid);}
-function curLeader(){return LEADERS.find(l=>l.id===S.leader);}
+// EQUIPPED gear is per world. The catalogs are single shared arrays (every entry
+// carries world:'salt'|'fresh' and ids never collide), so ownership lists and
+// inventories stay shared and existing saves load untouched; only the SELECTION
+// is split, under parallel f* fields. Saltwater keeps the original field names.
+const GEAR_FIELD={boat:'fboat',rod:'frod',reel:'freel',braid:'fbraid',leader:'fleader',
+                  method:'fmethod',baitSel:'fbaitSel',lureSel:'fLureSel'};
+function gearKey(k){return isFresh()?(GEAR_FIELD[k]||k):k;}
+function gearGet(k){return S[gearKey(k)];}
+function gearSet(k, v){S[gearKey(k)]=v;}
+// Catalog slices: the shop and every "what can I equip" check work off these.
+function forWorld(arr, w){w=w||curWorldId();return arr.filter(function(it){return (it.world||'salt')===w;});}
+function boatsFor(w){return forWorld(BOATS, w);}
+
+function curBoat(){return BOATS.find(b=>b.id===gearGet('boat'))||boatsFor()[0];}
+function curRod(){return RODS.find(r=>r.id===gearGet('rod'))||forWorld(RODS)[0];}
+function curReel(){return REELS.find(r=>r.id===gearGet('reel'))||forWorld(REELS)[0];}
+function curBraid(){return BRAIDS.find(b=>b.id===gearGet('braid'))||forWorld(BRAIDS)[0];}
+function curLeader(){return LEADERS.find(l=>l.id===gearGet('leader'))||LEADERS[0];}
 function curZone(){return ZONES[S.zone];}
-function curMethod(){return METHODS.find(m=>m.id===S.method);}
-function maxZone(){return curBoat().maxZone;}
+function curMethod(){return METHODS.find(m=>m.id===gearGet('method'))||methodsForZone(S.zone)[0];}
+
+// ---- Zone access ----------------------------------------------------------
+// Extra per-zone requirements beyond "your boat reaches it". Mountains is the
+// only one today: you need waders (the boat slot) AND a fly rod + fly reel.
+const ZONE_REQ={
+  5:{label:'a fly rod & fly reel', check:function(){return hasFlyCombo();}},
+};
+function hasFlyCombo(){
+  const r=RODS.find(function(x){return x.id===S.frod;}), rl=REELS.find(function(x){return x.id===S.freel;});
+  return !!(r&&r.fly&&rl&&rl.fly);
+}
+// Can the player stand in zone `z`, judged with the gear equipped in z's world?
+function zoneReachIn(w, z){
+  const bid=(w==='fresh')?S.fboat:S.boat;
+  const b=BOATS.find(function(x){return x.id===bid;});
+  if(!b||b.maxZone<z)return false;
+  const req=ZONE_REQ[z];
+  if(req&&req.check&&!req.check())return false;
+  return true;
+}
+// Highest CONTIGUOUS reachable zone in a world. Every `if(S.zone>maxZone())`
+// clamp in the file relies on this staying inside the current world's range,
+// otherwise a freshwater player gets silently teleported back to Offshore.
+function maxZoneIn(w){
+  const zs=worldZones(w);let hi=zs[0];
+  for(let i=0;i<zs.length;i++){if(zoneReachIn(w, zs[i]))hi=zs[i];else break;}
+  return hi;
+}
+function maxZone(){return maxZoneIn(curWorldId());}
+// The freshwater world itself is gated so brand-new players finish the tutorial
+// on the flats first. Cheap on purpose: it's content, not a paywall.
+const FRESH_UNLOCK_LVL=3;
+function freshUnlocked(){return (S.level||1)>=FRESH_UNLOCK_LVL;}
 function levelNeed(){return XP_CURVE[Math.min(S.level, XP_CURVE.length-1)];}
 
 // ===================== ACHIEVEMENTS =====================
@@ -5248,7 +5763,11 @@ const CROWNS=[
 const ACHIEVEMENTS=[
   // Impressive
   {id:'materialistic',tier:'impressive',name:'Materialistic',desc:'Own every buyable boat, rod, and reel.',check:()=>BOATS.filter(b=>!b.reward).every(b=>S.ownedBoats.includes(b.id))&&RODS.filter(r=>!r.reward).every(r=>S.ownedRods.includes(r.id))&&REELS.filter(r=>!r.reward).every(r=>S.ownedReels.includes(r.id)),prog:()=>{const bs=BOATS.filter(b=>!b.reward),rs=RODS.filter(r=>!r.reward),es=REELS.filter(r=>!r.reward);return [bs.filter(b=>S.ownedBoats.includes(b.id)).length+rs.filter(r=>S.ownedRods.includes(r.id)).length+es.filter(r=>S.ownedReels.includes(r.id)).length, bs.length+rs.length+es.length];}},
-  {id:'explorer',tier:'impressive',name:'Explorer',desc:'Fish at every structure in the game.',check:()=>Object.keys(STRUCT_META).every(k=>(S.fishedStructures||[]).includes(k)),prog:()=>{const ks=Object.keys(STRUCT_META);return [ks.filter(k=>(S.fishedStructures||[]).includes(k)).length, ks.length];}},
+  // Scoped to saltwater on purpose: V0.9.8 added ~30 freshwater spot kinds, and
+  // counting them here would have silently un-earned this for everyone who had
+  // already fished every saltwater structure. Freshwater has its own version.
+  {id:'explorer',tier:'impressive',name:'Explorer',desc:'Fish at every saltwater structure.',check:()=>saltStructKinds().every(k=>(S.fishedStructures||[]).includes(k)),prog:()=>{const ks=saltStructKinds();return [ks.filter(k=>(S.fishedStructures||[]).includes(k)).length, ks.length];}},
+  {id:'freshexplorer',tier:'impressive',name:'Watershed',desc:'Fish at every freshwater structure.',check:()=>freshStructKinds().every(k=>(S.fishedStructures||[]).includes(k)),prog:()=>{const ks=freshStructKinds();return [ks.filter(k=>(S.fishedStructures||[]).includes(k)).length, ks.length];}},
   {id:'lockedin',tier:'impressive',name:'Locked In',desc:'Hit the bonus section 15 times in a row.',check:()=>(S.bullseyeBest||0)>=15,prog:()=>[Math.min(S.bullseyeBest||0,15),15]},
   // Extraordinary
   {id:'legendaryangler',tier:'extraordinary',name:'Legendary Angler',desc:'Catch every legendary fish in the game.',check:()=>FISH.filter(f=>f.rarity==='legendary'&&!f.surf).every(f=>(S.caught[f.id]||0)>0),prog:()=>{const L=FISH.filter(f=>f.rarity==='legendary'&&!f.surf);return [L.filter(f=>(S.caught[f.id]||0)>0).length, L.length];}},
@@ -5294,7 +5813,7 @@ function dist(ax, ay, bx, by){return Math.hypot(ax-bx, ay-by);}
 function fmtLb(w){return w>=10?Math.round(w):w.toFixed(1);}
 function castRange(){return curReel().range + curBoat().range;}
 function tackleForCat(cat){return TACKLE.filter(t=>t.cat===cat && S.tackleInv[t.id] && S.tackleInv[t.id].qty>0).map(t=>t.id);}
-function currentTackleId(){const cat=curMethod().cat;if(S.toothHook&&(cat==='jig'||cat==='livehook'))return 'tooth_hook';if(S.tackleSel[cat]&&S.tackleInv[S.tackleSel[cat]]&&S.tackleInv[S.tackleSel[cat]].qty>0)return S.tackleSel[cat];const own=tackleForCat(cat);return own[0]||null;}
+function currentTackleId(){const cat=methodCat();if(S.toothHook&&(cat==='jig'||cat==='livehook'))return 'tooth_hook';if(S.tackleSel[cat]&&S.tackleInv[S.tackleSel[cat]]&&S.tackleInv[S.tackleSel[cat]].qty>0)return S.tackleSel[cat];const own=tackleForCat(cat);return own[0]||null;}
 function tackleById(id){return TACKLE.find(t=>t.id===id);}
 
 // ===================== TIME =====================
@@ -5443,8 +5962,8 @@ let jesterStacks=0;      // Jester set: +5%/stack from being hit by abilities (p
 // multipliers that only apply while that coloured lure is actually being fished.
 function lureColorBuffs(){
   const r={luck:1,bite:1};
-  if(typeof S==='undefined'||!S.lureSel)return r;
-  const lure=LURES.find(function(l){return l.id===S.lureSel;});
+  if(typeof S==='undefined'||!gearGet('lureSel'))return r;
+  const lure=LURES.find(function(l){return l.id===gearGet('lureSel');});
   if(!lure||!lure.color||(typeof activeLure==='function'&&!activeLure()))return r;
   const ph=phaseOf(hourNow()),wx=currentWeather().id, tide=currentTide();
   switch(lure.color){
@@ -5692,7 +6211,9 @@ function sightFishHitAt(sx, sy){
 
 // ===================== OPEN WORLD =====================
 // Each zone is its own self-contained world larger than the viewport.
-const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200]]; // inshore / nearshore / offshore
+// inshore / nearshore / offshore / lake / river / mountains.
+// The Mountains map is the smallest: you cover it on foot, not under power.
+const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200],[1900,1650],[2250,1900],[1500,1400]];
 // Tournament world: a single big, vast map with randomly scattered structures
 // and other players (ghosts) roaming around. Set up in startTournamentMode.
 let tourn={active:false, coop:false, seed:null, W:0,H:0,structs:[],ghosts:[]};
@@ -5747,9 +6268,13 @@ function initWorld(entry, anchored){
 // No gates during a tournament: you stay in the tournament world.
 function gatesFor(){
   if(tourn.active)return [];
+  // Bounds come from the CURRENT world, not the literal 0..2. Without this the
+  // two worlds chain into one 6-zone strip and you can drive the bluewater
+  // straight into the Lake.
+  const lo=worldZoneLo(), hi=worldZoneHi();
   const W=worldW(),H=worldH(),g=[];
-  if(S.zone<2)g.push({dir:'deeper',tz:S.zone+1,wx:W/2,wy:55,label:ZONE_LBL[S.zone+1]});
-  if(S.zone>0)g.push({dir:'shallow',tz:S.zone-1,wx:W/2,wy:H-55,label:ZONE_LBL[S.zone-1]});
+  if(S.zone<hi)g.push({dir:'deeper',tz:S.zone+1,wx:W/2,wy:55,label:ZONE_LBL[S.zone+1]});
+  if(S.zone>lo)g.push({dir:'shallow',tz:S.zone-1,wx:W/2,wy:H-55,label:ZONE_LBL[S.zone-1]});
   return g;
 }
 // Build a big tournament world with structures scattered at random so players
@@ -6377,8 +6902,8 @@ function drawCoopMap(){
   g.strokeStyle='rgba(255,255,255,.25)';g.lineWidth=1.5;g.strokeRect(offX, offY, W*sc, H*sc);
   // zone-edge hints (deeper at top, shallower at bottom)
   g.fillStyle='rgba(255,255,255,.55)';g.font='700 9px Fredoka, system-ui, sans-serif';g.textAlign='center';
-  if(S.zone<2)g.fillText('▲ '+ZONE_LBL[S.zone+1],CWp/2,offY+11);
-  if(S.zone>0)g.fillText('▼ '+ZONE_LBL[S.zone-1],CWp/2,offY+H*sc-4);
+  if(S.zone<worldZoneHi())g.fillText('▲ '+ZONE_LBL[S.zone+1],CWp/2,offY+11);
+  if(S.zone>worldZoneLo())g.fillText('▼ '+ZONE_LBL[S.zone-1],CWp/2,offY+H*sc-4);
   // structures
   for(const s of activeStructures()){
     const x=MX(s.x),y=MY(s.y);
@@ -6806,9 +7331,9 @@ function abilityPlunder(){
   const stash=(g._stash!=null)?g._stash:(g._stash=8+Math.floor(Math.random()*15));
   const amt=Math.max(1,Math.round(stash*frac));
   g._stash=Math.max(0,stash-amt);
-  if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=(S.baitInv[S.baitSel]||0)+amt;
-  else if(S.lureSel)S.lureInv[S.lureSel]=(S.lureInv[S.lureSel]||0)+amt;
-  else if(S.baitSel)S.baitInv[S.baitSel]=(S.baitInv[S.baitSel]||0)+amt;
+  if(curMethod().bait&&gearGet('baitSel'))S.baitInv[gearGet('baitSel')]=(S.baitInv[gearGet('baitSel')]||0)+amt;
+  else if(gearGet('lureSel'))S.lureInv[gearGet('lureSel')]=(S.lureInv[gearGet('lureSel')]||0)+amt;
+  else if(gearGet('baitSel'))S.baitInv[gearGet('baitSel')]=(S.baitInv[gearGet('baitSel')]||0)+amt;
   updateRigBar();queueSave();
   toast('Plundered '+amt+' bait/lures from '+g.name+'!','#2aa890');
   spawnAbilityFx(g.wx, g.wy,'#ffd24a','coins');
@@ -6960,8 +7485,8 @@ function applyIncomingAct(act){
   if(act.type==='confuse'){confusedUntil=now+(act.data.dur||3000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');spawnAbilityFx(boat.wx, boat.wy,'#c77ad8','hearts');}
   else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();const l=loseEquippedConsumable(0.10+Math.random()*0.05);toast('You got punched'+(l?' (-'+l+' bait/lures)':'')+'!','#c46f28');spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');}
   else if(act.type==='plunder'){const amt=act.data.amt||0;
-    if(curMethod().bait&&S.baitSel)S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-amt);
-    else if(S.lureSel)S.lureInv[S.lureSel]=Math.max(0,(S.lureInv[S.lureSel]||0)-amt);
+    if(curMethod().bait&&gearGet('baitSel'))S.baitInv[gearGet('baitSel')]=Math.max(0,(S.baitInv[gearGet('baitSel')]||0)-amt);
+    else if(gearGet('lureSel'))S.lureInv[gearGet('lureSel')]=Math.max(0,(S.lureInv[gearGet('lureSel')]||0)-amt);
     updateRigBar();queueSave();toast('Robbed of '+amt+' bait/lures!','#b3402a');spawnAbilityFx(boat.wx, boat.wy,'#ffd24a','coins');}
 }
 // A set-bot uses its set ability against the player when in range.
@@ -7002,8 +7527,8 @@ function botUseAbility(g, s, dp, now){
 }
 // Knock loose / steal a fraction of the player's equipped bait (or lure). Returns the amount lost.
 function loseEquippedConsumable(frac){
-  if(curMethod().bait&&S.baitSel){const c=S.baitInv[S.baitSel]||0;const loss=Math.min(c, Math.ceil(c*frac));S.baitInv[S.baitSel]=c-loss;updateRigBar();queueSave();return loss;}
-  if(S.lureSel){const c=S.lureInv[S.lureSel]||0;const loss=Math.min(c, Math.ceil(c*frac));S.lureInv[S.lureSel]=c-loss;updateRigBar();queueSave();return loss;}
+  if(curMethod().bait&&gearGet('baitSel')){const c=S.baitInv[gearGet('baitSel')]||0;const loss=Math.min(c, Math.ceil(c*frac));S.baitInv[gearGet('baitSel')]=c-loss;updateRigBar();queueSave();return loss;}
+  if(gearGet('lureSel')){const c=S.lureInv[gearGet('lureSel')]||0;const loss=Math.min(c, Math.ceil(c*frac));S.lureInv[gearGet('lureSel')]=c-loss;updateRigBar();queueSave();return loss;}
   return 0;
 }
 // Tap an angler while roaming a tournament to see their loadout (show off!).
@@ -7149,19 +7674,33 @@ function tickAbilityEffects(){
 }
 function enterWorld(tz, arriveDir){
   S.zone=tz;
+  if(S.lastZone)S.lastZone[worldOf(tz)]=tz;   // so a world swap returns you where you left off
   initWorld(arriveDir, false);
   ensureRig();initStructures();clearSightFish();updateRigBar();updateZonePill();refreshMenu();queueSave();
   toast('Entered '+ZONES[tz].name,'#2aa890');
-  setStatus('Now in the '+ZONES[tz].name.toLowerCase()+'. Drive to a structure, then drop anchor to fish.');
+  setStatus('Now in the '+ZONES[tz].name.toLowerCase()+'. '+(ZONES[tz].walk?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
+}
+// Why a gate is closed, or '' when it's open. Covers both the craft requirement
+// (boat / waders) and any extra per-zone requirement such as the fly combo.
+function gateBlockReason(tz){
+  const w=worldOf(tz);
+  const b=BOATS.find(function(x){return x.id===(w==='fresh'?S.fboat:S.boat);});
+  if(!b||b.maxZone<tz){
+    const need=boatsFor(w).find(function(x){return x.maxZone>=tz;});
+    return 'Need the '+(need?need.name:'better gear')+' for '+ZONE_LBL[tz];
+  }
+  const req=ZONE_REQ[tz];
+  if(req&&req.check&&!req.check())return 'Need '+req.label+' for '+ZONE_LBL[tz];
+  return '';
 }
 function tryGate(g){
   const now=performance.now?performance.now():Date.now();
   if(now<_gateCoolUntil)return;
   // In a co op friends world everyone can roam all three zones together, no matter
   // what boat they own, the whole point is to fish side by side.
-  if(g.tz>maxZone()&&!tourn.coop){
-    const need=BOATS.find(b=>b.maxZone>=g.tz);
-    toast('Need the '+(need?need.name:'a bigger boat')+' for '+ZONE_LBL[g.tz],'#b3402a');
+  const why=tourn.coop?'':gateBlockReason(g.tz);
+  if(why){
+    toast(why,'#b3402a');
     _gateCoolUntil=now+2500;
     // nudge boat back inward
     boat.wy+=g.dir==='deeper'?60:-60;
@@ -8482,7 +9021,7 @@ function render(ts){
     if(sp>0.25)boat.heading=Math.atan2(boat.vy, boat.vx)+Math.PI/2;
     clampCamera();
     // trolling: drag a line behind the boat while it's moving
-    if(S.method==='troll'&&!surfActive)updateTrolling(sp);
+    if(gearGet('method')==='troll'&&!surfActive)updateTrolling(sp);
     // gate proximity
     for(const gt of gatesFor()){if(dist(boat.wx, boat.wy, gt.wx, gt.wy)<85){tryGate(gt);break;}}
   }
@@ -8670,7 +9209,7 @@ function openEnvDetails(){
   document.getElementById('modal-bg').classList.add('show');
 }
 function drawGate(gx, gy, gt, t){
-  const locked=gt.tz>maxZone();
+  const locked=!!gateBlockReason(gt.tz);
   const up=gt.dir==='deeper';
   const pulse=0.5+0.5*Math.sin(t*2.2);
   ctx.save();
@@ -8707,11 +9246,19 @@ let biteTimeout=null, escapeTimeout=null, catchAnim=null;
 let zoneSel={left:35,width:30,dir:1,speed:1.3},marker={pos:50,dir:1,speed:0.39};
 
 function ensureRig(){
-  const zm=METHODS.filter(m=>m.zones.includes(S.zone));
-  if(!zm.find(m=>m.id===S.method))S.method=zm[0].id;
-  const cat=curMethod().cat;const own=tackleForCat(cat);
+  const zm=methodsForZone(S.zone);
+  if(!zm.length)return;                                   // never crash on an unmapped zone
+  if(!zm.find(m=>m.id===gearGet('method')))gearSet('method', zm[0].id);
+  const cat=methodCat();const own=tackleForCat(cat);
   if(!S.tackleSel[cat]||!own.includes(S.tackleSel[cat]))S.tackleSel[cat]=own[0]||null;
-  if(!S.baitInv[S.baitSel]||S.baitInv[S.baitSel]<=0){const b=Object.keys(S.baitInv).find(k=>S.baitInv[k]>0);S.baitSel=b||S.baitSel;}
+  // Bait selection is per world, and only bait from THIS world's catalog counts.
+  const bsel=gearGet('baitSel');
+  if(!S.baitInv[bsel]||S.baitInv[bsel]<=0){
+    const pool=forWorld(BAIT).map(function(b){return b.id;});
+    const b=pool.find(function(k){return (S.baitInv[k]||0)>0;});
+    if(b)gearSet('baitSel', b);
+    else if(!bsel||pool.indexOf(bsel)<0)gearSet('baitSel', pool[0]||bsel);
+  }
 }
 
 // Hard to find structures need a tighter anchor radius, you must be right on top of them
@@ -8907,13 +9454,13 @@ function cast(x, y){
   if(m.id==='troll'){setStatus('Trolling works on the move, pull anchor and drive to drag your line.');return;}
   const tid=currentTackleId();
   if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
-  if(m.bait){if(!S.baitSel||!(S.baitInv[S.baitSel]>0)){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
+  if(m.bait){if(!gearGet('baitSel')||!(S.baitInv[gearGet('baitSel')]>0)){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
   // Artificial methods now require a lure tied on
   if(!m.bait){
-    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
+    const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
     if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
     if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tie on a '+ZONE_LBL[S.zone]+' lure.');return;}
-    if(!(S.lureInv[S.lureSel]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
+    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
   }
   // Tutorial catch step: the lesson is to cast ONTO the spot, so a cast that lands
   // in open water is nudged back without spending tackle.
@@ -8979,13 +9526,13 @@ const TROLL_MOVE_MIN=0.6;
 let _trollHintAt=0;
 // A troll lure that is valid for this zone and in stock, or null.
 function _trollLureValid(){
-  const lure=S.lureSel?lureById(S.lureSel):null;
+  const lure=gearGet('lureSel')?lureById(gearGet('lureSel')):null;
   if(!lure||!lure.methods.includes('troll'))return null;
   if(typeof lure.zone==='number'&&lure.zone!==S.zone)return null;
   if(!(S.lureInv[lure.id]>0))return null;
   return lure;
 }
-function _trollBaitValid(){return !!(S.baitSel&&S.baitInv[S.baitSel]>0);}
+function _trollBaitValid(){return !!(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0);}
 function _trollRigOK(){
   if(!currentTackleId())return false;                 // need a trolling spread on
   return !!(_trollLureValid()||_trollBaitValid());    // pulled on a troll lure OR bait
@@ -9042,8 +9589,9 @@ const RARITY_BITE_DELAY={common:1,uncommon:1.2,rare:1.7,epic:2.6,legendary:3.8,u
 // The lure currently in play: tied on, valid for this method & zone, and in stock.
 // Works for the jig (inshore/nearshore) and the troll (offshore) methods alike.
 function activeLure(){
-  if(!S.lureSel)return null;
-  const lure=LURES.find(function(l){return l.id===S.lureSel;});
+  const sel=gearGet('lureSel');
+  if(!sel)return null;
+  const lure=LURES.find(function(l){return l.id===sel;});
   if(!lure)return null;
   const m=curMethod();
   if(!lure.methods.includes(m.id))return null;
@@ -9062,7 +9610,11 @@ function activeLure(){
 function _hashId(s){let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))>>>0;return h;}
 function presentationPref(f){
   let art=0,nat=0;
-  f.methods.forEach(function(mm){if(mm==='jig'||mm==='troll')art++;else nat++;});
+  // Which methods are ARTIFICIAL is read off the method table (bait:false) rather
+  // than a hard-coded pair. The old `mm==='jig'||mm==='troll'` list predated the
+  // freshwater methods, so every cast-only or fly-only species scored as a
+  // bait-lover and ate the ×0.5 mismatch penalty below whenever a lure was on.
+  f.methods.forEach(function(mm){const M=METHODS.find(function(x){return x.id===mm;});if(M&&M.bait===false)art++;else nat++;});
   let v=(art+nat)?art/(art+nat):0.5;       // base species lean
   const ph=phaseOf(hourNow());
   v+=(ph==='day')?-0.10:0.12;              // bright day -> bait; low light -> lures
@@ -9078,9 +9630,9 @@ function presentationPref(f){
   return Math.max(0.05,Math.min(0.95,v));
 }
 function poolNow(){
-  const m=curMethod(),leader=S.leader, st=bobber.struct;
+  const m=curMethod(),leader=gearGet('leader'), st=bobber.struct;
   // Artificial methods derive their bait preferences from the equipped lure
-  let bait=S.baitSel;
+  let bait=gearGet('baitSel');
   const lure=activeLure();
   if(lure&&lure.baits&&lure.baits.length)bait=lure.baits[0];
   // Trolling can be pulled on a troll lure OR on plain rigged bait. When no troll
@@ -9468,7 +10020,7 @@ function endSdewGame(success){
   if(f.rarity==='ultra'&&!ultraGearOK()){snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');return;}
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f, w)>curReel().drag){snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
-  if(!f.surf&&f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<.72){snap(f, w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
+  if(!f.surf&&f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<.72){snap(f, w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off!');return;}}
   land(f, w, true, false);
 }
@@ -9723,7 +10275,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   // drag ceiling: fish stronger than the reel's drag rating snaps automatically
   if(fightStrength(f, w)>curReel().drag){return snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
-  if(f.leader==='wire'&&S.leader!=='wire'){if(Math.random()<0.72){return snap(f, w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
+  if(f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<0.72){return snap(f, w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
   // line break
   if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(0.9,(ratio-1)*0.6+0.12);if(Math.random()<sc){return snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off! Spool up heavier.');}}
   }
@@ -9756,7 +10308,7 @@ function land(f, w, perfect, bullseye){
   if(!f.surf){
     const lr=activeLure();
     if(lr){wearLure(lr.id);}
-    else if(curMethod().bait||curMethod().id==='troll'){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[S.baitSel]=Math.max(0,(S.baitInv[S.baitSel]||0)-1);}}
+    else if(curMethod().bait||curMethod().id==='troll'){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[gearGet('baitSel')]=Math.max(0,(S.baitInv[gearGet('baitSel')]||0)-1);}}
   }
   S.caught[f.id]=(S.caught[f.id]||0)+1;
   if(typeof activeChallenge!=='undefined'&&activeChallenge)challengeOnCatch(f, w);
@@ -9863,20 +10415,20 @@ function updateRigBar(){
       bEl.textContent=tl.name;bq.textContent='dur '+lureCurDur(tl.id)+' · x'+(S.lureInv[tl.id]||0);bslot.classList.remove('empty');
     } else {
       if(baitLabel)baitLabel.textContent='Bait';
-      if(S.baitSel&&S.baitInv[S.baitSel]>0){bEl.textContent=BAIT.find(x=>x.id===S.baitSel).name;bq.textContent='x'+S.baitInv[S.baitSel];bslot.classList.remove('empty');}
+      if(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent='x'+S.baitInv[gearGet('baitSel')];bslot.classList.remove('empty');}
       else{bEl.textContent='lure or bait';bq.textContent='tie one on';bslot.classList.add('empty');}
     }
   } else if(!m.bait){
     // Artificial method: this slot becomes the lure slot
     if(baitLabel)baitLabel.textContent='Lure';
-    const lure=S.lureSel?LURES.find(l=>l.id===S.lureSel):null;
+    const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
     const lq=lure?(S.lureInv[lure.id]||0):0;
     if(lure&&lq>0){bEl.textContent=lure.name;bq.textContent='dur '+lureCurDur(lure.id)+' · x'+lq;bslot.classList.remove('empty');}
     else if(lure){bEl.textContent=lure.name;bq.textContent='out, restock';bslot.classList.add('empty');}
     else{bEl.textContent='no lure';bq.textContent='buy a lure';bslot.classList.add('empty');}
   } else {
     if(baitLabel)baitLabel.textContent='Bait';
-    if(S.baitSel&&S.baitInv[S.baitSel]>0){bEl.textContent=BAIT.find(x=>x.id===S.baitSel).name;bq.textContent='x'+S.baitInv[S.baitSel];bslot.classList.remove('empty');}
+    if(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent='x'+S.baitInv[gearGet('baitSel')];bslot.classList.remove('empty');}
     else{bEl.textContent='out of bait';bq.textContent='buy in shop';bslot.classList.add('empty');}
   }
   document.getElementById('rig-leader').textContent=curLeader().name.replace(' Leader','');
@@ -9895,15 +10447,19 @@ function updateRigBar(){
 function openChooser(type){
   const c=document.getElementById('chooser');let html='';
   if(type==='zone'){
-    html='<h3>Run to...</h3><div class="sub">Your boat decides how far out you can fish.</div>';
-    ZONES.forEach((z, i)=>{const locked=i>maxZone();const reqBoat=BOATS.find(b=>b.maxZone>=i);
-      html+='<div class="opt '+(i===S.zone?'sel':'')+' '+(locked?'disabled':'')+'" data-pick="zone:'+i+'"><div class="oi">'+svgIcon('zone-pin',20)+'</div><div class="oinfo"><div class="on">'+z.name+'</div><div class="od">'+z.sub+' \u00b7 '+z.depth+(locked?', needs '+reqBoat.name:'')+'</div></div></div>';});
+    html='<h3>Run to...</h3><div class="sub">'+(isFresh()?'Your rig decides how far upstream you can fish.':'Your boat decides how far out you can fish.')+'</div>';
+    // Only THIS world's regions, and the lock reason comes from gateBlockReason so
+    // it covers waders and the fly combo, not just boat size. (The old version read
+    // reqBoat.name off an undefined lookup for any zone no boat reaches.)
+    worldZones().forEach(function(i){
+      const z=ZONES[i], why=gateBlockReason(i);
+      html+='<div class="opt '+(i===S.zone?'sel':'')+' '+(why?'disabled':'')+'" data-pick="zone:'+i+'"><div class="oi">'+svgIcon('zone-pin',20)+'</div><div class="oinfo"><div class="on">'+z.name+'</div><div class="od">'+z.sub+' \u00b7 '+z.depth+(why?', '+why.replace(/^Need /,'needs '):'')+'</div></div></div>';});
   } else if(type==='method'){
     html='<h3>Fishing method</h3><div class="sub">The technique gates which fish are possible.</div>';
-    METHODS.filter(m=>m.zones.includes(S.zone)).forEach(m=>{
-      html+='<div class="opt '+(m.id===S.method?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
+    methodsForZone(S.zone).forEach(m=>{
+      html+='<div class="opt '+(m.id===gearGet('method')?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
   } else if(type==='tackle'){
-    const cat=curMethod().cat;
+    const cat=methodCat();
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
     TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
       html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
@@ -9915,10 +10471,10 @@ function openChooser(type){
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Trolling lures</div>';
       if(!myLures.length){html+='<div style="font-size:12px;color:var(--text-soft);padding:4px 0 6px;">No '+ZONE_LBL[S.zone].toLowerCase()+' troll lures yet.</div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
+        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:8px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Natural baits</div>';
-      BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!S.lureSel&&S.baitSel===bt.id;
+      forWorld(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!gearGet('lureSel')&&gearGet('baitSel')===bt.id;
         html+='<div class="opt '+(sel?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'trollbait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});
     }
     else if(!curMethod().bait){
@@ -9927,16 +10483,16 @@ function openChooser(type){
       const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id)&&(typeof l.zone!=='number'||l.zone===S.zone));
       if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet. Open the Lures shop tab to buy one.</div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(S.lureSel===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
+        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
-      BAIT.forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
-        html+='<div class="opt '+(S.baitSel===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
+      forWorld(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
+        html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs. Match it to what you are targeting.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
-      html+='<div class="opt '+(S.leader===l.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">'+svgIcon('anchor',18)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(gearGet('leader')===l.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">'+svgIcon('anchor',18)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
   }
   html+='<button class="chooser-close" onclick="closeChooser()">Close</button>';
   c.innerHTML=html;
@@ -10021,20 +10577,21 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   if(useOpt){if(useOpt.dataset.use)useItem(useOpt.dataset.use);return;}
   const opt=e.target.closest('.opt');if(!opt||!opt.dataset.pick)return;
   const[type, val]=opt.dataset.pick.split(':');
-  if(type==='zone'){const zi=+val;if(zi>maxZone())return;S.zone=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
-  else if(type==='method'){if(typeof cancelTrollDrag==='function')cancelTrollDrag(false);S.method=val;ensureRig();}
-  else if(type==='tackle'){S.tackleSel[curMethod().cat]=val;}
-  else if(type==='bait'){S.baitSel=val;}
-  else if(type==='trollbait'){S.baitSel=val;S.lureSel=null;}  // troll on bait: clear the lure
-  else if(type==='lure'){S.lureSel=val;}
-  else if(type==='leader'){S.leader=val;}
+  if(type==='zone'){const zi=+val;if(gateBlockReason(zi))return;S.zone=zi;if(S.lastZone)S.lastZone[worldOf(zi)]=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
+  else if(type==='method'){if(typeof cancelTrollDrag==='function')cancelTrollDrag(false);gearSet('method', val);ensureRig();}
+  else if(type==='tackle'){S.tackleSel[methodCat()]=val;}
+  else if(type==='bait'){gearSet('baitSel', val);}
+  else if(type==='trollbait'){gearSet('baitSel', val);gearSet('lureSel', null);}  // troll on bait: clear the lure
+  else if(type==='lure'){gearSet('lureSel', val);}
+  else if(type==='leader'){gearSet('leader', val);}
   updateRigBar();queueSave();closeChooser();
 });
 document.getElementById('rig-bar').addEventListener('click',e=>{const slot=e.target.closest('.rig-slot');if(slot)openChooser(slot.dataset.rig);});
 document.getElementById('zone-pill').addEventListener('click',()=>{
   const g=gatesFor();
-  const hint=g.map(x=>(x.tz>maxZone()?'Locked: ':'')+x.label+(x.dir==='deeper'?' (drive north)':' (drive south)')).join(' · ');
-  toast('Travel by driving to the edge gates: '+(hint||'none here'),'#1c6a9e');
+  const move=isFresh()&&curZone().walk?'hike':'drive';
+  const hint=g.map(x=>(gateBlockReason(x.tz)?'Locked: ':'')+x.label+(x.dir==='deeper'?' ('+move+' north)':' ('+move+' south)')).join(' · ');
+  toast('Travel by heading to the edge gates: '+(hint||'none here'),'#1c6a9e');
 });
 
 // menu
@@ -10120,9 +10677,20 @@ function renderLogbook(){
   // Fish are listed chronologically, in the order a player works up to them:
   // common first, on through to the ultra legendaries.
   const byProgress=function(a, b){const ra=RARITY_ORDER.indexOf(a.rarity),rb=RARITY_ORDER.indexOf(b.rarity);if(ra!==rb)return ra-rb;return (a.gold||0)-(b.gold||0);};
-  ZONES.forEach((z, zi)=>{const zfish=FISH.filter(f=>f.zone===zi&&!f.surf).slice().sort(byProgress);const zlock=zi>maxZone();
-    html+='<div class="zone-head">'+z.name+' <small>'+z.sub+' \u00b7 '+z.depth+'</small></div><div class="fish-grid">';
-    html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
+  // Both worlds are listed, each region locked against the gear equipped in ITS
+  // world \u2014 a freshwater zone must not be judged against your saltwater boat.
+  WORLD_IDS.forEach(function(wid){
+    const wmax=maxZoneIn(wid);
+    if(wid==='fresh'&&!freshUnlocked())return;
+    if(WORLD_IDS.length>1)html+='<div class="log-world-head">'+WORLDS[wid].name+'</div>';
+    worldZones(wid).forEach(function(zi){
+      const z=ZONES[zi];
+      const zfish=FISH.filter(f=>f.zone===zi&&!f.surf&&!f.ice).slice().sort(byProgress);
+      if(!zfish.length)return;
+      const zlock=zi>wmax;
+      html+='<div class="zone-head">'+z.name+' <small>'+z.sub+' \u00b7 '+z.depth+'</small></div><div class="fish-grid">';
+      html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
+    });
   });
   // Surf: beach sharks, caught only from the inshore surf.
   const surfFish=FISH.filter(f=>f.surf).slice().sort(byProgress);
@@ -10196,42 +10764,55 @@ function renderShop(){
     subHtml=shopSubChips([['items','Items'],['sets','Sets']],leaf,'special');
   } else if(shopTab==='tackle'){
     leaf='tackle';
-    const tsubs=METHODS.filter(m=>TACKLE.some(t=>t.cat===m.cat)).map(m=>[m.cat, m.name]).concat([['special','Special']]);
+    // Only the categories the CURRENT world's methods actually use, so a lake
+    // angler is never offered a knocker rig and vice versa.
+    const _cw=curWorldId();
+    const tsubs=METHODS.filter(function(m){const c=methodCat(m);return TACKLE.some(function(t){return t.cat===c&&(t.world||'salt')===_cw;});})
+                       .map(function(m){return [methodCat(m), m.name];}).concat([['special','Special']]);
     if(!shopSub.tackle||!tsubs.some(s=>s[0]===shopSub.tackle))shopSub.tackle=tsubs[0][0];
     subHtml=shopSubChips(tsubs, shopSub.tackle,'tackle');
   }
   let html='';
-  if(leaf==='boats')html=BOATS.map(function(b, i){
-    const faster=i>0?Math.round((b.speed/BOATS[i-1].speed-1)*100):0;
+  // Every gear catalog is filtered to the world you're standing in. The Special
+  // tab (rubies: items & sets) is deliberately NOT filtered - it is shared.
+  if(leaf==='boats'){const _bl=boatsFor();html=_bl.map(function(b, i){
+    const faster=i>0?Math.round((b.speed/_bl[i-1].speed-1)*100):0;
     const spd=' · Speed '+b.speed.toFixed(1)+(faster>0?' (+'+faster+'% faster)':'');
-    const row=shopRow(b,'boat',S.ownedBoats.includes(b.id),S.boat===b.id, spd+' <i>('+b.perkName+')</i>',false);
+    const row=shopRow(b,'boat',S.ownedBoats.includes(b.id),gearGet('boat')===b.id, spd+' <i>('+b.perkName+')</i>',false);
     const cust=(S.ownedBoats.includes(b.id)&&skinsForBase(b.id).length)?'<div style="text-align:right;margin:-9px 2px 9px;">'+customizeBtn(b.id)+'</div>':'';
     return row+cust;
-  }).join('');
-  else if(leaf==='rods')html=RODS.map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),S.rod===r.id,'',true)).join('');
-  else if(leaf==='reels')html=REELS.map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),S.reel===r.id,' · '+r.drag+' lb drag',true)).join('');
-  else if(leaf==='braid')html=BRAIDS.map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),S.braid===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
+  }).join('');}
+  else if(leaf==='rods')html=forWorld(RODS).map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),gearGet('rod')===r.id,r.fly?' \u00b7 half the fly combo':'',true)).join('');
+  else if(leaf==='reels')html=forWorld(REELS).map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),gearGet('reel')===r.id,' · '+r.drag+' lb drag'+(r.fly?' \u00b7 half the fly combo':''),true)).join('');
+  else if(leaf==='braid')html=forWorld(BRAIDS).map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),gearGet('braid')===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
   else if(leaf==='tackle'){
     const tsel=shopSub.tackle;
     html=TACKLE.filter(function(t){
+      if((t.world||'salt')!==curWorldId())return false;
       if(t.id==='hook1440'&&!S.surfUnlocked)return false;
-      if(tsel==='special')return t.cat==='special'||t.cat==='surf';
+      if(t.id==='iceauger'&&!zoneReachIn('fresh',5))return false;   // Mountains first
+      if(tsel==='special')return t.cat==='special'||t.cat==='surf'||t.cat==='ice';
       return t.cat===tsel;
     }).map(t=>{
     if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(S.gold>=t.cost?'':'cant')+'">'+COIN+t.cost+'</span>';
       return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
     if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon"><span class="ultra-glint">'+svgIcon(t.icon)+'</span></div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
-    const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>m.cat===t.cat);
+    const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>methodCat(m)===t.cat);
     return shopRow(t,'tackle',own, false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
     if(!html)html='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:16px;">No tackle in this category yet.</div>';
   }
-  else if(leaf==='bait')html=BAIT.filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
+  else if(leaf==='bait')html=forWorld(BAIT).filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(leaf==='lures'){
-    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+LURE_CATS.map(function(c){return '<div class="shop-tab '+(lureSubTab===c.id?'active':'')+'" style="font-size:11.5px;" data-lcat="'+c.id+'">'+c.name+'</div>';}).join('')+'</div>'
+    // Region chips follow the world you're in: Inshore/Nearshore/Offshore, or
+    // Lake/River/Mountains. A lure only works in its own zone, so showing the
+    // other world's would just sell people something they can never tie on.
+    const _lz=worldZones();
+    if(_lz.indexOf(lureSubTab)<0)lureSubTab=_lz[0];
+    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+_lz.map(function(z){return '<div class="shop-tab '+(lureSubTab===z?'active':'')+'" style="font-size:11.5px;" data-lcat="'+z+'">'+ZONE_LBL[z]+'</div>';}).join('')+'</div>'
       +'<div style="font-size:11px;color:var(--text-soft);margin:-4px 0 9px;">'+ZONE_LBL[lureSubTab]+' lures only work in the '+ZONE_LBL[lureSubTab].toLowerCase()+' zone.</div>';
     html+=LURES.filter(function(l){return l.zone===lureSubTab;}).map(function(l){
       const q=S.lureInv[l.id]||0;
-      const equipped=S.lureSel===l.id;
+      const equipped=gearGet('lureSel')===l.id;
       const canAfford=S.gold>=l.cost, meetsLvl=S.level>=l.lvl;
       // Buyable any time to restock (like bait). Tapping when you own some ties it on.
       let action;
@@ -10379,12 +10960,12 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     const l=LURES.find(x=>x.id===id);if(!l)return;
     const tie=e.target.closest('[data-tie]');
     if(tie){
-      if(S.lureInv[id]>0)S.lureSel=id;
+      if(S.lureInv[id]>0)gearSet('lureSel', id);
     }else{
       if(S.level<l.lvl){toast('Reach Level '+l.lvl+' first.','#b58b53');return;}
       if(S.gold<l.cost){toast('Not enough gold.','#b3402a');return;}
       S.gold-=l.cost;S.lureInv[id]=(S.lureInv[id]||0)+LURE_PACK;
-      if(!S.lureSel)S.lureSel=id;
+      if(!gearGet('lureSel'))gearSet('lureSel', id);
       toast('Bought '+l.name+' (x'+LURE_PACK+')','#2aa890');
     }
   }
@@ -10399,8 +10980,13 @@ document.getElementById('shop-list').addEventListener('click',e=>{
       if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}
       S.gold-=obj.cost;owned.push(id);toast('Bought '+obj.name+'!','#2aa890');
     }
-    S[key]=id;
-    if(kind==='boat'&&S.zone>obj.maxZone){S.zone=obj.maxZone;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
+    gearSet(key, id);
+    // Buying a smaller boat can strand you past its range. Clamp INSIDE the
+    // current world - obj.maxZone is already an absolute zone index (0-2 salt,
+    // 3-5 fresh), so this never hops worlds.
+    if(kind==='boat'&&S.zone>obj.maxZone){S.zone=Math.max(worldZoneLo(), obj.maxZone);ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
+    // Losing the fly combo while standing in the Mountains walks you back down.
+    if((kind==='rod'||kind==='reel')&&S.zone===5&&!hasFlyCombo()){S.zone=4;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();toast('Without a fly combo you head back down to the river.','#b58b53');}
   }
   updateRigBar();renderShop();queueSave();
   checkAchievements();
@@ -10572,7 +11158,9 @@ function _fishTackleText(f){
 // fish detail modal
 function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
-  const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZone())return;
+  // Judge reachability against the fish's OWN world, not whichever one we're
+  // standing in — otherwise every freshwater fish reads as locked from the coast.
+  const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZoneIn(worldOf(f.zone)))return;
   const seasons=f.season.includes('all')?'Year-round':f.season.map(s=>SEASON_LABEL[s]).join(', ');
   const times=f.time.includes('all')?'Any time':f.time.map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(', ');
   document.getElementById('modal').innerHTML=
