@@ -30,6 +30,26 @@
     --accent:#d98a33;--accent-dark:#a9631d;
     --text:#22302a;--text-soft:#5c6b60;--ink:#22302a;
   }
+  /* ---- fly fishing panel (V0.9.8) ---- */
+  .fly-game{position:absolute;left:50%;transform:translateX(-50%);bottom:118px;width:min(340px,calc(100% - 28px));
+    background:var(--cream);border:1px solid var(--wood);border-radius:16px;padding:11px 12px 12px;
+    box-shadow:0 10px 26px rgba(10,26,34,.28);display:none;z-index:60;}
+  .fly-game.show{display:block;}
+  .fly-hint{font-size:11.5px;font-weight:700;color:var(--text-soft);text-align:center;line-height:1.45;margin-bottom:8px;min-height:32px;}
+  /* The rhythm gauge: a sweeping fill and the accept band you must release in. */
+  .fly-meter{position:relative;height:16px;border-radius:9px;background:var(--parchment);overflow:hidden;}
+  .fly-band{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#34c2a8,#34c2a8 6px,#2aa890 6px,#2aa890 12px);opacity:.9;}
+  .fly-fill{position:absolute;top:0;left:0;height:100%;width:0;background:var(--accent);opacity:.55;}
+  .fly-meter.drift .fly-fill{background:#b3402a;opacity:.75;}
+  .fly-meter.drift .fly-band{display:none;}
+  .fly-stats{display:flex;justify-content:space-between;font-size:10.5px;font-weight:800;color:var(--text-soft);margin:6px 2px 9px;text-transform:uppercase;letter-spacing:.4px;}
+  .fly-row{display:flex;gap:8px;}
+  .fly-btn{flex:1;padding:11px 8px;border:none;border-radius:12px;background:var(--parchment);color:var(--ink);
+    font-family:'Fredoka';font-size:14px;font-weight:700;cursor:pointer;touch-action:manipulation;user-select:none;}
+  .fly-btn.primary{background:var(--sea);color:#fff;}
+  .fly-btn.primary:active{transform:translateY(1px);}
+  .fly-btn:disabled{opacity:.42;cursor:default;}
+  .fly-btn.hot{background:var(--accent);color:#fff;}
   /* ---- world crest pill ---- */
   .world-pill{padding:4px 11px 4px 5px;gap:7px;}
   .wp-crest{width:24px;height:24px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(150deg,#4aa3cd,#0f4460);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.24);}
@@ -746,6 +766,17 @@
     </div>
 
     <div class="status-banner" id="status">Drive with the joystick. Reach a structure, then drop anchor to fish.</div>
+
+    <!-- Fly fishing (V0.9.8): its own three-beat loop, not the catch-track bar. -->
+    <div class="fly-game" id="fly-game">
+      <div class="fly-hint" id="fly-hint">Hold to load the rod, release when the line straightens.</div>
+      <div class="fly-meter"><div class="fly-band" id="fly-band"></div><div class="fly-fill" id="fly-fill"></div></div>
+      <div class="fly-stats"><span id="fly-line">0 ft of line</span><span id="fly-loops"></span></div>
+      <div class="fly-row">
+        <button class="fly-btn primary" id="fly-main">False Cast</button>
+        <button class="fly-btn" id="fly-alt">Present</button>
+      </div>
+    </div>
 
     <div class="catch-game" id="catch-game">
       <div class="hint" id="catch-hint">Stop the marker in the green!</div>
@@ -8773,22 +8804,27 @@ function drawAnglerFigure(cx, cy, r, tx, ty, tw, th, rad){
   ctx.beginPath();ctx.ellipse(cx-r*0.32,cy-r*0.4,r*0.34,r*0.22,-0.5,0,6.28);ctx.fill();
   drawAnglerHatAndExtras(cx, cy, r);
 }
+// True when the equipped "boat" is really a pair of legs (bank fishing, waders).
+// Walkers get no wake, no hull rotation and no anchor - they just stop.
+function onFoot(){const b=curBoat();return !!(b&&b.walker)||gearGet('boat')==='bank';}
 function drawBoat(dark){
   ctx.save();
   if(driving()){
     // wake trail behind the moving boat
     const sp=Math.hypot(boat.vx, boat.vy);
-    if(sp>0.4){
+    if(sp>0.4&&!onFoot()){
       ctx.save();ctx.translate(ORIGIN.x, ORIGIN.y);ctx.rotate(boat.heading);
       ctx.fillStyle='rgba(255,255,255,'+Math.min(0.3,sp*0.06)+')';
       ctx.beginPath();ctx.moveTo(-9,18);ctx.lineTo(-20,18+sp*7);ctx.lineTo(0,18);ctx.lineTo(20,18+sp*7);ctx.lineTo(9,18);ctx.closePath();ctx.fill();
       ctx.restore();
     }
-    ctx.translate(ORIGIN.x, ORIGIN.y-8);ctx.rotate(boat.heading);ctx.translate(0,-24);
+    // A person doesn't pivot like a hull, so walkers stay upright.
+    if(onFoot()){ctx.translate(ORIGIN.x, ORIGIN.y-18);}
+    else{ctx.translate(ORIGIN.x, ORIGIN.y-8);ctx.rotate(boat.heading);ctx.translate(0,-24);}
   }else{
-    ctx.translate(ORIGIN.x, ORIGIN.y-32);
+    ctx.translate(ORIGIN.x, ORIGIN.y-(onFoot()?18:32));
   }
-  const b=S.boat;
+  const b=gearGet('boat');
   if(b==='kayak')drawKayak(dark);
   else if(b==='jon')drawJonBoat(dark);
   else if(b==='bay')drawBayBoat(dark);
@@ -8800,8 +8836,46 @@ function drawBoat(dark){
     else drawSportfisher(dark);
   }
   else if(b==='marlinboat')drawMarlinBoat(dark);
+  // ---- Freshwater (V0.9.8). Hulls reuse the saltwater vector boats of the same
+  //      size class; `bank` and `waders` are on foot and get their own figure. ----
+  else if(b==='bank'||b==='waders')drawWadingAngler(dark, b==='waders');
+  else if(b==='canoe')drawKayak(dark);
+  else if(b==='jonboat')drawJonBoat(dark);
+  else if(b==='bassboat')drawBayBoat(dark);
+  else if(b==='jetsled')drawCenterConsole(dark);
+  else if(b==='driftboat')drawWalkaround(dark);
   ctx.restore();
   if(boat.anchored)drawRodAndReel(dark);
+}
+// On foot: the Mountains (and lake banks) are waded, not driven. Top-down angler
+// standing in the water with a wake ring instead of a hull, and boot-deep legs.
+function drawWadingAngler(dark, chestWaders){
+  const t=performance.now()/1000;
+  const moving=driving()&&Math.hypot(boat.vx, boat.vy)>0.15;
+  // Ripple rings pushing off the legs, tighter and quicker when wading along.
+  ctx.strokeStyle='rgba(255,255,255,'+(moving?0.34:0.2)+')';
+  for(let i=0;i<3;i++){
+    const ph=(t*(moving?1.5:0.7)+i*0.33)%1;
+    ctx.lineWidth=1.6*(1-ph);
+    ctx.beginPath();ctx.ellipse(0,6,10+ph*22,5+ph*12,0,0,6.28);ctx.stroke();
+  }
+  // Submerged legs, fading out with depth. Chest waders read darker and longer.
+  ctx.fillStyle=chestWaders?'rgba(46,72,64,.55)':'rgba(56,78,70,.4)';
+  const legL=chestWaders?17:12;
+  const sway=moving?Math.sin(t*7)*2.6:0;
+  ctx.beginPath();ctx.ellipse(-4.6+sway,8,3.6,legL*0.5,0,0,6.28);ctx.fill();
+  ctx.beginPath();ctx.ellipse(4.6-sway,8,3.6,legL*0.5,0,0,6.28);ctx.fill();
+  // Waist-deep waterline over the wader belt.
+  ctx.fillStyle='rgba(120,180,170,.22)';
+  ctx.beginPath();ctx.ellipse(0,4,11,5.5,0,0,6.28);ctx.fill();
+  // The angler themself, reusing the shared cosmetic-aware figure so hats,
+  // shirts, shades and worn sets all still show up out here.
+  drawAnglerFigure(0,-6,7,-7,-2,14,16,4);
+  // A wading staff in the off hand once you're in chest waders.
+  if(chestWaders){
+    ctx.strokeStyle='#7a5a34';ctx.lineWidth=2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(11,-14);ctx.lineTo(14,12);ctx.stroke();
+  }
 }
 // A boat skin: draw the top-down hull PNG (bow up, replacing the vector boat) and
 // seat the angler on the deck. Called from drawBoat within the boat transform.
@@ -9497,7 +9571,9 @@ function updateDriveUI(){
   if(!dc||!ab)return;
   dc.classList.toggle('anchored',boat.anchored);
   document.body.classList.toggle('driving',!boat.anchored);
-  ab.textContent=boat.anchored?'Pull Anchor':'Drop Anchor';
+  // On foot you don't weigh anchor, you just start and stop walking.
+  ab.textContent=onFoot()?(boat.anchored?'Start Hiking':'Stop & Fish')
+                         :(boat.anchored?'Pull Anchor':'Drop Anchor');
   ab.classList.toggle('is-anchored',boat.anchored);
 }
 (function setupJoystick(){
@@ -9617,6 +9693,10 @@ function cast(x, y){
     if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tie on a '+ZONE_LBL[S.zone]+' lure.');return;}
     if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
   }
+  // Fly fishing takes over here: its own casting rhythm, drift and set, then it
+  // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
+  // gear checks above so a fly angler still needs a leader/tippet and a fly.
+  if(m.fly){flyBeginCast(x, y);return;}
   // Tutorial catch step: the lesson is to cast ONTO the spot, so a cast that lands
   // in open water is nudged back without spending tackle.
   if(tut&&tut.active&&tut.steps[tut.i]&&tut.steps[tut.i].await==='catch'&&tut.forceTargetActive){
@@ -9658,13 +9738,267 @@ function cast(x, y){
     biteTimeout=setTimeout(()=>triggerBite(),wait);
   }
 }
+// ═══════════════ FLY FISHING (V0.9.8) ═══════════════
+// A completely different loop from cast->bite->hookset. Three beats:
+//   1 FALSE CAST  a hold-duration rhythm. You cannot power the forward stroke
+//                 until the line straightens behind you, so the target hold gets
+//                 LONGER and the accept window NARROWER the more line is out.
+//   2 DRIFT       the fly rides the current and drag builds. MEND resets it.
+//                 Let drag hit 100% and the seam goes quiet.
+//   3 THE SET     which input is correct depends on the fly you tied on --
+//                 a dry needs a slow deliberate lift, a nymph an instant one,
+//                 a streamer a strip-set you hold. That is the skill.
+// It ends by calling triggerBite(), so the fight, catch card, quests, XP and
+// achievements are all the existing ones.
+const FLY_MAX_FT=50, FLY_MAX_STROKES=5;
+const FLY_SHOOT_FT=[14,12,10,8,6];    // ft gained per good stroke
+const FLY_STROKE_BASE=380;            // ms target hold for the first stroke
+const FLY_STROKE_PER_FT=9.5;          // ms added per ft already in the air
+const FLY_WINDOW_BASE=190, FLY_WINDOW_DECAY=0.82, FLY_WINDOW_MIN=70;
+const FLY_MAX_TANGLE=2;
+const FLY_DRIFT_MS=9000;              // a drift runs about nine seconds
+const FLY_DRAG_PER_SEC=26;            // drag climbs this fast with no mending
+const FLY_MEND_RELIEF=42;             // one mend buys this much back
+// Per-fly-type set windows, ms after the take. This is the heart of the mechanic.
+const FLY_SET={
+  dry:    {lo:320, hi:850, hold:false, tell:'A nose breaks the surface. Wait for it to turn down, then lift.'},
+  nymph:  {lo:0,   hi:430, hold:false, tell:'The indicator dips. Set NOW.'},
+  streamer:{lo:0,  hi:700, hold:true,  tell:'Something hammered it. STRIP-SET and hold.'},
+  wet:    {lo:120, hi:620, hold:false, tell:'The line comes tight on the swing. Lift.'},
+};
+let flyPhase='idle';                  // idle | casting | drift | take
+let flyLineOut=0, flyStrokes=0, flyAcc=0, flyTangle=0;
+let flyAim=null, flyHoldStart=0, flyAnim=null, flyDrag=0, flyMends=0;
+let flyDriftEnd=0, flyTakeAt=0, flySetSpec=null, flyHoldSet=0, flyTargetFish=null;
+
+// Which family the tied-on fly belongs to. Falls back to a nymph-style set.
+function flyKind(){
+  const l=activeLure();
+  if(!l)return 'nymph';
+  const n=(l.name||'').toLowerCase();
+  if(/popper|dry|adams|caddis|hopper|stimulator|drake|dun|spinner|elk/.test(n))return 'dry';
+  if(/streamer|clouser|sculpin|leech|bugger|minnow|zonker|muddler/.test(n))return 'streamer';
+  if(/soft.?hackle|wet|swing|emerger/.test(n))return 'wet';
+  return 'nymph';
+}
+function flyPanel(){return document.getElementById('fly-game');}
+function flySay(m){const e=document.getElementById('fly-hint');if(e)e.innerHTML=m;}
+function flyShow(on){const p=flyPanel();if(p)p.classList.toggle('show',!!on);}
+// The hold target and accept half-width for the NEXT stroke.
+function flyStrokeTarget(){return FLY_STROKE_BASE+FLY_STROKE_PER_FT*flyLineOut;}
+function flyStrokeWindow(){return Math.max(FLY_WINDOW_MIN, FLY_WINDOW_BASE*Math.pow(FLY_WINDOW_DECAY, flyStrokes));}
+
+// Entry point, called from cast() when the method is `fly`.
+function flyBeginCast(x, y){
+  flyPhase='casting';flyLineOut=0;flyStrokes=0;flyAcc=0;flyTangle=0;flyDrag=0;flyMends=0;
+  flyAim={x, y};flyTargetFish=null;
+  bobber={x, y, active:false, struct:nearestStruct(x, y)};
+  flyShow(true);flyPaintMeter();
+  document.getElementById('fly-main').textContent='False Cast';
+  document.getElementById('fly-alt').textContent='Present';
+  document.getElementById('fly-alt').disabled=true;
+  flySay('Hold to load the rod. Release the instant the line straightens behind you.');
+  flyStats();
+  if(flyAnim)cancelAnimationFrame(flyAnim);
+  flyAnim=requestAnimationFrame(flyLoop);
+}
+function flyStats(){
+  const a=document.getElementById('fly-line'),b=document.getElementById('fly-loops');
+  if(a)a.textContent=Math.round(flyLineOut)+' ft of line';
+  if(b)b.textContent=flyPhase==='drift'?(flyMends+' mend'+(flyMends===1?'':'s')):(flyTangle?('⚠ '+flyTangle+' tangle'+(flyTangle===1?'':'s')):'');
+}
+// Paint the accept band for the coming stroke so the rhythm is learnable.
+function flyPaintMeter(){
+  const band=document.getElementById('fly-band');if(!band)return;
+  const T=flyStrokeTarget(), W=flyStrokeWindow(), span=1600;
+  band.style.left=(100*Math.max(0,(T-W))/span)+'%';
+  band.style.width=(100*Math.min(span,(2*W))/span)+'%';
+  document.getElementById('fly-meter-x');
+}
+function flyLoop(){
+  const now=performance.now();
+  const fill=document.getElementById('fly-fill');
+  const meter=fill?fill.parentElement:null;
+  if(flyPhase==='casting'){
+    if(meter)meter.classList.remove('drift');
+    const held=flyHoldStart?(now-flyHoldStart):0;
+    if(fill)fill.style.width=Math.min(100,100*held/1600)+'%';
+  }else if(flyPhase==='drift'||flyPhase==='take'){
+    if(meter)meter.classList.add('drift');
+    if(flyPhase==='drift'){
+      flyDrag=Math.min(100, flyDrag+FLY_DRAG_PER_SEC/60);
+      if(fill)fill.style.width=flyDrag+'%';
+      // The fly swings downstream as drag builds, which is what kills the drift.
+      if(bobber&&bobber.active)bobber.y+=0.18+flyDrag*0.012;
+      if(flyDrag>=100){flyEndDrift('The fly dragged across the seam and the lie went quiet.');return;}
+      if(now>=flyTakeAt&&flyTakeAt>0)flyTheTake();
+      else if(now>=flyDriftEnd){flyEndDrift('The drift ran out. Pick it up and cast again.');return;}
+    }else{
+      // In the take window the meter shows the closing window, not drag.
+      const spec=flySetSpec, since=now-flyTakeAt;
+      if(fill)fill.style.width=Math.max(0,100-100*since/(spec.hi+260))+'%';
+      if(since>spec.hi+260){flyMissedSet();return;}
+    }
+  }
+  flyAnim=requestAnimationFrame(flyLoop);
+}
+// ---- beat 1: the false-cast rhythm ----
+function flyPressMain(){
+  if(flyPhase==='casting'){flyHoldStart=performance.now();return;}
+  if(flyPhase==='take'&&flySetSpec&&flySetSpec.hold){flyHoldSet=performance.now();}
+}
+function flyReleaseMain(){
+  if(flyPhase==='casting')return flyResolveStroke();
+  if(flyPhase==='drift')return flyMend();
+  if(flyPhase==='take')return flyResolveSet();
+}
+function flyResolveStroke(){
+  if(!flyHoldStart)return;
+  const held=performance.now()-flyHoldStart;flyHoldStart=0;
+  const T=flyStrokeTarget(), W=flyStrokeWindow();
+  const err=Math.abs(held-T);
+  if(err<=W){
+    const a=1-err/W;
+    flyAcc=(flyAcc*flyStrokes+a)/(flyStrokes+1);
+    flyStrokes++;
+    flyLineOut=Math.min(FLY_MAX_FT, flyLineOut+FLY_SHOOT_FT[Math.min(FLY_SHOOT_FT.length-1,flyStrokes-1)]);
+    AUDIO.sfx('cast');
+    flySay(a>0.72?'Tight loop. The line sings out.':'Good stroke. A little more line.');
+    document.getElementById('fly-alt').disabled=false;
+  }else if(held<T-W){
+    flyTangle++;flySay('Tailing loop — you rushed the forward stroke.');
+  }else{
+    flyTangle++;flyLineOut=Math.max(0,flyLineOut*0.75);flySay('The loop collapsed behind you.');
+  }
+  flyStats();flyPaintMeter();
+  if(flyTangle>=FLY_MAX_TANGLE){flyAbort('Wind knot. Strip it in and start the cast over.');return;}
+  if(flyStrokes>=FLY_MAX_STROKES)flyPresent();
+}
+// ---- beat 2: presentation + drift ----
+function flyPresent(){
+  if(flyPhase!=='casting')return;
+  if(flyLineOut<6){flySay('Not enough line in the air yet. Work another stroke.');return;}
+  flyHoldStart=0;
+  // The fly lands along the aim ray, only as far as the line you actually earned.
+  const ox=ORIGIN.x, oy=ORIGIN.y;
+  const dx=flyAim.x-ox, dy=flyAim.y-oy, d=Math.max(1,Math.hypot(dx,dy));
+  const reach=Math.min(1, flyLineOut/FLY_MAX_FT);
+  const px=ox+dx/d*(d*reach), py=oy+dy/d*(d*reach);
+  bobber={x:px, y:py, active:true, struct:nearestStruct(px, py)};
+  ripples.push({x:px, y:py, r:2,life:1},{x:px, y:py, r:6,life:.6});
+  noteLastCast(bobber.struct);
+  phase='waiting';S.totalCasts++;
+  if(bobber.struct){
+    if(!S.fishedStructures)S.fishedStructures=[];
+    if(!S.fishedStructures.includes(bobber.struct.kind))S.fishedStructures.push(bobber.struct.kind);
+  }
+  queueSave();
+  flyPhase='drift';flyDrag=0;flyMends=0;
+  const now=performance.now();
+  flyDriftEnd=now+FLY_DRIFT_MS;
+  document.getElementById('fly-main').textContent='Mend';
+  document.getElementById('fly-main').classList.remove('hot');
+  document.getElementById('fly-alt').textContent='Pick Up';
+  document.getElementById('fly-alt').disabled=false;
+  // Does anything eat, and when? Accuracy and a clean drift both help.
+  // The base chance is gated on there actually being fish in the pool: without
+  // this a take fires over dead water, the set "succeeds", and triggerBite() has
+  // nothing to hook -- which strands the player in phase 'done' with no message.
+  const {strength}=poolNow();
+  const acc=0.55+flyAcc*0.45;
+  const chance=strength>0?Math.min(0.95,(0.30+strength/170)*environmentBiteFactor()*acc*(reach*0.4+0.75)):0;
+  if(_forcedBiteFish&&tut&&tut.forceTargetActive)flyTakeAt=now+900;
+  else flyTakeAt=(Math.random()<chance)?(now+900+Math.random()*(FLY_DRIFT_MS-2400)):0;
+  flySay(bobber.struct?'Drifting through the '+structLabel(bobber.struct.kind)+'. MEND to keep it drag-free.'
+                      :'Drifting. MEND upstream to keep the fly ahead of the line.');
+  flyStats();
+}
+function flyMend(){
+  if(flyPhase!=='drift')return;
+  flyDrag=Math.max(0, flyDrag-FLY_MEND_RELIEF);
+  flyMends++;
+  // Mending buys drift time, but each mend risks a little less of it than the last.
+  flyDriftEnd+=900;
+  AUDIO.sfx('cast');
+  flySay('Mended. The fly leads the line again.');
+  flyStats();
+}
+// ---- beat 3: the take, with a fly-specific correct answer ----
+function flyTheTake(){
+  flyPhase='take';
+  flySetSpec=FLY_SET[flyKind()]||FLY_SET.nymph;
+  flyTakeAt=performance.now();
+  flyHoldSet=0;
+  const btn=document.getElementById('fly-main');
+  btn.textContent=flySetSpec.hold?'Strip-Set (hold)':'Set the Hook';
+  btn.classList.add('hot');
+  document.getElementById('fly-alt').disabled=true;
+  AUDIO.sfx('bite');
+  flySay('<b>'+flySetSpec.tell+'</b>');
+  if(navigator.vibrate)try{navigator.vibrate(18);}catch(e){}
+}
+function flyResolveSet(){
+  if(flyPhase!=='take')return;
+  const spec=flySetSpec, since=performance.now()-flyTakeAt;
+  let ok=(since>=spec.lo&&since<=spec.hi);
+  // A strip-set has to actually be held; a twitchy tap pulls it out of its mouth.
+  if(ok&&spec.hold){const h=flyHoldSet?(performance.now()-flyHoldSet):0;if(h<220)ok=false;}
+  if(ok){
+    // Belt and braces: never hand a set off to triggerBite() with nothing to
+    // hook, or the player lands in phase 'done' with no explanation.
+    if(poolNow().strength<=0){flyEndDrift('You came tight on nothing — the fly pulled free.');return;}
+    flyFinish();
+    triggerBite();           // hands off to the existing bite -> fight pipeline
+  }else{
+    const why=since<spec.lo?(spec.hold?'You snatched it away before it turned.':'Too quick — you pulled it out of its mouth.')
+                           :'Too slow — it spat the fly.';
+    flyMissedSet(why);
+  }
+}
+function flyMissedSet(why){
+  S.misses=(S.misses||0)+1;
+  flyEndDrift(why||'You missed the take.');
+}
+function flyEndDrift(msg){
+  flyFinish();
+  phase='idle';bobber.active=false;
+  setStatus(msg);
+  updateRigBar();queueSave();
+}
+function flyAbort(msg){
+  flyFinish();
+  phase='idle';bobber.active=false;
+  setStatus(msg);
+}
+// Tear down the panel and the rAF without touching the shared fishing state, so
+// triggerBite() can take over cleanly.
+function flyFinish(){
+  flyPhase='idle';flyHoldStart=0;flyTakeAt=0;
+  if(flyAnim){cancelAnimationFrame(flyAnim);flyAnim=null;}
+  flyShow(false);
+  const btn=document.getElementById('fly-main');if(btn)btn.classList.remove('hot');
+}
+(function wireFlyButtons(){
+  const main=document.getElementById('fly-main'), alt=document.getElementById('fly-alt');
+  if(!main||!alt)return;
+  // pointerdown/up rather than click: click double-fires on touch and this is a
+  // hold-duration mechanic, so the pair IS the input.
+  main.addEventListener('pointerdown',function(e){e.preventDefault();flyPressMain();});
+  main.addEventListener('pointerup',function(e){e.preventDefault();flyReleaseMain();});
+  main.addEventListener('pointercancel',function(){flyHoldStart=0;});
+  alt.addEventListener('click',function(){
+    if(flyPhase==='casting')flyPresent();
+    else if(flyPhase==='drift')flyEndDrift('Picked the fly up off the water.');
+  });
+})();
+
 // Reeling a lure in: one retrieve rolls for a strike. The chance scales with the
 // pool strength, the conditions and the reel (better reel = better odds).
 function retrieveLure(){
   _lureRetrieve=false;
   const {strength}=poolNow();
   if(strength<=0){phase='idle';bobber.active=false;setStatus('Reeled it in, nothing was interested. Try another lure or spot.');return;}
-  const reelIdx=Math.max(0,REELS.findIndex(r=>r.id===S.reel));
+  const reelIdx=Math.max(0,REELS.findIndex(r=>r.id===gearGet('reel')));
   let chance=Math.min(0.94,(0.22+strength/200)*environmentBiteFactor()*(1+reelIdx*0.07));
   if(_forcedBiteFish&&tut&&tut.forceTargetActive)chance=1;
   if(Math.random()<chance){triggerBite();}
