@@ -21,6 +21,56 @@
     --accent:#ea9440;--accent-dark:#cc7620;
     --text:#25313a;--text-soft:#5b6b74;--ink:#25313a;
   }
+  /* ===== Freshwater world palette (V0.9.8). The whole game reskins from here:
+     `html.world-fresh` is toggled on the world swap and simply remaps the same
+     tokens to evergreen / river-stone / tannin instead of coastal blue. ===== */
+  html.world-fresh{
+    --cream:#f8f6ee;--parchment:#e9eee2;--wood-dark:#2b3d33;--wood:#d5ded0;
+    --sea:#2f7d63;--grass:#5f9a4c;--grass-dark:#41762f;
+    --accent:#d98a33;--accent-dark:#a9631d;
+    --text:#22302a;--text-soft:#5c6b60;--ink:#22302a;
+  }
+  /* ---- world crest pill ---- */
+  .world-pill{padding:4px 11px 4px 5px;gap:7px;}
+  .wp-crest{width:24px;height:24px;border-radius:7px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:#fff;background:linear-gradient(150deg,#4aa3cd,#0f4460);box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.24);}
+  .wp-crest svg{width:15px;height:15px;}
+  html.world-fresh .wp-crest{background:linear-gradient(150deg,#4b9d67,#173f2c);}
+  .wp-txt{display:flex;flex-direction:column;line-height:1.06;text-align:left;}
+  .wp-k{font-size:8px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;opacity:.6;}
+  .wp-v{font-size:12.5px;font-weight:800;}
+  .world-pill.locked{opacity:.55;}
+  /* a slow amber ring until the player has actually swapped once */
+  .world-pill.nudge{animation:wpNudge 2.4s ease-in-out infinite;}
+  @keyframes wpNudge{0%,100%{box-shadow:0 0 0 0 rgba(221,150,51,.55);}55%{box-shadow:0 0 0 7px rgba(221,150,51,0);}}
+  /* ---- world swap confirmation card ---- */
+  .ws-bg{position:fixed;inset:0;z-index:340;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(12,26,34,.55);-webkit-backdrop-filter:blur(3px);backdrop-filter:blur(3px);}
+  .ws-bg.show{display:flex;animation:wsFade .16s ease;}
+  @keyframes wsFade{from{opacity:0}to{opacity:1}}
+  .ws-card{position:relative;width:100%;max-width:430px;background:var(--cream);border:1px solid var(--wood);border-radius:18px;box-shadow:0 18px 44px rgba(10,26,34,.34);padding:16px 16px 18px;text-align:center;animation:wsPop .22s cubic-bezier(.2,1.25,.4,1);}
+  @keyframes wsPop{from{transform:scale(.9) translateY(12px);opacity:0}to{transform:none;opacity:1}}
+  .ws-x{position:absolute;top:9px;right:13px;font-size:23px;font-weight:800;color:var(--text-soft);cursor:pointer;line-height:1;}
+  .ws-h{font-family:'Fredoka';font-size:20px;font-weight:600;color:var(--wood-dark);}
+  .ws-sub{font-size:11.5px;font-weight:700;color:var(--text-soft);margin:4px 0 13px;line-height:1.5;}
+  .ws-pair{display:flex;align-items:stretch;gap:9px;}
+  .ws-side{flex:1;position:relative;overflow:hidden;color:#fff;text-align:center;border-radius:14px;padding:13px 8px 16px;}
+  .ws-side.salt{background:linear-gradient(160deg,#4aa3cd,#0f4460);}
+  .ws-side.fresh{background:linear-gradient(160deg,#5aab74,#173f2c);}
+  .ws-side.here{outline:2.5px solid var(--accent);outline-offset:-2.5px;}
+  .ws-side .wsn{font-family:'Fredoka';font-size:15px;font-weight:700;}
+  .ws-side .wsr{font-size:10.5px;font-weight:700;opacity:.85;margin-top:2px;line-height:1.5;}
+  .ws-side .wstag{position:absolute;top:0;left:0;right:0;font-size:8.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;background:rgba(0,0,0,.28);padding:3px 0;}
+  .ws-why{font-size:11.5px;font-weight:700;color:#b3402a;margin:11px 2px 0;line-height:1.5;min-height:0;}
+  .ws-go{width:100%;margin-top:13px;padding:12px;border:none;border-radius:13px;background:var(--accent);color:#fff;font-family:'Fredoka';font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 3px 10px rgba(217,138,51,.35);}
+  .ws-go:disabled{background:#b9bfc2;box-shadow:none;cursor:default;}
+  /* the travel beat: a full-screen wipe while the new world builds */
+  .ws-wipe{position:fixed;inset:0;z-index:360;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;color:#fff;font-family:'Fredoka';font-weight:700;font-size:17px;}
+  .ws-wipe.show{display:flex;}
+  .ws-wipe.salt{background:linear-gradient(160deg,#2b7fae,#06202f);}
+  .ws-wipe.fresh{background:linear-gradient(160deg,#3f8a5f,#0d2b1e);}
+  .ws-wipe .wsw-sub{font-family:'Nunito';font-size:12px;font-weight:700;opacity:.75;max-width:280px;text-align:center;line-height:1.55;}
+  .ws-spin{width:34px;height:34px;border-radius:50%;border:3px solid rgba(255,255,255,.25);border-top-color:#fff;animation:wsSpin .8s linear infinite;}
+  @keyframes wsSpin{to{transform:rotate(360deg)}}
+  @media (max-width:600px){.world-pill{padding:4px;} .wp-txt{display:none;}}
   *{box-sizing:border-box;margin:0;padding:0;}
   html, body{background:#10212e;font-family:'Nunito',sans-serif;color:var(--text);min-height:100vh;}
   .stage{max-width:980px;margin:0 auto;padding:10px;min-height:100%;display:flex;flex-direction:column;}
@@ -670,6 +720,7 @@
         <button class="menu-dd-item" data-go="friends"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M3 20a6 6 0 0 1 12 0"/><path d="M16 6a3 3 0 0 1 0 6"/><path d="M18 14a6 6 0 0 1 3 5"/></svg></span>Friends</button>
         <button class="menu-dd-item" data-go="settings"><span class="menu-dd-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 0 1-4 0v-.1a1.6 1.6 0 0 0-1-1.5 1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 0 1 0-4h.1a1.6 1.6 0 0 0 1.5-1 1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 0 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 0 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z"/></svg></span>Settings</button>
       </div>
+      <div class="pill click world-pill" id="world-pill" onclick="openWorldSwap()" title="Travel between worlds"><span class="wp-crest" id="wp-crest"></span><span class="wp-txt"><span class="wp-k">Travel to</span><span class="wp-v" id="wp-name">Freshwater</span></span></div>
       <div class="pill click" id="zone-pill"><span id="zone-icon" style="display:inline-flex;align-items:center;"></span> <span id="zone-name">Inshore</span></div>
       <div class="pill" id="time-pill"><span id="time-icon" style="display:inline-flex;align-items:center;"></span> <span class="sub" id="time-season">Spring</span></div>
       <div class="pill click" id="env-pill" onclick="openEnvDetails()" title="Conditions"><span id="env-icons" style="display:inline-flex;align-items:center;gap:3px;"></span></div>
@@ -828,6 +879,19 @@
   <button class="sdew-btn" id="sdew-btn">HOLD TO REEL</button>
   <button class="sdew-slowmo" id="sdew-slowmo" style="display:none" onclick="useChainsawSlowmo()"><span class="cs-blade"></span> SLOW-MO</button>
 </div>
+<!-- World swap (V0.9.8): the deliberate Clash-of-Clans style travel beat. -->
+<div class="ws-bg" id="ws-bg" onclick="if(event.target===this)closeWorldSwap()">
+  <div class="ws-card">
+    <div class="ws-x" onclick="closeWorldSwap()">&times;</div>
+    <div class="ws-h">Change Waters</div>
+    <div class="ws-sub">Your boats, rods, tackle and bait stay in the world they belong to. Gold, rubies, pearls, your logbook and your level follow you everywhere.</div>
+    <div class="ws-pair" id="ws-pair"></div>
+    <div class="ws-why" id="ws-why"></div>
+    <button class="ws-go" id="ws-go" onclick="confirmWorldSwap()">Head to the Freshwater</button>
+  </div>
+</div>
+<div class="ws-wipe" id="ws-wipe"><div class="ws-spin"></div><div id="wsw-title">Travelling…</div><div class="wsw-sub" id="wsw-sub"></div></div>
+
 <div class="surf-overlay" id="surf-overlay">
   <div class="surf-sky"></div>
   <div class="surf-sea" id="surf-sea"></div>
@@ -1868,6 +1932,7 @@ let _lobbyUnsub=null,_inviteUnsub=null,_shownInvites={},_lastInviteList=[],_pend
 function updatePills(){updateRigBar();}
 function updateZonePill(){
   document.getElementById('zone-name').textContent=curZone().name;
+  if(typeof updateWorldPill==='function')updateWorldPill();
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
 }
 
@@ -3264,6 +3329,10 @@ const ICONS={
 'season-fall':'<path d="M4.5 20C4.5 11.5 10 5 19 5C19 14.5 12.5 20 4.5 20Z"/><path d="M4.5 20 19 5"/><path d="M10.8 13.2l4.4-1.5M8.6 15.8l5-1.6"/><path d="M4.5 20 2.6 21.9"/>',
 'season-winter':'<line x1="12" y1="2.5" x2="12" y2="21.5"/><line x1="3.8" y1="7.25" x2="20.2" y2="16.75"/><line x1="3.8" y1="16.75" x2="20.2" y2="7.25"/><path d="M9.6 4.7 12 6.4 14.4 4.7"/><path d="M9.6 19.3 12 17.6 14.4 19.3"/><path d="M4.6 11 6.9 10.7 6.6 8.4"/><path d="M19.4 13 17.1 13.3 17.4 15.6"/><path d="M4.6 13 6.9 13.3 6.6 15.6"/><path d="M19.4 11 17.1 10.7 17.4 8.4"/>',
 'zone-pin':'<path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>',
+// World crests (V0.9.8): rolling swell + sun for saltwater, a peak and its
+// waterline for freshwater.
+'world-salt':'<path d="M2 16c2.4 0 2.4-2 4.8-2s2.4 2 4.8 2 2.4-2 4.8-2 2.4 2 4.8 2"/><path d="M2 20.5c2.4 0 2.4-2 4.8-2s2.4 2 4.8 2 2.4-2 4.8-2 2.4 2 4.8 2"/><circle cx="17" cy="6" r="3"/>',
+'world-fresh':'<path d="M2 20h20"/><path d="M12 3 6 20"/><path d="M12 3l6 17"/><path d="M8.4 11h7.2"/>',
 'fits':'<path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>',
 // misc UI icons (replacing emojis)
 'person':'<circle cx="12" cy="8" r="4"/><path d="M5 21v-1a7 7 0 0 1 14 0v1"/>',
@@ -4547,7 +4616,7 @@ let S={
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
   // ---- Freshwater world (V0.9.8). Equipped gear is per world; ownership lists
   //      and inventories above stay shared because ids never collide. ----
-  lastZone:{salt:0,fresh:3},
+  lastZone:{salt:0,fresh:3},everSwapped:false,
   fboat:'bank',frod:'frod0',freel:'freel0',fbraid:'fline0',fleader:'fluoro',
   fmethod:'bobber',fbaitSel:'worm',fLureSel:'',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
@@ -5349,6 +5418,7 @@ function normalizeState(){
   if(!S.fmethod)S.fmethod='bobber';
   if(!S.fbaitSel)S.fbaitSel='worm';
   if(typeof S.fLureSel!=='string')S.fLureSel='';
+  if(typeof S.everSwapped!=='boolean')S.everSwapped=false;
   if(typeof S.iceUnlocked!=='boolean')S.iceUnlocked=false;
   if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
   // Freshwater starter gear is free and implicit, exactly like the Kayak: you can
@@ -5358,6 +5428,11 @@ function normalizeState(){
     if(arr&&arr.indexOf(id)<0)arr.push(id);
   });
   if(typeof S.baitInv.worm!=='number')S.baitInv.worm=20;
+  // Starter terminal tackle, mirroring the saltwater kit at S's declaration: a
+  // float rig and a bottom rig so the Lake is fishable the moment you arrive.
+  // Without this the rig bar reads "none / buy in shop" and no cast is legal.
+  if(!S.tackleInv.fwbob_b)S.tackleInv.fwbob_b={qty:5,dur:7};
+  if(!S.tackleInv.fwbot_b)S.tackleInv.fwbot_b={qty:5,dur:6};
   // A save that ended in a zone the player can no longer reach (or an out-of-range
   // index from a future build) must land somewhere valid IN ITS OWN WORLD.
   if(!(S.zone>=0&&S.zone<ZONES.length))S.zone=0;
@@ -7672,6 +7747,86 @@ function tickAbilityEffects(){
   // live cooldown countdown on the ability button
   updateAbilityButton();
 }
+// ===================== WORLD SWAP (V0.9.8) =====================
+// Saltwater <-> Freshwater. Deliberately a three-beat action (pill -> card ->
+// wipe) rather than a toggle: it throws away your position, rebuilds the map and
+// swaps every catalog, so it should feel like travelling, not like flipping a
+// switch.
+let _worldSwapping=false;
+function otherWorldId(){return curWorldId()==='salt'?'fresh':'salt';}
+// Why you can't leave right now, or '' when travel is allowed.
+function worldSwapBlock(){
+  if(activeTournament||tourn.active||tourn.coop)return 'You can’t change waters during a match.';
+  if(typeof surfActive!=='undefined'&&surfActive)return 'Leave the surf first.';
+  if(typeof iceActive!=='undefined'&&iceActive)return 'Come off the ice first.';
+  if(bobber&&bobber.active)return 'Reel your line in first.';
+  if(otherWorldId()==='fresh'&&!freshUnlocked())return 'Reach Level '+FRESH_UNLOCK_LVL+' to unlock the freshwater.';
+  return '';
+}
+function updateWorldPill(){
+  const p=document.getElementById('world-pill');if(!p)return;
+  const to=otherWorldId(), W=WORLDS[to];
+  const nm=document.getElementById('wp-name');if(nm)nm.textContent=W.name;
+  const cr=document.getElementById('wp-crest');
+  if(cr)cr.innerHTML=svgIcon(to==='fresh'?'world-fresh':'world-salt',15);
+  const locked=(to==='fresh'&&!freshUnlocked());
+  p.classList.toggle('locked', locked);
+  // Nudge until they've travelled once, so the second world is discoverable.
+  p.classList.toggle('nudge', !locked && !S.everSwapped);
+  // The whole page reskins off this class.
+  document.documentElement.classList.toggle('world-fresh', isFresh());
+}
+function openWorldSwap(){
+  const to=otherWorldId(), here=curWorldId();
+  const pair=document.getElementById('ws-pair');
+  pair.innerHTML=[here, to].map(function(w){
+    const W=WORLDS[w], regions=W.zones.map(function(z){return ZONE_LBL[z];}).join(' · ');
+    return '<div class="ws-side '+w+' '+(w===here?'here':'')+'">'+(w===here?'<div class="wstag">You are here</div>':'')
+      +'<div class="wsn" style="margin-top:'+(w===here?'9px':'0')+';">'+W.name+'</div><div class="wsr">'+regions+'</div></div>';
+  }).join('');
+  const why=worldSwapBlock();
+  document.getElementById('ws-why').textContent=why;
+  const go=document.getElementById('ws-go');
+  go.textContent='Head to the '+WORLDS[to].name;
+  go.disabled=!!why;
+  document.getElementById('ws-bg').classList.add('show');
+  AUDIO.sfx('open');
+}
+function closeWorldSwap(){document.getElementById('ws-bg').classList.remove('show');}
+function confirmWorldSwap(){
+  if(_worldSwapping)return;
+  const why=worldSwapBlock();
+  if(why){toast(why,'#b3402a');return;}
+  const to=otherWorldId();
+  _worldSwapping=true;
+  closeWorldSwap();
+  // Remember where we were, and where we're going back to.
+  if(!S.lastZone)S.lastZone={salt:0,fresh:3};
+  S.lastZone[curWorldId()]=S.zone;
+  const wipe=document.getElementById('ws-wipe');
+  wipe.className='ws-wipe show '+to;
+  document.getElementById('wsw-title').textContent='Heading to the '+WORLDS[to].name;
+  document.getElementById('wsw-sub').textContent=WORLDS[to].zones.map(function(z){return ZONE_LBL[z];}).join(' · ');
+  // One beat so the transition reads as travel, then rebuild on the far side.
+  setTimeout(function(){
+    let z=S.lastZone[to];
+    if(worldOf(z)!==to)z=worldZoneLo(to);
+    S.zone=z;
+    // Standing somewhere this world's gear can no longer reach (sold the boat,
+    // unequipped the fly rod) drops you back to the furthest you CAN reach.
+    if(S.zone>maxZone())S.zone=maxZone();
+    S.everSwapped=true;
+    ensureRig();initStructures();clearSightFish();initWorld('center',true);
+    updateDriveUI();updateRigBar();updateZonePill();updateWorldPill();refreshMenu();queueSave();
+    setTimeout(function(){
+      wipe.classList.remove('show');
+      _worldSwapping=false;
+      toast('Welcome to the '+WORLDS[to].name+'.','#2aa890');
+      setStatus('Now in the '+ZONES[S.zone].name.toLowerCase()+'. '+(ZONES[S.zone].walk?'Hike to a spot, then stop to fish.':'Drive to a structure, then drop anchor to fish.'));
+    },420);
+  },620);
+}
+
 function enterWorld(tz, arriveDir){
   S.zone=tz;
   if(S.lastZone)S.lastZone[worldOf(tz)]=tz;   // so a world swap returns you where you left off
@@ -11594,7 +11749,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   preloadFishSprites();// start keying out flat backgrounds on the raster fish art
   await loadGame();
   if(S.zone>maxZone())S.zone=maxZone();
-  ensureRig();updateRigBar();refreshMenu();updateCosmeticHUD();
+  ensureRig();updateRigBar();refreshMenu();updateCosmeticHUD();updateZonePill();
   // Auto-refresh tournament panel every 60s so countdowns stay live
   setInterval(function(){
     const tp=document.getElementById('mp-tournament');
