@@ -483,6 +483,7 @@
   .ultra-catch::before{content:"";position:absolute;inset:-3px;border-radius:22px;padding:3px;background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;animation:ultraShift 2.5s linear infinite;-webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none;}
   .ultra-catch .catch-name{color:#fff;}
   .ultra-catch .catch-weight{color:#ffe9a8;}
+  .ultra-catch .catch-len{color:rgba(255,233,168,.72);}
   .ultra-catch .catch-fact{color:rgba(255,255,255,.78);}
   .ultra-catch .catch-ok{background:linear-gradient(100deg,#ff5ed4,#7b5cff);border-color:#7b5cff;}
   .ultra-badge,.ultra-rarity{background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;animation:ultraShift 2.5s linear infinite;-webkit-background-clip:text;background-clip:text;color:transparent;}
@@ -491,7 +492,8 @@
   .leg-label.ultra{font-size:42px;letter-spacing:3px;background:linear-gradient(100deg,#ffd24a,#ff5ed4,#7b5cff,#34e7e4,#ffd24a);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:ultraShift 2s linear infinite;}
   .fish-card.ultra .fname{color:#c83bbf;}
   .fish-card.ultra.caught{border-color:#ff3df0;background:linear-gradient(135deg,#fbe6fb,#eee2ff);box-shadow:0 0 12px rgba(255,61,240,.35);}
-  .catch-weight{font-family:'Fredoka';font-size:30px;font-weight:600;color:var(--ink);margin:8px 0 2px;}
+  .catch-weight{font-family:'Fredoka';font-size:30px;font-weight:600;color:var(--ink);margin:8px 0 0;}
+  .catch-len{font-family:'Fredoka';font-size:17px;font-weight:600;color:var(--text-soft);margin:0 0 4px;font-variant-numeric:tabular-nums;}
   .catch-rewards{font-size:14px;font-weight:800;color:var(--accent-dark);margin-bottom:10px;}
   .catch-fact{background:var(--parchment);border-radius:11px;padding:10px 12px;font-size:12.5px;font-weight:600;font-style:italic;color:var(--text);line-height:1.5;text-align:left;}
   .catch-ok{margin-top:13px;width:100%;padding:12px;font-family:'Fredoka';font-size:16px;font-weight:700;color:#fff;background:var(--grass);border:none;border-radius:13px;box-shadow:0 4px 16px rgba(47,167,149,.42);cursor:pointer;}
@@ -559,6 +561,7 @@
     .catch-card{padding:14px;border-radius:16px;}
     .catch-name{font-size:20px;}
     .catch-weight{font-size:26px;}
+    .catch-len{font-size:15px;}
     /* toast tighter to top */
     .toast{top:calc(env(safe-area-inset-top,0px) + 12px);font-size:13px;padding:7px 14px;}
   }
@@ -4676,6 +4679,82 @@ const FISH=[
   {id:'sheefish',name:'Inconnu',zone:5,ice:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:460,weight:1.1,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one" \u2014 the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
   {id:'ghostlaker',name:'Ghost of the Ice',zone:5,ice:true,rarity:'ultra',size:[60,180],line:40,methods:['ice'],baits:['shiner','shad'],leader:'any',structure:['icehole'],season:['winter'],time:['all'],xp:1500,gold:2200,weight:1,spawnChance:0.0012,iceDepth:[48,60],icePatience:4500,iceTS:1.00,iceRise:3.00,iceChase:true,fact:'An albino lake trout from water that has never thawed. A handful of anglers have seen the mark; almost none have seen the fish. Photograph it and slide it back.'},
 ];
+
+// ===================== LENGTH (inches) =====================
+// A fish's weight is only ever rolled (rollWeight); its LENGTH is derived from
+// that weight, never rolled separately, so the two numbers on a catch can never
+// contradict each other.
+//
+// The relationship is the standard angler shape-factor formula used by state
+// fisheries agencies and every length-to-weight conversion chart:
+//
+//        weight(lb) = length(in)^3 / K        =>   length = cbrt(weight * K)
+//
+// K is a per-species constant set by body form. A slender, pencil-shaped fish
+// (wahoo, gar, barracuda, sturgeon) carries a high K: lots of length for very
+// little weight. A deep, slab-sided fish (permit, tripletail, bluegill,
+// sheepshead) carries a low one. Every value below was fitted against published
+// length/weight tables for that species at BOTH ends of its size[] range, so a
+// minimum-size fish and a maximum-size fish both measure out correctly:
+//
+//   redfish  K=2450 ->  3 lb = 19.4"   18 lb = 35.3"   (FWC: 20"~3 lb, 36"~20 lb)
+//   snook    K=3000 ->  3 lb = 20.8"   20 lb = 39.1"   (FWC: 30"~9 lb, 40"~22 lb)
+//   tarpon   K=2800 -> 40 lb = 48.2"  160 lb = 76.5"
+//   largemouth K=1600 -> 1 lb = 11.7"  14 lb = 28.2"   (the classic bass formula)
+//   walleye  K=2700 ->  1 lb = 13.9"   12 lb = 31.9"
+//
+// Anything not listed falls back to SHAPE_K_DEFAULT (a generic fusiform fish).
+const SHAPE_K={
+  // ---------- INSHORE ----------
+  pinfish:1150, trout:3100, ladyfish:5000, mangrovesnap:1700, sheepshead:1600,
+  flounder:2650, redfish:2450, snook:3000, blackdrum:1850, tarpon:2800,
+  pompano:1700, permit:1550, jack:1800, bonefish:2550, sawfish:10000,
+  // ---------- NEARSHORE ----------
+  grunt:1750, lanesnap:1700, spanish:4500, trigger:1470, hogfish:1650,
+  nearmangrove:1700, king:3250, gag:1950, cobia:2900, blacktip:3700,
+  bluefish:2750, bonito:2400, barracuda:4700, tripletail:1250, goliath:1220,
+  // ---------- OFFSHORE ----------
+  vermilion:1650, almaco:2600, blackfin:1900, redsnapper:1750, mahi:4300,
+  amberjack:2450, wahoo:4700, sailfish:12900, yellowfin:1520, swordfish:3400,
+  marlin:4800, bluefin:1950, stripedmarlin:5600, roosterfish:2600, blackmarlin:4300,
+  // ---------- SURF SHARKS (total length) ----------
+  nurseshark:4400, sandbarshark:3400, lemonshark:3900, bullshark:2500,
+  hammerhead:5000, tigershark:4350, greatwhite:2200,
+  // ---------- LAKE ----------
+  goldenshiner:2600, bluegill:1200, redear:1200, yellowbullhead:2400,
+  whitebass:2150, blackcrappie:1750, channelcat:2500, spottedbass:1750,
+  chainpickerel:4200, commoncarp:1800, largemouth:1600, freshdrum:1900,
+  bowfin:2900, hybridstriper:1950, longnosegar:6500, flathead:2050,
+  bluecat:2050, muskie:3650,
+  // ---------- RIVER ----------
+  longearsunfish:1200, skipjack:3400, rivercat:2500, redhorse:2600,
+  riverwhite:2150, riverspot:1750, smallmouth:1900, sauger:2700,
+  riverhybrid:1950, smallbuffalo:1700, walleye:2700, stripedbass:2600,
+  rivergar:6500, shovelnose:6500, riverflat:2050, paddlefish:3900,
+  lakesturgeon:5000, riverblue:2050,
+  // ---------- MOUNTAINS ----------
+  brooktrout:2100, mtnsucker:2700, mtnwhitefish:3900, rainbowtrout:2700,
+  cutthroattrout:2700, browntrout:2500, grayling:3000, kokanee:2800,
+  tigertrout:2600, cuttbow:2700, goldentrout:2400, bulltrout:2500,
+  laketrout:2350, landlockedsalmon:2900, steelhead:2700, arcticchar:2500,
+  taimen:2500,
+  // ---------- ICE ----------
+  tullibee:3100, lakewhitefish:2700, burbot:4300, northernpike:3900,
+  giantlaker:2350, sheefish:3100, ghostlaker:2350,
+};
+const SHAPE_K_DEFAULT=2600;   // generic fusiform fish, roughly trout/bass shaped
+// Length in inches for a fish of weight w (lb).
+function fishLen(f, w){return Math.cbrt(Math.max(0.01,w)*((f&&SHAPE_K[f.id])||SHAPE_K_DEFAULT));}
+// 8.4 lb fish -> 28.5"; anything past 8 ft also gets a feet-and-inches read,
+// because "14 ft 8 in" means more on a great white than "176 in" does.
+function fmtIn(n){return n>=100?String(Math.round(n)):n.toFixed(1);}
+function fishLenIn(f, w){return fmtIn(fishLen(f, w))+'"';}
+function fishLenStr(f, w){
+  const n=fishLen(f, w);
+  if(n<96)return fishLenIn(f, w);
+  const ft=Math.floor(n/12), inch=Math.round(n-ft*12);
+  return fmtIn(n)+'" ('+(inch===12?(ft+1)+' ft':(inch?ft+' ft '+inch+' in':ft+' ft'))+')';
+}
 
 // ===================== CURRENCIES =====================
 // Three currencies, deliberately kept apart:
@@ -11892,7 +11971,7 @@ function land(f, w, perfect, bullseye){
   recordTournamentCatch(f, w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
-  setStatus('Landed a '+fmtLb(w)+' lb '+f.name+'.');
+  setStatus('Landed a '+f.name+' — '+fmtLb(w)+' lb, '+fishLenIn(f, w)+'.');
   if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
   // After surf is unlocked, jacks & amberjacks are kept as the only surf bait.
   if(S.surfUnlocked&&(f.id==='jack'||f.id==='amberjack')){S.surfBait=(S.surfBait||0)+1;setTimeout(function(){toast('Kept as surf bait (x'+S.surfBait+').','#2aa890');},950);}
@@ -11942,6 +12021,7 @@ function showCatch(f, w, o){
     '<div class="catch-name">'+f.name+'</div>'+
     '<div class="catch-rarity'+(ultra?' ultra-rarity':'')+'"'+(ultra?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+' \u00b7 '+ZONES[f.zone].name+'</div>'+
     '<div class="catch-weight">'+fmtLb(w)+' lb</div>'+
+    '<div class="catch-len">'+fishLenStr(f, w)+'</div>'+
     '<div class="catch-rewards">+'+o.xp+' XP'+((activeTournament&&!(activeTournament.def&&activeTournament.def.coop))?' &nbsp;\u00b7&nbsp; tournament catch':(o.rubies>0?' &nbsp;\u00b7&nbsp; +'+o.gold+' gold &nbsp;\u00b7&nbsp; <span style="color:#d61f3a;">+'+o.rubies+' rubies</span>':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold'))+'</div>'+
     '<div class="catch-fact">'+f.fact+'</div>'+
     '<button class="catch-ok" onclick="closeCatch()">'+(ultra?'Once in a lifetime!':'Nice!')+'</button>';
@@ -12732,8 +12812,9 @@ function openFish(id){
     '<div class="mrow"><span class="ml">Season</span><span class="mv">'+seasons+'</span></div>'+
     '<div class="mrow"><span class="ml">Best time</span><span class="mv">'+times+'</span></div>'+
     '<div class="mrow"><span class="ml">Size</span><span class="mv">'+f.size[0]+'-'+f.size[1]+' lb</span></div>'+
+    '<div class="mrow"><span class="ml">Length</span><span class="mv">'+fishLenIn(f, f.size[0])+' - '+fishLenIn(f, f.size[1])+'</span></div>'+
     '<div class="mrow"><span class="ml">Line needed</span><span class="mv">'+f.line+' lb+ to land</span></div>'+
-    '<div class="mrow"><span class="ml">Your best</span><span class="mv">'+(S.best[f.id]?fmtLb(S.best[f.id])+' lb ('+S.caught[f.id]+' caught)':'not yet caught')+'</span></div>'+
+    '<div class="mrow"><span class="ml">Your best</span><span class="mv">'+(S.best[f.id]?fmtLb(S.best[f.id])+' lb · '+fishLenIn(f, S.best[f.id])+' ('+S.caught[f.id]+' caught)':'not yet caught')+'</span></div>'+
     '<div class="mfact">\u201C'+f.fact+'\u201D</div>';
   document.getElementById('modal-bg').classList.add('show');
 }
