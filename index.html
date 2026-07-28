@@ -12354,13 +12354,25 @@ function renderLogbook(){
 
 // Boats, rods and reels must be purchased in order. Returns the name of the
 // previous required tier if the current one is gated by progression, else null.
+//
+// The ladder is per WORLD and skips ultra-reward gear. Both matter: BOATS/RODS/
+// REELS are single flat arrays with the freshwater tiers appended after the
+// saltwater ones, and the ultra rewards (Chainsaw Rod, Black Marlin Speedboat)
+// sit at the end of their saltwater run. Walking the raw array therefore handed
+// every freshwater STARTER the last saltwater item as its prerequisite — the
+// Ultralight Rod demanded the Chainsaw Rod, which cannot be bought at all since
+// it only drops for landing a Sawfish. Same for Bank & Wade behind the Black
+// Marlin Speedboat, and the 1000 Ultralight behind the Big Game Two Speed.
+// Filtering to the item's own world makes each world's first tier index 0 (no
+// prerequisite), and dropping reward items keeps unbuyable gear out of the chain.
 function prereqLocked(kind, item){
   const map={boat:[BOATS, S.ownedBoats],rod:[RODS, S.ownedRods],reel:[REELS, S.ownedReels]};
   const entry=map[kind];if(!entry)return null;
-  const arr=entry[0],owned=entry[1];
-  const idx=arr.indexOf(item);
+  const owned=entry[1];
+  const ladder=forWorld(entry[0], item.world||'salt').filter(function(it){return !it.reward;});
+  const idx=ladder.indexOf(item);
   if(idx<=0)return null;
-  const prev=arr[idx-1];
+  const prev=ladder[idx-1];
   if(owned.includes(prev.id))return null;
   return prev.name;
 }
