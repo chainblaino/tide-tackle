@@ -809,7 +809,12 @@
       <div class="pill" id="lvl-pill">Lv 1</div>
       <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies, won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
-      <div class="pill" id="pearls-pill" title="Pearls, the competitive stake. Earned only, never for sale."><span class="pearl-s"></span> <span id="pearls-count">0</span></div>
+      <!-- Pearls deliberately have NO HUD pill: the top bar was too crowded, and
+           pearls are only ever spent in two places (the skin chooser and a
+           competitive lobby's wager). Both of those screens show the balance
+           themselves, so it is surfaced exactly where it is needed instead of
+           taking up permanent space up here. updatePills() stays null-safe on
+           #pearls-count so nothing breaks by its absence. -->
       <div class="pill click clancy-pill" id="clancy-pill" onclick="openClancyInfo()" title="Ask Captain Clancy"><span class="clancy-face" id="clancy-face"></span></div>
     </div>
     </div>
@@ -3118,7 +3123,9 @@ function _renderLobbyForm(){
   if(comp){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
-    h+='<div class="lob-lbl">Pearl wager (each)</div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
+    // Balance shown inline: pearls have no HUD pill, and picking a wager you
+    // cannot cover is otherwise only caught by an error toast on Open.
+    h+='<div class="lob-lbl">Pearl wager (each) <span style="opacity:.75;font-weight:700;">· you have '+(S.pearls||0)+'</span></div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Gold buy-in (each)</div><div class="lob-row">'+GOLD_BUYIN_TIERS.map(function(g){return _lchip(g===0?'None':(g>=1000?(g/1000)+'k':g+''),d.goldBuyIn===g,"lobbySet('goldBuyIn','"+g+"')");}).join('')+'</div>';
   }
   h+='</div>';
@@ -3140,7 +3147,7 @@ function publishLobby(){
     wager:(comp?Math.max(0,Math.min(WAGER_MAX,d.wager)):0),
     goldBuyIn:(comp&&GOLD_BUYIN_TIERS.indexOf(d.goldBuyIn)>=0)?d.goldBuyIn:0,
     castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
-  if(settings.wager>0&&(S.pearls||0)<settings.wager){toast('You need '+settings.wager+' pearls to host this wager.','#b3402a');return;}
+  if(settings.wager>0&&(S.pearls||0)<settings.wager){toast('You need '+settings.wager+' pearls to host this wager — you have '+(S.pearls||0)+'.','#b3402a');return;}
   if(settings.goldBuyIn>0&&(S.gold||0)<settings.goldBuyIn){toast('You need '+settings.goldBuyIn+' gold to host this buy-in.','#b3402a');return;}
   const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
@@ -3290,7 +3297,7 @@ function joinLobby(id){
     const cap=(data.settings&&data.settings.size)||25;
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
     const w=(data.settings&&data.settings.wager)||0;
-    if(w>0&&(S.pearls||0)<w){toast('You need '+w+' pearls to join this wager.','#b3402a');return;}
+    if(w>0&&(S.pearls||0)<w){toast('You need '+w+' pearls to join this wager — you have '+(S.pearls||0)+'.','#b3402a');return;}
     const gb=(data.settings&&data.settings.goldBuyIn)||0;
     if(gb>0&&(S.gold||0)<gb){toast('You need '+gb+' gold to join this buy-in.','#b3402a');return;}
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
@@ -4037,8 +4044,12 @@ function openSkinChooser(base){
       +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' pearls':'Free')+' · alternate look</div></div>'+act+'</div>';
   });
   const note=owns?'':'<div style="font-size:11.5px;color:#b3402a;font-weight:700;margin-bottom:9px;">Buy the '+_skinBaseLabel(base)+' first to unlock its skins.</div>';
+  // Skins are the only thing pearls buy, and pearls have no HUD pill, so the
+  // balance is shown right here where it is about to be spent.
+  const bal='<div style="font-size:11.5px;font-weight:800;color:var(--text-soft);margin-bottom:9px;">'
+    +'<span class="pearl-s" style="width:11px;height:11px;margin-right:4px;"></span>'+(S.pearls||0)+' pearls</div>';
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
-  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Customize: '+_skinBaseLabel(base)+'</div>'+note+rows;
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Customize: '+_skinBaseLabel(base)+'</div>'+bal+note+rows;
   bg.classList.add('show');
 }
 function pickSkin(base, skinId){
@@ -4048,7 +4059,7 @@ function pickSkin(base, skinId){
   const owned=(S.ownedSkins||[]).includes(skinId);
   if(!owned){
     if((sk.cost||0)>0){
-      if((S.pearls||0)<sk.cost){toast('Not enough pearls.','#b3402a');return;}
+      if((S.pearls||0)<sk.cost){toast('Not enough pearls — '+sk.name+' costs '+sk.cost+', you have '+(S.pearls||0)+'.','#b3402a');return;}
       S.pearls-=sk.cost;if(typeof updatePills==='function')updatePills();
     }
     S.ownedSkins=S.ownedSkins||[];S.ownedSkins.push(skinId);
