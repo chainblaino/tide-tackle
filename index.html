@@ -858,12 +858,12 @@
 
     <!-- Fly fishing (V0.9.8): its own three-beat loop, not the catch-track bar. -->
     <div class="fly-game" id="fly-game">
-      <div class="fly-hint" id="fly-hint">Hold to load the rod, release when the line straightens.</div>
+      <div class="fly-hint" id="fly-hint">Press and follow the green loop with your finger.</div>
       <div class="fly-meter"><div class="fly-band" id="fly-band"></div><div class="fly-fill" id="fly-fill"></div></div>
       <div class="fly-stats"><span id="fly-line">0 ft of line</span><span id="fly-loops"></span></div>
       <div class="fly-row">
-        <button class="fly-btn primary" id="fly-main">False Cast</button>
-        <button class="fly-btn" id="fly-alt">Present</button>
+        <button class="fly-btn primary" id="fly-main">Present</button>
+        <button class="fly-btn" id="fly-alt">Cancel</button>
       </div>
     </div>
 
@@ -10689,6 +10689,11 @@ function render(ts){
     if(phase==='biting'){ctx.strokeStyle='rgba(224,73,44,.5)';ctx.lineWidth=1.6;const rr=8+Math.abs(Math.sin(t*8))*9;ctx.beginPath();ctx.arc(bobber.x, bobber.y, rr,0,6.28);ctx.stroke();}
   }
 
+  // FLY beat 1: the green loop drifting around the angler's head, and the line
+  // trailing from the rod tip to wherever the finger is. Drawn last so it sits
+  // over the water and the boat.
+  if(typeof flyPhase!=='undefined'&&flyPhase==='casting')drawFlyLoop(t);
+
   // Rain overlay during rain or storm weather
   updateAndDrawRain(t);
 
@@ -10843,12 +10848,37 @@ const FIND_RADIUS={power_plant:36,wreck:40};
 function nearestStruct(x, y){let best=null, bd=1e9;for(const s of activeStructures()){const d=dist(x, y, s.x-camera.x, s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
 
 // ── Bounty cannon: drag-aim slingshot on the canvas ──
+// Canvas point -> internal canvas coordinates.
+function _cvPt(e){
+  const rect=canvas.getBoundingClientRect();
+  return {x:(e.clientX-rect.left)*(CW/rect.width), y:(e.clientY-rect.top)*(CH/rect.height)};
+}
+// FLY beat 1 owns the canvas while a cast is being loaded: press anywhere and
+// track the loop. Registered in the capture phase, ahead of the cannon and the
+// click-to-cast handler, so neither fires mid-track.
 canvas.addEventListener('pointerdown',function(e){
+  if(typeof flyPhase!=='undefined'&&flyPhase==='casting'){
+    const p=_cvPt(e);flyTrackStart(p.x, p.y);
+    try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+    e.preventDefault();e.stopPropagation();return;
+  }
   if(!_cannonArmed)return;
   const rect=canvas.getBoundingClientRect();
   _cannonDrag={x:(e.clientX-rect.left)*(CW/rect.width),y:(e.clientY-rect.top)*(CH/rect.height)};
   e.preventDefault();
 },true);
+canvas.addEventListener('pointermove',function(e){
+  if(typeof flyPhase==='undefined'||flyPhase!=='casting'||!flyTracking)return;
+  const p=_cvPt(e);flyTrackMove(p.x, p.y);
+  e.preventDefault();
+},true);
+['pointerup','pointercancel'].forEach(function(ev){
+  canvas.addEventListener(ev,function(e){
+    if(typeof flyPhase==='undefined'||flyPhase!=='casting'||!flyTracking)return;
+    flyTrackEnd();
+    e.preventDefault();e.stopPropagation();
+  },true);
+});
 window.addEventListener('pointermove',function(e){
   if(!_cannonArmed||!_cannonDrag)return;
   const rect=canvas.getBoundingClientRect();
@@ -11446,11 +11476,13 @@ function startIceFight(){
   });
 })();
 
-// ═══════════════ FLY FISHING (V0.9.8) ═══════════════
+// ═══════════════ FLY FISHING (V0.9.8, recast V0.9.8.1) ═══════════════
 // A completely different loop from cast->bite->hookset. Three beats:
-//   1 FALSE CAST  a hold-duration rhythm. You cannot power the forward stroke
-//                 until the line straightens behind you, so the target hold gets
-//                 LONGER and the accept window NARROWER the more line is out.
+//   1 THE LOOP    hold anywhere and TRACK the green loop as it drifts in slow
+//                 circles around the angler's head. While your finger stays
+//                 inside it the line pays out; stray and it stalls and bleeds
+//                 back. Release when you like the length you have earned.
+//                 Longer line = a better presentation, up to FLY_MAX_FT.
 //   2 DRIFT       the fly rides the current and drag builds. MEND resets it.
 //                 Let drag hit 100% and the seam goes quiet.
 //   3 THE SET     which input is correct depends on the fly you tied on --
@@ -11458,12 +11490,14 @@ function startIceFight(){
 //                 a streamer a strip-set you hold. That is the skill.
 // It ends by calling triggerBite(), so the fight, catch card, quests, XP and
 // achievements are all the existing ones.
-const FLY_MAX_FT=50, FLY_MAX_STROKES=5;
-const FLY_SHOOT_FT=[14,12,10,8,6];    // ft gained per good stroke
-const FLY_STROKE_BASE=380;            // ms target hold for the first stroke
-const FLY_STROKE_PER_FT=9.5;          // ms added per ft already in the air
-const FLY_WINDOW_BASE=190, FLY_WINDOW_DECAY=0.82, FLY_WINDOW_MIN=70;
-const FLY_MAX_TANGLE=2;
+const FLY_MAX_FT=50;
+// ---- Beat 1 tuning ----
+const FLY_TRACK_GAIN=17;       // ft of line per second while you are on the loop
+const FLY_TRACK_BLEED=11;      // ft per second lost while you are off it
+const FLY_LOOP_R=26;           // the loop's own radius, px
+const FLY_CATCH_R=34;          // how close the finger counts as "on" it, px
+const FLY_ORBIT_MIN=54, FLY_ORBIT_MAX=132;   // how far the loop wanders from the head
+const FLY_MIN_FT=6;            // below this there is not enough line to present
 const FLY_DRIFT_MS=9000;              // a drift runs about nine seconds
 const FLY_DRAG_PER_SEC=26;            // drag climbs this fast with no mending
 const FLY_MEND_RELIEF=42;             // one mend buys this much back
@@ -11478,6 +11512,24 @@ let flyPhase='idle';                  // idle | casting | drift | take
 let flyLineOut=0, flyStrokes=0, flyAcc=0, flyTangle=0;
 let flyAim=null, flyHoldStart=0, flyAnim=null, flyDrag=0, flyMends=0;
 let flyDriftEnd=0, flyTakeAt=0, flySetSpec=null, flyHoldSet=0, flyTargetFish=null;
+// ---- Beat 1 state: the tracked loop ----
+// The loop wanders on two out-of-phase sine pairs so its path is a slow
+// irregular orbit rather than a readable circle. The phases are randomised per
+// cast, so the same track never repeats.
+let flyLoopPt={x:0,y:0}, flyFinger=null, flyTracking=false;
+let flyLoopSeed=0, flyLoopT=0, flyOnLoop=false, flyOnMs=0, flyTotalMs=0, flyLastT=0;
+function flyLoopReseed(){
+  flyLoopSeed=Math.random()*1000;
+  flyLoopT=0;flyOnMs=0;flyTotalMs=0;flyOnLoop=false;
+}
+// Where the loop sits this instant, in screen space around the angler's head.
+function flyLoopAt(tSec){
+  const s=flyLoopSeed;
+  // two orbits at different rates -> a drifting, non-repeating figure
+  const ang=tSec*0.9+s+Math.sin(tSec*0.53+s*1.7)*1.25;
+  const rad=FLY_ORBIT_MIN+(FLY_ORBIT_MAX-FLY_ORBIT_MIN)*(0.5+0.5*Math.sin(tSec*0.41+s*2.3));
+  return {x:ORIGIN.x+Math.cos(ang)*rad, y:ORIGIN.y-14+Math.sin(ang)*rad*0.62};
+}
 
 // Which family the tied-on fly belongs to. Falls back to a nymph-style set.
 function flyKind(){
@@ -11489,39 +11541,82 @@ function flyKind(){
   if(/soft.?hackle|wet|swing|emerger/.test(n))return 'wet';
   return 'nymph';
 }
+// ---- Beat 1 rendering -------------------------------------------------------
+// The loop is the target; the line is the feedback. Both live on the main canvas
+// because the loop orbits the angler's head, not a panel.
+function drawFlyLoop(t){
+  const p=flyLoopPt;if(!p)return;
+  const on=flyOnLoop&&flyTracking;
+  const pulse=1+Math.sin(t*5)*0.06;
+  const r=FLY_LOOP_R*pulse;
+  // Catch radius, faint — shows how forgiving the tracking is.
+  ctx.beginPath();ctx.arc(p.x, p.y, FLY_CATCH_R,0,6.28);
+  ctx.fillStyle=on?'rgba(74,222,128,.16)':'rgba(74,222,128,.07)';ctx.fill();
+  // The loop itself.
+  ctx.lineWidth=on?4:3;
+  ctx.strokeStyle=on?'#4ade80':'#8fe6ab';
+  ctx.shadowColor='rgba(74,222,128,'+(on?.85:.45)+')';ctx.shadowBlur=on?16:9;
+  ctx.beginPath();ctx.arc(p.x, p.y, r,0,6.28);ctx.stroke();
+  ctx.shadowBlur=0;
+  // A bead orbiting the loop gives it a direction to read.
+  const bx=p.x+Math.cos(t*3.1)*r, by=p.y+Math.sin(t*3.1)*r;
+  ctx.fillStyle=on?'#eaffef':'#cfeeda';
+  ctx.beginPath();ctx.arc(bx, by,3.2,0,6.28);ctx.fill();
+  // The line: rod tip -> finger. It goes taut and bright while you are on target.
+  if(flyTracking&&flyFinger){
+    const tipX=ORIGIN.x+16, tipY=ORIGIN.y-30;
+    ctx.strokeStyle=on?'rgba(235,255,240,.95)':'rgba(220,235,225,.5)';
+    ctx.lineWidth=on?2:1.3;
+    ctx.beginPath();ctx.moveTo(tipX, tipY);
+    // Sag when you are off the loop; straight when you are on it.
+    const mx=(tipX+flyFinger.x)/2, my=(tipY+flyFinger.y)/2+(on?4:22);
+    ctx.quadraticCurveTo(mx, my, flyFinger.x, flyFinger.y);
+    ctx.stroke();
+    ctx.fillStyle=on?'#4ade80':'rgba(200,220,205,.75)';
+    ctx.beginPath();ctx.arc(flyFinger.x, flyFinger.y,4.5,0,6.28);ctx.fill();
+  }
+  // Line-length readout right on the water, so the eye never leaves the loop.
+  ctx.font='700 12px Fredoka, system-ui, sans-serif';ctx.textAlign='center';
+  ctx.fillStyle='rgba(255,255,255,.92)';
+  ctx.fillText(Math.round(flyLineOut)+' ft', ORIGIN.x, ORIGIN.y-52);
+  ctx.textAlign='left';
+}
 function flyPanel(){return document.getElementById('fly-game');}
 function flySay(m){const e=document.getElementById('fly-hint');if(e)e.innerHTML=m;}
 function flyShow(on){const p=flyPanel();if(p)p.classList.toggle('show',!!on);}
-// The hold target and accept half-width for the NEXT stroke.
-function flyStrokeTarget(){return FLY_STROKE_BASE+FLY_STROKE_PER_FT*flyLineOut;}
-function flyStrokeWindow(){return Math.max(FLY_WINDOW_MIN, FLY_WINDOW_BASE*Math.pow(FLY_WINDOW_DECAY, flyStrokes));}
 
 // Entry point, called from cast() when the method is `fly`.
 function flyBeginCast(x, y){
   flyPhase='casting';flyLineOut=0;flyStrokes=0;flyAcc=0;flyTangle=0;flyDrag=0;flyMends=0;
   flyAim={x, y};flyTargetFish=null;
+  flyLoopReseed();flyFinger=null;flyTracking=false;
+  flyLoopPt=flyLoopAt(0);
   bobber={x, y, active:false, struct:nearestStruct(x, y)};
   flyShow(true);flyPaintMeter();
-  document.getElementById('fly-main').textContent='False Cast';
-  document.getElementById('fly-alt').textContent='Present';
-  document.getElementById('fly-alt').disabled=true;
-  flySay('Hold to load the rod. Release the instant the line straightens behind you.');
+  document.getElementById('fly-main').textContent='Present';
+  document.getElementById('fly-alt').textContent='Cancel';
+  document.getElementById('fly-alt').disabled=false;
+  flySay('Press and <b>follow the green loop</b> with your finger. Line pays out while you stay on it — release when you like the length.');
   flyStats();
   if(flyAnim)cancelAnimationFrame(flyAnim);
   flyAnim=requestAnimationFrame(flyLoop);
 }
 function flyStats(){
   const a=document.getElementById('fly-line'),b=document.getElementById('fly-loops');
-  if(a)a.textContent=Math.round(flyLineOut)+' ft of line';
-  if(b)b.textContent=flyPhase==='drift'?(flyMends+' mend'+(flyMends===1?'':'s')):(flyTangle?('⚠ '+flyTangle+' tangle'+(flyTangle===1?'':'s')):'');
+  if(a)a.textContent=Math.round(flyLineOut)+' / '+FLY_MAX_FT+' ft of line';
+  if(b){
+    if(flyPhase==='drift')b.textContent=flyMends+' mend'+(flyMends===1?'':'s');
+    else if(flyPhase==='casting')b.textContent=flyTotalMs>400?('tracking '+Math.round(100*flyOnMs/Math.max(1,flyTotalMs))+'%'):'';
+    else b.textContent='';
+  }
 }
-// Paint the accept band for the coming stroke so the rhythm is learnable.
+// The bar under the hint doubles as the line-length gauge during beat 1, and as
+// the drag/take gauge afterwards, so there is only ever one thing to read.
 function flyPaintMeter(){
   const band=document.getElementById('fly-band');if(!band)return;
-  const T=flyStrokeTarget(), W=flyStrokeWindow(), span=1600;
-  band.style.left=(100*Math.max(0,(T-W))/span)+'%';
-  band.style.width=(100*Math.min(span,(2*W))/span)+'%';
-  document.getElementById('fly-meter-x');
+  // A "good length" band sits at the top of the range: reaching it is the goal,
+  // not a timing window to hit exactly.
+  band.style.left='70%';band.style.width='30%';
 }
 function flyLoop(){
   const now=performance.now();
@@ -11529,9 +11624,30 @@ function flyLoop(){
   const meter=fill?fill.parentElement:null;
   if(flyPhase==='casting'){
     if(meter)meter.classList.remove('drift');
-    const held=flyHoldStart?(now-flyHoldStart):0;
-    if(fill)fill.style.width=Math.min(100,100*held/1600)+'%';
+    // ---- beat 1: track the loop ----
+    const dt=Math.min(0.05,(flyLastT?(now-flyLastT):16)/1000);
+    flyLoopT+=dt;
+    flyLoopPt=flyLoopAt(flyLoopT);
+    if(flyTracking&&flyFinger){
+      flyTotalMs+=dt*1000;
+      const d=Math.hypot(flyFinger.x-flyLoopPt.x, flyFinger.y-flyLoopPt.y);
+      flyOnLoop=d<=FLY_CATCH_R;
+      if(flyOnLoop){
+        flyOnMs+=dt*1000;
+        // Dead-centre tracking pays out a touch faster than clinging to the rim.
+        const centred=1-Math.min(1,d/FLY_CATCH_R)*0.35;
+        flyLineOut=Math.min(FLY_MAX_FT, flyLineOut+FLY_TRACK_GAIN*centred*dt);
+      }else{
+        flyLineOut=Math.max(0, flyLineOut-FLY_TRACK_BLEED*dt);
+      }
+      // Accuracy is simply how much of the track you actually held.
+      flyAcc=flyTotalMs>0?(flyOnMs/flyTotalMs):0;
+      if(fill)fill.style.width=(100*flyLineOut/FLY_MAX_FT)+'%';
+      flyStats();
+    }
+    flyLastT=now;
   }else if(flyPhase==='drift'||flyPhase==='take'){
+    flyLastT=0;
     if(meter)meter.classList.add('drift');
     if(flyPhase==='drift'){
       flyDrag=Math.min(100, flyDrag+FLY_DRAG_PER_SEC/60);
@@ -11550,43 +11666,50 @@ function flyLoop(){
   }
   flyAnim=requestAnimationFrame(flyLoop);
 }
-// ---- beat 1: the false-cast rhythm ----
+// ---- beat 1: tracking the loop ----
+// The whole canvas is the input surface during beat 1: press anywhere, follow
+// the loop, release to present. flyTrackMove() is fed by the canvas pointer
+// handlers below.
+function flyTrackStart(x, y){
+  if(flyPhase!=='casting')return;
+  flyTracking=true;flyFinger={x, y};flyLastT=performance.now();
+  flySay('Stay on the loop — the longer you hold it, the more line you shoot.');
+}
+function flyTrackMove(x, y){
+  if(flyPhase!=='casting'||!flyTracking)return;
+  flyFinger={x, y};
+}
+// Releasing is the cast. Below FLY_MIN_FT there is not enough line in the air to
+// turn a leader over, so the rod just goes back to ready rather than presenting.
+function flyTrackEnd(){
+  if(flyPhase!=='casting'||!flyTracking)return;
+  flyTracking=false;flyFinger=null;
+  if(flyLineOut<FLY_MIN_FT){
+    flySay('Not enough line in the air. Press and follow the loop again.');
+    flyStats();return;
+  }
+  AUDIO.sfx('cast');
+  flyPresent();
+}
 function flyPressMain(){
-  if(flyPhase==='casting'){flyHoldStart=performance.now();return;}
+  // The button is now PRESENT, not a stroke timer: it commits whatever line you
+  // have earned, for anyone who would rather tap than release on the water.
   if(flyPhase==='take'&&flySetSpec&&flySetSpec.hold){flyHoldSet=performance.now();}
 }
 function flyReleaseMain(){
-  if(flyPhase==='casting')return flyResolveStroke();
+  if(flyPhase==='casting'){
+    if(flyTracking)return flyTrackEnd();
+    if(flyLineOut>=FLY_MIN_FT)return flyPresent();
+    flySay('Press and follow the green loop first.');return;
+  }
   if(flyPhase==='drift')return flyMend();
   if(flyPhase==='take')return flyResolveSet();
-}
-function flyResolveStroke(){
-  if(!flyHoldStart)return;
-  const held=performance.now()-flyHoldStart;flyHoldStart=0;
-  const T=flyStrokeTarget(), W=flyStrokeWindow();
-  const err=Math.abs(held-T);
-  if(err<=W){
-    const a=1-err/W;
-    flyAcc=(flyAcc*flyStrokes+a)/(flyStrokes+1);
-    flyStrokes++;
-    flyLineOut=Math.min(FLY_MAX_FT, flyLineOut+FLY_SHOOT_FT[Math.min(FLY_SHOOT_FT.length-1,flyStrokes-1)]);
-    AUDIO.sfx('cast');
-    flySay(a>0.72?'Tight loop. The line sings out.':'Good stroke. A little more line.');
-    document.getElementById('fly-alt').disabled=false;
-  }else if(held<T-W){
-    flyTangle++;flySay('Tailing loop — you rushed the forward stroke.');
-  }else{
-    flyTangle++;flyLineOut=Math.max(0,flyLineOut*0.75);flySay('The loop collapsed behind you.');
-  }
-  flyStats();flyPaintMeter();
-  if(flyTangle>=FLY_MAX_TANGLE){flyAbort('Wind knot. Strip it in and start the cast over.');return;}
-  if(flyStrokes>=FLY_MAX_STROKES)flyPresent();
 }
 // ---- beat 2: presentation + drift ----
 function flyPresent(){
   if(flyPhase!=='casting')return;
-  if(flyLineOut<6){flySay('Not enough line in the air yet. Work another stroke.');return;}
-  flyHoldStart=0;
+  if(flyLineOut<FLY_MIN_FT){flySay('Not enough line in the air yet. Follow the loop a little longer.');return;}
+  flyHoldStart=0;flyTracking=false;flyFinger=null;
   // The fly lands along the aim ray, only as far as the line you actually earned.
   const ox=ORIGIN.x, oy=ORIGIN.y;
   const dx=flyAim.x-ox, dy=flyAim.y-oy, d=Math.max(1,Math.hypot(dx,dy));
@@ -11675,6 +11798,7 @@ function flyEndDrift(msg){
 }
 function flyAbort(msg){
   flyFinish();
+  flyTracking=false;flyFinger=null;
   phase='idle';bobber.active=false;
   setStatus(msg);
 }
@@ -11689,13 +11813,15 @@ function flyFinish(){
 (function wireFlyButtons(){
   const main=document.getElementById('fly-main'), alt=document.getElementById('fly-alt');
   if(!main||!alt)return;
-  // pointerdown/up rather than click: click double-fires on touch and this is a
-  // hold-duration mechanic, so the pair IS the input.
+  // pointerdown/up rather than click: click double-fires on touch, and the SET
+  // (beat 3) is still a hold-duration input, so the pair IS the input there.
   main.addEventListener('pointerdown',function(e){e.preventDefault();flyPressMain();});
   main.addEventListener('pointerup',function(e){e.preventDefault();flyReleaseMain();});
   main.addEventListener('pointercancel',function(){flyHoldStart=0;});
   alt.addEventListener('click',function(){
-    if(flyPhase==='casting')flyPresent();
+    // During beat 1 the alt button backs out of the cast entirely; the MAIN
+    // button is what presents, matching its "Present" label.
+    if(flyPhase==='casting')flyAbort('Stripped the line back in.');
     else if(flyPhase==='drift')flyEndDrift('Picked the fly up off the water.');
   });
 })();
