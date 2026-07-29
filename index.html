@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide & Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.2</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -933,7 +933,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.2</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -3744,12 +3744,24 @@ function methodCat(m){m=m||curMethod();return (isFresh()&&m&&m.fwcat)?m.fwcat:(m
 // Methods legal in a zone. A method tagged `fly` also needs the fly combo in hand,
 // which is what keeps fly water off the rig bar until you have actually bought one.
 function methodsForZone(z){
+  // Once the Northern lakes lock up, the surface IS ice: there is no open water
+  // to cast into, so ice fishing is not merely available, it is the only thing
+  // you can do. Out of season it isn't offered at all.
+  const frozen=(typeof lakeFrozenAt==='function')&&lakeFrozenAt(z);
   return METHODS.filter(function(m){
     if(!m.zones.includes(z))return false;
     if(m.fly&&!hasFlyCombo())return false;
-    return true;
+    if(m.ice)return frozen;
+    return !frozen;
   });
 }
+// True when this zone's surface has frozen over. Only the Northern region does
+// this — the Mountains run their own Alaska ice mode off a separate season.
+function lakeFrozenAt(z){
+  if(z!==5)return false;
+  return (typeof seasonNow==='function')&&seasonNow()==='winter';
+}
+function lakeFrozen(){return lakeFrozenAt(S.zone);}
 
 const TACKLE=[
   {id:'cork_b', cat:'cork', name:'Foam Cork Rig', icon:'tackle-cork', cost:40, pack:4, dur:7, rare:1, lvl:1, desc:'Basic popping cork.'},
@@ -4504,8 +4516,7 @@ const BOATS=[
   // the licence) plus one or two upgrades. maxZone is now just "my own region",
   // since the licence does the travel gating.
   // -- Midwest --
-  {id:'bank',      name:'Bank & Wade',        icon:'person',      cost:0,     lvl:1,  maxZone:3, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Midwest bites',world:'fresh',region:'midwest',fixedCost:true},
-  {id:'canoe',     name:'Canoe',              icon:'boat-kayak',  cost:280,   lvl:2,  maxZone:3, range:0,  speed:2.6, perk:'baitsaver',   perkName:'Bait Saver: 12% bait not used',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'canoe',     name:'Canoe',              icon:'boat-kayak',  cost:0,     lvl:1,  maxZone:3, range:0,  speed:2.6, perk:'baitsaver',   perkName:'Bait Saver: 12% bait not used',world:'fresh',region:'midwest',fixedCost:true},
   {id:'jonboat',   name:'Jon Boat',           icon:'boat-jon',    cost:900,   lvl:3,  maxZone:3, range:15, speed:3.3, perk:'tacklesaver', perkName:'Tackle Saver: 12% no wear per cast',world:'fresh',region:'midwest',fixedCost:true},
   // -- Southern --
   {id:'so_boat0',  name:'Levee Walk',         icon:'person',      cost:0,     lvl:1,  maxZone:4, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Southern bites',world:'fresh',region:'southern',fixedCost:true},
@@ -4574,6 +4585,20 @@ const REELS=[
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
 // gates which fish it can land: 2500(12)->small, ... BigGame(50)->everything.
+// The line class a SPECIFIC fish actually demands.
+//
+// f.line rates the species at its MAXIMUM size, so using it raw meant a 1 lb
+// channel catfish snapped 6 lb line because a 20 lb one would have. Scale it by
+// where this fish sits in its own size range instead, with a floor tied to the
+// hooked weight so a genuinely heavy fish still needs real line, and a ceiling
+// at the species rating so nothing ever demands more than its own class.
+function lineNeededFor(f, w){
+  if(!f||!f.line)return 0;
+  const lo=(f.size&&f.size[0])||0, hi=(f.size&&f.size[1])||lo+1;
+  const frac=Math.max(0,Math.min(1,(w-lo)/Math.max(0.01,hi-lo)));
+  const scaled=f.line*(0.30+0.70*frac);
+  return Math.max(scaled, Math.min(f.line, w*0.45));
+}
 function fightStrength(f, w){
   const a=f.size[0],b=f.size[1];
   const frac=Math.max(0,Math.min(1,(w-a)/Math.max(0.01,b-a)));
@@ -4588,12 +4613,42 @@ const BRAIDS=[
   {id:'braid4',name:'130 lb Braid',line:130,color:'#ff5fa2',cost:4400,lvl:11,desc:'Marlin, tuna & swords.'},
   // ---- Freshwater (V0.9.8) ----
   // Freshwater line classes: 4 lb to 40 lb, plus two fly lines.
-  {id:'mono4',    name:'4 lb Mono',              line:4,  color:'#f2efe6', cost:0,    lvl:1,  desc:'Limp clear mono. Panfish and small trout only.',world:'fresh',fixedCost:true},
-  {id:'mono6',    name:'6 lb Copolymer',         line:6,  color:'#cfe0c8', cost:160,  lvl:2,  desc:'A little more stretch and abrasion resistance.',world:'fresh',fixedCost:true},
-  {id:'flyline5', name:'5wt Floating Fly Line',  line:10, color:'#e8b23a', cost:620,  lvl:5,  desc:'Weight-forward floating taper on a 4x leader. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
-  {id:'braid20',  name:'20 lb Braid',            line:20, color:'#2f6fb0', cost:1800, lvl:8,  desc:'No stretch through timber, hydrilla and riprap.',world:'fresh',fixedCost:true},
-  {id:'flyline8', name:'8wt Sink-Tip Fly Line',  line:20, color:'#3f8a4a', cost:3600, lvl:10, desc:'A sinking-tip 8-weight head. Every Mountains fish is a 20 lb class or under.', fly:true,world:'fresh',fixedCost:true},
-  {id:'braid40',  name:'40 lb Braid',            line:40, color:'#e0c020', cost:6400, lvl:12, desc:'Flatheads, sturgeon and blue cats in heavy river current.',world:'fresh',fixedCost:true},
+  // ---- Freshwater line, per region (V0.9.8.2) ----
+  // Each region gets its own ladder, matched to what actually swims there: the
+  // Midwest tops out at paddlefish, the Southern at alligator gar, the Northern
+  // at sturgeon, and the Mountains stay light because you are wading. Every
+  // region starts with a free spool so it is fishable the moment you arrive.
+  // MIDWEST — panfish and bass up through paddlefish
+  {id:'fw_m4',  name:'4 lb Mono',       line:4,  color:'#f2efe6', cost:0,    lvl:1,  desc:'Limp clear mono. Bluegill, crappie and little bullheads.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m6',  name:'6 lb Copolymer',  line:6,  color:'#e2e8d4', cost:150,  lvl:2,  desc:'A little stretch and better abrasion resistance around wood.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m10', name:'10 lb Mono',      line:10, color:'#cfe0c8', cost:420,  lvl:4,  desc:'The all-round reservoir line. Bass, channel cats and walleye.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m14', name:'14 lb Braid',     line:14, color:'#8fbf6a', cost:900,  lvl:6,  desc:'No stretch for hauling bass out of standing timber.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m20', name:'20 lb Braid',     line:20, color:'#2f6fb0', cost:1700, lvl:8,  desc:'Gar, blue cats and anything that runs for the creek channel.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m30', name:'30 lb Braid',     line:30, color:'#c8952f', cost:3000, lvl:10, desc:'Heavy reservoir line for grass carp and big flatheads.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'fw_m40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:5200, lvl:12, desc:'Snagging line for paddlefish. Nothing here needs more.',world:'fresh',region:'midwest',fixedCost:true},
+  // SOUTHERN — heavy cover from the first cast, and alligator gar at the top
+  {id:'fw_s10', name:'10 lb Mono',      line:10, color:'#d8dcc0', cost:0,    lvl:1,  desc:'Tough mono for the canals. Nothing lighter survives the cover.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'fw_s17', name:'17 lb Copolymer', line:17, color:'#b6c48c', cost:500,  lvl:4,  desc:'Abrasion resistance for cypress knees and barnacled pilings.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'fw_s25', name:'25 lb Braid',     line:25, color:'#6a9e4a', cost:1200, lvl:6,  desc:'Winches peacock bass and snakeheads out of the pads.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'fw_s40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:2600, lvl:9,  desc:'Bowfin, big flatheads and stripers in the current.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'fw_s60', name:'60 lb Braid',     line:60, color:'#d4772f', cost:4800, lvl:11, desc:'Heavy swamp line. Gar teeth go through anything lighter.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'fw_s80', name:'80 lb Braid',     line:80, color:'#b3402a', cost:8000, lvl:13, desc:'Alligator gar line. A rope with a hook on the end.',world:'fresh',region:'southern',fixedCost:true},
+  // NORTHERN — finesse walleye at one end, sturgeon at the other
+  {id:'fw_n4',  name:'4 lb Fluorocarbon',line:4, color:'#eef2f4', cost:0,    lvl:1,  desc:'Near-invisible in gin-clear shield water. Perch and rock bass.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n6',  name:'6 lb Fluorocarbon',line:6, color:'#dbe6ea', cost:200,  lvl:3,  desc:'The walleye finesse line, light enough for a slow presentation.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n8',  name:'8 lb Copolymer',  line:8,  color:'#c2d4da', cost:480,  lvl:5,  desc:'A step up for smallmouth and whitefish on the reefs.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n12', name:'12 lb Braid',     line:12, color:'#8fb6c4', cost:1100, lvl:7,  desc:'Thin diameter, no stretch, good bite detection deep.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n20', name:'20 lb Braid',     line:20, color:'#2f6fb0', cost:2200, lvl:9,  desc:'Pike, lakers and salmon. Add a wire bite guard for pike.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n30', name:'30 lb Braid',     line:30, color:'#c8952f', cost:4000, lvl:11, desc:'Big-water line for muskie and deep lake trout.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'fw_n40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:6800, lvl:13, desc:'Lake sturgeon line. They do not stop for anything less.',world:'fresh',region:'northern',fixedCost:true},
+  // MOUNTAINS — waded and light, plus the two fly lines
+  {id:'fw_x2',  name:'2 lb Tippet',     line:2,  color:'#f6f6f0', cost:0,    lvl:1,  desc:'6x tippet. Brook trout, grayling and blackfish on a dead drift.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'fw_x4',  name:'4 lb Tippet',     line:4,  color:'#eef0e6', cost:180,  lvl:3,  desc:'4x tippet. The all-round trout size in a freestone stream.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'fw_x6',  name:'6 lb Fluorocarbon',line:6, color:'#dfe8dc', cost:450,  lvl:5,  desc:'Sinks faster than mono and disappears in clear pocket water.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyline5',name:'5wt Floating Fly Line',line:10,color:'#e8b23a',cost:620, lvl:5, desc:'Weight-forward floating taper on a 4x leader. The trout line.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'fw_x12', name:'12 lb Mono',      line:12, color:'#cfd8c8', cost:1400, lvl:8,  desc:'Backbone for bull trout and a hooked salmon in current.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyline8',name:'8wt Sink-Tip Fly Line',line:20,color:'#3f8a4a',cost:3600,lvl:10,desc:'A sinking-tip 8-weight head that turns over big streamers.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'fw_x40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:7000, lvl:13, desc:'White sturgeon line. You are wading; they are not.',world:'fresh',region:'mountains',fixedCost:true},
 ];
 // V8.5 economy pass (run ONCE at boot, after FISH is defined):
 //  • Bait & lures that can take rarer fish cost more (surcharge by the rarest
@@ -5980,6 +6035,28 @@ function normalizeState(){
   // split has no cash wallet — seed it empty rather than porting gold across,
   // because the whole point is that the two economies never convert.
   if(typeof S.cash!=='number')S.cash=0;
+  // V0.9.8.2 replaced the shared freshwater line list with region-specific
+  // ladders. Repoint any save still holding a retired spool at its region's
+  // free starter, and drop the dead ids from the owned list.
+  (function(){
+    const live={};BRAIDS.forEach(function(b){live[b.id]=1;});
+    if(Array.isArray(S.ownedBraids))S.ownedBraids=S.ownedBraids.filter(function(id){return live[id];});
+    // Freshwater gear lives per region in S.fgear[rid]; only touch bags that
+    // already exist, so this never creates a region the player hasn't unlocked.
+    if(S.fgear)Object.keys(S.fgear).forEach(function(rid){
+      const bag=S.fgear[rid], start=REGION_STARTER[rid];
+      if(!bag||!start)return;
+      if(bag.braid&&!live[bag.braid]){
+        bag.braid=start.braid;
+        if(S.ownedBraids&&S.ownedBraids.indexOf(bag.braid)<0)S.ownedBraids.push(bag.braid);
+      }
+      // the Midwest bank rig was retired in the same pass
+      if(bag.boat==='bank'){
+        bag.boat=start.boat;
+        if(S.ownedBoats&&S.ownedBoats.indexOf(bag.boat)<0)S.ownedBoats.push(bag.boat);
+      }
+    });
+  })();
   if(typeof S.cashEarned!=='number')S.cashEarned=0;
   if(!S.licenses||typeof S.licenses!=='object')S.licenses={};
   // V0.9.8.1: freshwater was rebuilt from three water TYPES into four REGIONS and
@@ -6449,10 +6526,10 @@ const GEAR_SLOTS=['boat','rod','reel','braid','leader','method','baitSel','lureS
 // The free kit every region hands you the moment its licence is bought, so you
 // can always fish the water you just paid to enter.
 const REGION_STARTER={
-  midwest:  {boat:'bank',     rod:'ul_rod',  reel:'spin1000', braid:'mono4', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
-  southern: {boat:'so_boat0', rod:'so_rod0', reel:'so_reel0', braid:'mono6', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
-  northern: {boat:'no_boat0', rod:'no_rod0', reel:'no_reel0', braid:'mono6', leader:'fluoro', method:'livebait', baitSel:'minnow', lureSel:''},
-  mountains:{boat:'waders',   rod:'mt_rod0', reel:'mt_reel0', braid:'mono4', leader:'fluoro', method:'spincast', baitSel:'worm',   lureSel:''},
+  midwest:  {boat:'canoe',    rod:'ul_rod',  reel:'spin1000', braid:'fw_m4', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
+  southern: {boat:'so_boat0', rod:'so_rod0', reel:'so_reel0', braid:'fw_s10', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
+  northern: {boat:'no_boat0', rod:'no_rod0', reel:'no_reel0', braid:'fw_n4', leader:'fluoro', method:'livebait', baitSel:'minnow', lureSel:''},
+  mountains:{boat:'waders',   rod:'mt_rod0', reel:'mt_reel0', braid:'fw_x2', leader:'fluoro', method:'spincast', baitSel:'worm',   lureSel:''},
 };
 function defaultRegionGear(rid){
   const s=REGION_STARTER[rid]||REGION_STARTER.midwest;
@@ -9157,6 +9234,33 @@ function drawShoreEdge(t, sky, forIsland){
 function drawWaterFill(t, sky){
   const z=curZone();
   const x0=camera.x-40, y0=camera.y-40, w=CW+80, h=CH+80;
+  // Once the Northern lakes lock up the surface is ICE, not water: a pale sheet
+  // with pressure ridges and drifted snow instead of a blue gradient. This is
+  // the same condition that makes ice fishing the only legal method here.
+  if(typeof lakeFrozen==='function'&&lakeFrozen()){
+    const ig=ctx.createLinearGradient(0, y0, 0, y0+h);
+    ig.addColorStop(0,'#cfe0e8');ig.addColorStop(.5,'#e6f0f4');ig.addColorStop(1,'#c4d6e0');
+    ctx.fillStyle=ig;ctx.fillRect(x0, y0, w, h);
+    // pressure ridges: long faint cracks that scroll with the world
+    ctx.save();ctx.globalAlpha=0.5;ctx.strokeStyle='#a8c0cc';ctx.lineWidth=1.6;
+    for(let k=0;k<7;k++){
+      const yy=y0+((k*137.5)%h);
+      ctx.beginPath();
+      for(let x=x0;x<x0+w;x+=46)ctx.lineTo(x, yy+Math.sin(x*0.013+k*2.1)*14);
+      ctx.stroke();
+    }
+    // drifted snow patches, on the same deterministic grid the land uses
+    ctx.globalAlpha=0.55;ctx.fillStyle='#f4fafc';
+    const G=150, cx0=Math.floor(x0/G), cy0=Math.floor(y0/G);
+    for(let cy=cy0;cy<cy0+Math.ceil(h/G)+1;cy++)for(let cx=cx0;cx<cx0+Math.ceil(w/G)+1;cx++){
+      const r=_lh(cx*3.1, cy*5.7);
+      if(r<0.45)continue;
+      ctx.beginPath();ctx.ellipse(cx*G+r*G*0.6, cy*G+_lh(cx,cy+9)*G*0.6, 40+r*44, 18+r*22, r*2.4,0,6.28);ctx.fill();
+    }
+    ctx.restore();
+    if(sky.darkness>0){ctx.fillStyle='rgba(10,20,44,'+(sky.darkness*0.5)+')';ctx.fillRect(x0, y0, w, h);}
+    return;
+  }
   const g=ctx.createLinearGradient(0, y0, 0, y0+h);
   g.addColorStop(0,z.baseWater[0]);g.addColorStop(.45,z.baseWater[1]);g.addColorStop(1,z.baseWater[2]);
   ctx.fillStyle=g;ctx.fillRect(x0, y0, w, h);
@@ -11025,7 +11129,10 @@ function drawAnglerFigure(cx, cy, r, tx, ty, tw, th, rad){
 }
 // True when the equipped "boat" is really a pair of legs (bank fishing, waders).
 // Walkers get no wake, no hull rotation and no anchor - they just stop.
-function onFoot(){const b=curBoat();return !!(b&&b.walker)||gearGet('boat')==='bank';}
+// Wading is a Mountains-only thing now: everywhere else you are in a boat, so
+// only a rig explicitly flagged `walker` puts you on your feet. (This used to
+// also treat the Midwest 'bank' rig as on-foot, which let you walk on water.)
+function onFoot(){const b=curBoat();return !!(b&&b.walker);}
 function drawBoat(dark){
   ctx.save();
   if(driving()){
@@ -11057,7 +11164,7 @@ function drawBoat(dark){
   else if(b==='marlinboat')drawMarlinBoat(dark);
   // ---- Freshwater (V0.9.8). Hulls reuse the saltwater vector boats of the same
   //      size class; `bank` and `waders` are on foot and get their own figure. ----
-  else if(b==='bank'||b==='waders')drawWadingAngler(dark, b==='waders');
+  else if(b==='waders')drawWadingAngler(dark, true);
   else if(b==='canoe')drawKayak(dark);
   else if(b==='jonboat')drawJonBoat(dark);
   else if(b==='bassboat')drawBayBoat(dark);
@@ -11516,27 +11623,31 @@ function render(ts){
     }
     ctx.restore();
   }
-  // day/night tint
-  if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.62)+')';ctx.fillRect(0,0,CW, CH);}
-  if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*0.16)+')';ctx.fillRect(0,0,CW, CH);}
+  // day/night tint. Ice takes the darkness but only a fraction of the warm
+  // low-sun wash — at full strength it turned a white sheet muddy brown.
+  const _iceNow=(typeof lakeFrozen==='function')&&lakeFrozen()&&!tourn.active;
+  if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*(_iceNow?0.45:0.62))+')';ctx.fillRect(0,0,CW, CH);}
+  if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*(_iceNow?0.04:0.16))+')';ctx.fillRect(0,0,CW, CH);}
   // Blood Moon: a red cast hangs over the water
   if(isBloodMoon()){ctx.fillStyle='rgba(150,18,18,0.24)';ctx.fillRect(0,0,CW, CH);}
 
   // In freshwater everything from here to the whitecaps is water-only decoration,
   // so clip it to the shoreline or it paints straight over the banks.
+  const _frozen=(typeof lakeFrozen==='function')&&lakeFrozen()&&!tourn.active;
   if(_shore){ctx.save();ctx.translate(-camera.x,-camera.y);ctx.clip(_shore);ctx.setTransform(1,0,0,1,0,0);}
-  // swells (fewer rows in low-detail mode)
-  const _nsw=gfxLow?3:(_shore?3:5);
+  // swells (fewer rows in low-detail mode). None of this runs on ice.
+  const _nsw=_frozen?0:(gfxLow?3:(_shore?3:5));
   for(let i=0;i<_nsw;i++){const y0=(i/_nsw)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x, y);else ctx.lineTo(x, y);}ctx.stroke();}
   // night stars-on-water shimmer + moon glint
-  if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x, st.y, st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(480,0,240,210);}
+  if(_frozen){/* ice: no shimmer, no glint, no whitecaps */}
+  else if(sky.darkness>0.5){for(const st of STARS){const a=(0.3+0.3*Math.sin(t*2+st.ph))*(sky.darkness);ctx.fillStyle='rgba(200,220,255,'+a+')';ctx.beginPath();ctx.arc(st.x, st.y, st.r,0,6.28);ctx.fill();}const mg=ctx.createRadialGradient(600,90,4,600,90,120);mg.addColorStop(0,'rgba(220,230,255,'+(0.14*sky.darkness)+')');mg.addColorStop(1,'rgba(220,230,255,0)');ctx.fillStyle=mg;ctx.fillRect(480,0,240,210);}
   else{const gl=ctx.createRadialGradient(180,80,5,180,80,170);gl.addColorStop(0,'rgba(255,255,255,'+(0.16*(1-sky.darkness))+')');gl.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=gl;ctx.fillRect(0,0,350,250);}
   // whitecaps
   // Freshwater has chop, not ocean swell: fewer caps, smaller, and much fainter.
   // A reservoir covered in whitecaps is the single loudest 'this is still the
   // sea' tell left in the freshwater world.
   const _fw=isFresh(), _wStep=(gfxLow?2:1)*(_fw?2:1), _wAlpha=_fw?0.38:1, _wSize=_fw?0.55:1;
-  for(let _wi=0;_wi<WHITECAPS.length;_wi+=_wStep){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5)*_wAlpha;ctx.fillStyle=_fw?'#dff2ea':'#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r*_wSize, w.r*.38*_wSize,0,0,6.28);ctx.fill();}
+  for(let _wi=0;!_frozen&&_wi<WHITECAPS.length;_wi+=_wStep){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5)*_wAlpha;ctx.fillStyle=_fw?'#dff2ea':'#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r*_wSize, w.r*.38*_wSize,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
   if(_shore)ctx.restore();          // done with water-only decoration
 
@@ -13325,7 +13436,9 @@ function endSdewGame(success){
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f, w)>curReel().drag){snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(!f.surf&&f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<.72){snap(f, w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
-  if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(.9,(ratio-1)*.6+.12);if(Math.random()<sc){snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off!');return;}}
+  {const need=lineNeededFor(f, w), have=curBraid().line;
+   if(have<need){const ratio=need/have;const sc=Math.min(.9,(ratio-1)*.6+.12);
+     if(Math.random()<sc){snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+have+' lb line. It broke you off!');return;}}}
   land(f, w, true, false);
 }
 
@@ -13581,7 +13694,9 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   // wire cutoff
   if(f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<0.72){return snap(f, w,'bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need a wire leader.');}}
   // line break
-  if(curBraid().line<f.line){const ratio=f.line/curBraid().line;const sc=Math.min(0.9,(ratio-1)*0.6+0.12);if(Math.random()<sc){return snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+curBraid().line+' lb line. It broke you off! Spool up heavier.');}}
+  {const need=lineNeededFor(f, w), have=curBraid().line;
+   if(have<need){const ratio=need/have;const sc=Math.min(0.9,(ratio-1)*0.6+0.12);
+     if(Math.random()<sc)return snap(f, w,'A ~'+fmtLb(w)+' lb '+f.name+' on '+have+' lb line. It broke you off! Spool up heavier.');}}
   }
   land(f, w, perfect, bullseye);
 });
@@ -14113,10 +14228,14 @@ function renderLogbook(){
   const byProgress=function(a, b){const ra=RARITY_ORDER.indexOf(a.rarity),rb=RARITY_ORDER.indexOf(b.rarity);if(ra!==rb)return ra-rb;return (a.gold||0)-(b.gold||0);};
   // Both worlds are listed, each region locked against the gear equipped in ITS
   // world \u2014 a freshwater zone must not be judged against your saltwater boat.
-  WORLD_IDS.forEach(function(wid){
+  // The logbook shows the world you are STANDING IN. The two worlds have
+  // separate species, separate gear and separate money, so listing both at once
+  // made the saltwater angler scroll past four freshwater regions to reach the
+  // reef, and vice versa. Swap worlds and the log follows you.
+  const _logWorld=curWorldId();
+  WORLD_IDS.filter(function(w){return w===_logWorld;}).forEach(function(wid){
     const wmax=maxZoneIn(wid);
     if(wid==='fresh'&&!freshUnlocked())return;
-    if(WORLD_IDS.length>1)html+='<div class="log-world-head">'+WORLDS[wid].name+'</div>';
     worldZones(wid).forEach(function(zi){
       const z=ZONES[zi];
       const zfish=FISH.filter(f=>f.zone===zi&&!f.surf&&!f.ice).slice().sort(byProgress);
@@ -14126,15 +14245,20 @@ function renderLogbook(){
       html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
     });
   });
-  // Surf: beach sharks, caught only from the inshore surf.
-  const surfFish=FISH.filter(f=>f.surf).slice().sort(byProgress);
+  // Surf: beach sharks, caught only from the inshore surf. Saltwater only.
+  const surfFish=(_logWorld==='salt')?FISH.filter(f=>f.surf).slice().sort(byProgress):[];
   if(surfFish.length){
     html+='<div class="zone-head">Surf <small>Beach sharks \u00b7 wade in from the inshore</small></div><div class="fish-grid">';
     html+=surfFish.map(f=>fishCard(f, false)).join('')+'</div>';
   }
   document.getElementById('logbook-zones').innerHTML=html;
-  document.getElementById('species-count').textContent=Object.keys(S.caught).length;
-  document.getElementById('species-total').textContent=FISH.length;
+  // Counts follow the same world filter, so "17 / 62" refers to what is listed.
+  const _inWorld=FISH.filter(function(f){
+    if(f.surf)return _logWorld==='salt';
+    return worldOf(f.zone)===_logWorld;
+  });
+  document.getElementById('species-count').textContent=_inWorld.filter(function(f){return (S.caught[f.id]||0)>0;}).length;
+  document.getElementById('species-total').textContent=_inWorld.length;
 }
 
 // Boats, rods and reels must be purchased in order. Returns the name of the
@@ -14166,7 +14290,12 @@ function prereqLocked(kind, item){
   return prev.name;
 }
 // Small coin matching the HUD gold pill, for shop price buttons.
-const COIN='<span class="coin-s" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
+// The soft-currency icon follows the world you're shopping in: a gold coin in
+// saltwater, a folded note in freshwater. This has to be a function, not a
+// const, or every price in the freshwater shop renders a gold coin.
+function coinIcon(){
+  return '<span class="'+(isFresh()?'cash-s':'coin-s')+'" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
+}
 function shopRow(item, kind, owned, equipped, extra, swatch){
   const canAfford=coinCanAfford(item.cost), meetsLvl=S.level>=item.lvl;
   // Reward items can't be bought, they're earned by catching an ultra legendary.
@@ -14180,7 +14309,7 @@ function shopRow(item, kind, owned, equipped, extra, swatch){
   else if(owned&&kind!=='tackle'&&kind!=='bait')action='<span class="shop-action equip">Equip</span>';
   else if(needPrev)action='<span class="shop-action lvl">Need '+needPrev+'</span>';
   else if(!meetsLvl)action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
-  else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+item.cost+'</span>';
+  else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+coinIcon()+item.cost+'</span>';
   const locked=!owned&&(!!needPrev||!meetsLvl||!canAfford)&&kind!=='tackle'&&kind!=='bait';
   let icon=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
   if(item.reward&&owned)icon='<span class="ultra-glint">'+icon+'</span>'; // earned ultra item sheen
@@ -14222,7 +14351,9 @@ function renderShop(){
   let leaf=shopTab, subHtml='';
   if(shopTab==='combo'){
     if(!shopSub.combo)shopSub.combo='rods';leaf=shopSub.combo;
-    subHtml=shopSubChips([['rods','Rods'],['reels','Reels'],['braid','Braid']],leaf,'combo');
+    // Freshwater sells mono, copolymer, fluoro and fly line as well as braid, so
+    // the tab is "Line" there; saltwater is braid-led and keeps its name.
+    subHtml=shopSubChips([['rods','Rods'],['reels','Reels'],['braid',isFresh()?'Line':'Braid']],leaf,'combo');
   } else if(shopTab==='special'){
     if(!shopSub.special)shopSub.special='items';leaf=shopSub.special;
     subHtml=shopSubChips([['items','Items'],['sets','Sets']],leaf,'special');
@@ -14258,7 +14389,7 @@ function renderShop(){
       if(tsel==='special')return t.cat==='special'||t.cat==='surf'||t.cat==='ice';
       return t.cat===tsel;
     }).map(t=>{
-    if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(coinCanAfford(t.cost)?'':'cant')+'">'+COIN+t.cost+'</span>';
+    if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(coinCanAfford(t.cost)?'':'cant')+'">'+coinIcon()+t.cost+'</span>';
       return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
     if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon"><span class="ultra-glint">'+svgIcon(t.icon)+'</span></div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
     const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>methodCat(m)===t.cat);
@@ -14282,7 +14413,7 @@ function renderShop(){
       // Buyable any time to restock (like bait). Tapping when you own some ties it on.
       let action;
       if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
-      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+l.cost+'</span>';
+      else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+coinIcon()+l.cost+'</span>';
       const tieBtn=(q>0&&!equipped)?'<span class="shop-action equip" data-tie="'+l.id+'" style="margin-right:6px;">Tie On</span>':(equipped?'<span class="shop-action equipped-tag" style="margin-right:6px;">Tied On</span>':'');
       const sub=l.desc+' · durability '+lureDurabilityOf(l)+' · '+LURE_PACK+' per pack'+(q>0?' · have x'+q:'');
       return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="lure" data-id="'+l.id+'"><div class="shop-icon">'+svgIcon(l.icon)+'</div><div class="shop-info"><div class="shop-name">'+l.name+'</div><div class="shop-desc">'+sub+'</div></div>'+tieBtn+action+'</div>';
@@ -14329,7 +14460,7 @@ function renderShop(){
         if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
         else if(owned) action='<span class="shop-action equip">Equip</span>';
         else if(!meetsLvl) action='<span class="shop-action lvl">Lv '+item.lvl+'</span>';
-        else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+COIN+item.cost+'</span>';
+        else action='<span class="shop-action buy '+(canAfford?'':'cant')+'">'+coinIcon()+item.cost+'</span>';
         return '<div class="shop-item '+(equipped?'equipped':'')+'" data-kind="cosmetic" data-id="'+item.id+'" data-slot="'+slot+'">'
           +'<div class="shop-icon">'+svgIcon(item.icon)+'</div>'
           +'<div class="shop-info"><div class="shop-name">'+item.name+'</div><div class="shop-desc">'+item.desc+'</div></div>'
@@ -14640,7 +14771,7 @@ function openFish(id){
     '<div class="mrow"><span class="ml">Best time</span><span class="mv">'+times+'</span></div>'+
     '<div class="mrow"><span class="ml">Size</span><span class="mv">'+f.size[0]+'-'+f.size[1]+' lb</span></div>'+
     '<div class="mrow"><span class="ml">Length</span><span class="mv">'+fishLenIn(f, f.size[0])+' - '+fishLenIn(f, f.size[1])+'</span></div>'+
-    '<div class="mrow"><span class="ml">Line needed</span><span class="mv">'+f.line+' lb+ to land</span></div>'+
+    '<div class="mrow"><span class="ml">Line needed</span><span class="mv">'+Math.round(lineNeededFor(f,(f.size?f.size[0]:0)))+'\u2013'+f.line+' lb (by size)</span></div>'+
     '<div class="mrow"><span class="ml">Your best</span><span class="mv">'+(S.best[f.id]?fmtLb(S.best[f.id])+' lb · '+fishLenIn(f, S.best[f.id])+' ('+S.caught[f.id]+' caught)':'not yet caught')+'</span></div>'+
     '<div class="mfact">\u201C'+f.fact+'\u201D</div>';
   document.getElementById('modal-bg').classList.add('show');
