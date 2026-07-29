@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.2</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.3</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -686,6 +686,9 @@
 .friend-name{font-size:13.5px;font-weight:800;color:var(--ink);}
 .friend-lvl{font-size:11px;color:var(--text-soft);}
 .friend-rm{font-size:11px;color:#b3402a;cursor:pointer;background:none;border:none;padding:0;}
+/* presence: grey when away, lit green when active in the last five minutes */
+.pres-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#b9c0c4;margin-right:6px;vertical-align:1px;}
+.pres-dot.on{background:#3fbf6a;box-shadow:0 0 0 2px rgba(63,191,106,.25);}
 .friend-msg{font-size:12px;color:#b3402a;margin-top:4px;min-height:16px;}
 .friend-req-card{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:10px;background:#e8f4f0;border:1.5px solid var(--grass);margin-bottom:7px;}
 .friend-req-name{font-size:13.5px;font-weight:800;color:var(--ink);}
@@ -933,7 +936,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.2</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.3</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1238,6 +1241,9 @@ async function doSignup(){
 let _pendingNewUser=false;
 async function afterAuth(user, isNew){
   fbUser=user;
+  // Start the presence heartbeat as soon as we know who this is, not on the
+  // first catch — a friend browsing the shop is still online.
+  if(typeof startPresence==='function')startPresence();
   try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
     const tutDone=(doc.data()||{}).tutorialDone;
     document.getElementById("auth-overlay").style.display="none";
@@ -1823,7 +1829,9 @@ function setLbTab(mode){
 }
 function pushLeaderboard(){
   if(!fbUser||!fbDb)return;
+  if(typeof startPresence==='function')startPresence();   // friends see you as active
   fbDb.collection("leaderboard").doc(fbUser.uid).set({
+    lastActive:Date.now(),
     username:fbUsername, totalCatches:S.totalCatches, biggestWeight:S.biggest||0,biggestName:S.biggestName||"",
     goldEarned:S.goldEarned||0,level:S.level, prestige:S.prestige||0,
     achievements:S.achievements||{},tournamentWins:S.tournamentWins||0,
@@ -1961,6 +1969,43 @@ function renderFwfCard(){
     +'<div class="fwf-btns"><button class="fwf-btn world" onclick="openCreateLobby()">Create Lobby</button>'
     +'<button class="fwf-btn chal" onclick="openJoinLobby()">Join Lobby</button></div></div>';
 }
+// ── PRESENCE (V0.9.8.3) ────────────────────────────────────────────────────
+// A heartbeat on the player's own leaderboard doc, which is already the doc the
+// friends list reads, so showing who is around costs no extra reads. Long
+// interval on purpose: Firestore bills per write and nobody needs
+// second-accurate presence.
+const PRESENCE_MS=90*1000;          // heartbeat interval
+const PRESENCE_ACTIVE_MS=5*60*1000; // "active now" window
+let _presenceTimer=null;
+function beatPresence(){
+  if(!fbUser||!fbDb)return;
+  fbDb.collection('leaderboard').doc(fbUser.uid)
+    .set({lastActive:Date.now()},{merge:true}).catch(function(){});
+}
+function startPresence(){
+  if(_presenceTimer)return;
+  beatPresence();
+  _presenceTimer=setInterval(beatPresence, PRESENCE_MS);
+  // a final beat as the tab goes away, so someone who just quit reads as
+  // "5m ago" instead of lingering as active for another minute and a half
+  window.addEventListener('visibilitychange',function(){if(document.hidden)beatPresence();});
+  window.addEventListener('pagehide', beatPresence);
+}
+function presenceLabel(lastActive){
+  if(!lastActive)return '';
+  const d=Date.now()-lastActive;
+  if(d<PRESENCE_ACTIVE_MS)return 'Active now';
+  const m=Math.floor(d/60000);
+  if(m<60)return m+'m ago';
+  const h=Math.floor(m/60);
+  if(h<24)return h+'h ago';
+  const dy=Math.floor(h/24);
+  return dy<7?(dy+'d ago'):'a while ago';
+}
+function presenceDot(lastActive){
+  const on=lastActive&&(Date.now()-lastActive)<PRESENCE_ACTIVE_MS;
+  return '<span class="pres-dot'+(on?' on':'')+'"></span>';
+}
 function renderFriendsPanel(){
   renderFwfCard();
   const el=document.getElementById("friends-list");
@@ -1974,7 +2019,8 @@ function renderFriendsPanel(){
       const d=s.data()||{};
       const uname=(d.username||"Angler").replace(/'/g,"&#39;");
       const pres=(d.prestige>0)?" · Prestige "+d.prestige:"";
-      return "<div class=\"friend-card\" style=\"cursor:pointer;\" onclick=\"openFriendProfile('"+s.id+"','"+uname+"')\"><div><div class=\"friend-name\">"+(d.username||"Angler")+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+pres+" · tap to view</div></div><button class=\"friend-rm\" onclick=\"event.stopPropagation();removeFriend('"+s.id+"')\">Remove</button></div>";
+      const seen=presenceLabel(d.lastActive), seenTag=seen?(" · "+seen):"";
+      return "<div class=\"friend-card\" style=\"cursor:pointer;\" onclick=\"openFriendProfile('"+s.id+"','"+uname+"')\"><div><div class=\"friend-name\">"+presenceDot(d.lastActive)+(d.username||"Angler")+"</div><div class=\"friend-lvl\">Level "+(d.level||1)+pres+seenTag+"</div></div><button class=\"friend-rm\" onclick=\"event.stopPropagation();removeFriend('"+s.id+"')\">Remove</button></div>";
     }).join("");
   }).catch(function(){el.innerHTML="<div class=\"lb-empty\">Could not load friends.</div>";});
 }
@@ -4555,7 +4601,7 @@ const RODS=[
   {id:'no_rod2',  name:'Downrigger Trolling Rod',zoneBonus:16,color:'#22303a',cost:4200,lvl:10, desc:'A long parabolic blank that loads against a big-water laker without pulling hooks.',world:'fresh',region:'northern',fixedCost:true},
   // -- Mountains -- (fly:true marks half of the fly combo that opens the region)
   {id:'mt_rod0',  name:'Creek Spin Rod',     zoneBonus:0,  color:'#a8b89a', cost:0,    lvl:1,  desc:'A stubby 5 ft spin rod for flicking hardware under overhanging brush.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains \u2014 stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'flyrod_p', name:'8wt Fly Rod',        zoneBonus:15, color:'#2e4a3a', cost:3600, lvl:10, desc:'A fast 8-weight that turns over streamers and stops a king in heavy current.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 const REELS=[
@@ -4580,7 +4626,7 @@ const REELS=[
   {id:'no_reel2', name:'Line-Counter Trolling Reel',range:460,drag:50, color:'#2a2f36', cost:4200, lvl:10, desc:'A counter on the spool so you can put the lure back at the exact depth that just bit.',world:'fresh',region:'northern',fixedCost:true},
   // -- Mountains --
   {id:'mt_reel0', name:'500 Ultralight Spinning',  range:130, drag:7,  color:'#c8d0c4', cost:0,    lvl:1,  desc:'A palm-sized spinner on 4 lb line. All a mountain creek ever asks for.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains \u2014 stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
@@ -4645,7 +4691,7 @@ const BRAIDS=[
   {id:'fw_x2',  name:'2 lb Tippet',     line:2,  color:'#f6f6f0', cost:0,    lvl:1,  desc:'6x tippet. Brook trout, grayling and blackfish on a dead drift.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x4',  name:'4 lb Tippet',     line:4,  color:'#eef0e6', cost:180,  lvl:3,  desc:'4x tippet. The all-round trout size in a freestone stream.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x6',  name:'6 lb Fluorocarbon',line:6, color:'#dfe8dc', cost:450,  lvl:5,  desc:'Sinks faster than mono and disappears in clear pocket water.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyline5',name:'5wt Floating Fly Line',line:10,color:'#e8b23a',cost:620, lvl:5, desc:'Weight-forward floating taper on a 4x leader. The trout line.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyline5',name:'5wt Floating Fly Line',line:10,color:'#e8b23a',cost:620, lvl:5, desc:'Weight-forward floating taper on a 4x leader. The trout line.',fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'fw_x12', name:'12 lb Mono',      line:12, color:'#cfd8c8', cost:1400, lvl:8,  desc:'Backbone for bull trout and a hooked salmon in current.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'flyline8',name:'8wt Sink-Tip Fly Line',line:20,color:'#3f8a4a',cost:3600,lvl:10,desc:'A sinking-tip 8-weight head that turns over big streamers.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:7000, lvl:13, desc:'White sturgeon line. You are wading; they are not.',world:'fresh',region:'mountains',fixedCost:true},
@@ -4798,20 +4844,22 @@ function initStructures(){
         }
       });
       const clearance=function(px, py){
-        for(let r=14;r<=80;r+=14){
-          for(let a2=0;a2<8;a2++){
-            const ang=a2*(6.283/8);
+        for(let r=12;r<=96;r+=12){
+          for(let a2=0;a2<12;a2++){
+            const ang=a2*(6.283/12);
             if(!isWaterAt(px+Math.cos(ang)*r, py+Math.sin(ang)*r, i))return r;
           }
         }
-        return 94;
+        return 108;
       };
+      // Every spot is pushed to open water, BANK_SPOTS included. A dock or a dam
+      // is conceptually a bank feature, but its art is drawn centred on the spot,
+      // so leaving it on the waterline put half of it up the grass.
       z.structures.forEach(function(st){
-        if(BANK_SPOTS[st.kind])return;
         let bx=st.x, by=st.y, best=clearance(st.x, st.y);
-        for(let a2=0;a2<12;a2++){
-          const ang=a2*(6.283/12);
-          for(let r=18;r<=72;r+=18){
+        for(let a2=0;a2<16;a2++){
+          const ang=a2*(6.283/16);
+          for(let r=14;r<=140;r+=14){
             const nx=st.x+Math.cos(ang)*r, ny=st.y+Math.sin(ang)*r;
             if(nx<40||ny<40||nx>W-40||ny>H-40)continue;
             if(!isWaterAt(nx, ny, i))continue;
@@ -6547,15 +6595,32 @@ function gearSet(k, v){if(isFresh())regionGearBag()[k]=v;else S[k]=v;}
 // Grant a region's free starter kit and equip it. Called when its licence is
 // bought (and for the Midwest on first load), so nobody lands in a region with
 // nothing they are allowed to tie on.
+// V0.9.8.3: a new region hands you NOTHING. You buy the rig for the water you
+// just bought a licence for, which is the whole point of a region being its own
+// fishery. The Midwest is the exception — it is the freshwater on-ramp, so it
+// still comes with its free kit or a new player lands with no way to fish at all.
+//
+// The gear BAG is still created (so equip slots exist and the shop knows what is
+// selected), it is just seeded empty; ownership is what you have to earn. Every
+// region's entry tier costs 0, so there is always a zero-cash path in and you
+// can never be stranded by having spent everything on the licence.
+const STARTER_GRANT_REGIONS={midwest:1};
 function grantRegionStarter(rid){
   const s=REGION_STARTER[rid];if(!s)return;
+  S.fgear=S.fgear||{};
+  if(!S.fgear[rid])S.fgear[rid]=STARTER_GRANT_REGIONS[rid]?defaultRegionGear(rid):emptyRegionGear();
+  if(!STARTER_GRANT_REGIONS[rid])return;
   S.ownedBoats=S.ownedBoats||[];S.ownedRods=S.ownedRods||[];S.ownedReels=S.ownedReels||[];S.ownedBraids=S.ownedBraids||[];
   if(s.boat &&S.ownedBoats.indexOf(s.boat)<0)  S.ownedBoats.push(s.boat);
   if(s.rod  &&S.ownedRods.indexOf(s.rod)<0)    S.ownedRods.push(s.rod);
   if(s.reel &&S.ownedReels.indexOf(s.reel)<0)  S.ownedReels.push(s.reel);
   if(s.braid&&S.ownedBraids.indexOf(s.braid)<0)S.ownedBraids.push(s.braid);
-  S.fgear=S.fgear||{};
-  if(!S.fgear[rid])S.fgear[rid]=defaultRegionGear(rid);
+}
+// An unequipped bag: the slots exist, nothing is in them.
+function emptyRegionGear(){
+  const out={};GEAR_SLOTS.forEach(function(k){out[k]='';});
+  out.leader='fluoro';                 // both leaders are owned from the start
+  return out;
 }
 // Catalog slices: the shop and every "what can I equip" check work off these.
 function forWorld(arr, w){w=w||curWorldId();return arr.filter(function(it){return (it.world||'salt')===w;});}
@@ -9129,6 +9194,19 @@ const LAND_PAL={
   northern: {soil:'#6a7150',soil2:'#575d42',grass:'#767e58',rock:'#8d8d8a',sand:'#c2bb9a',tree:['#274c37','#316043','#1e3d2c'],trunk:'#4f3f2a'},
   mountains:{soil:'#6a6f5c',soil2:'#585d4c',grass:'#74795e',rock:'#8b8f92',sand:'#b9b7a4',tree:['#2b4a3a','#356048','#223d30'],trunk:'#4e4030'},
 };
+// A shade of THIS region's water, lightened or darkened. Bottom features drawn
+// with a hard-coded blue read as painted-on stripes in a green reservoir or a
+// blackwater swamp; derived from baseWater they read as depth.
+function _shelfTint(shift, alpha){
+  const z=curZone();
+  const hex=(z&&z.baseWater&&z.baseWater[1])||'#2e6f88';
+  let r=parseInt(hex.slice(1,3),16), g=parseInt(hex.slice(3,5),16), b=parseInt(hex.slice(5,7),16);
+  const k=shift||0;
+  if(k>=0){r=r+(255-r)*k;g=g+(255-g)*k;b=b+(255-b)*k;}
+  else{r=r*(1+k);g=g*(1+k);b=b*(1+k);}
+  r=Math.max(0,Math.min(255,Math.round(r)));g=Math.max(0,Math.min(255,Math.round(g)));b=Math.max(0,Math.min(255,Math.round(b)));
+  return (alpha===undefined)?('rgb('+r+','+g+','+b+')'):('rgba('+r+','+g+','+b+','+alpha+')');
+}
 function landPal(){return LAND_PAL[curRegionId()]||LAND_PAL.midwest;}
 // Deterministic hash on a world-space grid cell: land detail is identical for
 // every player and never jitters as the camera moves.
@@ -9177,6 +9255,13 @@ function drawLandProps(t, sky, sparse){
     else if(wp&&_inPathWorld(wp, px, py))continue;
     const k=_lh(cx+11,cy+11);
     const sc=sparse?0.72:1;
+    // The Southern swamp has no pines and no granite: its hammocks are cypress
+    // and saw palmetto.
+    if(rid==='southern'){
+      if(k<0.62)drawSwampTree(px, py,(15+r*15)*sc, P, dk, t, cx+cy);
+      else drawPalmetto(px, py,(9+r*8)*sc, P, dk);
+      continue;
+    }
     if(k<0.60)drawConifer(px, py,(15+r*14)*sc, P, dk, t, cx+cy, winter);
     else if(k<0.80)drawBoulder(px, py,(7+r*10)*sc, P, dk, winter);
     else drawScrub(px, py,(8+r*9)*sc, P, dk, winter);
@@ -9199,6 +9284,40 @@ function drawConifer(x, y, h, P, dk, t, seed, winter){
   }
   if(dk>0.35){ctx.fillStyle='rgba(8,16,30,'+(dk*0.45)+')';
     ctx.beginPath();ctx.moveTo(x, y-h*1.2);ctx.lineTo(x+h*0.62, y);ctx.lineTo(x-h*0.62, y);ctx.closePath();ctx.fill();}
+}
+// A bald cypress: buttressed base, flat spreading crown, Spanish moss.
+function drawSwampTree(x, y, h, P, dk, t, seed){
+  const sway=Math.sin(t*0.5+seed)*0.8;
+  ctx.fillStyle='rgba(20,30,18,.22)';
+  ctx.beginPath();ctx.ellipse(x+h*0.26, y+h*0.15, h*0.50, h*0.22, 0,0,6.28);ctx.fill();
+  ctx.fillStyle=P.trunk;
+  ctx.beginPath();ctx.moveTo(x-h*0.16, y+h*0.10);ctx.lineTo(x-h*0.06, y-h*0.30);
+  ctx.lineTo(x+h*0.06, y-h*0.30);ctx.lineTo(x+h*0.16, y+h*0.10);ctx.closePath();ctx.fill();
+  ctx.fillStyle=P.tree[0];
+  ctx.beginPath();ctx.ellipse(x+sway, y-h*0.46, h*0.62, h*0.30, 0,0,6.28);ctx.fill();
+  ctx.fillStyle=P.tree[1];
+  ctx.beginPath();ctx.ellipse(x+sway-h*0.18, y-h*0.54, h*0.34, h*0.20, 0,0,6.28);ctx.fill();
+  ctx.strokeStyle='rgba(176,190,150,.55)';ctx.lineWidth=1.4;ctx.lineCap='round';
+  for(let i=0;i<3;i++){
+    const mx=x+sway-h*0.34+i*h*0.34;
+    ctx.beginPath();ctx.moveTo(mx, y-h*0.40);
+    ctx.quadraticCurveTo(mx+1.5, y-h*0.22, mx-1, y-h*0.08);ctx.stroke();
+  }
+  if(dk>0.35){ctx.fillStyle='rgba(8,16,30,'+(dk*0.45)+')';
+    ctx.beginPath();ctx.ellipse(x, y-h*0.44, h*0.66, h*0.34,0,0,6.28);ctx.fill();}
+}
+// Saw palmetto: a low fan of stiff blades.
+function drawPalmetto(x, y, r, P, dk){
+  ctx.fillStyle='rgba(20,30,18,.18)';
+  ctx.beginPath();ctx.ellipse(x+r*0.2, y+r*0.28, r*0.9, r*0.34,0,0,6.28);ctx.fill();
+  ctx.strokeStyle=P.tree[1];ctx.lineWidth=2.2;ctx.lineCap='round';
+  for(let i=0;i<7;i++){
+    const a=(-0.35-i*0.36);
+    ctx.beginPath();ctx.moveTo(x, y+r*0.2);
+    ctx.lineTo(x+Math.cos(a)*r*1.05, y+r*0.2+Math.sin(a)*r*0.85);ctx.stroke();
+  }
+  ctx.fillStyle=P.tree[2];ctx.beginPath();ctx.arc(x, y+r*0.2, r*0.26,0,6.28);ctx.fill();
+  if(dk>0.35){ctx.fillStyle='rgba(8,16,30,'+(dk*0.42)+')';ctx.beginPath();ctx.arc(x, y, r*0.95,0,6.28);ctx.fill();}
 }
 function drawBoulder(x, y, r, P, dk, winter){
   ctx.fillStyle='rgba(20,30,18,.20)';ctx.beginPath();ctx.ellipse(x+r*0.3, y+r*0.34, r*1.05, r*0.5,0,0,6.28);ctx.fill();
@@ -9811,15 +9930,15 @@ else if(s.kind==='crab_trap'){
   }else if(s.kind==='creekchan'){
     // the old creek bed still cut into the lake floor, shelves either side
     ctx.lineCap='round';
-    ctx.strokeStyle='#2e6f88';ctx.lineWidth=14;
+    ctx.strokeStyle=_shelfTint();ctx.lineWidth=14;
     for(const off of [-27,27]){ctx.beginPath();
       for(let i=-52;i<=52;i+=8)ctx.lineTo(x+i, y+off+Math.sin(i*0.045)*11);ctx.stroke();}
     const kg=ctx.createLinearGradient(0,y-22,0,y+22);
-    kg.addColorStop(0,'#0f3a4e');kg.addColorStop(.5,'#082a3c');kg.addColorStop(1,'#0f3a4e');
+    kg.addColorStop(0,_shelfTint(-0.16));kg.addColorStop(.5,_shelfTint(-0.34));kg.addColorStop(1,_shelfTint(-0.16));
     ctx.strokeStyle=kg;ctx.lineWidth=40;
     ctx.beginPath();for(let i=-52;i<=52;i+=8)ctx.lineTo(x+i, y+Math.sin(i*0.045)*11);ctx.stroke();
     // thin break line where the shelf drops into the cut
-    ctx.strokeStyle='rgba(8,26,38,.7)';ctx.lineWidth=1.2;
+    ctx.strokeStyle=_shelfTint(-0.45,0.65);ctx.lineWidth=1.2;
     for(const off of [-20,20]){ctx.beginPath();
       for(let i=-52;i<=52;i+=8)ctx.lineTo(x+i, y+off+Math.sin(i*0.045)*11);ctx.stroke();}
     ctx.strokeStyle='rgba(255,255,255,.10)';ctx.lineWidth=1;
@@ -10399,8 +10518,26 @@ const _scAnchor={};
 function _sceneryAnchors(rid, W, H, list){
   const key=rid+'_'+W+'x'+H;
   if(_scAnchor[key])return _scAnchor[key];
+  // Most scenery is landscape and belongs on the bank, but a drifting gator, a
+  // wading heron and a swimming loon are IN the water — anchoring them to the
+  // nearest land beached them.
+  const WET={gator:1, heron:1, loon:1};
   const out=list.map(function(p){
     let x=Math.round(p.xF*W), y=Math.round(p.yF*H);
+    if(WATER_SHAPE[S.zone]&&WET[p.k]){
+      if(!isWaterAt(x, y)){
+        let found=false;
+        for(let r=24;r<=520&&!found;r+=24){
+          for(let a=0;a<16;a++){
+            const ang=a*(6.283/16);
+            const nx=x+Math.cos(ang)*r, ny=y+Math.sin(ang)*r;
+            if(nx<20||ny<20||nx>W-20||ny>H-20)continue;
+            if(isWaterAt(nx, ny)){x=Math.round(nx);y=Math.round(ny);found=true;break;}
+          }
+        }
+      }
+      return {x:x, y:y};
+    }
     if(WATER_SHAPE[S.zone]&&isWaterAt(x, y)){
       let done=false;
       for(let r=24;r<=520&&!done;r+=24){
@@ -11179,6 +11316,15 @@ function drawBoat(dark){
   else if(b==='bassboat')drawBayBoat(dark);
   else if(b==='jetsled')drawCenterConsole(dark);
   else if(b==='driftboat')drawWalkaround(dark);
+  // V0.9.8.3: these four were added with the regions but never given a draw
+  // case, so the player was invisible in the Southern and Northern regions.
+  else if(b==='so_boat0')drawKayak(dark);          // Levee Walk — a pirogue off the levee
+  else if(b==='so_boat1')drawJonBoat(dark);        // Go-Devil Skiff
+  else if(b==='no_boat0')drawJonBoat(dark);        // Dock & Shore — a tin boat off the dock
+  else if(b==='no_boat1')drawBayBoat(dark);        // Deep-V Lund
+  // Anything still unmatched falls back to a hull rather than drawing nothing:
+  // an invisible player is unrecoverable, a generic boat is merely wrong.
+  else drawJonBoat(dark);
   ctx.restore();
   if(boat.anchored)drawRodAndReel(dark);
 }
@@ -14296,6 +14442,14 @@ function renderLogbook(){
       html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
     });
   });
+  // Through the ice: the Alaska and Northern hard-water rosters. These are real
+  // catchable species but carry f.ice, which every normal pool excludes, so they
+  // were absent from the logbook entirely.
+  const iceFish=(_logWorld==='fresh')?FISH.filter(f=>f.ice).slice().sort(byProgress):[];
+  if(iceFish.length){
+    html+='<div class="zone-head">Through the Ice <small>Hard water \u00b7 drilled from the Northern lakes &amp; the Alaska range</small></div><div class="fish-grid">';
+    html+=iceFish.map(f=>fishCard(f, false)).join('')+'</div>';
+  }
   // Surf: beach sharks, caught only from the inshore surf. Saltwater only.
   const surfFish=(_logWorld==='salt')?FISH.filter(f=>f.surf).slice().sort(byProgress):[];
   if(surfFish.length){
@@ -14306,6 +14460,7 @@ function renderLogbook(){
   // Counts follow the same world filter, so "17 / 62" refers to what is listed.
   const _inWorld=FISH.filter(function(f){
     if(f.surf)return _logWorld==='salt';
+    if(f.ice)return _logWorld==='fresh';
     return worldOf(f.zone)===_logWorld;
   });
   document.getElementById('species-count').textContent=_inWorld.filter(function(f){return (S.caught[f.id]||0)>0;}).length;
