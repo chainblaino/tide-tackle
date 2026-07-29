@@ -5709,10 +5709,40 @@ const PNG_FISH={
   bullshark:{file:'bull shark.png',alt:'Bull Shark'},
   hammerhead:{file:'great hammerhead.png',alt:'Great Hammerhead'},
   tigershark:{file:'tiger shark.png',alt:'Tiger Shark'},
-  greatwhite:{file:'great white shark.png',alt:'Great White Shark'}
+  greatwhite:{file:'great white shark.png',alt:'Great White Shark'},
+  // ---- Freshwater raster art (V0.9.8.1). Source faces LEFT like the
+  //      saltwater art, so it is mirrored to face right in game. ----
+  redear:{file:'redear sunfish.png',alt:'Redear Sunfish',dir:'freshwater fish'},
+  blackbullhead:{file:'black bullhead.png',alt:'Black Bullhead',dir:'freshwater fish'},
+  yellowbass:{file:'yellow bass.png',alt:'Yellow Bass',dir:'freshwater fish'},
+  whitecrappie:{file:'white crappie.png',alt:'White Crappie',dir:'freshwater fish'},
+  blackcrappie:{file:'black crappie.png',alt:'Black Crappie',dir:'freshwater fish'},
+  channelcat:{file:'channel catfish.png',alt:'Channel Catfish',dir:'freshwater fish'},
+  largemouth:{file:'largemouth bass.png',alt:'Largemouth Bass',dir:'freshwater fish'},
+  grasscarp:{file:'grass carp.png',alt:'Grass Carp',dir:'freshwater fish'},
+  longnosegar:{file:'longnose gar.png',alt:'Longnose Gar',dir:'freshwater fish'},
+  bluecat:{file:'blue catfish.png',alt:'Blue Catfish',dir:'freshwater fish'},
+  paddlefish:{file:'paddlefish.png',alt:'American Paddlefish',dir:'freshwater fish'},
+  bluetilapia:{file:'blue tilapia.png',alt:'Blue Tilapia',dir:'freshwater fish'},
+  sowhitebass:{file:'white bass.png',alt:'White Bass',dir:'freshwater fish'},
+  shortnosegar:{file:'shortnose gar.png',alt:'Shortnose Gar',dir:'freshwater fish'},
+  chainpickerel:{file:'chain pickerel.png',alt:'Chain Pickerel',dir:'freshwater fish'},
+  bowfin:{file:'bowfin.png',alt:'Bowfin',dir:'freshwater fish'},
+  knifefish:{file:'clown knifefish.png',alt:'Clown Knifefish',dir:'freshwater fish'},
+  snakehead:{file:'snakehead.png',alt:'Snakehead',dir:'freshwater fish'},
+  peacockbass:{file:'peacock bass.png',alt:'Peacock Bass',dir:'freshwater fish'},
+  sostripedbass:{file:'striped bass.png',alt:'Striped Bass',dir:'freshwater fish'},
+  soflathead:{file:'flathead catfish.png',alt:'Flathead Catfish',dir:'freshwater fish'},
+  alligatorgar:{file:' alligator gar.png',alt:'Alligator Gar',dir:'freshwater fish'},
+  alabamasturgeon:{file:'alabama sturgeon.png',alt:'Alabama Sturgeon',dir:'freshwater fish'},
+  smallmouth:{file:'smallmouth bass.png',alt:'Smallmouth Bass',dir:'freshwater fish'},
+  walleye:{file:'walleye.png',alt:'Walleye',dir:'freshwater fish'},
+  muskie:{file:'muskie.png',alt:'Muskellunge',dir:'freshwater fish'},
 };
 // Fish raster art lives in the fish/ folder; filenames may contain spaces.
-function pngFishSrc(file){return 'fish/'+encodeURIComponent(file);}
+// Art now lives in two folders (the old flat fish/ was split in V0.9.8.1), so a
+// PNG_FISH entry carries its own directory. Saltwater is the default.
+function pngFishSrc(file, dir){return (dir||'saltwater fish')+'/'+encodeURIComponent(file);}
 // Some art ships with a flat (white) background. On load we flood-fill the
 // edge-connected background to transparent so the fish sits cleanly in the
 // logbook (and so the "undiscovered" silhouette is the fish shape, not a box).
@@ -5752,14 +5782,14 @@ function preloadFishSprites(){
         if(lz&&lz.children.length&&typeof renderLogbook==='function')renderLogbook();
       }}catch(e){}
     };
-    im.src=pngFishSrc(cfg.file);
+    im.src=pngFishSrc(cfg.file, cfg.dir);
   });
 }
 function buildPngFishArt(id, px, mono){
   px=px||240;
   const cfg=PNG_FISH[id];
   const h=Math.round(px*1024/1536); // art is ~3:2
-  const src=FISH_SPRITE_URL[id]||pngFishSrc(cfg.file);
+  const src=FISH_SPRITE_URL[id]||pngFishSrc(cfg.file, cfg.dir);
   // Undiscovered: a clean dark silhouette ("outline"). Discovered: full colour.
   const filt=mono?'filter:brightness(0) saturate(0) opacity(.5);':'';
   // Fish PNGs are drawn facing left in-source and mirrored to face right in-game.
