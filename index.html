@@ -193,6 +193,10 @@
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
   /* Freshwater cash: a folded green note, so a glance at the HUD tells you which
      world's wallet you're looking at without reading the number. */
+  /* Green Ice: the Greenland Shark's season dial, a shard of glacial ice. */
+  .green-ice-chip{display:inline-block;width:12px;height:12px;vertical-align:-1px;margin-right:5px;border-radius:3px;
+    background:linear-gradient(135deg,#d8fbf2,#6fe0c8 55%,#2aa890);border:1px solid #1d7d68;
+    box-shadow:0 0 6px rgba(80,224,200,.7);}
   /* Freshwater shop banner: which region's stock you're looking at. */
   .shop-region{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:8px 11px;border-radius:11px;
     background:linear-gradient(100deg,rgba(63,158,99,.16),rgba(63,158,99,.05));border:1px solid rgba(47,125,76,.28);}
@@ -335,6 +339,13 @@
   .rig-slot .rq{font-size:10px;font-weight:700;color:var(--accent-dark);}
   .rig-slot.empty{border-color:#c0392b;}
   .rig-slot.empty .rv{color:#c0392b;}
+  /* An empty slot is a shop shortcut, so the hint line reads as a button. */
+  .rig-slot.empty .rq{color:#c0392b;font-weight:800;text-decoration:underline;text-underline-offset:2px;}
+  .rig-slot.needs{animation:rigNeed 620ms ease-in-out 4;}
+  @keyframes rigNeed{
+    0%,100%{background:var(--cream);box-shadow:none;}
+    50%{background:#ffe7e3;box-shadow:0 0 0 3px rgba(192,57,43,.28);}
+  }
 
   /* chooser popover */
   .chooser-bg{position:fixed;inset:0;background:rgba(20,15,8,.4);display:none;align-items:flex-end;justify-content:center;z-index:40;}
@@ -1706,9 +1717,18 @@ function renderEquipSections(){
       +'<span style="font-size:11px;font-weight:800;color:'+(S.equippedPet==null?'var(--grass-dark)':'var(--text-soft)')+';">'+(S.equippedPet==null?'Selected':'Select')+'</span></div>';
     petHtml+=pets.map(function(p){
       const eq=S.equippedPet===p.id;
-      return '<div class="proj-equip" style="'+_equipCardCss(eq)+'" onclick="equipPet(\''+p.id+'\')">'
+      // The Golden Trout is a timed burst, so its row reports the live state:
+      // glowing while running, counting down while resting.
+      let state='', glow='';
+      if(p.id==='goldentrout'){
+        const st=goldenState();
+        if(st==='running'){state='<div style="font-size:10.5px;font-weight:800;color:#e0a93c;">Glowing — '+fmtDur(goldenMsLeft())+' left</div>';glow='box-shadow:0 0 0 2px #e0a93c, 0 0 12px rgba(224,169,60,.55);';}
+        else if(st==='cooling')state='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);">Resting — ready in '+fmtDur(goldenMsLeft())+'</div>';
+        else state='<div style="font-size:10.5px;font-weight:800;color:#1f9d57;">Ready — equip to start the 10 min run</div>';
+      }
+      return '<div class="proj-equip" style="'+_equipCardCss(eq)+glow+'" onclick="equipPet(\''+p.id+'\')">'
         +'<span style="width:34px;height:24px;border-radius:4px;overflow:hidden;background:#f4f6f8;flex:none;"><img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover;"></span>'
-        +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div></span>'
+        +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div>'+state+'</span>'
         +'<span style="font-size:11px;font-weight:800;color:'+(eq?'var(--grass-dark)':'var(--accent)')+';">'+(eq?'Equipped':'Equip')+'</span></div>';
     }).join('');
   }
@@ -1735,6 +1755,13 @@ function renderEquipSections(){
 }
 function equipPet(id){
   if(id&&!petOwned(id))return;
+  // Equipping the Golden Trout is what starts its 10-minute run — but only from
+  // a ready state, so re-equipping mid-cooldown never sneaks a second window.
+  if(id==='goldentrout'){
+    const st=goldenState();
+    if(st==='cooling'){toast('The Golden Trout is still resting — ready in '+fmtDur(goldenMsLeft())+'.','#b58b53');return;}
+    if(st==='ready')goldenTryStart();
+  }
   S.equippedPet=id;queueSave();renderProjectsPanel();
 }
 function equipCrown(id){
@@ -3791,6 +3818,10 @@ const BAIT=[
   {id:'shad',        name:'Gizzard Shad',     icon:'bait-fish-long',cost:130, pack:12, lvl:6, desc:'Cast-netted shad, whole or cut. The forage every open-water predator follows.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
   {id:'shiner',      name:'Wild Shiners',     icon:'bait-fish',     cost:140, pack:12, lvl:6, desc:'Big hand-picked golden shiners. The premium bait for trophy bass, pike and muskie.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
   {id:'waxworm', name:'Wax Worms', icon:'bait-shrimp', cost:70, pack:20, lvl:12, desc:'A tub of wax moth larvae kept warm in a jacket pocket. The ice angler\u2019s bait.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
+  // STURGEON EGGS \u2014 the Alabama Sturgeon ultra reward. Never bought, never runs
+  // out, and skips the bait gate entirely so anything will eat it. cost:0 keeps
+  // it off the shop shelves (renderShop filters bait on cost>0).
+  {id:'sturgeoneggs', name:'Sturgeon Eggs', icon:'bait-shrimp', cost:0, pack:0, lvl:1, desc:'A palmful of pearlescent roe from the rarest fish in America. Endless, and everything in fresh water wants it.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true,endless:true,reward:'alabamasturgeon'},
 ];
 
 // Players own both leaders from the start; you swap between them on the rig bar
@@ -4186,7 +4217,48 @@ const PETS=[
   {id:'tiger',   name:'Tiger',   prestige:3, buff:'+20% tournament winnings'},
   {id:'bat',     name:'Bat',     prestige:4, buff:'+100% night fish spawn rate'},
   {id:'penguin', name:'Penguin', prestige:5, buff:'+100% ultra legendary spawn rate'},
+  // Earned, not prestiged: landing the California Golden Trout. prestige:99 keeps
+  // it out of ownedPets()'s level check; petOwned() special-cases it.
+  {id:'goldentrout', name:'Golden Trout', prestige:99, reward:'cagoldentrout',
+   buff:'1 ruby per catch (3 for legendary) for 10 min, then a 12 hr rest'},
 ];
+// ---- The Golden Trout companion --------------------------------------------
+// Unlike every other pet this one is a TIMED burst: equipping it starts a 10
+// minute window paying rubies per catch, and when that expires it goes on a 12
+// hour cooldown. Both timestamps live in the save so the timer survives a reload
+// (and cannot be reset by closing the app).
+const GOLDEN_RUN_MS=10*60*1000, GOLDEN_COOL_MS=12*60*60*1000;
+function goldenState(){
+  if(!S.goldenPet)return 'locked';
+  const now=Date.now();
+  if(S.goldenUntil&&now<S.goldenUntil)return 'running';
+  if(S.goldenReadyAt&&now<S.goldenReadyAt)return 'cooling';
+  return 'ready';
+}
+function goldenActive(){return S.equippedPet==='goldentrout'&&goldenState()==='running';}
+function goldenMsLeft(){
+  const now=Date.now();
+  if(goldenState()==='running')return Math.max(0,S.goldenUntil-now);
+  if(goldenState()==='cooling')return Math.max(0,S.goldenReadyAt-now);
+  return 0;
+}
+// Called when the pet is equipped. Starts the run if it is off cooldown.
+function goldenTryStart(){
+  const st=goldenState();
+  if(st!=='ready')return st;
+  S.goldenUntil=Date.now()+GOLDEN_RUN_MS;
+  S.goldenReadyAt=S.goldenUntil+GOLDEN_COOL_MS;
+  queueSave();
+  toast('The Golden Trout is glowing — 10 minutes of rubies!','#e0a93c');
+  return 'running';
+}
+function fmtDur(ms){
+  const s=Math.max(0,Math.round(ms/1000));
+  if(s<60)return s+'s';
+  const m=Math.floor(s/60);
+  if(m<60)return m+'m '+(s%60)+'s';
+  return Math.floor(m/60)+'h '+(m%60)+'m';
+}
 // Preloaded pet artwork (drawn beside the boat + shown in the shop/stats).
 // The source PNGs have a flat white background; on load we flood-fill the
 // background-connected white to transparent (interior whites like bellies are
@@ -4237,8 +4309,13 @@ const NPC_BOAT={};
   im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),384);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
 });
-function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.prestige<=p;});}
-function petOwned(id){const p=S.prestige||0;const def=PETS.find(function(x){return x.id===id;});return !!def&&def.prestige<=p;}
+// Reward pets are earned by catching their ultra, not by prestiging, so they
+// bypass the level comparison entirely.
+function petRewardHeld(def){return def&&def.reward==='cagoldentrout'&&!!S.goldenPet;}
+function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.reward?petRewardHeld(x):x.prestige<=p;});}
+function petOwned(id){const def=PETS.find(function(x){return x.id===id;});if(!def)return false;
+  if(def.reward)return petRewardHeld(def);
+  return def.prestige<=(S.prestige||0);}
 function hasPet(id){return petOwned(id);}
 // V0.9.6: only ONE pet can be equipped at a time, so only the equipped pet's buff
 // applies. petActive() is true only for the currently-equipped, owned pet.
@@ -4908,6 +4985,17 @@ function fishLenStr(f, w){
 // it is in. Rubies and pearls stay global — they are account-wide, and the
 // competitive systems (tournaments, lobby buy-ins, achievements, prestige) stay
 // on GOLD on purpose so a cross-world match has one shared stake.
+// ---- Endless bait (ultra reward) --------------------------------------------
+// A bait flagged `endless` is never consumed and is "owned" by holding its
+// unlocking reward rather than by a stack in baitInv. Sturgeon Eggs is the only
+// one today (Alabama Sturgeon drop).
+function baitEndless(id){const b=BAIT.find(function(x){return x.id===id;});return !!(b&&b.endless);}
+function baitOwned(id){
+  if(id==='sturgeoneggs')return !!S.sturgeonEggs;
+  return (S.baitInv[id]||0)>0;
+}
+// Stock count for display: endless bait shows as such rather than a number.
+function baitStock(id){return baitEndless(id)?'∞':('x'+(S.baitInv[id]||0));}
 function coinField(w){return ((w||curWorldId())==='fresh')?'cash':'gold';}
 function coinEarnedField(w){return ((w||curWorldId())==='fresh')?'cashEarned':'goldEarned';}
 function coinLabel(w){return ((w||curWorldId())==='fresh')?'cash':'gold';}
@@ -5849,6 +5937,12 @@ function normalizeState(){
   if(typeof S.everSwapped!=='boolean')S.everSwapped=false;
   if(typeof S.iceUnlocked!=='boolean')S.iceUnlocked=false;
   if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
+  // V0.9.8.1 freshwater ultra rewards. All three are permanent once earned.
+  if(typeof S.greenIce!=='boolean')S.greenIce=false;         // Greenland Shark: season dial
+  if(typeof S.sturgeonEggs!=='boolean')S.sturgeonEggs=false; // Alabama Sturgeon: endless bait
+  if(typeof S.goldenPet!=='boolean')S.goldenPet=false;       // California Golden Trout: ruby pet
+  if(typeof S.goldenUntil!=='number')S.goldenUntil=0;
+  if(typeof S.goldenReadyAt!=='number')S.goldenReadyAt=0;
   // ---- V0.9.8.1: freshwater loadouts are per REGION ----------------------
   // A V0.9.8 save carries ONE flat freshwater set (S.fboat/S.frod/...). Fold it
   // into the Midwest bag and retire the flat fields. Note the old defaults
@@ -10665,8 +10759,31 @@ function openEnvDetails(){
     +'<div class="mrow"><span class="ml">'+svgIcon('tide',14)+' Tide</span><span class="mv">'+tide.label+' ('+(tide.dir==='slack'?'-18%':'+'+Math.round(tide.strength*20)+'%')+' bite)</span></div>'
     +'<div class="mrow"><span class="ml">'+svgIcon(weather.icon,14)+' Weather</span><span class="mv">'+weather.name+' ('+((weather.mul>=1?'+':'')+Math.round((weather.mul-1)*100))+'% bite)</span></div>'
     +'<div class="mrow"><span class="ml">'+svgIcon('wind',14)+' Wind</span><span class="mv">'+wind.name+' '+wind.mph+' ('+((wind.mul>=1?'+':'')+Math.round((wind.mul-1)*100))+'% bite)</span></div>'
-    +'<div class="mfact">Total bite rate factor: <b>×'+factor.toFixed(2)+'</b></div>';
+    +'<div class="mfact">Total bite rate factor: <b>×'+factor.toFixed(2)+'</b></div>'
+    // GREEN ICE (Greenland Shark ultra reward): a permanent season dial. Never
+    // consumed, so it lives here on the Conditions panel rather than in Items.
+    +(S.greenIce?('<div class="mrow" style="margin-top:10px;"><span class="ml"><span class="green-ice-chip"></span> Green Ice</span><span class="mv">set the season</span></div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 2px;">'
+        +SEASONS.map(function(se){
+          return '<div class="shop-tab '+(seasonNow()===se?'active':'')+'" style="font-size:11.5px;" onclick="setSeasonGreenIce(\''+se+'\')">'+SEASON_LABEL[se]+'</div>';
+        }).join('')+'</div>'):'');
   document.getElementById('modal-bg').classList.add('show');
+}
+// Green Ice jumps S.clock to the start of the chosen season, keeping the time of
+// day intact so it reads as the calendar moving, not the sun teleporting.
+function setSeasonGreenIce(se){
+  if(!S.greenIce)return;
+  const idx=SEASONS.indexOf(se);if(idx<0)return;
+  if(activeTournament){toast('Green Ice has no hold over a tournament season.','#b58b53');return;}
+  const len=1440*5;
+  const yearStart=Math.floor(S.clock/(len*4))*(len*4);
+  const timeOfDay=S.clock%1440;
+  const dayInSeason=Math.floor((S.clock%len)/1440);
+  S.clock=yearStart+idx*len+dayInSeason*1440+timeOfDay;
+  toast('Green Ice: it is '+SEASON_LABEL[se]+' now.','#2aa890');
+  queueSave();
+  if(typeof updateZonePill==='function')updateZonePill();
+  openEnvDetails();   // re-render so the new season and its chips show
 }
 function drawGate(gx, gy, gt, t){
   const locked=!!gateBlockReason(gt.tz);
@@ -10915,14 +11032,15 @@ function cast(x, y){
   // Trolling isn't a stationary cast, you drag a line while driving.
   if(m.id==='troll'){setStatus('Trolling works on the move, pull anchor and drive to drag your line.');return;}
   const tid=currentTackleId();
-  if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Buy some in the shop (\u2630).');return;}
-  if(m.bait){if(!gearGet('baitSel')||!(S.baitInv[gearGet('baitSel')]>0)){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait. Restock in the shop (\u2630).');return;}}
+  // Out of something: say WHERE to fix it and make the rig bar the button.
+  if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle \u2014 tap the Tackle slot below to buy more.');flashRigGap();return;}
+  if(m.bait){if(!gearGet('baitSel')||!(baitOwned(gearGet('baitSel')))){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait \u2014 tap the Bait slot below to restock.');flashRigGap();return;}}
   // Artificial methods now require a lure tied on
   if(!m.bait){
     const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
-    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Buy one in the Lures shop tab.');return;}
-    if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tie on a '+ZONE_LBL[S.zone]+' lure.');return;}
-    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+'. Restock lures in the shop ('+'☰'+').');return;}
+    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first — tap the Lure slot below.');flashRigGap();return;}
+    if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tap the Lure slot for '+ZONE_LBL[S.zone]+' lures.');flashRigGap();return;}
+    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+' — tap the Lure slot below to restock.');flashRigGap();return;}
   }
   // Fly fishing takes over here: its own casting rhythm, drift and set, then it
   // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
@@ -10993,28 +11111,93 @@ let iceDragging=false, iceDragY0=0, iceDragFt0=0, iceLastTap=0;
 let iceFish=null, iceFishState='none', iceFishFt=0, iceFishTS=0.4, iceFishW=0;
 let iceDwell=0, iceLockMs=ICE_LOCK_MS, iceTol=ICE_TOL_FT, iceStateT=0;
 let iceTrailJig=[], iceTrailFish=[], iceRevs=[], iceAttract=0, iceLastTick=0, iceSpawnAt=0;
+// Which fishery this session of the flasher is: 'alaska' (rubies, own roster) or
+// 'northern' (cash, the ordinary Northern roster).
+let iceMode='alaska';
 
 function iceGearOK(){return !!S.iceAuger;}
-function iceSeasonOK(){return seasonNow()==='winter';}
-// The ice only exists on the alpine lake, and only once you've reached the
-// Mountains. Mirrors the surf button's proximity test.
+// How far through the CURRENT season we are, 0..1. Seasons are 1440*5 clock
+// units each, matching seasonNow()'s divisor.
+function seasonProgress(){const len=1440*5;return (S.clock%len)/len;}
+// ---- The two ice fisheries --------------------------------------------------
+// ALASKAN ice sits on the Mountains alpine lake, opens halfway through fall and
+// runs all winter, and pays RUBIES from its own six-species roster.
+// NORTHERN ice is a plain method in the Northern region, winter only, and fishes
+// the ordinary Northern roster for cash. Both use the same flasher screen.
+function alaskaSeasonOpen(){
+  const s=seasonNow();
+  if(s==='winter')return true;
+  return s==='fall'&&seasonProgress()>=0.5;
+}
+function iceModeHere(){
+  if(S.zone===6)return 'alaska';
+  if(S.zone===5)return 'northern';
+  return null;
+}
+function iceSeasonOK(){
+  const m=iceModeHere();
+  if(m==='alaska')return alaskaSeasonOpen();
+  if(m==='northern')return seasonNow()==='winter';
+  return false;
+}
+// Alaskan ice needs the Mountains licence (it is that region's water); Northern
+// ice only needs to be standing in the Northern region.
+function iceRegionOK(){
+  const m=iceModeHere();
+  if(m==='alaska')return hasLicense(6);
+  if(m==='northern')return hasLicense(5);
+  return false;
+}
+// The button shows on the Mountains alpine lake, and anywhere on the Northern
+// big water once it locks up. Mirrors the surf button's proximity test.
 function updateIceButton(){
   const b=document.getElementById('ice-btn');if(!b)return;
   let near=false;
-  // The alpine lake now sits in zone 6 (Mountains); zone 5 is the Northern region.
-  if(S.zone===6&&!tourn.active&&!activeTournament&&!iceActive&&!surfActive){
-    const al=(ZONES[6].structures||[]).find(function(s){return s.kind==='alpinelake';});
-    if(al)near=dist(boat.wx, boat.wy, al.x, al.y)<120;
+  const busy=tourn.active||activeTournament||iceActive||surfActive;
+  if(!busy){
+    if(S.zone===6){
+      const al=(ZONES[6].structures||[]).find(function(s){return s.kind==='alpinelake';});
+      if(al)near=dist(boat.wx, boat.wy, al.x, al.y)<120;
+    } else if(S.zone===5&&seasonNow()==='winter'){
+      near=true;   // the whole Northern basin freezes over
+    }
   }
   b.classList.toggle('show', near);
+  if(near){
+    const lbl=b.querySelector('.ice-lbl')||b;
+    lbl.textContent=(iceModeHere()==='alaska')?'Drill the Alaskan ice':'Drill through the ice';
+  }
+  maybeAlaskaSeasonNotice();
+}
+// One toast when the Alaskan season opens and one when it shuts, so a player who
+// unlocked it is never left wondering why the hole vanished. Only fires once per
+// transition, and only for someone who actually holds the Mountains licence.
+function maybeAlaskaSeasonNotice(){
+  if(!hasLicense(6))return;
+  const open=alaskaSeasonOpen();
+  if(typeof S._akOpen!=='boolean'){S._akOpen=open;return;}   // first observation, stay quiet
+  if(S._akOpen===open)return;
+  S._akOpen=open;
+  if(open)toast('The Alaskan ice season is OPEN — the alpine lake has locked up. Fish there pay rubies.','#4a9fd4');
+  else toast('The Alaskan ice season is CLOSED until late fall. The alpine lake is open water again.','#b58b53');
+  queueSave();
 }
 function tryEnterIce(){
-  if(!iceSeasonOK()){toast('The lake is open water. Come back in winter.','#b58b53');return;}
+  const mode=iceModeHere();
+  if(!mode){toast('No hard water here.','#b58b53');return;}
+  if(!iceRegionOK()){toast('You need the '+(mode==='alaska'?'Mountains':'Northern')+' Licence first.','#b58b53');return;}
+  if(!iceSeasonOK()){
+    toast(mode==='alaska'
+      ? 'The Alaskan ice is out. It sets up halfway through fall and holds all winter.'
+      : 'The lake is open water. Come back in winter.','#b58b53');
+    return;
+  }
   if(!iceGearOK()){toast('You need a Hand Ice Auger to cut a hole. Tackle → Special.','#b58b53');return;}
-  enterIce();
+  enterIce(mode);
 }
-function enterIce(){
+function enterIce(mode){
   iceActive=true;icePhase='fishing';boat.anchored=true;
+  iceMode=mode||iceModeHere()||'alaska';
   S.iceUnlocked=true;
   // Each visit drills a fresh hole somewhere on the basin.
   iceHoleFt=Math.round(28+Math.random()*32);
@@ -11046,11 +11229,19 @@ function buildIceRod(){
     +'<circle cx="106" cy="140" r="13" fill="#39454e" stroke="#8f9ea8" stroke-width="2.5"/>'
     +'<circle cx="106" cy="140" r="4" fill="#c9a24a"/></svg>';
 }
+// The roster under the hole depends on which ice you drilled: the Alaskan six,
+// or the ordinary Northern region species (a hole in a Northern lake finds the
+// same walleye and pike you'd catch through open water).
+function iceRoster(){
+  if(iceMode==='northern')return FISH.filter(function(f){return f.zone===5&&!f.alaska&&!f.surf;});
+  return FISH.filter(function(f){return f.alaska;});
+}
 // Which species are down there right now, weighted like the normal pool.
 function pickIceFish(){
-  const pool=FISH.filter(function(f){return f.ice&&f.rarity!=='ultra';});
+  const roster=iceRoster();
+  const pool=roster.filter(function(f){return f.rarity!=='ultra';});
   // The ultra rolls its own independent chance, exactly like the surf great white.
-  const ultra=FISH.find(function(f){return f.ice&&f.rarity==='ultra';});
+  const ultra=roster.find(function(f){return f.rarity==='ultra';});
   if(ultra){
     let c=ultra.spawnChance||0.001;
     if(typeof petUltraMult==='function')c*=petUltraMult();
@@ -11538,7 +11729,7 @@ function _trollLureValid(){
   if(!(S.lureInv[lure.id]>0))return null;
   return lure;
 }
-function _trollBaitValid(){return !!(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0);}
+function _trollBaitValid(){return !!(gearGet('baitSel')&&baitOwned(gearGet('baitSel')));}
 function _trollRigOK(){
   if(!currentTackleId())return false;                 // need a trolling spread on
   return !!(_trollLureValid()||_trollBaitValid());    // pulled on a troll lure OR bait
@@ -11659,7 +11850,9 @@ function poolNow(){
       if(lure.targets&&lure.targets.length){if(lure.targets.indexOf(f.id)<0)continue;}
       else if(!lure.baits||!lure.baits.some(function(lb){return f.baits.includes(lb);}))continue;
     }else if(baitMethod){
-      if(!f.baits.includes(bait))continue;                 // wrong bait -> no bite
+      // STURGEON EGGS (Alabama Sturgeon ultra reward): an endless bait every
+      // species will eat, so it skips the bait gate entirely.
+      if(bait!=='sturgeoneggs'&&!f.baits.includes(bait))continue;   // wrong bait -> no bite
     }else{
       continue;                                            // artificial method, no valid lure tied on
     }
@@ -11791,8 +11984,18 @@ function triggerBite(){
         setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1700);
         return;
       }
-      let r=Math.random()*strength;pick=out[out.length-1].f;
-      for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
+      // STURGEON EGGS: a flat 25% chance per cast that whatever eats it is a
+      // legendary, drawn from the legendaries actually present in this pool.
+      // Rolled before the weighted pick so it genuinely overrides it, and falls
+      // through harmlessly when the water holds no legendary.
+      if(gearGet('baitSel')==='sturgeoneggs'&&Math.random()<0.25){
+        const legs=out.filter(function(o){return o.f.rarity==='legendary';});
+        if(legs.length)pick=legs[Math.floor(Math.random()*legs.length)].f;
+      }
+      if(!pick){
+        let r=Math.random()*strength;pick=out[out.length-1].f;
+        for(const o of out){r-=o.w;if(r<=0){pick=o.f;break;}}
+      }
     }
   }
   hookedFish=pick;hookW=rollWeight(pick);
@@ -12316,7 +12519,11 @@ function land(f, w, perfect, bullseye){
   if(!f.surf){
     const lr=activeLure();
     if(lr){wearLure(lr.id);}
-    else if(curMethod().bait||curMethod().id==='troll'){if(!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[gearGet('baitSel')]=Math.max(0,(S.baitInv[gearGet('baitSel')]||0)-1);}}
+    else if(curMethod().bait||curMethod().id==='troll'){
+      // Sturgeon Eggs are endless — never decremented.
+      const bsel=gearGet('baitSel');
+      if(!baitEndless(bsel)&&!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[bsel]=Math.max(0,(S.baitInv[bsel]||0)-1);}
+    }
   }
   S.caught[f.id]=(S.caught[f.id]||0)+1;
   if(typeof activeChallenge!=='undefined'&&activeChallenge)challengeOnCatch(f, w);
@@ -12341,9 +12548,19 @@ function land(f, w, perfect, bullseye){
   // currently pay nothing. It lands with the Alaskan ice mode commit.
   coinAdd(gold);
   S.totalCatches++;setTimeout(pushLeaderboard,2000);
-  // Surf sharks pay out in RUBIES (5-25), scaled by the shark's rarity and size.
+  // Surf sharks and the Alaskan ice roster pay out in RUBIES (5-25), scaled by
+  // rarity with a size kicker. Both carry gold:0 so they never double-dip.
   let rubyReward=0;
-  if(f.surf){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
+  if(f.surf||f.alaska){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
+  // GOLDEN TROUT companion: while its 10-minute window is glowing, every catch
+  // pays a ruby, three for a legendary. Stacks on top of a surf/Alaskan payout.
+  if(goldenActive()){
+    const gr=(f.rarity==='legendary'||f.rarity==='ultra')?3:1;
+    S.rubies=(S.rubies||0)+gr;rubyReward+=gr;
+    setTimeout(function(){toast('Golden Trout: +'+gr+' ruby'+(gr>1?'s':'')+'.','#e0a93c');},900);
+    // The window may have just run out on this very catch.
+    if(goldenState()!=='running')setTimeout(function(){toast('The Golden Trout has gone quiet. Back in 12 hours.','#b58b53');},1800);
+  }
   recordTournamentCatch(f, w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
@@ -12372,6 +12589,13 @@ function grantUltraReward(f){
     S.boat='marlinboat';msg='Black Marlin Speedboat';sub='Equipped! The fastest boat in the game.';
   }else if(f.id==='greatwhite'){
     S.toothHook=true;S.ownedTooth=true;msg='Great White Tooth Hook';sub='Unbreakable \u2014 jighead or circle hook.';
+  // ---- Freshwater ultra rewards (V0.9.8.1) ----
+  }else if(f.id==='greenlandshark'){
+    S.greenIce=true;msg='Green Ice';sub='Never runs out. Set the season to whatever you like from the Conditions pill.';
+  }else if(f.id==='alabamasturgeon'){
+    S.sturgeonEggs=true;msg='Sturgeon Eggs';sub='An endless bait that catches anything, with a 25% legendary roll on every cast.';
+  }else if(f.id==='cagoldentrout'){
+    S.goldenPet=true;msg='Golden Trout companion';sub='Equip it from Projects \u2192 Pets: 10 minutes of rubies per catch, then a 12 hour rest.';
   }
   if(msg){
     updateRigBar();
@@ -12418,7 +12642,7 @@ function updateRigBar(){
   const tslot=document.querySelector('.rig-slot[data-rig="tackle"]');
   if(tid==='tooth_hook'){tEl.textContent='Tooth Hook';tq.textContent='never breaks';tslot.classList.remove('empty');}
   else if(tid){const tk=tackleById(tid),inv=S.tackleInv[tid];tEl.textContent=tk.name;tq.textContent='dur '+inv.dur+' \u00b7 x'+inv.qty;tslot.classList.remove('empty');}
-  else{tEl.textContent='none';tq.textContent='buy in shop';tslot.classList.add('empty');}
+  else{tEl.textContent='none';tq.textContent='tap to buy';tslot.classList.add('empty');}
   const bEl=document.getElementById('rig-bait'),bq=document.getElementById('rig-bait-q'),bslot=document.querySelector('.rig-slot[data-rig="bait"]');
   const baitLabel=bslot.querySelector('.rl');
   if(m.id==='troll'){
@@ -12429,7 +12653,7 @@ function updateRigBar(){
       bEl.textContent=tl.name;bq.textContent='dur '+lureCurDur(tl.id)+' · x'+(S.lureInv[tl.id]||0);bslot.classList.remove('empty');
     } else {
       if(baitLabel)baitLabel.textContent='Bait';
-      if(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent='x'+S.baitInv[gearGet('baitSel')];bslot.classList.remove('empty');}
+      if(gearGet('baitSel')&&baitOwned(gearGet('baitSel'))){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent=baitStock(gearGet('baitSel'));bslot.classList.remove('empty');}
       else{bEl.textContent='lure or bait';bq.textContent='tie one on';bslot.classList.add('empty');}
     }
   } else if(!m.bait){
@@ -12438,12 +12662,12 @@ function updateRigBar(){
     const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
     const lq=lure?(S.lureInv[lure.id]||0):0;
     if(lure&&lq>0){bEl.textContent=lure.name;bq.textContent='dur '+lureCurDur(lure.id)+' · x'+lq;bslot.classList.remove('empty');}
-    else if(lure){bEl.textContent=lure.name;bq.textContent='out, restock';bslot.classList.add('empty');}
-    else{bEl.textContent='no lure';bq.textContent='buy a lure';bslot.classList.add('empty');}
+    else if(lure){bEl.textContent=lure.name;bq.textContent='tap to restock';bslot.classList.add('empty');}
+    else{bEl.textContent='no lure';bq.textContent='tap to buy';bslot.classList.add('empty');}
   } else {
     if(baitLabel)baitLabel.textContent='Bait';
-    if(gearGet('baitSel')&&S.baitInv[gearGet('baitSel')]>0){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent='x'+S.baitInv[gearGet('baitSel')];bslot.classList.remove('empty');}
-    else{bEl.textContent='out of bait';bq.textContent='buy in shop';bslot.classList.add('empty');}
+    if(gearGet('baitSel')&&baitOwned(gearGet('baitSel'))){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent=baitStock(gearGet('baitSel'));bslot.classList.remove('empty');}
+    else{bEl.textContent='out of bait';bq.textContent='tap to buy';bslot.classList.add('empty');}
   }
   document.getElementById('rig-leader').textContent=curLeader().name.replace(' Leader','');
   // HUD
@@ -12478,9 +12702,11 @@ function openChooser(type){
       html+='<div class="opt '+(m.id===gearGet('method')?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
   } else if(type==='tackle'){
     const cat=methodCat();
-    html='<h3>Tackle</h3><div class="sub">Wears out with use. Buy more in the shop. Better tackle lasts longer & draws more.</div>';
-    TACKLE.filter(t=>t.cat===cat).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
-      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'tackle:'+t.id:'')+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'buy in shop')+'</div></div>';});
+    html='<h3>Tackle</h3><div class="sub">Wears out with use. Better tackle lasts longer &amp; draws more \u2014 tap one you don\u2019t own to go buy it.</div>';
+    // Unowned rows are no longer dead ends: they deep-link to this category's
+    // shelf in the shop rather than sitting greyed out with nothing to tap.
+    TACKLE.filter(t=>t.cat===cat&&itemHere(t)).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
+      html+='<div class="opt '+(currentTackleId()===t.id?'sel':'')+'" data-pick="'+(own?'tackle:'+t.id:'shop:tackle:'+t.cat)+'"><div class="oi">'+(t.id==='tooth_hook'?'<span class="ultra-glint">'+svgIcon(t.icon,20)+'</span>':svgIcon(t.icon,20))+'</div><div class="oinfo"><div class="on">'+t.name+'</div></div><div class="oq">'+(own?'dur '+inv.dur+' \u00b7 x'+inv.qty:'tap to buy')+'</div></div>';});
   } else if(type==='bait'){
     if(curMethod().id==='troll'){
       // Trolling: pick a trolling lure OR a natural bait. Both pull on the spread.
@@ -12493,20 +12719,22 @@ function openChooser(type){
       });
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:8px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Natural baits</div>';
       forHere(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!gearGet('lureSel')&&gearGet('baitSel')===bt.id;
-        html+='<div class="opt '+(sel?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'trollbait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});
+        html+='<div class="opt '+(sel?'sel':'')+'" data-pick="'+(own?'trollbait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'tap to buy')+'</div></div>';});
     }
     else if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
       html='<h3>Tie on a lure</h3><div class="sub">Only '+ZONE_LBL[S.zone]+' lures work out here. Buy more in the Lures shop tab.</div>';
       const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id)&&(typeof l.zone!=='number'||l.zone===S.zone));
-      if(!myLures.length){html+='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:14px;">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet. Open the Lures shop tab to buy one.</div>';}
+      if(!myLures.length){html+='<div class="opt" data-pick="shop:lures:'+(S.zone|0)+'" style="justify-content:center;"><div class="oinfo" style="text-align:center;"><div class="on">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet</div><div class="od">Tap to open the Lures shop</div></div></div>';}
       myLures.forEach(function(l){
         html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
-      forHere(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
-        html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
+      // Reward bait (Sturgeon Eggs) only appears once its ultra has been landed,
+      // and is never buyable — so it is filtered in by ownership, not by stock.
+      forHere(BAIT).filter(bt=>!bt.reward||baitOwned(bt.id)).forEach(bt=>{const own=baitOwned(bt.id);
+        html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+(bt.endless?' ultra-glint':'')+'" data-pick="'+(own?'bait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?baitStock(bt.id):'tap to buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs. Match it to what you are targeting.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
@@ -12594,7 +12822,10 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   const useOpt=e.target.closest('[data-use]');
   if(useOpt){if(useOpt.dataset.use)useItem(useOpt.dataset.use);return;}
   const opt=e.target.closest('.opt');if(!opt||!opt.dataset.pick)return;
-  const[type, val]=opt.dataset.pick.split(':');
+  const[type, val, val2]=opt.dataset.pick.split(':');
+  // "shop:<tab>:<sub>" — a row for something you don't own yet. Close the
+  // chooser and land on the shelf that sells it instead of doing nothing.
+  if(type==='shop'){closeChooser();openShopAt(val, val2||null);return;}
   if(type==='zone'){const zi=+val;if(gateBlockReason(zi))return;S.zone=zi;if(S.lastZone)S.lastZone[worldOf(zi)]=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
   else if(type==='method'){if(typeof cancelTrollDrag==='function')cancelTrollDrag(false);gearSet('method', val);ensureRig();}
   else if(type==='tackle'){S.tackleSel[methodCat()]=val;}
@@ -12604,7 +12835,24 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   else if(type==='leader'){gearSet('leader', val);}
   updateRigBar();queueSave();closeChooser();
 });
-document.getElementById('rig-bar').addEventListener('click',e=>{const slot=e.target.closest('.rig-slot');if(slot)openChooser(slot.dataset.rig);});
+document.getElementById('rig-bar').addEventListener('click',e=>{
+  const slot=e.target.closest('.rig-slot');if(!slot)return;
+  // An EMPTY tackle/bait/lure slot is a shortcut to the shelf that refills it;
+  // a full one still opens the chooser so you can swap what you already own.
+  const gap=rigGap();
+  if(gap&&gap.slot===slot.dataset.rig&&slot.classList.contains('empty')){goRestock();return;}
+  openChooser(slot.dataset.rig);
+});
+// Pulse the slot that needs attention so "tap the Bait slot" has something to
+// point at. Purely a cue; the slot is tappable either way.
+function flashRigGap(){
+  const g=rigGap();if(!g)return;
+  const slot=document.querySelector('.rig-slot[data-rig="'+g.slot+'"]');
+  if(!slot)return;
+  slot.classList.remove('needs');void slot.offsetWidth;   // restart the animation
+  slot.classList.add('needs');
+  setTimeout(function(){slot.classList.remove('needs');},2600);
+}
 document.getElementById('zone-pill').addEventListener('click',()=>{
   // Freshwater opens the Regions board (licences, lock state, where you are);
   // saltwater keeps the plain travel hint, since it has no licence system.
@@ -12672,6 +12920,49 @@ function openMenuTab(mtab){
   openMenu();
   const btn=document.querySelector("[data-mtab='"+mtab+"']");
   if(btn)btn.click();   // reuse the tab's activation + side effects
+}
+// ---- Shop deep-links --------------------------------------------------------
+// Land the player on the exact shelf that restocks what they just ran out of,
+// instead of dropping them at the shop door to go hunting. `sub` picks the
+// second-row chip (a tackle category, or a combo/special sub-tab).
+function openShopAt(tab, sub){
+  if(shopLockedNow()){toast('Shop is locked during the match.','#b58b53');return;}
+  shopTab=tab||'bait';
+  if(sub){
+    if(tab==='tackle')shopSub.tackle=sub;
+    else if(tab==='combo')shopSub.combo=sub;
+    else if(tab==='special')shopSub.special=sub;
+    else if(tab==='lures')lureSubTab=sub;
+  }
+  openMenuTab('shop');
+  if(typeof renderShop==='function')renderShop();
+}
+// Where does the CURRENT rig gap get fixed? Returns {tab, sub, label} or null
+// when nothing is missing. Drives both the tappable rig slot and the cast-time
+// status line, so the two can never point at different shelves.
+function rigGap(){
+  const m=curMethod();
+  if(!currentTackleId())return {tab:'tackle', sub:methodCat(m), label:m.name+' tackle', slot:'tackle'};
+  if(m.id==='troll'){
+    const tl=_trollLureValid();
+    if(!tl&&!(gearGet('baitSel')&&baitOwned(gearGet('baitSel'))))
+      return {tab:'lures', sub:S.zone|0, label:'a trolling lure', slot:'bait'};
+    return null;
+  }
+  if(m.bait){
+    if(!gearGet('baitSel')||!(baitOwned(gearGet('baitSel'))))
+      return {tab:'bait', sub:null, label:'bait', slot:'bait'};
+    return null;
+  }
+  const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
+  if(!lure||!(S.lureInv[lure.id]>0))return {tab:'lures', sub:S.zone|0, label:'a lure', slot:'bait'};
+  return null;
+}
+// Fired from the cast handler and from tapping the empty slot.
+function goRestock(){
+  const g=rigGap();
+  if(!g){toast('Your rig is good to go.','#2aa890');return;}
+  openShopAt(g.tab, g.sub);
 }
 document.getElementById('menu-open').addEventListener('click',function(e){e.stopPropagation();toggleMenuDropdown();});
 document.querySelectorAll('#menu-dropdown .menu-dd-item').forEach(function(it){
