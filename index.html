@@ -193,6 +193,12 @@
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
   /* Freshwater cash: a folded green note, so a glance at the HUD tells you which
      world's wallet you're looking at without reading the number. */
+  /* Freshwater shop banner: which region's stock you're looking at. */
+  .shop-region{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px;padding:8px 11px;border-radius:11px;
+    background:linear-gradient(100deg,rgba(63,158,99,.16),rgba(63,158,99,.05));border:1px solid rgba(47,125,76,.28);}
+  .shop-region .sr-dot{width:9px;height:9px;border-radius:50%;background:#3f9e63;box-shadow:0 0 0 3px rgba(63,158,99,.18);flex:none;}
+  .shop-region .sr-name{font-family:'Fredoka';font-size:14px;font-weight:700;color:var(--wood-dark);}
+  .shop-region .sr-sub{font-size:11px;font-weight:700;color:var(--text-soft);}
   .cash-s{width:17px;height:12px;background:linear-gradient(160deg,#8fd6a4,#3f9e63 60%,#2f7d4c);border-radius:2.5px;border:1.5px solid #266b41;display:inline-block;vertical-align:-1px;position:relative;}
   .cash-s::after{content:"";position:absolute;inset:2.5px 3px;border-radius:1px;border:1px solid rgba(255,255,255,.55);}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
@@ -879,6 +885,7 @@
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
       <div class="shop-wallet" id="shop-wallet"><span class="wallet-chip"><span class="coin-s" id="wallet-coin-icon"></span> <span id="wallet-gold">0</span></span><span class="wallet-chip"><span class="gem-s"></span> <span id="wallet-rubies">0</span></span></div>
+      <div class="shop-region" id="shop-region" style="display:none"></div>
       <div class="shop-tabs" id="shop-tabs"></div>
       <div id="shop-list"></div>
     </div>
@@ -2041,6 +2048,32 @@ function curWorld(){return WORLDS[curWorldId()];}
 function isFresh(){return curWorldId()==='fresh';}
 // The zone-index range of a world, used everywhere a hard-coded 0..2 used to be.
 function worldZones(w){return WORLDS[w||curWorldId()].zones;}
+// ---- FRESHWATER REGIONS ------------------------------------------------------
+// Freshwater is split into four regions and almost every catalog is scoped to
+// one. Regions are identified by the ZONES entry's own id, so the zone index and
+// the region id can never drift apart.
+const REGION_IDS=['midwest','southern','northern','mountains'];
+function regionIdOf(zone){const z=ZONES[zone|0];return (z&&z.region)?z.id:null;}
+function curRegionId(){return regionIdOf(S.zone|0)||'midwest';}
+function zoneOfRegion(rid){for(let i=0;i<ZONES.length;i++){if(ZONES[i].region&&ZONES[i].id===rid)return i;}return 3;}
+function regionName(rid){const z=ZONES[zoneOfRegion(rid)];return z?z.name:rid;}
+// Which regions an item belongs to. `regions:[...]` wins; a bare `region:'x'` is
+// shorthand for a single-region item; anything untagged is available everywhere
+// in its world (braids and leaders, shared on purpose — every region needs the
+// whole 4-to-40 lb line range).
+function itemRegions(it){
+  if(it.regions&&it.regions.length)return it.regions;
+  if(it.region)return [it.region];
+  return REGION_IDS;
+}
+function itemInRegion(it, rid){return itemRegions(it).indexOf(rid||curRegionId())>=0;}
+// "Is this catalog entry usable right where I'm standing?" — world first, then
+// region if that world is split into any.
+function itemHere(it){
+  const w=curWorldId();
+  if((it.world||'salt')!==w)return false;
+  return (w!=='fresh')||itemInRegion(it);
+}
 function worldZoneLo(w){const z=worldZones(w);return z[0];}
 function worldZoneHi(w){const z=worldZones(w);return z[z.length-1];}
 // A zone's position WITHIN its world (0=starter, 1=mid, 2=far). Lets logic that
@@ -3711,20 +3744,23 @@ const TACKLE=[
   {id:'tooth_hook',cat:'special',name:'Great White Tooth Hook',icon:'tackle-circle',cost:0,pack:0,dur:9999,rare:1.5,lvl:1,desc:'Carved from a great white tooth. Never breaks, works as a jighead or a circle hook.',reward:'greatwhite',rewardName:'a Great White'},
   {id:'hook1440',cat:'surf',name:'14/0 Circle Hook',icon:'tackle-circle',cost:600,pack:1,dur:9999,lvl:11,surfGear:true, desc:'A giant 14/0 circle hook, the only hook big enough to hold a surf shark. One time buy.'},
   // ---- Freshwater (V0.9.8) ----
-  // Freshwater terminal tackle, two per method category.
-  {id:'fwbob_b', cat:'fwbobber', name:'Red & White Float Rig',    icon:'tackle-cork',   cost:35,  pack:4, dur:7,  rare:1,    lvl:1, desc:'A clip-on float, a split shot and an Aberdeen hook.',world:'fresh',fixedCost:true},
-  {id:'fwbob_p', cat:'fwbobber', name:'Slip Float Rig',           icon:'tackle-cork',   cost:155, pack:4, dur:16, rare:1.25, lvl:3, desc:'Bobber stop and a slip float. Fish any depth you like, and it casts a mile.',world:'fresh',fixedCost:true},
-  {id:'fwcast_b',cat:'fwcast',   name:'Snap Swivel Pack',         icon:'tackle-hook',   cost:45,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Barrel swivel and a snap for quick lure changes.',world:'fresh',fixedCost:true},
-  {id:'fwcast_p',cat:'fwcast',   name:'Ball-Bearing Snap Kit',    icon:'tackle-hook',   cost:175, pack:4, dur:16, rare:1.25, lvl:4, desc:'Bearing swivels kill line twist and hold up to hard-charging fish.',world:'fresh',fixedCost:true},
-  {id:'fwbot_b', cat:'fwbottom', name:'Carolina Rig',             icon:'tackle-weight', cost:60,  pack:4, dur:6,  rare:1,    lvl:2, desc:'Egg sinker, bead and a leader dragged along the bottom.',world:'fresh',fixedCost:true},
-  {id:'fwbot_p', cat:'fwbottom', name:'Santee Cooler Rig',        icon:'tackle-weight', cost:240, pack:4, dur:14, rare:1.3,  lvl:5, desc:'A peg float lifts the bait off the mud. The catfish rig.',world:'fresh',fixedCost:true},
-  {id:'fwjig_b', cat:'fwjig',    name:'Round Ball Jighead',       icon:'tackle-jig',    cost:40,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Plain lead heads for plastics and hair jigs.',world:'fresh',fixedCost:true},
-  {id:'fwjig_p', cat:'fwjig',    name:'Tungsten Football Head',   icon:'tackle-jig',    cost:165, pack:4, dur:16, rare:1.25, lvl:4, desc:'Dense tungsten telegraphs every rock, and better odds on rare fish.',world:'fresh',fixedCost:true},
-  {id:'fwtrl_b', cat:'fwtroll',  name:'Planer Board & Snap Weight',icon:'tackle-lure',  cost:130, pack:3, dur:8,  rare:1,    lvl:4, desc:'A board and a snap weight to spread a trolling pass wide.',world:'fresh',fixedCost:true},
-  {id:'fwtrl_p', cat:'fwtroll',  name:'Lead Core & Dipsy Spread', icon:'tackle-lure',   cost:450, pack:3, dur:18, rare:1.35, lvl:7, desc:'Lead core line and diving discs put lures right on the thermocline.',world:'fresh',fixedCost:true},
-  {id:'fwfly_b', cat:'fwfly',    name:'Tapered Leader & Tippet',  icon:'tackle-circle', cost:70,  pack:4, dur:7,  rare:1,    lvl:5, desc:'A 9 ft tapered leader and a spool of 4x tippet. The fly angler\u2019s terminal end.',world:'fresh',fixedCost:true},
-  {id:'fwfly_p', cat:'fwfly',    name:'Furled Leader & Fluoro Tippet',icon:'tackle-circle',cost:280,pack:4,dur:16,rare:1.3,  lvl:8, desc:'A hand-furled butt section turns over big streamers and still lands soft.',world:'fresh',fixedCost:true},
-  {id:'iceauger', cat:'ice', name:'Hand Ice Auger', icon:'tackle-anchor', cost:700, pack:1, dur:9999, lvl:12, iceGear:true, desc:'A 8 in hand auger and a skimmer. The only way through the ice on a high mountain lake. One time buy.',world:'fresh',fixedCost:true},
+  // Freshwater terminal tackle, two per method category, scoped to the regions
+  // whose legal methods actually use that category (V0.9.8.1). The Southern
+  // swamp has no trolling water, and the Mountains only run fly / spin cast /
+  // still \u2014 so neither is ever offered tackle it cannot legally fish.
+  {id:'fwbob_b', cat:'fwbobber', name:'Red & White Float Rig',    icon:'tackle-cork',   cost:35,  pack:4, dur:7,  rare:1,    lvl:1, desc:'A clip-on float, a split shot and an Aberdeen hook.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
+  {id:'fwbob_p', cat:'fwbobber', name:'Slip Float Rig',           icon:'tackle-cork',   cost:155, pack:4, dur:16, rare:1.25, lvl:3, desc:'Bobber stop and a slip float. Fish any depth you like, and it casts a mile.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
+  {id:'fwcast_b',cat:'fwcast',   name:'Snap Swivel Pack',         icon:'tackle-hook',   cost:45,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Barrel swivel and a snap for quick lure changes.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'fwcast_p',cat:'fwcast',   name:'Ball-Bearing Snap Kit',    icon:'tackle-hook',   cost:175, pack:4, dur:16, rare:1.25, lvl:4, desc:'Bearing swivels kill line twist and hold up to hard-charging fish.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'fwbot_b', cat:'fwbottom', name:'Carolina Rig',             icon:'tackle-weight', cost:60,  pack:4, dur:6,  rare:1,    lvl:2, desc:'Egg sinker, bead and a leader dragged along the bottom.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'fwbot_p', cat:'fwbottom', name:'Santee Cooler Rig',        icon:'tackle-weight', cost:240, pack:4, dur:14, rare:1.3,  lvl:5, desc:'A peg float lifts the bait off the mud. The catfish rig.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'fwjig_b', cat:'fwjig',    name:'Round Ball Jighead',       icon:'tackle-jig',    cost:40,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Plain lead heads for plastics and hair jigs.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
+  {id:'fwjig_p', cat:'fwjig',    name:'Tungsten Football Head',   icon:'tackle-jig',    cost:165, pack:4, dur:16, rare:1.25, lvl:4, desc:'Dense tungsten telegraphs every rock, and better odds on rare fish.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
+  {id:'fwtrl_b', cat:'fwtroll',  name:'Planer Board & Snap Weight',icon:'tackle-lure',  cost:130, pack:3, dur:8,  rare:1,    lvl:4, desc:'A board and a snap weight to spread a trolling pass wide.',regions:['midwest','northern'],world:'fresh',fixedCost:true},
+  {id:'fwtrl_p', cat:'fwtroll',  name:'Lead Core & Dipsy Spread', icon:'tackle-lure',   cost:450, pack:3, dur:18, rare:1.35, lvl:7, desc:'Lead core line and diving discs put lures right on the thermocline.',regions:['midwest','northern'],world:'fresh',fixedCost:true},
+  {id:'fwfly_b', cat:'fwfly',    name:'Tapered Leader & Tippet',  icon:'tackle-circle', cost:70,  pack:4, dur:7,  rare:1,    lvl:5, desc:'A 9 ft tapered leader and a spool of 4x tippet. The fly angler\u2019s terminal end.',regions:['mountains'],world:'fresh',fixedCost:true},
+  {id:'fwfly_p', cat:'fwfly',    name:'Furled Leader & Fluoro Tippet',icon:'tackle-circle',cost:280,pack:4,dur:16,rare:1.3,  lvl:8, desc:'A hand-furled butt section turns over big streamers and still lands soft.',regions:['mountains'],world:'fresh',fixedCost:true},
+  {id:'iceauger', cat:'ice', name:'Hand Ice Auger', icon:'tackle-anchor', cost:700, pack:1, dur:9999, lvl:12, iceGear:true, desc:'A 8 in hand auger and a skimmer. The only way through hard water. One time buy.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
 ];
 
 const BAIT=[
@@ -3738,20 +3774,23 @@ const BAIT=[
   {id:'ballyhoo',name:'Rigged Ballyhoo', icon:'bait-fish-long', cost:90, pack:8, lvl:3, desc:'The classic offshore trolling bait.'},
   {id:'menhaden',name:'Menhaden', icon:'bait-fish', cost:60, pack:12, lvl:4, desc:'Oily chunk bait for the chum slick.'},
   // ---- Freshwater (V0.9.8) ----
-  // Freshwater bait — exactly the 12 ids the fish tables reference.
-  {id:'corn',        name:'Canned Corn',      icon:'bait-shrimp',   cost:25,  pack:20, lvl:1, desc:'A handful of sweet corn on a small hook. Carp, buffalo and stocked trout.',world:'fresh',fixedCost:true},
-  {id:'cricket',     name:'Live Crickets',    icon:'bait-crab',     cost:40,  pack:20, lvl:1, desc:'A tub of chirping crickets. Panfish cannot leave them alone.',world:'fresh',fixedCost:true},
-  {id:'worm',        name:'Nightcrawlers',    icon:'bait-squid',    cost:45,  pack:20, lvl:1, desc:'The universal freshwater bait. Everything in fresh water eats a worm.',world:'fresh',fixedCost:true},
-  {id:'stinkbait',   name:'Dip Stinkbait',    icon:'bait-cutbait',  cost:55,  pack:15, lvl:2, desc:'A tub of soured dough on a ribbed worm. Channel cats smell it a long way off.',world:'fresh',fixedCost:true},
-  {id:'powerbait',   name:'Dough Bait',       icon:'bait-shrimp',   cost:60,  pack:15, lvl:2, desc:'Scented floating dough moulded on a treble. Made for stocked and hatchery fish.',world:'fresh',fixedCost:true},
-  {id:'chickenliver',name:'Chicken Liver',    icon:'bait-cutbait',  cost:65,  pack:15, lvl:3, desc:'A bloody tub of liver. Messy, and the best catfish bait there is.',world:'fresh',fixedCost:true},
-  {id:'minnow',      name:'Live Minnows',     icon:'bait-fish',     cost:95,  pack:15, lvl:3, desc:'A bucket of lively fatheads. Nearly everything with teeth eats them.',world:'fresh',fixedCost:true},
-  {id:'salmonegg',   name:'Salmon Eggs',      icon:'bait-shrimp',   cost:75,  pack:15, lvl:4, desc:'A jar of cured single eggs. Trout, char and steelhead key on them hard.',world:'fresh',fixedCost:true},
-  {id:'leech',       name:'Ribbon Leeches',   icon:'bait-squid',    cost:90,  pack:12, lvl:4, desc:'Squirming leeches on a slow-death hook. Walleye and big trout candy.',world:'fresh',fixedCost:true},
-  {id:'crawfish',    name:'Live Crawfish',    icon:'crab',          cost:105, pack:12, lvl:5, desc:'Soft-shell crawdads. Smallmouth, drum and sturgeon hunt nothing else in summer.',world:'fresh',fixedCost:true},
-  {id:'shad',        name:'Gizzard Shad',     icon:'bait-fish-long',cost:130, pack:12, lvl:6, desc:'Cast-netted shad, whole or cut. The forage every open-water predator follows.',world:'fresh',fixedCost:true},
-  {id:'shiner',      name:'Wild Shiners',     icon:'bait-fish',     cost:140, pack:12, lvl:6, desc:'Big hand-picked golden shiners. The premium bait for trophy bass, pike and muskie.',world:'fresh',fixedCost:true},
-  {id:'waxworm', name:'Wax Worms', icon:'bait-shrimp', cost:70, pack:20, lvl:12, desc:'A tub of wax moth larvae kept warm in a jacket pocket. The ice angler\u2019s bait.',world:'fresh',fixedCost:true},
+  // Freshwater bait, scoped by region (V0.9.8.1). The four staples a bait shop
+  // stocks anywhere carry all four regions; the specialty baits are sold only
+  // where the fish that want them live, which is what makes a region's bait box
+  // feel different from the one you left behind.
+  {id:'corn',        name:'Canned Corn',      icon:'bait-shrimp',   cost:25,  pack:20, lvl:1, desc:'A handful of sweet corn on a small hook. Carp, buffalo and stocked trout.',regions:['midwest','southern'],world:'fresh',fixedCost:true},
+  {id:'cricket',     name:'Live Crickets',    icon:'bait-crab',     cost:40,  pack:20, lvl:1, desc:'A tub of chirping crickets. Panfish cannot leave them alone.',regions:['midwest','southern','mountains'],world:'fresh',fixedCost:true},
+  {id:'worm',        name:'Nightcrawlers',    icon:'bait-squid',    cost:45,  pack:20, lvl:1, desc:'The universal freshwater bait. Everything in fresh water eats a worm.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'stinkbait',   name:'Dip Stinkbait',    icon:'bait-cutbait',  cost:55,  pack:15, lvl:2, desc:'A tub of soured dough on a ribbed worm. Channel cats smell it a long way off.',regions:['midwest','southern'],world:'fresh',fixedCost:true},
+  {id:'powerbait',   name:'Dough Bait',       icon:'bait-shrimp',   cost:60,  pack:15, lvl:2, desc:'Scented floating dough moulded on a treble. Made for stocked and hatchery fish.',regions:['midwest','mountains'],world:'fresh',fixedCost:true},
+  {id:'chickenliver',name:'Chicken Liver',    icon:'bait-cutbait',  cost:65,  pack:15, lvl:3, desc:'A bloody tub of liver. Messy, and the best catfish bait there is.',regions:['midwest','southern'],world:'fresh',fixedCost:true},
+  {id:'minnow',      name:'Live Minnows',     icon:'bait-fish',     cost:95,  pack:15, lvl:3, desc:'A bucket of lively fatheads. Nearly everything with teeth eats them.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'salmonegg',   name:'Salmon Eggs',      icon:'bait-shrimp',   cost:75,  pack:15, lvl:4, desc:'A jar of cured single eggs. Trout, char and steelhead key on them hard.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'leech',       name:'Ribbon Leeches',   icon:'bait-squid',    cost:90,  pack:12, lvl:4, desc:'Squirming leeches on a slow-death hook. Walleye and big trout candy.',regions:['midwest','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'crawfish',    name:'Live Crawfish',    icon:'crab',          cost:105, pack:12, lvl:5, desc:'Soft-shell crawdads. Smallmouth, drum and sturgeon hunt nothing else in summer.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'shad',        name:'Gizzard Shad',     icon:'bait-fish-long',cost:130, pack:12, lvl:6, desc:'Cast-netted shad, whole or cut. The forage every open-water predator follows.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
+  {id:'shiner',      name:'Wild Shiners',     icon:'bait-fish',     cost:140, pack:12, lvl:6, desc:'Big hand-picked golden shiners. The premium bait for trophy bass, pike and muskie.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
+  {id:'waxworm', name:'Wax Worms', icon:'bait-shrimp', cost:70, pack:20, lvl:12, desc:'A tub of wax moth larvae kept warm in a jacket pocket. The ice angler\u2019s bait.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
 ];
 
 // Players own both leaders from the start; you swap between them on the rig bar
@@ -3812,8 +3851,8 @@ const LURES=[
   {id:'fw_glidebait', cat:'plug',      zone:3,color:'gold',         name:'Gold Glide Bait',           icon:'fish',       cost:620,lvl:9, methods:['topwater','troll'], baits:['shiner'],  targets:['muskie','largemouth','chainpickerel','longnosegar'],                 desc:'A jointed 8 in glider that S-tracks on a slow pull. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_bucktail10',cat:'spinnerbait',zone:3,                     name:'Double-10 Bucktail',        icon:'reel',       cost:700,lvl:10,methods:['topwater','troll'], baits:['shad'],    targets:['muskie','chainpickerel','sostripedbass','longnosegar'],              desc:'Two size-10 blades and a fistful of hair. The muskie bait, and it is brutal to throw.',world:'fresh',fixedCost:true},
   // Lake flies
-  {id:'fly_popper',   cat:'fly',       zone:3,                      name:'Foam Bluegill Popper',      icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['bluegill','bluegill','largemouth','smallmouth'],                desc:'A tiny foam popper on a 4x leader. Bluegill will eat it until the foam is gone.',world:'fresh',fixedCost:true},
-  {id:'fly_clouser',  cat:'fly',       zone:3,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['largemouth','smallmouth','bluegill','bluegill'],                desc:'Dumbbell eyes and bucktail, jigging on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
+  {id:'fly_popper',   cat:'fly',       zone:6,                      name:'Foam Bluegill Popper',      icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['bluegill','bluegill','largemouth','smallmouth'],                desc:'A tiny foam popper on a 4x leader. Bluegill will eat it until the foam is gone.',world:'fresh',fixedCost:true},
+  {id:'fly_clouser',  cat:'fly',       zone:6,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['largemouth','smallmouth','bluegill','bluegill'],                desc:'Dumbbell eyes and bucktail, jigging on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
   // ---- RIVER (zone 4) ----
   {id:'fw_inlinespin',   cat:'spinnerbait',zone:4,                  name:'Inline Spinner',            icon:'reel',       cost:170,lvl:2, methods:['topwater'],        baits:['minnow'],  targets:['smallmouth','smallmouth','sowhitebass','rockbass'],             desc:'A #3 blade thumping in current. Nothing in a river ignores it.',world:'fresh',fixedCost:true},
   {id:'fw_tubejig',      cat:'softplastic',zone:4,color:'red',      name:'Rootbeer Tube Jig',         icon:'reel',       cost:190,lvl:3, methods:['jig'],         baits:['crawfish'],targets:['smallmouth','smallmouth','walleye','walleye'],                       desc:'A hollow tube dragged over gravel. Rootbeer: +5% bite while the current is moving.',world:'fresh',fixedCost:true},
@@ -3822,26 +3861,26 @@ const LURES=[
   {id:'fw_swimjig',      cat:'softplastic',zone:4,color:'chartreuse',name:'Swim Jig & Trailer',       icon:'reel',       cost:260,lvl:5, methods:['jig','topwater'],  baits:['shiner'],  targets:['smallmouth','smallmouth','sowhitebass','sostripedbass'],                desc:'A pointed head swum through wood. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
   {id:'fw_jerkbait',     cat:'plug',      zone:4,                   name:'Suspending Jerkbait',       icon:'fish',       cost:320,lvl:6, methods:['topwater'],        baits:['minnow'],  targets:['smallmouth','walleye','smallmouth','sostripedbass'],                  desc:'Darts and hangs dead in the current. Cold-water smallmouth cannot stand it.',world:'fresh',fixedCost:true},
   {id:'fw_topwalker',    cat:'topwater',  zone:4,color:'gold',      name:'Gold Topwater Walker',      icon:'fish',       cost:400,lvl:7, methods:['topwater'],        baits:['shiner'],  targets:['sostripedbass','smallmouth','sowhitebass','longnosegar'],                desc:'Walked over a boiling wing dam at first light. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
-  {id:'fw_shadrap',      cat:'crankbait', zone:4,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','topwater'],baits:['shad'],    targets:['walleye','walleye','sostripedbass','sostripedbass'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
-  {id:'fw_trollbucktail',cat:'trolling',  zone:4,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['sostripedbass','sostripedbass','longnosegar','walleye'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
+  {id:'fw_shadrap',      cat:'crankbait', zone:5,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','topwater'],baits:['shad'],    targets:['walleye','walleye','sostripedbass','sostripedbass'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
+  {id:'fw_trollbucktail',cat:'trolling',  zone:5,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['sostripedbass','sostripedbass','longnosegar','walleye'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
   // River flies
-  {id:'fly_woolly',      cat:'fly',       zone:4,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['smallmouth','smallmouth','rockbass','sowhitebass'],             desc:'Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
-  {id:'fly_crawfly',     cat:'fly',       zone:4,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['smallmouth','smallmouth','rockbass'],                         desc:'Rubber-leg claws crawled over a gravel bar. River smallmouth candy.',world:'fresh',fixedCost:true},
+  {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['smallmouth','smallmouth','rockbass','sowhitebass'],             desc:'Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
+  {id:'fly_crawfly',     cat:'fly',       zone:6,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['smallmouth','smallmouth','rockbass'],                         desc:'Rubber-leg claws crawled over a gravel bar. River smallmouth candy.',world:'fresh',fixedCost:true},
   // ---- MOUNTAINS (zone 5) ----
-  {id:'fw_troutspinner',cat:'spinnerbait',zone:5,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['topwater'],        baits:['worm'],    targets:['rainbowtrout','browntrout','cutthroattrout','brooktrout','grayling','brooktrout','goldentrout','cutthroattrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['topwater'],        baits:['worm'],    targets:['rainbowtrout','browntrout','cutthroattrout','brooktrout','grayling','brooktrout','goldentrout','cutthroattrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['bulltrout','laketrout','browntrout','arcticchar'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
   {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','sockeyesalmon'],                                               desc:'A 4 in white tube jigged over an alpine lake shelf. White: +5% bite during the day.',world:'fresh',fixedCost:true},
   {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['sockeyesalmon','cohosalmon','laketrout','rainbowtrout'],             desc:'A flashing dodger ahead of a tipped squid. The kokanee troll, corn and all.',world:'fresh',fixedCost:true},
   {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['cohosalmon','arcticchar','laketrout','sockeyesalmon'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
   {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['topwater','troll'],baits:['minnow'],  targets:['bulltrout','bulltrout','browntrout','cohosalmon','arcticchar'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
-  {id:'fly_adams',      cat:'fly',       zone:5,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cutthroattrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
-  {id:'fly_hopper',     cat:'fly',       zone:5,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','browntrout','goldentrout','grayling','cutthroattrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
-  {id:'fly_pheasant',   cat:'fly',       zone:5,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout','goldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
-  {id:'fly_stonefly',   cat:'fly',       zone:5,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['browntrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
-  {id:'fly_softhackle', cat:'fly',       zone:5,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['browntrout','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
-  {id:'fly_globug',     cat:'fly',       zone:5,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','arcticchar','mtnwhitefish','brooktrout'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
-  {id:'fly_sculpin',    cat:'fly',       zone:5,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['browntrout','bulltrout','brooktrout','bulltrout','cohosalmon'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
-  {id:'fly_mouse',      cat:'fly',       zone:5,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','browntrout','arcticchar'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
+  {id:'fly_adams',      cat:'fly',       zone:6,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cutthroattrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
+  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','browntrout','goldentrout','grayling','cutthroattrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
+  {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout','goldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
+  {id:'fly_stonefly',   cat:'fly',       zone:6,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['browntrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
+  {id:'fly_softhackle', cat:'fly',       zone:6,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['browntrout','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
+  {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','arcticchar','mtnwhitefish','brooktrout'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
+  {id:'fly_sculpin',    cat:'fly',       zone:6,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['browntrout','bulltrout','brooktrout','bulltrout','cohosalmon'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fly_mouse',      cat:'fly',       zone:6,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','browntrout','arcticchar'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
 ];
 function lureById(id){return LURES.find(function(l){return l.id===id;});}
 // Lure durability: unlike bait (consumed every cast), a lure survives several
@@ -4284,13 +4323,14 @@ function doPrestige(){
   S.ownedRods=['rod0'].concat(keepChainsaw?['chainsaw']:[]);
   S.ownedReels=['reel0'];S.ownedBraids=['braid0'];S.ownedLeaders=['fluoro','wire'];
   S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='fluoro';
-  S.ownedBoats.push('bank');S.ownedRods.push('frod0');S.ownedReels.push('freel0');S.ownedBraids.push('fline0');
-  S.fboat='bank';S.frod='frod0';S.freel='freel0';S.fbraid='fline0';S.fleader='fluoro';
+  // Freshwater restarts in the Midwest with only its starter kit; the other
+  // three regions come back when their licences are re-bought.
+  S.fgear={};grantRegionStarter('midwest');
   // consumables back to the starter kit
   S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
   S.baitInv={shrimp:20};S.lureInv={};S.lureDur={};S.ownedLures=[];
   S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
-  S.fmethod='livebait';S.fbaitSel='worm';S.fLureSel='';S.lastZone={salt:0,fresh:3};
+  S.lastZone={salt:0,fresh:3};
   S.baitInv.worm=20;
   // bump prestige (grants the next pet automatically via ownedPets())
   S.prestige=next;S.prestigeOffered=false;
@@ -4383,13 +4423,24 @@ const BOATS=[
   // Freshwater craft. `bank` is the free starter (you wade the lake from
   // shore) and `waders` is the Mountains gate — a walking 'boat' with walker:true
   // so the render layer knows to draw a hiker instead of a hull.
-  {id:'bank',      name:'Bank & Wade',        icon:'person',      cost:0,     lvl:1,  maxZone:3, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Midwest bites',world:'fresh',fixedCost:true},
-  {id:'canoe',     name:'Canoe',              icon:'boat-kayak',  cost:280,   lvl:2,  maxZone:3, range:0,  speed:2.6, perk:'baitsaver',   perkName:'Bait Saver: 12% bait not used',world:'fresh',fixedCost:true},
-  {id:'jonboat',   name:'Jon Boat',           icon:'boat-jon',    cost:900,   lvl:3,  maxZone:4, range:15, speed:3.3, perk:'tacklesaver', perkName:'Tackle Saver: 12% no wear per cast',world:'fresh',fixedCost:true},
-  {id:'bassboat',  name:'Bass Boat',          icon:'boat-bay',    cost:2600,  lvl:5,  maxZone:4, range:35, speed:4.6, perk:'fastbite',    perkName:'Fast Bites: bites come 15% sooner',world:'fresh',fixedCost:true},
-  {id:'jetsled',   name:'Jet Sled',           icon:'boat-console',cost:5400,  lvl:7,  maxZone:5, range:55, speed:5.8, perk:'nightowl',    perkName:'Night Owl: no night bite penalty',world:'fresh',fixedCost:true},
-  {id:'driftboat', name:'Drift Boat',         icon:'boat-walk',   cost:8600,  lvl:9,  maxZone:5, range:80, speed:6.4, perk:'finder',      perkName:'Fish Finder: +range & better odds',world:'fresh',fixedCost:true},
-  {id:'waders',    name:'Breathable Waders',  icon:'shirt-waders',cost:12500, lvl:11, maxZone:6, range:25, speed:1.6, perk:'finder',      perkName:'Fish Finder: +range & better odds', walker:true,world:'fresh',fixedCost:true},
+  // Craft are REGION-scoped: each region has its own free starter (granted with
+  // the licence) plus one or two upgrades. maxZone is now just "my own region",
+  // since the licence does the travel gating.
+  // -- Midwest --
+  {id:'bank',      name:'Bank & Wade',        icon:'person',      cost:0,     lvl:1,  maxZone:3, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Midwest bites',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'canoe',     name:'Canoe',              icon:'boat-kayak',  cost:280,   lvl:2,  maxZone:3, range:0,  speed:2.6, perk:'baitsaver',   perkName:'Bait Saver: 12% bait not used',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'jonboat',   name:'Jon Boat',           icon:'boat-jon',    cost:900,   lvl:3,  maxZone:3, range:15, speed:3.3, perk:'tacklesaver', perkName:'Tackle Saver: 12% no wear per cast',world:'fresh',region:'midwest',fixedCost:true},
+  // -- Southern --
+  {id:'so_boat0',  name:'Levee Walk',         icon:'person',      cost:0,     lvl:1,  maxZone:4, range:0,  speed:1.9, perk:'stealth',     perkName:'Bank Stealth: +10% Southern bites',world:'fresh',region:'southern',fixedCost:true},
+  {id:'so_boat1',  name:'Go-Devil Skiff',     icon:'boat-jon',    cost:1400,  lvl:4,  maxZone:4, range:20, speed:3.6, perk:'tacklesaver', perkName:'Tackle Saver: 12% no wear per cast',world:'fresh',region:'southern',fixedCost:true},
+  {id:'bassboat',  name:'Bass Boat',          icon:'boat-bay',    cost:2600,  lvl:5,  maxZone:4, range:35, speed:4.6, perk:'fastbite',    perkName:'Fast Bites: bites come 15% sooner',world:'fresh',region:'southern',fixedCost:true},
+  // -- Northern --
+  {id:'no_boat0',  name:'Dock & Shore',       icon:'person',      cost:0,     lvl:1,  maxZone:5, range:0,  speed:2.0, perk:'stealth',     perkName:'Shore Stealth: +10% Northern bites',world:'fresh',region:'northern',fixedCost:true},
+  {id:'no_boat1',  name:'Deep-V Lund',        icon:'boat-console',cost:3600,  lvl:7,  maxZone:5, range:55, speed:5.2, perk:'nightowl',    perkName:'Night Owl: no night bite penalty',world:'fresh',region:'northern',fixedCost:true},
+  {id:'jetsled',   name:'Jet Sled',           icon:'boat-console',cost:5400,  lvl:9,  maxZone:5, range:70, speed:5.8, perk:'finder',      perkName:'Fish Finder: +range & better odds',world:'fresh',region:'northern',fixedCost:true},
+  // -- Mountains -- (waders are the free starter: you hiked in)
+  {id:'waders',    name:'Breathable Waders',  icon:'shirt-waders',cost:0,     lvl:1,  maxZone:6, range:25, speed:1.6, perk:'stealth',     perkName:'Wading Stealth: +10% Mountains bites', walker:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'driftboat', name:'Drift Boat',         icon:'boat-walk',   cost:4800,  lvl:9,  maxZone:6, range:80, speed:4.4, perk:'finder',      perkName:'Fish Finder: +range & better odds',world:'fresh',region:'mountains',fixedCost:true},
 ];
 function boatSpeed(id){const b=BOATS.find(x=>x.id===id);return b?b.speed:3;}
 
@@ -4402,12 +4453,22 @@ const RODS=[
   {id:'chainsaw',name:'Chainsaw Rod',zoneBonus:17,color:'#d4500a',cost:0,lvl:1,desc:'A roaring saw blade for a butt. Fights regular fish with the same power as the Bluewater Rod, and adds a SLOW MO button in the fight: −50% fish speed for 3s, once per fight.',reward:'sawfish',rewardName:'a Sawfish'},
   // ---- Freshwater (V0.9.8) ----
   // Freshwater rods. fly:true marks half of the fly combo.
-  {id:'ul_rod',   name:'Ultralight Rod',     zoneBonus:0,  color:'#d8cfa8', cost:0,    lvl:1,  desc:'A limber 5 ft ultralight. Fun on panfish, outgunned by anything else.',world:'fresh',fixedCost:true},
-  {id:'spin_rod', name:'Spinning Rod',       zoneBonus:5,  color:'#4a6b52', cost:160,  lvl:2,  desc:'A 7 ft medium spinning stick. Crisper hooksets, wider catch window.',world:'fresh',fixedCost:true},
-  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
-  {id:'cast_rod', name:'Baitcasting Rod',    zoneBonus:13, color:'#6b3f2a', cost:1800, lvl:8,  desc:'A heavy-power casting rod with real backbone for timber and current.',world:'fresh',fixedCost:true},
-  {id:'flyrod_p', name:'8wt Fly Rod',        zoneBonus:15, color:'#2e4a3a', cost:3600, lvl:10, desc:'A fast 8-weight that turns over streamers and stops steelhead.', fly:true,world:'fresh',fixedCost:true},
-  {id:'flipstick',name:'Flipping Stick',     zoneBonus:17, color:'#1f2b22', cost:6400, lvl:12, desc:'An 8 ft heavy flipping stick. Maximum forgiveness on the hookset.',world:'fresh',fixedCost:true},
+  // -- Midwest --
+  {id:'ul_rod',   name:'Ultralight Rod',     zoneBonus:0,  color:'#d8cfa8', cost:0,    lvl:1,  desc:'A limber 5 ft ultralight. Fun on panfish, outgunned by anything else.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'spin_rod', name:'Spinning Rod',       zoneBonus:5,  color:'#4a6b52', cost:160,  lvl:2,  desc:'A 7 ft medium spinning stick. Crisper hooksets, wider catch window.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'cast_rod', name:'Baitcasting Rod',    zoneBonus:13, color:'#6b3f2a', cost:1800, lvl:8,  desc:'A heavy-power casting rod with real backbone for timber and current.',world:'fresh',region:'midwest',fixedCost:true},
+  // -- Southern --
+  {id:'so_rod0',  name:'Cane Pole',          zoneBonus:0,  color:'#c9b077', cost:0,    lvl:1,  desc:'Twelve feet of cane and a length of line. No reel, no drag, no complaints.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'so_rod1',  name:'Flipping Stick',     zoneBonus:7,  color:'#1f2b22', cost:900,  lvl:4,  desc:'An 8 ft heavy stick for pitching into pads and cypress knees.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'so_rod2',  name:'Swamp Heavy Rod',    zoneBonus:15, color:'#3a2b1c', cost:3200, lvl:9,  desc:'An unforgiving blank built to turn a gar before it reaches the timber.',world:'fresh',region:'southern',fixedCost:true},
+  // -- Northern --
+  {id:'no_rod0',  name:'Perch Rod',          zoneBonus:0,  color:'#b8c4cc', cost:0,    lvl:1,  desc:'A light 6 ft spinning rod. Perch, rock bass and whitefish all day.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'no_rod1',  name:'Walleye Spinning Rod',zoneBonus:8, color:'#4a5b6b', cost:1200, lvl:5,  desc:'A fast 7 ft tip that telegraphs the softest walleye tap in twenty feet of water.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'no_rod2',  name:'Downrigger Trolling Rod',zoneBonus:16,color:'#22303a',cost:4200,lvl:10, desc:'A long parabolic blank that loads against a big-water laker without pulling hooks.',world:'fresh',region:'northern',fixedCost:true},
+  // -- Mountains -- (fly:true marks half of the fly combo that opens the region)
+  {id:'mt_rod0',  name:'Creek Spin Rod',     zoneBonus:0,  color:'#a8b89a', cost:0,    lvl:1,  desc:'A stubby 5 ft spin rod for flicking hardware under overhanging brush.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyrod_p', name:'8wt Fly Rod',        zoneBonus:15, color:'#2e4a3a', cost:3600, lvl:10, desc:'A fast 8-weight that turns over streamers and stops a king in heavy current.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 const REELS=[
   {id:'reel0',name:'2500 Spinning',range:145,drag:12,color:'#c8ccd0',cost:0,   lvl:1, desc:'Short, accurate casts.'},
@@ -4417,12 +4478,22 @@ const REELS=[
   {id:'reel4',name:'Big Game Two Speed',range:476,drag:50,color:'#2a2c30',cost:4200,lvl:11,desc:'Max range & cranking power.'},
   // ---- Freshwater (V0.9.8) ----
   // Freshwater reels.
-  {id:'spin1000', name:'1000 Ultralight Spinning', range:140, drag:8,  color:'#d0d4d8', cost:0,    lvl:1,  desc:'Tiny spool, short accurate flips to the bank.',world:'fresh',fixedCost:true},
-  {id:'spin3000', name:'3000 Spinning',            range:210, drag:14, color:'#9aa0a6', cost:160,  lvl:2,  desc:'More line, more reach across the flat.',world:'fresh',fixedCost:true},
-  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',fixedCost:true},
-  {id:'baitcast', name:'Low-Profile Baitcaster',   range:370, drag:34, color:'#2b3a2f', cost:1800, lvl:8,  desc:'Cranking power for heavy cover and hard current.',world:'fresh',fixedCost:true},
-  {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',fixedCost:true},
-  {id:'roundcast',name:'Round Baitcaster 300',     range:480, drag:55, color:'#4a4e54', cost:6400, lvl:12, desc:'Big round reel, maximum range and cranking torque.',world:'fresh',fixedCost:true},
+  // -- Midwest --
+  {id:'spin1000', name:'1000 Ultralight Spinning', range:140, drag:8,  color:'#d0d4d8', cost:0,    lvl:1,  desc:'Tiny spool, short accurate flips to the bank.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'spin3000', name:'3000 Spinning',            range:210, drag:14, color:'#9aa0a6', cost:160,  lvl:2,  desc:'More line, more reach across the flat.',world:'fresh',region:'midwest',fixedCost:true},
+  {id:'baitcast', name:'Low-Profile Baitcaster',   range:370, drag:34, color:'#2b3a2f', cost:1800, lvl:8,  desc:'Cranking power for heavy cover and hard current.',world:'fresh',region:'midwest',fixedCost:true},
+  // -- Southern --
+  {id:'so_reel0', name:'Spincast 33',              range:150, drag:9,  color:'#c4c8cc', cost:0,    lvl:1,  desc:'A closed-face push-button reel. Nothing to backlash, nothing to go wrong.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'so_reel1', name:'Baitcaster 200',           range:280, drag:22, color:'#3a2f24', cost:900,  lvl:4,  desc:'Thumb-bar casting reel with enough torque to winch a bass out of the pads.',world:'fresh',region:'southern',fixedCost:true},
+  {id:'roundcast',name:'Round Baitcaster 300',     range:400, drag:48, color:'#4a4e54', cost:3200, lvl:9,  desc:'Big round reel, maximum cranking torque. Built for gar and flatheads.',world:'fresh',region:'southern',fixedCost:true},
+  // -- Northern --
+  {id:'no_reel0', name:'2500 Spinning',            range:180, drag:12, color:'#b0b6bc', cost:0,    lvl:1,  desc:'A dependable mid-size spinner for perch, rock bass and whitefish.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'no_reel1', name:'4000 Spinning',            range:300, drag:24, color:'#8a9098', cost:1200, lvl:5,  desc:'More spool and more drag for walleye out on the shield lakes.',world:'fresh',region:'northern',fixedCost:true},
+  {id:'no_reel2', name:'Line-Counter Trolling Reel',range:460,drag:50, color:'#2a2f36', cost:4200, lvl:10, desc:'A counter on the spool so you can put the lure back at the exact depth that just bit.',world:'fresh',region:'northern',fixedCost:true},
+  // -- Mountains --
+  {id:'mt_reel0', name:'500 Ultralight Spinning',  range:130, drag:7,  color:'#c8d0c4', cost:0,    lvl:1,  desc:'A palm-sized spinner on 4 lb line. All a mountain creek ever asks for.',world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
 // gates which fish it can land: 2500(12)->small, ... BigGame(50)->everything.
@@ -4885,6 +4956,9 @@ function buyLicense(zone){
   }
   coinSpend(l.cost,'fresh');
   S.licenses=S.licenses||{};S.licenses[l.id]=1;
+  // The licence comes with the region's free starter kit, so you can fish the
+  // water you just paid for instead of arriving with nothing legal to tie on.
+  grantRegionStarter(l.id);
   try{AUDIO.sfx('coin');}catch(e){}
   toast(l.name+' bought! '+ZONE_LBL[zone]+' is open.','#2aa890');
   if(typeof updatePills==='function')updatePills();
@@ -4940,11 +5014,12 @@ let S={
   baitInv:{shrimp:20},
   ownedLures:[],lureInv:{},lureDur:{},lureSel:'',
   zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',
-  // ---- Freshwater world (V0.9.8). Equipped gear is per world; ownership lists
-  //      and inventories above stay shared because ids never collide. ----
+  // ---- Freshwater world (V0.9.8.1). Equipped gear is per REGION and lives in
+  //      S.fgear[regionId]; ownership lists and inventories above stay shared
+  //      because ids never collide. normalizeState() seeds the Midwest bag and
+  //      grants each licensed region's starter kit. ----
   lastZone:{salt:0,fresh:3},everSwapped:false,
-  fboat:'bank',frod:'frod0',freel:'freel0',fbraid:'fline0',fleader:'fluoro',
-  fmethod:'livebait',fbaitSel:'worm',fLureSel:'',
+  fgear:{},
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
 
@@ -5760,7 +5835,6 @@ function normalizeState(){
   if(!S.ownedLeaders.includes('fluoro'))S.ownedLeaders.push('fluoro');
   if(!S.ownedLeaders.includes('wire'))S.ownedLeaders.push('wire');
   if(S.leader!=='fluoro'&&S.leader!=='wire')S.leader='fluoro';
-  if(S.fleader!=='fluoro'&&S.fleader!=='wire')S.fleader='fluoro';
   if(S.gfx!=='high'&&S.gfx!=='smooth'&&S.gfx!=='auto')S.gfx='auto';
   if(typeof S.showFps!=='boolean')S.showFps=false;
   if(typeof S.surfUnlocked!=='boolean')S.surfUnlocked=false;
@@ -5772,24 +5846,50 @@ function normalizeState(){
   if(!S.lastZone||typeof S.lastZone!=='object')S.lastZone={salt:0,fresh:3};
   if(typeof S.lastZone.salt!=='number')S.lastZone.salt=0;
   if(typeof S.lastZone.fresh!=='number')S.lastZone.fresh=3;
-  if(!S.fboat)S.fboat='bank';
-  if(!S.frod)S.frod='frod0';
-  if(!S.freel)S.freel='freel0';
-  if(!S.fbraid)S.fbraid='fline0';
-  if(!S.fleader)S.fleader='fluoro';
-  // obber and cast were retired in V0.9.8.1; anyone holding one lands on live bait.
-  if(!S.fmethod||S.fmethod==='bobber'||S.fmethod==='cast')S.fmethod='livebait';
-  if(!S.fbaitSel)S.fbaitSel='worm';
-  if(typeof S.fLureSel!=='string')S.fLureSel='';
   if(typeof S.everSwapped!=='boolean')S.everSwapped=false;
   if(typeof S.iceUnlocked!=='boolean')S.iceUnlocked=false;
   if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
-  // Freshwater starter gear is free and implicit, exactly like the Kayak: you can
-  // always bank-fish the lake. Grant it rather than making the shop the only path.
-  ['bank','frod0','freel0','fline0'].forEach(function(id, i){
-    const arr=[S.ownedBoats, S.ownedRods, S.ownedReels, S.ownedBraids][i];
-    if(arr&&arr.indexOf(id)<0)arr.push(id);
+  // ---- V0.9.8.1: freshwater loadouts are per REGION ----------------------
+  // A V0.9.8 save carries ONE flat freshwater set (S.fboat/S.frod/...). Fold it
+  // into the Midwest bag and retire the flat fields. Note the old defaults
+  // pointed at frod0 / freel0 / fline0, which were never real catalog ids - the
+  // fallbacks inside curRod()/curReel() masked it, but the ownership arrays had
+  // been collecting phantom entries, so those get purged here too.
+  if(!S.fgear||typeof S.fgear!=='object'){
+    S.fgear={};
+    const legacy={boat:S.fboat,rod:S.frod,reel:S.freel,braid:S.fbraid,leader:S.fleader,
+                  method:S.fmethod,baitSel:S.fbaitSel,lureSel:S.fLureSel};
+    const mw=defaultRegionGear('midwest');
+    // Keep a legacy pick only where it is still a real, Midwest-legal item;
+    // otherwise that slot falls back to the region's starter.
+    const stillLegal={
+      boat:function(v){return BOATS.some(function(x){return x.id===v&&itemInRegion(x,'midwest');});},
+      rod:function(v){return RODS.some(function(x){return x.id===v&&itemInRegion(x,'midwest');});},
+      reel:function(v){return REELS.some(function(x){return x.id===v&&itemInRegion(x,'midwest');});},
+      braid:function(v){return BRAIDS.some(function(x){return x.id===v;});},
+      leader:function(v){return v==='fluoro'||v==='wire';},
+      method:function(v){return METHODS.some(function(m){return m.id===v&&m.zones.indexOf(3)>=0;});},
+      baitSel:function(v){return BAIT.some(function(x){return x.id===v&&itemInRegion(x,'midwest');});},
+      lureSel:function(v){return v===''||LURES.some(function(x){return x.id===v&&x.zone===3;});}
+    };
+    GEAR_SLOTS.forEach(function(k){
+      const v=legacy[k];
+      if(v===undefined||v===null)return;
+      if(stillLegal[k]&&!stillLegal[k](v))return;
+      mw[k]=v;
+    });
+    S.fgear.midwest=mw;
+  }
+  ['frod0','freel0','fline0'].forEach(function(bad){
+    [S.ownedRods,S.ownedReels,S.ownedBraids].forEach(function(arr){
+      if(!arr)return;const i=arr.indexOf(bad);if(i>=0)arr.splice(i,1);
+    });
   });
+  // Every region you are entitled to stand in owns its free starter kit. The
+  // Midwest is always free; the rest arrive with their licence.
+  grantRegionStarter('midwest');
+  FRESH_LICENSES.forEach(function(l){if(hasLicense(l.zone))grantRegionStarter(l.id);});
+  ['fboat','frod','freel','fbraid','fleader','fmethod','fbaitSel','fLureSel'].forEach(function(k){delete S[k];});
   if(typeof S.baitInv.worm!=='number')S.baitInv.worm=20;
   // Starter terminal tackle, mirroring the saltwater kit at S's declaration: a
   // float rig and a bottom rig so the Lake is fishable the moment you arrive.
@@ -6131,19 +6231,63 @@ function applyRecovery(key){
 // carries world:'salt'|'fresh' and ids never collide), so ownership lists and
 // inventories stay shared and existing saves load untouched; only the SELECTION
 // is split, under parallel f* fields. Saltwater keeps the original field names.
-const GEAR_FIELD={boat:'fboat',rod:'frod',reel:'freel',braid:'fbraid',leader:'fleader',
-                  method:'fmethod',baitSel:'fbaitSel',lureSel:'fLureSel'};
-function gearKey(k){return isFresh()?(GEAR_FIELD[k]||k):k;}
-function gearGet(k){return S[gearKey(k)];}
-function gearSet(k, v){S[gearKey(k)]=v;}
+// V0.9.8.1: freshwater gear is per REGION, not per world. Each region keeps its
+// own equipped set under S.fgear[regionId], so walking from the Midwest into the
+// Southern swaps your whole rig with no explicit "switch loadout" step — the
+// region IS the loadout. Saltwater keeps the original flat S.boat/S.rod/... .
+const GEAR_SLOTS=['boat','rod','reel','braid','leader','method','baitSel','lureSel'];
+// The free kit every region hands you the moment its licence is bought, so you
+// can always fish the water you just paid to enter.
+const REGION_STARTER={
+  midwest:  {boat:'bank',     rod:'ul_rod',  reel:'spin1000', braid:'mono4', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
+  southern: {boat:'so_boat0', rod:'so_rod0', reel:'so_reel0', braid:'mono6', leader:'fluoro', method:'livebait', baitSel:'worm',   lureSel:''},
+  northern: {boat:'no_boat0', rod:'no_rod0', reel:'no_reel0', braid:'mono6', leader:'fluoro', method:'livebait', baitSel:'minnow', lureSel:''},
+  mountains:{boat:'waders',   rod:'mt_rod0', reel:'mt_reel0', braid:'mono4', leader:'fluoro', method:'spincast', baitSel:'worm',   lureSel:''},
+};
+function defaultRegionGear(rid){
+  const s=REGION_STARTER[rid]||REGION_STARTER.midwest;
+  const out={};GEAR_SLOTS.forEach(function(k){out[k]=s[k];});
+  return out;
+}
+function regionGearBag(rid){
+  rid=rid||curRegionId();
+  S.fgear=S.fgear||{};
+  if(!S.fgear[rid])S.fgear[rid]=defaultRegionGear(rid);
+  return S.fgear[rid];
+}
+function gearGet(k){return isFresh()?regionGearBag()[k]:S[k];}
+function gearSet(k, v){if(isFresh())regionGearBag()[k]=v;else S[k]=v;}
+// Grant a region's free starter kit and equip it. Called when its licence is
+// bought (and for the Midwest on first load), so nobody lands in a region with
+// nothing they are allowed to tie on.
+function grantRegionStarter(rid){
+  const s=REGION_STARTER[rid];if(!s)return;
+  S.ownedBoats=S.ownedBoats||[];S.ownedRods=S.ownedRods||[];S.ownedReels=S.ownedReels||[];S.ownedBraids=S.ownedBraids||[];
+  if(s.boat &&S.ownedBoats.indexOf(s.boat)<0)  S.ownedBoats.push(s.boat);
+  if(s.rod  &&S.ownedRods.indexOf(s.rod)<0)    S.ownedRods.push(s.rod);
+  if(s.reel &&S.ownedReels.indexOf(s.reel)<0)  S.ownedReels.push(s.reel);
+  if(s.braid&&S.ownedBraids.indexOf(s.braid)<0)S.ownedBraids.push(s.braid);
+  S.fgear=S.fgear||{};
+  if(!S.fgear[rid])S.fgear[rid]=defaultRegionGear(rid);
+}
 // Catalog slices: the shop and every "what can I equip" check work off these.
 function forWorld(arr, w){w=w||curWorldId();return arr.filter(function(it){return (it.world||'salt')===w;});}
-function boatsFor(w){return forWorld(BOATS, w);}
+// The slice the shop and every "can I equip this" check work off. In saltwater
+// this is just the world filter; in freshwater it narrows again to the region
+// you are standing in, which is what makes a loadout region-locked.
+function forHere(arr, w, rid){
+  w=w||curWorldId();
+  const out=forWorld(arr, w);
+  if(w!=='fresh')return out;
+  rid=rid||curRegionId();
+  return out.filter(function(it){return itemInRegion(it, rid);});
+}
+function boatsFor(w){return forHere(BOATS, w);}
 
 function curBoat(){return BOATS.find(b=>b.id===gearGet('boat'))||boatsFor()[0];}
-function curRod(){return RODS.find(r=>r.id===gearGet('rod'))||forWorld(RODS)[0];}
-function curReel(){return REELS.find(r=>r.id===gearGet('reel'))||forWorld(REELS)[0];}
-function curBraid(){return BRAIDS.find(b=>b.id===gearGet('braid'))||forWorld(BRAIDS)[0];}
+function curRod(){return RODS.find(r=>r.id===gearGet('rod'))||forHere(RODS)[0]||forWorld(RODS)[0];}
+function curReel(){return REELS.find(r=>r.id===gearGet('reel'))||forHere(REELS)[0]||forWorld(REELS)[0];}
+function curBraid(){return BRAIDS.find(b=>b.id===gearGet('braid'))||forHere(BRAIDS)[0]||forWorld(BRAIDS)[0];}
 function curLeader(){return LEADERS.find(l=>l.id===gearGet('leader'))||LEADERS[0];}
 function curZone(){return ZONES[S.zone];}
 function curMethod(){return METHODS.find(m=>m.id===gearGet('method'))||methodsForZone(S.zone)[0];}
@@ -6161,18 +6305,28 @@ const ZONE_REQ={
      // order the player actually has to solve it: licence, then fly combo.
      extra:{label:'a fly rod & fly reel', check:function(){return hasFlyCombo();}}},
 };
+// OWNERSHIP, not what happens to be equipped. The Mountains starter rig is a
+// spin outfit, so gating on the equipped rod would lock out anyone who arrived
+// with their starter tied on and never let them in to switch.
 function hasFlyCombo(){
-  const r=RODS.find(function(x){return x.id===S.frod;}), rl=REELS.find(function(x){return x.id===S.freel;});
-  return !!(r&&r.fly&&rl&&rl.fly);
+  const ownsFly=function(arr, own){return arr.some(function(x){return x.fly&&(own||[]).indexOf(x.id)>=0;});};
+  return ownsFly(RODS, S.ownedRods)&&ownsFly(REELS, S.ownedReels);
 }
-// Can the player stand in zone `z`, judged with the gear equipped in z's world?
+// Can the player stand in zone `z`, judged against that zone's own region gear?
 function zoneReachIn(w, z){
-  const bid=(w==='fresh')?S.fboat:S.boat;
-  const b=BOATS.find(function(x){return x.id===bid;});
-  if(!b||b.maxZone<z)return false;
   const req=ZONE_REQ[z];
   if(req&&req.check&&!req.check())return false;
   if(req&&req.extra&&req.extra.check&&!req.extra.check())return false;
+  if(w==='fresh'){
+    // Freshwater travel is gated by the LICENCE (checked above), not by boat
+    // tier — craft are region-scoped now, so what matters is owning something
+    // that floats in the destination. The licence grants that starter free, so
+    // this only bites on a save that predates the region split.
+    const rid=regionIdOf(z);
+    return BOATS.some(function(b){return (b.world==='fresh')&&itemInRegion(b, rid)&&(S.ownedBoats||[]).indexOf(b.id)>=0;});
+  }
+  const b=BOATS.find(function(x){return x.id===S.boat;});
+  if(!b||b.maxZone<z)return false;
   return true;
 }
 // Highest CONTIGUOUS reachable zone in a world. Every `if(S.zone>maxZone())`
@@ -8212,24 +8366,34 @@ function enterWorld(tz, arriveDir){
 // (boat / waders) and any extra per-zone requirement such as the fly combo.
 function gateBlockReason(tz){
   const w=worldOf(tz);
-  const b=BOATS.find(function(x){return x.id===(w==='fresh'?S.fboat:S.boat);});
+  const req=ZONE_REQ[tz];
+  // Licence first: in freshwater it is the real wall, and naming the craft or
+  // the fly combo before it would send the player shopping for the wrong thing.
+  if(req&&req.check&&!req.check())return 'Need '+req.label+' for '+ZONE_LBL[tz];
+  if(req&&req.extra&&req.extra.check&&!req.extra.check())return 'Need '+req.extra.label+' for '+ZONE_LBL[tz];
+  if(w==='fresh'){
+    // Craft are region-scoped: what matters is owning one for the DESTINATION.
+    const rid=regionIdOf(tz);
+    const owned=BOATS.some(function(x){return x.world==='fresh'&&itemInRegion(x, rid)&&(S.ownedBoats||[]).indexOf(x.id)>=0;});
+    if(!owned){
+      const need=BOATS.find(function(x){return x.world==='fresh'&&itemInRegion(x, rid);});
+      return 'Need the '+(need?need.name:'local craft')+' for '+ZONE_LBL[tz];
+    }
+    return '';
+  }
+  const b=BOATS.find(function(x){return x.id===S.boat;});
   if(!b||b.maxZone<tz){
     const need=boatsFor(w).find(function(x){return x.maxZone>=tz;});
     return 'Need the '+(need?need.name:'better gear')+' for '+ZONE_LBL[tz];
   }
-  const req=ZONE_REQ[tz];
-  if(req&&req.check&&!req.check())return 'Need '+req.label+' for '+ZONE_LBL[tz];
-  if(req&&req.extra&&req.extra.check&&!req.extra.check())return 'Need '+req.extra.label+' for '+ZONE_LBL[tz];
   return '';
 }
-// A region you could enter if you just bought the licence — the gate offers to
-// sell it instead of only telling you no.
+// A region whose ONLY wall is the licence — the gate offers to sell it rather
+// than just refusing. Craft no longer gate freshwater travel (the licence grants
+// the region's starter), so the licence being absent is enough.
 function gateNeedsLicense(tz){
   const req=ZONE_REQ[tz];
-  if(!req||!req.license||hasLicense(tz))return false;
-  const w=worldOf(tz);
-  const b=BOATS.find(function(x){return x.id===(w==='fresh'?S.fboat:S.boat);});
-  return !!(b&&b.maxZone>=tz);   // boat already reaches it; the licence is the only wall
+  return !!(req&&req.license&&!hasLicense(tz));
 }
 function tryGate(g){
   const now=performance.now?performance.now():Date.now();
@@ -10550,7 +10714,7 @@ function ensureRig(){
   // Bait selection is per world, and only bait from THIS world's catalog counts.
   const bsel=gearGet('baitSel');
   if(!S.baitInv[bsel]||S.baitInv[bsel]<=0){
-    const pool=forWorld(BAIT).map(function(b){return b.id;});
+    const pool=forHere(BAIT).map(function(b){return b.id;});
     const b=pool.find(function(k){return (S.baitInv[k]||0)>0;});
     if(b)gearSet('baitSel', b);
     else if(!bsel||pool.indexOf(bsel)<0)gearSet('baitSel', pool[0]||bsel);
@@ -12328,7 +12492,7 @@ function openChooser(type){
         html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:8px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Natural baits</div>';
-      forWorld(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!gearGet('lureSel')&&gearGet('baitSel')===bt.id;
+      forHere(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!gearGet('lureSel')&&gearGet('baitSel')===bt.id;
         html+='<div class="opt '+(sel?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'trollbait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});
     }
     else if(!curMethod().bait){
@@ -12341,7 +12505,7 @@ function openChooser(type){
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
-      forWorld(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
+      forHere(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;
         html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'bait:'+bt.id:'')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs. Match it to what you are targeting.</div>';
@@ -12592,21 +12756,25 @@ function renderLogbook(){
 // Boats, rods and reels must be purchased in order. Returns the name of the
 // previous required tier if the current one is gated by progression, else null.
 //
-// The ladder is per WORLD and skips ultra-reward gear. Both matter: BOATS/RODS/
-// REELS are single flat arrays with the freshwater tiers appended after the
-// saltwater ones, and the ultra rewards (Chainsaw Rod, Black Marlin Speedboat)
-// sit at the end of their saltwater run. Walking the raw array therefore handed
-// every freshwater STARTER the last saltwater item as its prerequisite — the
-// Ultralight Rod demanded the Chainsaw Rod, which cannot be bought at all since
-// it only drops for landing a Sawfish. Same for Bank & Wade behind the Black
-// Marlin Speedboat, and the 1000 Ultralight behind the Big Game Two Speed.
-// Filtering to the item's own world makes each world's first tier index 0 (no
-// prerequisite), and dropping reward items keeps unbuyable gear out of the chain.
+// The ladder is per WORLD, per REGION in freshwater, and skips ultra-reward
+// gear. All three matter: BOATS/RODS/REELS are single flat arrays with the
+// freshwater tiers appended after the saltwater ones, and the ultra rewards
+// (Chainsaw Rod, Black Marlin Speedboat) sit at the end of their saltwater run.
+// Walking the raw array handed every freshwater STARTER the last saltwater item
+// as its prerequisite — the Ultralight Rod demanded the Chainsaw Rod, which
+// cannot be bought at all since it only drops for landing a Sawfish. Narrowing
+// again by region in V0.9.8.1 keeps the same bug from reappearing one level
+// down, where the Southern Cane Pole would have inherited the last MIDWEST rod.
+// Each region's first tier lands at index 0 with no prerequisite, and dropping
+// reward items keeps unbuyable gear out of the chain entirely.
 function prereqLocked(kind, item){
   const map={boat:[BOATS, S.ownedBoats],rod:[RODS, S.ownedRods],reel:[REELS, S.ownedReels]};
   const entry=map[kind];if(!entry)return null;
   const owned=entry[1];
-  const ladder=forWorld(entry[0], item.world||'salt').filter(function(it){return !it.reward;});
+  const iw=item.world||'salt';
+  let ladder=forWorld(entry[0], iw);
+  if(iw==='fresh'){const rid=itemRegions(item)[0];ladder=ladder.filter(function(it){return itemInRegion(it, rid);});}
+  ladder=ladder.filter(function(it){return !it.reward;});
   const idx=ladder.indexOf(item);
   if(idx<=0)return null;
   const prev=ladder[idx-1];
@@ -12651,6 +12819,19 @@ function renderShop(){
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
   // Folder tabs. Pets & Crowns now live in the Projects tab; leaders are owned
   // from the start and swapped on the rig bar, so neither appears in the shop.
+  // Freshwater shops are REGIONAL: everything below the banner is stocked for
+  // the region you are standing in, and nothing you buy here works elsewhere.
+  // The banner is a statement of where you are, not a picker — you change region
+  // by travelling, which is also what swaps your loadout.
+  const rb=document.getElementById('shop-region');
+  if(rb){
+    if(isFresh()){
+      const rid=curRegionId(), zn=ZONES[zoneOfRegion(rid)];
+      rb.style.display='';
+      rb.innerHTML='<span class="sr-dot"></span><span class="sr-name">'+zn.name+' shop</span>'
+        +'<span class="sr-sub">'+zn.sub+' · region-locked gear</span>';
+    } else rb.style.display='none';
+  }
   const tabs=[['boats','Boats'],['combo','Fishing Combo'],['tackle','Tackle'],['bait','Bait'],['lures','Lures'],['special',svgIcon('shades-mask',13)+' Special']];
   document.getElementById('shop-tabs').innerHTML=tabs.map(t=>'<div class="shop-tab '+(shopTab===t[0]?'active':'')+'" data-stab="'+t[0]+'">'+t[1]+'</div>').join('');
   // Resolve the leaf category being shown, plus any sub-tab chip row.
@@ -12681,15 +12862,15 @@ function renderShop(){
     const cust=(S.ownedBoats.includes(b.id)&&skinsForBase(b.id).length)?'<div style="text-align:right;margin:-9px 2px 9px;">'+customizeBtn(b.id)+'</div>':'';
     return row+cust;
   }).join('');}
-  else if(leaf==='rods')html=forWorld(RODS).map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),gearGet('rod')===r.id,r.fly?' \u00b7 half the fly combo':'',true)).join('');
-  else if(leaf==='reels')html=forWorld(REELS).map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),gearGet('reel')===r.id,' · '+r.drag+' lb drag'+(r.fly?' \u00b7 half the fly combo':''),true)).join('');
-  else if(leaf==='braid')html=forWorld(BRAIDS).map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),gearGet('braid')===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
+  else if(leaf==='rods')html=forHere(RODS).map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),gearGet('rod')===r.id,r.fly?' \u00b7 half the fly combo':'',true)).join('');
+  else if(leaf==='reels')html=forHere(REELS).map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),gearGet('reel')===r.id,' · '+r.drag+' lb drag'+(r.fly?' \u00b7 half the fly combo':''),true)).join('');
+  else if(leaf==='braid')html=forHere(BRAIDS).map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),gearGet('braid')===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
   else if(leaf==='tackle'){
     const tsel=shopSub.tackle;
     html=TACKLE.filter(function(t){
-      if((t.world||'salt')!==curWorldId())return false;
+      if(!itemHere(t))return false;
       if(t.id==='hook1440'&&!S.surfUnlocked)return false;
-      if(t.id==='iceauger'&&!zoneReachIn('fresh',5))return false;   // Mountains first
+      if(t.id==='iceauger'&&!hasLicense(5))return false;   // Northern licence first
       if(tsel==='special')return t.cat==='special'||t.cat==='surf'||t.cat==='ice';
       return t.cat===tsel;
     }).map(t=>{
@@ -12700,15 +12881,16 @@ function renderShop(){
     return shopRow(t,'tackle',own, false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
     if(!html)html='<div style="font-size:12.5px;color:var(--text-soft);text-align:center;padding:16px;">No tackle in this category yet.</div>';
   }
-  else if(leaf==='bait')html=forWorld(BAIT).filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
+  else if(leaf==='bait')html=forHere(BAIT).filter(b=>b.cost>0).map(b=>{const q=S.baitInv[b.id]||0;return shopRow(b,'bait',q>0,false,' \u00b7 '+b.pack+' per pack'+(q>0?' \u00b7 have x'+q:''),false);}).join('');
   else if(leaf==='lures'){
-    // Region chips follow the world you're in: Inshore/Nearshore/Offshore, or
-    // Lake/River/Mountains. A lure only works in its own zone, so showing the
-    // other world's would just sell people something they can never tie on.
-    const _lz=worldZones();
+    // Saltwater keeps its three-zone chip row, because one boat fishes all three.
+    // Freshwater does NOT: the shop is regional, so it shows only the region you
+    // are standing in. Offering the other three would sell gear you cannot carry
+    // out of the shop.
+    const _lz=isFresh()?[S.zone|0]:worldZones();
     if(_lz.indexOf(lureSubTab)<0)lureSubTab=_lz[0];
-    html='<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+_lz.map(function(z){return '<div class="shop-tab '+(lureSubTab===z?'active':'')+'" style="font-size:11.5px;" data-lcat="'+z+'">'+ZONE_LBL[z]+'</div>';}).join('')+'</div>'
-      +'<div style="font-size:11px;color:var(--text-soft);margin:-4px 0 9px;">'+ZONE_LBL[lureSubTab]+' lures only work in the '+ZONE_LBL[lureSubTab].toLowerCase()+' zone.</div>';
+    html=(_lz.length>1?'<div style="display:flex;gap:6px;margin-bottom:11px;flex-wrap:wrap;">'+_lz.map(function(z){return '<div class="shop-tab '+(lureSubTab===z?'active':'')+'" style="font-size:11.5px;" data-lcat="'+z+'">'+ZONE_LBL[z]+'</div>';}).join('')+'</div>':'')
+      +'<div style="font-size:11px;color:var(--text-soft);margin:-4px 0 9px;">'+ZONE_LBL[lureSubTab]+' lures only work in the '+ZONE_LBL[lureSubTab].toLowerCase()+(isFresh()?' region.':' zone.')+'</div>';
     html+=LURES.filter(function(l){return l.zone===lureSubTab;}).map(function(l){
       const q=S.lureInv[l.id]||0;
       const equipped=gearGet('lureSel')===l.id;
