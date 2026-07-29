@@ -4816,7 +4816,7 @@ const ZONES=[
   //      species list, legal methods and (V0.9.8.2+) shop, loadout and map. ----
   {id:'midwest', name:'Midwest', sub:'Reservoirs & Farm Ponds', depth:'2-40 ft', baseWater:['#6fae86','#3d8470','#1d5352'],
    world:'fresh', region:true, structures:[]},
-  {id:'southern', name:'Southern', sub:'Swamps & Canals', depth:'2-30 ft', baseWater:['#84a86a','#4a7d4e','#22452f'],
+  {id:'southern', name:'Southern', sub:'Swamps & Canals', depth:'2-30 ft', baseWater:['#4a5a3d','#26331f','#0d1510'],
    world:'fresh', region:true, structures:[]},
   {id:'northern', name:'Northern', sub:'Big Water & Shield Lakes', depth:'5-80 ft', baseWater:['#7fae9a','#3f7d74','#17414a'],
    world:'fresh', region:true, structures:[]},
@@ -5315,7 +5315,10 @@ function _bodyClip(s){
 }
 
 function buildFishArt(id, px, mono){
-  if(PNG_FISH[id])return buildPngFishArt(id, px, mono);
+  // Raster art is used only once it is known to be background-free; before that
+  // we draw the vector fish so a white box never appears.
+  if(PNG_FISH[id]&&FISH_SPRITE_URL[id])return buildPngFishArt(id, px, mono);
+  if(PNG_FISH[id]&&typeof preloadFishSprites==='function')preloadFishSprites();
   const base=FISH_ART[id]||FISH_ART.trout;
   const s=base, cid='f'+(__cid++);
   let bodyD='',tailD='',finsB=[],pect='',eye=[100,28,4,'#15202a'],extras='',gillX=88,tailRays=[];
@@ -5818,7 +5821,9 @@ function pngFishSrc(file, dir){return (dir||'saltwater fish')+'/'+encodeURICompo
 // edge-connected background to transparent so the fish sits cleanly in the
 // logbook (and so the "undiscovered" silhouette is the fish shape, not a box).
 // Art that already has its own alpha channel is left untouched.
-const FISH_SPRITE_URL={};   // id -> keyed transparent PNG dataURL
+const FISH_SPRITE_URL={};   // id -> background-free URL (keyed dataURL, or the
+                           // file itself when it already has an alpha channel)
+const _fishSpritePending={};  // ids currently being loaded/keyed
 function _keyOutFishBg(im){
   const w=im.naturalWidth, h=im.naturalHeight;if(!w||!h)return null;
   const c=document.createElement('canvas');c.width=w;c.height=h;
@@ -5842,17 +5847,27 @@ function _keyOutFishBg(im){
   g.putImageData(img,0,0);
   try{return c.toDataURL('image/png');}catch(e){return null;}
 }
+// Art whose flat background still needs keying out shows a WHITE BOX until the
+// key completes. With 78 large PNGs that wait is long and very visible, so a
+// fish is only ever drawn from its raster once that raster is known-good:
+// FISH_SPRITE_URL[id] is set either to the keyed dataURL or, when the file
+// already carries its own alpha, to the plain file URL. Until then the fish
+// falls back to its vector art, which never has a background at all.
 function preloadFishSprites(){
   Object.keys(PNG_FISH).forEach(function(id){
-    const cfg=PNG_FISH[id];if(!cfg||FISH_SPRITE_URL[id])return;
+    const cfg=PNG_FISH[id];if(!cfg||FISH_SPRITE_URL[id]||_fishSpritePending[id])return;
+    _fishSpritePending[id]=1;
     const im=new Image();
     im.onload=function(){
-      try{const u=_keyOutFishBg(im);if(u){FISH_SPRITE_URL[id]=u;
-        // refresh the open logbook so the cleaned art swaps in
-        const lz=document.getElementById('logbook-zones');
-        if(lz&&lz.children.length&&typeof renderLogbook==='function')renderLogbook();
-      }}catch(e){}
+      let u=null;
+      try{u=_keyOutFishBg(im);}catch(e){}
+      // null means "already has real alpha" -> the file is usable as it stands.
+      FISH_SPRITE_URL[id]=u||pngFishSrc(cfg.file, cfg.dir);
+      delete _fishSpritePending[id];
+      const lz=document.getElementById('logbook-zones');
+      if(lz&&lz.children.length&&typeof renderLogbook==='function')renderLogbook();
     };
+    im.onerror=function(){delete _fishSpritePending[id];};
     im.src=pngFishSrc(cfg.file, cfg.dir);
   });
 }
@@ -5860,7 +5875,7 @@ function buildPngFishArt(id, px, mono){
   px=px||240;
   const cfg=PNG_FISH[id];
   const h=Math.round(px*1024/1536); // art is ~3:2
-  const src=FISH_SPRITE_URL[id]||pngFishSrc(cfg.file, cfg.dir);
+  const src=FISH_SPRITE_URL[id];
   // Undiscovered: a clean dark silhouette ("outline"). Discovered: full colour.
   const filt=mono?'filter:brightness(0) saturate(0) opacity(.5);':'';
   // Fish PNGs are drawn facing left in-source and mirrored to face right in-game.
@@ -9033,7 +9048,7 @@ function drawPier(g, x, y, len, t, dark, isPier){
 // identity: farm country, blackwater swamp, shield granite, alpine scree.
 const LAND_PAL={
   midwest:  {soil:'#7c8449',soil2:'#69713c',grass:'#8d9553',rock:'#928f81',sand:'#cdc08e',tree:['#33652f','#3f7a3a','#2a5427'],trunk:'#5b4229'},
-  southern: {soil:'#6b7444',soil2:'#57603a',grass:'#79834b',rock:'#7f7c6c',sand:'#bdb184',tree:['#2c5738','#376a42','#24472e'],trunk:'#54432c'},
+  southern: {soil:'#7b854e',soil2:'#666f40',grass:'#8a9457',rock:'#8a8774',sand:'#c8bc8e',tree:['#2c5738','#376a42','#24472e'],trunk:'#54432c'},
   northern: {soil:'#6a7150',soil2:'#575d42',grass:'#767e58',rock:'#8d8d8a',sand:'#c2bb9a',tree:['#274c37','#316043','#1e3d2c'],trunk:'#4f3f2a'},
   mountains:{soil:'#6a6f5c',soil2:'#585d4c',grass:'#74795e',rock:'#8b8f92',sand:'#b9b7a4',tree:['#2b4a3a','#356048','#223d30'],trunk:'#4e4030'},
 };
@@ -9124,17 +9139,18 @@ function drawScrub(x, y, r, P, dk, winter){
 }
 // The waterline: a damp margin and a crisp edge, so a shore reads as a shore
 // and not as a colour change.
-function drawShoreEdge(t, sky){
+// The damp margin at the waterline. Strokes ONE path — the mainland shore or an
+// island's — and is always drawn before whatever fill covers its inner half, so
+// the visible band sits on land and no internal seam survives.
+function drawShoreEdge(t, sky, forIsland){
   const P=landPal();
-  const wp=waterPathFor(S.zone), isl=islandPathFor(S.zone);
-  if(!wp)return;
+  const path=forIsland?islandPathFor(S.zone):waterPathFor(S.zone);
+  if(!path)return;
   const winter=(typeof seasonNow==='function')&&seasonNow()==='winter'&&(typeof SNOW_REGIONS!=='undefined')&&!!SNOW_REGIONS[curRegionId()];
   ctx.save();
-  ctx.strokeStyle=winter?'#e8f1f6':P.sand;ctx.lineWidth=13;ctx.globalAlpha=0.75;
-  ctx.stroke(wp);if(isl)ctx.stroke(isl);
-  ctx.globalAlpha=0.5+0.1*Math.sin(t*0.9);
-  ctx.strokeStyle='rgba(255,255,255,.75)';ctx.lineWidth=2.2;ctx.stroke(wp);if(isl)ctx.stroke(isl);
-  ctx.globalAlpha=0.30;ctx.strokeStyle='#2a3a2a';ctx.lineWidth=1.2;ctx.stroke(wp);if(isl)ctx.stroke(isl);
+  // doubled width because only the outer half survives the fill that follows
+  ctx.strokeStyle=winter?'#e8f1f6':P.sand;ctx.lineWidth=22;ctx.globalAlpha=0.8;ctx.stroke(path);
+  ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=7;ctx.globalAlpha=0.5+0.08*Math.sin(t*0.9);ctx.stroke(path);
   ctx.globalAlpha=1;ctx.restore();
 }
 // The water fill inside the shoreline clip, in world coords.
@@ -9144,14 +9160,11 @@ function drawWaterFill(t, sky){
   const g=ctx.createLinearGradient(0, y0, 0, y0+h);
   g.addColorStop(0,z.baseWater[0]);g.addColorStop(.45,z.baseWater[1]);g.addColorStop(1,z.baseWater[2]);
   ctx.fillStyle=g;ctx.fillRect(x0, y0, w, h);
-  // the shallow shelf hugging the bank, which is what makes water read as a lake
-  const wp=waterPathFor(S.zone);
-  ctx.save();
-  ctx.strokeStyle='rgba(190,225,205,.30)';ctx.lineWidth=26;ctx.stroke(wp);
-  ctx.strokeStyle='rgba(150,200,185,.22)';ctx.lineWidth=52;ctx.stroke(wp);
-  const isl=islandPathFor(S.zone);
-  if(isl){ctx.strokeStyle='rgba(190,225,205,.30)';ctx.lineWidth=20;ctx.stroke(isl);}
-  ctx.restore();
+  // NOTE: no shelf stroke here. Stroking the union path drew a pale band along
+  // every internal seam — i.e. straight through open water wherever a channel
+  // overlaps a basin — which read as overlapping shorelines. The shallow-water
+  // read now comes from the shore band itself, which the caller draws first.
+
   if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.62)+')';ctx.fillRect(x0, y0, w, h);}
   if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*0.16)+')';ctx.fillRect(x0, y0, w, h);}
 }
@@ -11487,12 +11500,20 @@ function render(ts){
     ctx.save();
     ctx.translate(-camera.x,-camera.y);          // world space for the whole block
     drawLandBase(t, sky);
+    // Stroke the shoreline FIRST, then fill the water over it: the water covers
+    // the inner half of the band and every internal seam, leaving a clean edge
+    // that sits only on the land side.
+    drawShoreEdge(t, sky, false);
     ctx.save();ctx.clip(_shore);
     drawWaterFill(t, sky);
     ctx.restore();
     const _isl=islandPathFor(S.zone);
-    if(_isl){ctx.save();ctx.clip(_isl);drawLandBase(t, sky, true);ctx.restore();}
-    drawShoreEdge(t, sky);
+    if(_isl){
+      ctx.save();ctx.clip(_isl);
+      drawLandBase(t, sky, true);
+      drawShoreEdge(t, sky, true);   // island beach, clipped so it stays on the island
+      ctx.restore();
+    }
     ctx.restore();
   }
   // day/night tint
