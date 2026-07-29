@@ -191,6 +191,10 @@
   .proj-part-name{flex:1;font-size:12.5px;font-weight:700;color:var(--wood-dark);}
   .proj-part-tick{font-size:13px;font-weight:900;color:#1f9d57;}
   .coin-s{width:15px;height:15px;background:radial-gradient(circle at 35% 30%,#ffe08a,#e0a93c 70%);border-radius:50%;border:1.5px solid #c4882a;display:inline-block;}
+  /* Freshwater cash: a folded green note, so a glance at the HUD tells you which
+     world's wallet you're looking at without reading the number. */
+  .cash-s{width:17px;height:12px;background:linear-gradient(160deg,#8fd6a4,#3f9e63 60%,#2f7d4c);border-radius:2.5px;border:1.5px solid #266b41;display:inline-block;vertical-align:-1px;position:relative;}
+  .cash-s::after{content:"";position:absolute;inset:2.5px 3px;border-radius:1px;border:1px solid rgba(255,255,255,.55);}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
   .pearl-s{width:13px;height:13px;border-radius:50%;display:inline-block;vertical-align:-2px;background:radial-gradient(circle at 34% 30%,#ffffff,#eaf6fb 42%,#a8c9da 100%);border:1.5px solid #dcecf4;box-shadow:0 0 5px rgba(168,201,218,.7);}
 
@@ -807,7 +811,9 @@
     </div>
       <div class="hud tr">
       <div class="pill" id="lvl-pill">Lv 1</div>
-      <div class="pill"><span class="coin-s"></span> <span id="gold-pill">0</span></div>
+      <!-- One soft-currency pill that swaps with the world: gold coin in
+           saltwater, green note in freshwater. The two wallets never mix. -->
+      <div class="pill" id="coin-pill"><span class="coin-s" id="coin-icon"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies, won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
       <!-- Pearls deliberately have NO HUD pill: the top bar was too crowded, and
            pearls are only ever spent in two places (the skin chooser and a
@@ -872,7 +878,7 @@
   </div>
   <div class="menu-body">
     <div class="mpanel active" id="mp-shop">
-      <div class="shop-wallet" id="shop-wallet"><span class="wallet-chip"><span class="coin-s"></span> <span id="wallet-gold">0</span></span><span class="wallet-chip"><span class="gem-s"></span> <span id="wallet-rubies">0</span></span></div>
+      <div class="shop-wallet" id="shop-wallet"><span class="wallet-chip"><span class="coin-s" id="wallet-coin-icon"></span> <span id="wallet-gold">0</span></span><span class="wallet-chip"><span class="gem-s"></span> <span id="wallet-rubies">0</span></span></div>
       <div class="shop-tabs" id="shop-tabs"></div>
       <div id="shop-list"></div>
     </div>
@@ -1999,7 +2005,9 @@ const TOURN_FEES=[
 ];
 function tournFee(zone, rarity){return (TOURN_FEES[zone]||TOURN_FEES[0])[rarity]||300;}
 const ALWAYS_TOURN_NAMES=["Open Saltwater Challenge","Coastal Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
-const ZONE_LBL=["Inshore","Nearshore","Offshore","Lake","River","Mountains"];
+// Short travel/gate labels, indexed by zone. Must stay the same length as ZONES —
+// a missing entry shows up as `undefined` in every gate hint and licence toast.
+const ZONE_LBL=["Inshore","Nearshore","Offshore","Midwest","Southern","Northern","Mountains"];
 
 // ===================== WORLDS (V0.9.8) =====================
 // The game has TWO worlds the player swaps between, Clash-of-Clans style. Each
@@ -4265,8 +4273,10 @@ function doPrestige(){
   const keepCaught={},keepBest={};
   FISH.forEach(function(f){if(f.rarity==='ultra'&&S.caught[f.id]){keepCaught[f.id]=S.caught[f.id];if(S.best[f.id])keepBest[f.id]=S.best[f.id];}});
   S.caught=keepCaught;S.best=keepBest;
-  // reset coins, level & xp
-  S.gold=0;S.xp=0;S.level=1;
+  // reset coins, level & xp. Both soft wallets go, and so do the region
+  // licences — freshwater progression restarts in the Midwest alongside
+  // everything else, which is the whole point of a prestige.
+  S.gold=0;S.cash=0;S.licenses={};S.xp=0;S.level=1;
   // gear back to starters (ultra-reward gear is kept since ultra catches persist)
   const keepMarlin=S.ownedBoats&&S.ownedBoats.indexOf('marlinboat')>=0;
   const keepChainsaw=S.ownedRods&&S.ownedRods.indexOf('chainsaw')>=0;
@@ -4280,7 +4290,7 @@ function doPrestige(){
   S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
   S.baitInv={shrimp:20};S.lureInv={};S.lureDur={};S.ownedLures=[];
   S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
-  S.fmethod='bobber';S.fbaitSel='worm';S.fLureSel='';S.lastZone={salt:0,fresh:3};
+  S.fmethod='livebait';S.fbaitSel='worm';S.fLureSel='';S.lastZone={salt:0,fresh:3};
   S.baitInv.worm=20;
   // bump prestige (grants the next pet automatically via ownedPets())
   S.prestige=next;S.prestigeOffered=false;
@@ -4303,19 +4313,31 @@ function prestigeFromStats(){
 // ---- Fail-safe: if a player is out of gear AND broke, Clancy spots them a starter kit ----
 let _failsafeAt=0;
 function clancyFailsafe(){
-  if((S.gold||0)>=50)return false;        // can still afford a cheap restock
+  // Check the wallet of the world you're actually standing in — a freshwater
+  // angler with no cash is stranded no matter how much saltwater gold they hold,
+  // and the two never convert.
+  if(coinGet()>=50)return false;          // can still afford a cheap restock
   if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))return false; // not mid-tournament
   if(Date.now()-_failsafeAt<4000)return true; // already just helped; swallow the cast
   _failsafeAt=Date.now();
-  S.baitInv=S.baitInv||{};S.baitInv.shrimp=(S.baitInv.shrimp||0)+5;
-  S.tackleInv=S.tackleInv||{};
-  const hk=S.tackleInv.lh_b||(S.tackleInv.lh_b={qty:0,dur:0});
-  hk.qty+=2;if(hk.dur<=0)hk.dur=(tackleById('lh_b')||{dur:8}).dur;
-  // make the gift immediately usable
-  S.method='livebait';S.tackleSel=S.tackleSel||{};S.tackleSel.livehook='lh_b';S.baitSel='shrimp';
+  S.baitInv=S.baitInv||{};S.tackleInv=S.tackleInv||{};
+  // The gift has to be usable where the player is standing: saltwater gets live
+  // shrimp on a circle hook, freshwater gets nightcrawlers under a float. Handing
+  // a lake angler a bag of shrimp and a 6/0 circle hook helps nobody.
+  const fresh=isFresh();
+  const baitId=fresh?'worm':'shrimp', tackId=fresh?'fwbob_b':'lh_b', cat=fresh?'fwbobber':'livehook';
+  S.baitInv[baitId]=(S.baitInv[baitId]||0)+5;
+  const hk=S.tackleInv[tackId]||(S.tackleInv[tackId]={qty:0,dur:0});
+  hk.qty+=2;if(hk.dur<=0)hk.dur=(tackleById(tackId)||{dur:8}).dur;
+  // make the gift immediately usable, through the per-world gear fields
+  gearSet('method','livebait');
+  S.tackleSel=S.tackleSel||{};S.tackleSel[cat]=tackId;
+  gearSet('baitSel', baitId);
   if(typeof ensureRig==='function')ensureRig();
   updateRigBar&&updateRigBar();queueSave&&queueSave();
-  toast("Cap'n Clancy slipped ye 5 live shrimp & 2 circle hooks, can’t have ye stranded!",'#e0a93c');
+  toast(fresh
+    ? "Cap'n Clancy slipped ye 5 nightcrawlers & 2 float rigs, can’t have ye stranded!"
+    : "Cap'n Clancy slipped ye 5 live shrimp & 2 circle hooks, can’t have ye stranded!",'#e0a93c');
   return true;
 }
 
@@ -4793,8 +4815,12 @@ function fishLenStr(f, w){
 }
 
 // ===================== CURRENCIES =====================
-// Three currencies, deliberately kept apart:
-//   GOLD   soft. Earned only. Buys gear.
+// Four currencies, deliberately kept apart:
+//   GOLD   soft, SALTWATER. Earned only. Buys saltwater gear.
+//   CASH   soft, FRESHWATER. Earned only. Buys freshwater gear and the region
+//          licences. Gold and cash never convert into each other — the two
+//          worlds have separate economies, so grinding tarpon can't buy you a
+//          bass boat and neither wallet is worth anything in the other world.
 //   RUBIES premium. Earned AND (later) purchasable with real money. Buys sets,
 //          skins, items and second chances. NEVER stakeable.
 //   PEARLS competitive. Earned ONLY, never for sale and never convertible to or
@@ -4804,6 +4830,69 @@ function fishLenStr(f, w){
 //          mechanic rather than real-money gaming (App Store 5.3.4).
 // If you ever add a way to buy pearls, or to trade pearls for rubies, that wall
 // comes down and the wagering becomes a licensing problem. Don't.
+// ---- The soft-currency wallet, split by world -------------------------------
+// Everything that spends or earns the SOFT currency goes through these helpers
+// instead of touching S.gold, so a freshwater price is paid in cash and a
+// freshwater catch pays out in cash without every call site knowing which world
+// it is in. Rubies and pearls stay global — they are account-wide, and the
+// competitive systems (tournaments, lobby buy-ins, achievements, prestige) stay
+// on GOLD on purpose so a cross-world match has one shared stake.
+function coinField(w){return ((w||curWorldId())==='fresh')?'cash':'gold';}
+function coinEarnedField(w){return ((w||curWorldId())==='fresh')?'cashEarned':'goldEarned';}
+function coinLabel(w){return ((w||curWorldId())==='fresh')?'cash':'gold';}
+function coinGet(w){return S[coinField(w)]||0;}
+function coinSet(n, w){S[coinField(w)]=Math.max(0,Math.round(n));}
+function coinCanAfford(n, w){return coinGet(w)>=n;}
+function coinSpend(n, w){const f=coinField(w);S[f]=Math.max(0,(S[f]||0)-n);return true;}
+// Earning credits both the wallet and its all-time total, which the stats page
+// and the cloud progress score read.
+function coinAdd(n, w){
+  if(!(n>0))return 0;
+  const f=coinField(w), e=coinEarnedField(w);
+  S[f]=(S[f]||0)+n;S[e]=(S[e]||0)+n;
+  return n;
+}
+
+// ---- FRESHWATER REGION LICENCES ---------------------------------------------
+// The freshwater progression gate. You start in the Midwest for free and buy
+// your way north/south, in order, with cash. Because maxZoneIn() only walks
+// CONTIGUOUS reachable zones, an unbought licence blocks everything past it —
+// no skipping straight to the Mountains with a big enough wallet.
+const FRESH_LICENSES=[
+  {zone:4, id:'southern',  name:'Southern Licence',  cost:1000,
+   blurb:'Swamps, canals and oxbows. Peacock bass, snakehead and gar in warm, tannin-black water.'},
+  {zone:5, id:'northern',  name:'Northern Licence',  cost:2500,
+   blurb:'Shield lakes and big cold water. Walleye, lake trout and muskie — and the ice, once winter locks it up.'},
+  {zone:6, id:'mountains', name:'Mountains Licence', cost:10000,
+   blurb:'Freestone streams and alpine lakes. Fly, spin cast and still fishing only, and the gateway to Alaskan ice.'},
+];
+function licenseFor(zone){return FRESH_LICENSES.find(function(l){return l.zone===zone;})||null;}
+// Zone 3 (Midwest) is the free starter region and has no licence.
+function hasLicense(zone){
+  const l=licenseFor(zone);
+  if(!l)return true;
+  return !!(S.licenses&&S.licenses[l.id]);
+}
+function buyLicense(zone){
+  const l=licenseFor(zone);if(!l)return false;
+  if(hasLicense(zone)){toast('You already hold the '+l.name+'.','#b58b53');return false;}
+  // Enforce the order even if the UI ever offers one out of turn.
+  const prev=licenseFor(zone-1);
+  if(prev&&!hasLicense(zone-1)){toast('Buy the '+prev.name+' first.','#b58b53');return false;}
+  if(!coinCanAfford(l.cost,'fresh')){
+    toast('The '+l.name+' costs '+l.cost.toLocaleString()+' cash — you have '+coinGet('fresh').toLocaleString()+'.','#b3402a');
+    return false;
+  }
+  coinSpend(l.cost,'fresh');
+  S.licenses=S.licenses||{};S.licenses[l.id]=1;
+  try{AUDIO.sfx('coin');}catch(e){}
+  toast(l.name+' bought! '+ZONE_LBL[zone]+' is open.','#2aa890');
+  if(typeof updatePills==='function')updatePills();
+  if(typeof refreshMenu==='function')refreshMenu();
+  queueSave();
+  return true;
+}
+
 const PEARL_START=25;              // enough to enter the low-stake lobbies
 const PEARL_PRIZES=[12,6,3];       // competitive placement payout (1st/2nd/3rd)
 
@@ -4840,7 +4929,7 @@ function grantLobbyRubies(n){
 
 // ===================== STATE =====================
 let S={
-  xp:0,level:1,gold:0,rubies:0,pearls:PEARL_START,clock:360, // start 6:00 spring
+  xp:0,level:1,gold:0,cash:0,cashEarned:0,licenses:{},rubies:0,pearls:PEARL_START,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['fluoro','wire'],
   ownedCosmetics:[],ownedSets:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
@@ -4855,7 +4944,7 @@ let S={
   //      and inventories above stay shared because ids never collide. ----
   lastZone:{salt:0,fresh:3},everSwapped:false,
   fboat:'bank',frod:'frod0',freel:'freel0',fbraid:'fline0',fleader:'fluoro',
-  fmethod:'bobber',fbaitSel:'worm',fLureSel:'',
+  fmethod:'livebait',fbaitSel:'worm',fLureSel:'',
   totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:'',
 };
 
@@ -5536,7 +5625,7 @@ let cloudReady=false, cloudBaseScore=-1, forceCloudWrite=false;
 function progressScore(s){
   s=s||S;
   return (s.totalCatches||0)*4
-    + Math.floor((s.goldEarned||0)/50)
+    + Math.floor(((s.goldEarned||0)+(s.cashEarned||0))/50)
     + (s.level||1)*8
     + Object.keys(s.caught||{}).length*6
     + (s.totalCasts||0)
@@ -5608,6 +5697,12 @@ async function loadGame(){
 // Ensure new V6 fields exist and migrate legacy data after any load.
 function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
+  // V0.9.8.1: freshwater runs on its own soft currency. A save from before the
+  // split has no cash wallet — seed it empty rather than porting gold across,
+  // because the whole point is that the two economies never convert.
+  if(typeof S.cash!=='number')S.cash=0;
+  if(typeof S.cashEarned!=='number')S.cashEarned=0;
+  if(!S.licenses||typeof S.licenses!=='object')S.licenses={};
   // V0.9.8.1: freshwater was rebuilt from three water TYPES into four REGIONS and
   // the old freshwater roster was retired. A save from V0.9.8 still holds caught/
   // best keys for species that no longer exist (goldenshiner, tullibee, taimen,
@@ -5682,7 +5777,8 @@ function normalizeState(){
   if(!S.freel)S.freel='freel0';
   if(!S.fbraid)S.fbraid='fline0';
   if(!S.fleader)S.fleader='fluoro';
-  if(!S.fmethod)S.fmethod='bobber';
+  // obber and cast were retired in V0.9.8.1; anyone holding one lands on live bait.
+  if(!S.fmethod||S.fmethod==='bobber'||S.fmethod==='cast')S.fmethod='livebait';
   if(!S.fbaitSel)S.fbaitSel='worm';
   if(typeof S.fLureSel!=='string')S.fLureSel='';
   if(typeof S.everSwapped!=='boolean')S.everSwapped=false;
@@ -6053,10 +6149,17 @@ function curZone(){return ZONES[S.zone];}
 function curMethod(){return METHODS.find(m=>m.id===gearGet('method'))||methodsForZone(S.zone)[0];}
 
 // ---- Zone access ----------------------------------------------------------
-// Extra per-zone requirements beyond "your boat reaches it". Mountains is the
-// only one today: you need waders (the boat slot) AND a fly rod + fly reel.
+// Extra per-zone requirements beyond "your boat reaches it". In freshwater every
+// region past the Midwest needs its LICENCE; the Mountains additionally needs a
+// fly rod + fly reel on top of the licence and the waders.
 const ZONE_REQ={
-  5:{label:'a fly rod & fly reel', check:function(){return hasFlyCombo();}},
+  4:{label:'the Southern Licence',  license:true, check:function(){return hasLicense(4);}},
+  5:{label:'the Northern Licence',  license:true, check:function(){return hasLicense(5);}},
+  6:{label:'the Mountains Licence', license:true,
+     check:function(){return hasLicense(6);},
+     // Checked only once the licence is held, so the message escalates in the
+     // order the player actually has to solve it: licence, then fly combo.
+     extra:{label:'a fly rod & fly reel', check:function(){return hasFlyCombo();}}},
 };
 function hasFlyCombo(){
   const r=RODS.find(function(x){return x.id===S.frod;}), rl=REELS.find(function(x){return x.id===S.freel;});
@@ -6069,6 +6172,7 @@ function zoneReachIn(w, z){
   if(!b||b.maxZone<z)return false;
   const req=ZONE_REQ[z];
   if(req&&req.check&&!req.check())return false;
+  if(req&&req.extra&&req.extra.check&&!req.extra.check())return false;
   return true;
 }
 // Highest CONTIGUOUS reachable zone in a world. Every `if(S.zone>maxZone())`
@@ -8115,7 +8219,17 @@ function gateBlockReason(tz){
   }
   const req=ZONE_REQ[tz];
   if(req&&req.check&&!req.check())return 'Need '+req.label+' for '+ZONE_LBL[tz];
+  if(req&&req.extra&&req.extra.check&&!req.extra.check())return 'Need '+req.extra.label+' for '+ZONE_LBL[tz];
   return '';
+}
+// A region you could enter if you just bought the licence — the gate offers to
+// sell it instead of only telling you no.
+function gateNeedsLicense(tz){
+  const req=ZONE_REQ[tz];
+  if(!req||!req.license||hasLicense(tz))return false;
+  const w=worldOf(tz);
+  const b=BOATS.find(function(x){return x.id===(w==='fresh'?S.fboat:S.boat);});
+  return !!(b&&b.maxZone>=tz);   // boat already reaches it; the licence is the only wall
 }
 function tryGate(g){
   const now=performance.now?performance.now():Date.now();
@@ -8124,7 +8238,10 @@ function tryGate(g){
   // what boat they own, the whole point is to fish side by side.
   const why=tourn.coop?'':gateBlockReason(g.tz);
   if(why){
-    toast(why,'#b3402a');
+    // If a licence is the only thing missing, put the shop in front of the
+    // player right here rather than making them go hunting for where to buy it.
+    if(!tourn.coop&&gateNeedsLicense(g.tz))openLicenseModal(g.tz);
+    else toast(why,'#b3402a');
     _gateCoolUntil=now+2500;
     // nudge boat back inward
     boat.wy+=g.dir==='deeper'?60:-60;
@@ -10343,6 +10460,35 @@ function updateClockHUD(h, sky){
     env.innerHTML=html;
   }
 }
+// The freshwater licence counter. Opened straight off the region gate when a
+// licence is the only thing standing between the player and the next region,
+// and from the Regions row in the menu.
+function openLicenseModal(zone){
+  const l=licenseFor(zone);if(!l)return;
+  const have=coinGet('fresh'), afford=have>=l.cost;
+  const owned=hasLicense(zone);
+  const prev=licenseFor(zone-1);
+  const prevMissing=prev&&!hasLicense(zone-1);
+  let action;
+  if(owned)action='<div class="mrow"><span class="ml">Status</span><span class="mv" style="color:#1f9d57;font-weight:800;">Held</span></div>';
+  else if(prevMissing)action='<div class="mfact" style="color:#b3402a;">Buy the '+prev.name+' first — the regions open in order.</div>';
+  else action='<button class="catch-ok" style="width:100%;margin-top:12px;'+(afford?'':'opacity:.55;')+'" onclick="licenseBuyClick('+zone+')">'
+    +(afford?('Buy for '+l.cost.toLocaleString()+' cash'):('Need '+(l.cost-have).toLocaleString()+' more cash'))+'</button>';
+  const modal=document.getElementById('modal');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:2px;">'+l.name+'</div>'
+    +'<div class="mrarity" style="color:var(--accent);">'+ZONE_LBL[zone]+'</div>'
+    +'<div class="mfact" style="margin-top:10px;">'+l.blurb+'</div>'
+    +'<div class="mrow"><span class="ml">Cost</span><span class="mv">'+l.cost.toLocaleString()+' cash</span></div>'
+    +'<div class="mrow"><span class="ml">Your cash</span><span class="mv">'+have.toLocaleString()+'</span></div>'
+    +(zone===6?'<div class="mrow"><span class="ml">Also needs</span><span class="mv">waders + a fly rod &amp; reel</span></div>':'')
+    +action;
+  document.getElementById('modal-bg').classList.add('show');
+}
+function licenseBuyClick(zone){
+  if(buyLicense(zone)){closeModal();}
+  else openLicenseModal(zone);   // refresh the wallet line after a failed buy
+}
 function openEnvDetails(){
   const moon=currentMoonPhase(),weather=currentWeather(),wind=currentWind(),tide=currentTide();
   const ph=phaseOf(hourNow());
@@ -12025,7 +12171,12 @@ function land(f, w, perfect, bullseye){
   // No gold from fish in a tournament/challenge (you fish for ranking & rubies),
   // but a co op friends world is casual: everyone keeps the coins they catch.
   if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))gold=0;
-  S.gold+=gold;S.goldEarned+=gold;S.totalCatches++;setTimeout(pushLeaderboard,2000);
+  // The soft payout lands in the wallet of the world you are fishing: gold in
+  // saltwater, cash in freshwater. Alaskan ice species carry gold:0 because they
+  // are meant to pay RUBIES instead — that award is NOT wired up yet, so they
+  // currently pay nothing. It lands with the Alaskan ice mode commit.
+  coinAdd(gold);
+  S.totalCatches++;setTimeout(pushLeaderboard,2000);
   // Surf sharks pay out in RUBIES (5-25), scaled by the shark's rarity and size.
   let rubyReward=0;
   if(f.surf){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
@@ -12133,7 +12284,11 @@ function updateRigBar(){
   document.getElementById('rig-leader').textContent=curLeader().name.replace(' Leader','');
   // HUD
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
-  document.getElementById('gold-pill').textContent=S.gold;
+  // Soft-currency pill follows the world you're standing in.
+  document.getElementById('gold-pill').textContent=coinGet().toLocaleString();
+  var ci=document.getElementById('coin-icon'),cp=document.getElementById('coin-pill');
+  if(ci)ci.className=isFresh()?'cash-s':'coin-s';
+  if(cp)cp.title=isFresh()?'Cash — the freshwater wallet. Buys freshwater gear and region licences.':'Gold — the saltwater wallet.';
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
   var pc=document.getElementById('pearls-count');if(pc)pc.textContent=S.pearls||0;
   document.getElementById('zone-name').textContent=curZone().name;
@@ -12287,11 +12442,43 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
 });
 document.getElementById('rig-bar').addEventListener('click',e=>{const slot=e.target.closest('.rig-slot');if(slot)openChooser(slot.dataset.rig);});
 document.getElementById('zone-pill').addEventListener('click',()=>{
+  // Freshwater opens the Regions board (licences, lock state, where you are);
+  // saltwater keeps the plain travel hint, since it has no licence system.
+  if(isFresh()&&!tourn.active&&!activeTournament){openRegionsModal();return;}
   const g=gatesFor();
   const move=isFresh()&&curZone().walk?'hike':'drive';
   const hint=g.map(x=>(gateBlockReason(x.tz)?'Locked: ':'')+x.label+(x.dir==='deeper'?' ('+move+' north)':' ('+move+' south)')).join(' · ');
   toast('Travel by heading to the edge gates: '+(hint||'none here'),'#1c6a9e');
 });
+// The four freshwater regions at a glance: which you hold, which is next, and
+// what the next licence costs. Buying from here is the same path the region
+// gate uses.
+function openRegionsModal(){
+  const zs=worldZones('fresh');
+  let rows='';
+  zs.forEach(function(z){
+    const zn=ZONES[z], l=licenseFor(z), here=(S.zone===z);
+    const owned=hasLicense(z);
+    const reach=zoneReachIn('fresh', z);
+    let right;
+    if(!l)right='<span style="color:#1f9d57;font-weight:800;">Starter region</span>';
+    else if(owned&&reach)right='<span style="color:#1f9d57;font-weight:800;">Open</span>';
+    else if(owned&&!reach)right='<span style="color:#b58b53;font-weight:800;">Licensed · need gear</span>';
+    else right='<span style="color:var(--accent);font-weight:800;">'+l.cost.toLocaleString()+' cash</span>';
+    const clickable=(l&&!owned);
+    rows+='<div class="mrow"'+(clickable?' style="cursor:pointer;" onclick="closeModal();openLicenseModal('+z+')"':'')+'>'
+      +'<span class="ml">'+(here?'▸ ':'')+zn.name+'<span style="opacity:.6;font-weight:600;"> · '+zn.sub+'</span></span>'
+      +'<span class="mv">'+right+'</span></div>';
+  });
+  const modal=document.getElementById('modal');
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'
+    +'<div class="mname" style="margin-bottom:2px;">Freshwater Regions</div>'
+    +'<div class="ws-sub" style="margin:4px 0 10px;">Regions open in order. Each licence is a one-time buy in cash, and your gear loadout follows you into the region you are standing in.</div>'
+    +rows
+    +'<div class="mrow"><span class="ml">Your cash</span><span class="mv">'+coinGet('fresh').toLocaleString()+'</span></div>'
+    +'<div class="mfact">Travel by heading to the edge gates — north for the next region, south to head back.</div>';
+  document.getElementById('modal-bg').classList.add('show');
+}
 
 // menu
 function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();if(tut&&tut.active)tutPlaceBar();}
@@ -12429,7 +12616,7 @@ function prereqLocked(kind, item){
 // Small coin matching the HUD gold pill, for shop price buttons.
 const COIN='<span class="coin-s" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
 function shopRow(item, kind, owned, equipped, extra, swatch){
-  const canAfford=S.gold>=item.cost, meetsLvl=S.level>=item.lvl;
+  const canAfford=coinCanAfford(item.cost), meetsLvl=S.level>=item.lvl;
   // Reward items can't be bought, they're earned by catching an ultra legendary.
   if(item.reward&&!owned){
     const icon0=swatch?'<span class="shop-swatch" style="background:'+item.color+'"></span>':'<div class="shop-icon">'+svgIcon(item.icon)+'</div>';
@@ -12459,7 +12646,8 @@ function shopSubChips(opts, sel, parent){
   }).join('')+'</div>';
 }
 function renderShop(){
-  const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=S.gold;
+  const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=coinGet().toLocaleString();
+  const wi=document.getElementById('wallet-coin-icon');if(wi)wi.className=isFresh()?'cash-s':'coin-s';
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
   // Folder tabs. Pets & Crowns now live in the Projects tab; leaders are owned
   // from the start and swapped on the rig bar, so neither appears in the shop.
@@ -12505,7 +12693,7 @@ function renderShop(){
       if(tsel==='special')return t.cat==='special'||t.cat==='surf'||t.cat==='ice';
       return t.cat===tsel;
     }).map(t=>{
-    if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(S.gold>=t.cost?'':'cant')+'">'+COIN+t.cost+'</span>';
+    if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(coinCanAfford(t.cost)?'':'cant')+'">'+COIN+t.cost+'</span>';
       return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
     if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon"><span class="ultra-glint">'+svgIcon(t.icon)+'</span></div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
     const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>methodCat(m)===t.cat);
@@ -12524,7 +12712,7 @@ function renderShop(){
     html+=LURES.filter(function(l){return l.zone===lureSubTab;}).map(function(l){
       const q=S.lureInv[l.id]||0;
       const equipped=gearGet('lureSel')===l.id;
-      const canAfford=S.gold>=l.cost, meetsLvl=S.level>=l.lvl;
+      const canAfford=coinCanAfford(l.cost), meetsLvl=S.level>=l.lvl;
       // Buyable any time to restock (like bait). Tapping when you own some ties it on.
       let action;
       if(!meetsLvl)action='<span class="shop-action lvl">Lv '+l.lvl+'</span>';
@@ -12569,7 +12757,7 @@ function renderShop(){
       html+=COSMETICS[cosmeticSubTab].filter(item=>!item.setOnly).map(item=>{
         const owned=item.cost===0||S.ownedCosmetics.includes(item.id);
         const equipped=S.cosmetic[slot]===item.id;
-        const canAfford=S.gold>=item.cost;
+        const canAfford=coinCanAfford(item.cost);
         const meetsLvl=S.level>=item.lvl;
         let action;
         if(equipped) action='<span class="shop-action equipped-tag">Wearing</span>';
@@ -12630,9 +12818,9 @@ document.getElementById('shop-list').addEventListener('click',e=>{
   const item=e.target.closest('.shop-item');if(!item)return;
   const kind=item.dataset.kind, id=item.dataset.id;
   if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
-    if(t.surfGear){if(S.surfHook){toast('You already own the 14/0 Circle Hook.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;S.surfHook=true;toast('Bought the 14/0 Circle Hook! Surf rig ready.','#2aa890');updateRigBar();renderShop();queueSave();return;}
-    if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(S.gold<t.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=t.cost;const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack, dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
-  else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(S.gold<bt.cost){toast('Not enough gold.','#b3402a');return;}S.gold-=bt.cost;S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();if(tut&&tut.active)tutNotify('buybait');}
+    if(t.surfGear){if(S.surfHook){toast('You already own the 14/0 Circle Hook.','#b58b53');return;}if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(t.cost);S.surfHook=true;toast('Bought the 14/0 Circle Hook! Surf rig ready.','#2aa890');updateRigBar();renderShop();queueSave();return;}
+    if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(t.cost);const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack, dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
+  else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(!coinCanAfford(bt.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(bt.cost);S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();if(tut&&tut.active)tutNotify('buybait');}
   else if(kind==='cosmetic'){
     const slot=item.dataset.slot;
     const allItems=[...COSMETICS.hats,...COSMETICS.shirts,...COSMETICS.shades];
@@ -12640,8 +12828,8 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     if(!obj)return;
     if(!S.ownedCosmetics.includes(id)&&obj.cost>0){
       if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}
-      if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}
-      S.gold-=obj.cost;S.ownedCosmetics.push(id);toast('Got '+obj.name+'!','#2aa890');
+      if(!coinCanAfford(obj.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}
+      coinSpend(obj.cost);S.ownedCosmetics.push(id);toast('Got '+obj.name+'!','#2aa890');
     }
     S.cosmetic[slot]=id;updateCosmeticHUD();
   }
@@ -12674,8 +12862,8 @@ document.getElementById('shop-list').addEventListener('click',e=>{
       if(S.lureInv[id]>0)gearSet('lureSel', id);
     }else{
       if(S.level<l.lvl){toast('Reach Level '+l.lvl+' first.','#b58b53');return;}
-      if(S.gold<l.cost){toast('Not enough gold.','#b3402a');return;}
-      S.gold-=l.cost;S.lureInv[id]=(S.lureInv[id]||0)+LURE_PACK;
+      if(!coinCanAfford(l.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}
+      coinSpend(l.cost);S.lureInv[id]=(S.lureInv[id]||0)+LURE_PACK;
       if(!gearGet('lureSel'))gearSet('lureSel', id);
       toast('Bought '+l.name+' (x'+LURE_PACK+')','#2aa890');
     }
@@ -12688,8 +12876,8 @@ document.getElementById('shop-list').addEventListener('click',e=>{
       const need=prereqLocked(kind, obj);
       if(need){toast('Buy the '+need+' first.','#b58b53');return;}
       if(S.level<obj.lvl){toast('Reach Level '+obj.lvl+' first.','#b58b53');return;}
-      if(S.gold<obj.cost){toast('Not enough gold.','#b3402a');return;}
-      S.gold-=obj.cost;owned.push(id);toast('Bought '+obj.name+'!','#2aa890');
+      if(!coinCanAfford(obj.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}
+      coinSpend(obj.cost);owned.push(id);toast('Bought '+obj.name+'!','#2aa890');
     }
     gearSet(key, id);
     // Buying a smaller boat can strand you past its range. Clamp INSIDE the
@@ -12710,7 +12898,7 @@ function renderStats(){
   document.getElementById('m-xptext').textContent=S.xp+' / '+need+' XP';
   document.getElementById('m-gear').innerHTML=svgIcon(curBoat().icon,16)+' '+curRod().name.split(' ')[0]+' \u00b7 '+curBraid().line+'lb';
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
-  const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',S.goldEarned],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
+  const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',(S.goldEarned||0).toLocaleString()],['Cash earned (all time)',(S.cashEarned||0).toLocaleString()],['Region licences',(function(){const h=FRESH_LICENSES.filter(function(l){return hasLicense(l.zone);});return h.length?('Midwest + '+h.map(function(l){return ZONE_LBL[l.zone];}).join(', ')):'Midwest only';})()],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
   let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
   // V0.9 Prestige
   const pl=S.prestige||0;
