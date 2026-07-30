@@ -11862,8 +11862,6 @@ function drawRodAndReel(dark){
   // kayak's mount. lineRig.tipX/tipY below is where the line originates.
   const a=BOAT_ANCHORS[gearGet('boat')]||BOAT_ANCHORS.bay;
   const rod=curRod(), reel=curReel();
-  const rodIdx=RODS.indexOf(rod);
-  const reelIdx=REELS.indexOf(reel);
   const baseX=ORIGIN.x+a.dx, baseY=ORIGIN.y+a.dy;
   // Length from the rod's own power rating rather than a 6-slot table that
   // only ever covered the saltwater run (every freshwater rod fell to ||30).
@@ -11871,8 +11869,8 @@ function drawRodAndReel(dark){
   const sin=Math.sin(a.ang),cos=Math.cos(a.ang);
   const tipX=baseX+sin*rodLen, tipY=baseY+cos*rodLen;
   lineRig.tipX=tipX;lineRig.tipY=tipY;
-  drawReel(baseX, baseY, reelIdx, a.ang);
-  drawRod(baseX, baseY, tipX, tipY, rodIdx);
+  drawReel(baseX, baseY, reel, a.ang);
+  drawRod(baseX, baseY, tipX, tipY, rod);
 }
 
 // Ultra reward: the Chainsaw Rod renders as a running chainsaw, an orange motor
@@ -11919,12 +11917,38 @@ function drawChainsawRod(x1,y1,x2,y2){
   ctx.fillStyle='#d8b048';ctx.beginPath();ctx.arc(-7,6.5,1.5,0,6.28);ctx.fill();
   ctx.restore();
 }
-function drawRod(x1,y1,x2,y2,tier){
-  if(tier>=5){drawChainsawRod(x1,y1,x2,y2);return;}   // ultra reward: animated chainsaw
+// Visual tier 0-4: where an item sits in ITS OWN ladder (its world, and its
+// region in freshwater) — NOT its index in the combined catalog array.
+//
+// This is the bug that made every freshwater rod render as a roaring chainsaw.
+// drawRod took `RODS.indexOf(rod)` and treated `>=5` as "the Chainsaw Rod",
+// which was true only while RODS held nothing but the six saltwater rods. The
+// freshwater rods sit at index 6 and up, so all of them tripped that test. The
+// reels had the same fault, falling through to the conventional-reel branch and
+// indexing its colour/size tables out of bounds.
+function gearVisTier(list, item){
+  if(!item)return 0;
+  const w=item.world||'salt';
+  let pool=list.filter(function(x){return (x.world||'salt')===w&&!x.reward;});
+  if(w==='fresh'){
+    const rid=itemRegions(item)[0];
+    pool=pool.filter(function(x){return itemInRegion(x, rid);});
+  }
+  const i=pool.indexOf(item);
+  if(i<0)return 0;
+  // Spread whatever ladder this is across the five visual slots, so a 3-rod
+  // region still reads starter -> mid -> top instead of clumping at the bottom.
+  return pool.length<=1?0:Math.round(i*4/(pool.length-1));
+}
+function drawRod(x1,y1,x2,y2,rod){
+  // Identity, not position: only the actual Chainsaw Rod draws as a chainsaw.
+  if(rod&&rod.id==='chainsaw'){drawChainsawRod(x1,y1,x2,y2);return;}
+  const tier=gearVisTier(RODS, rod);
   const colors=['#cdbb8e','#5a6b7a','#7a4a3a','#2c2c30','#1f2a44'];
   const thick=[2.4,2.6,2.9,3.2,3.6][tier]||2.5;
   ctx.lineCap='round';
-  ctx.strokeStyle=colors[tier]||'#7a4a3a';ctx.lineWidth=thick;
+  // Every rod defines its own colour, so use it and keep the table as a fallback.
+  ctx.strokeStyle=(rod&&rod.color)||colors[tier]||'#7a4a3a';ctx.lineWidth=thick;
   ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();
   const gripFrac=0.22;
   ctx.strokeStyle='#3a2618';ctx.lineWidth=thick+1.2;
@@ -11939,12 +11963,13 @@ function drawRod(x1,y1,x2,y2,tier){
   ctx.beginPath();ctx.arc(x2,y2,1.5,0,6.28);ctx.fill();
 }
 
-function drawReel(x, y, tier, ang){
+function drawReel(x, y, reel, ang){
+  const tier=gearVisTier(REELS, reel);
   const isSpin=tier<=2;
   const sx=Math.sin(ang),cx_=Math.cos(ang);
   if(isSpin){
-    const sz=[3.6,4.0,4.4][tier];
-    const col=['#c8ccd0','#9aa0a6','#c9a24a'][tier];
+    const sz=[3.6,4.0,4.4][tier]||4.0;
+    const col=(reel&&reel.color)||['#c8ccd0','#9aa0a6','#c9a24a'][tier]||'#9aa0a6';
     ctx.fillStyle='rgba(0,0,0,.35)';
     ctx.beginPath();ctx.ellipse(x-cx_*1.5,y+sx*1.5+1,sz, sz*0.72,ang,0,6.28);ctx.fill();
     ctx.fillStyle=col;
@@ -11954,7 +11979,7 @@ function drawReel(x, y, tier, ang){
     ctx.beginPath();ctx.arc(x-cx_*5,y+sx*5,1.7,0,6.28);ctx.fill();
   }else{
     const sz=tier===3?4.8:5.5;
-    const col=tier===3?'#3a3e44':'#1a1a1a';
+    const col=(reel&&reel.color)||(tier===3?'#3a3e44':'#1a1a1a');
     ctx.fillStyle='rgba(0,0,0,.35)';
     ctx.beginPath();ctx.ellipse(x+sx*2+1,y+cx_*2+1,sz*1.4,sz*0.65,ang,0,6.28);ctx.fill();
     ctx.fillStyle=col;
@@ -12212,8 +12237,7 @@ function render(ts){
     const tvx=boat.vx/tsp, tvy=boat.vy/tsp;          // travel direction
     const rbx=ORIGIN.x, rby=ORIGIN.y-2;              // angler's hands
     const rtx=ORIGIN.x-tvx*30, rty=ORIGIN.y-tvy*30-9; // rod tip: back and slightly up
-    const rodIdx=RODS.indexOf(curRod());
-    try{drawRod(rbx, rby, rtx, rty, rodIdx);}catch(e){
+    try{drawRod(rbx, rby, rtx, rty, curRod());}catch(e){
       ctx.strokeStyle='#7a4a1e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(rbx,rby);ctx.lineTo(rtx,rty);ctx.stroke();
     }
     ctx.strokeStyle=curBraid().color;ctx.lineWidth=1.6;ctx.setLineDash([]);
