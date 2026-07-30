@@ -3746,7 +3746,15 @@ const RARITY_COLORS={common:'#9aa39b',uncommon:'#5fae6a',rare:'#4a9fd4',epic:'#a
 const RARITY_ORDER=['common','uncommon','rare','epic','legendary','ultra'];
 // Prismatic shimmer used for Ultra Legendary treatments (catch card, badges, etc.)
 const ULTRA_GRAD='linear-gradient(100deg,#ffd24a 0%,#ff5ed4 28%,#7b5cff 52%,#34e7e4 76%,#ffd24a 100%)';
-const XP_CURVE=[0,50,120,230,400,640,980,1450,2100,3200,5200,8000];
+// Index L is the XP needed to go from level L to L+1; the cap is length-1.
+// V0.9.8.4: extended from 12 entries (cap 11) to 31 (cap 30) — the catalogs
+// sell lvl 12-13 gear (each region's heaviest line), which nobody could ever
+// buy at the old cap, and that unreachable line was why big paddlefish, gar
+// and sturgeon "always broke off". Growth tapers from ~1.3x to ~1.09x so the
+// teens stay earnable and the 20s are long-haul prestige levels.
+const XP_CURVE=[0,50,120,230,400,640,980,1450,2100,3200,5200,8000,
+  10500,13500,17000,21000,25500,30500,36000,42000,48500,55500,63000,71000,
+  79500,88500,98000,108000,118500,129500,141000];
 const MIN_PER_SEC=3; // 1440 game-min over 480s = 8 real min per cycle (4 min day + 4 min night)
 const TOURN_MS=6*60*1000;     // a tournament runs 6 real minutes...
 const TOURN_DAY_START=300;    // ...as one full day->night cycle, starting at dawn (5:00)
@@ -3927,49 +3935,50 @@ const LURES=[
   {id:'flutterjig',  cat:'metaljig',    zone:2, name:'Flutter Jig',          icon:'reel', cost:820, lvl:8, methods:['jig'], baits:['squid'], targets:['amberjack','almaco','blackfin'], desc:'A wide flutter jig that flashes on the fall over offshore structure.'},
   // ---- Freshwater (V0.9.8). zone 3 Lake / 4 River / 5 Mountains. ----
   // ---- LAKE (zone 3) ----
-  {id:'fw_spinnerbait',cat:'spinnerbait',zone:3,color:'white',      name:'Double-Willow Spinnerbait', icon:'reel',       cost:190,lvl:2, methods:['topwater'],         baits:['shiner'],  targets:['largemouth','smallmouth','chainpickerel','sowhitebass'],              desc:'Twin willow blades flashing through grass. White colour: +5% bite during the day.',world:'fresh',fixedCost:true},
-  {id:'fw_curlytail', cat:'softplastic',zone:3,color:'chartreuse',  name:'Chartreuse Curly Tail Grub',icon:'reel',       cost:150,lvl:1, methods:['jig'],          baits:['minnow'],  targets:['blackcrappie','sowhitebass','channelcat','smallmouth'],                desc:'A 2 in curl tail on a ball head. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
-  {id:'fw_squarebill',cat:'crankbait', zone:3,                      name:'Squarebill Crankbait',      icon:'fish',       cost:220,lvl:3, methods:['topwater'],         baits:['crawfish'],targets:['largemouth','smallmouth','sowhitebass','bowfin'],                     desc:'A square lip that deflects off wood and rock instead of hanging up.',world:'fresh',fixedCost:true},
-  {id:'fw_senko',     cat:'softplastic',zone:3,color:'purple',      name:'Junebug Stick Worm',        icon:'reel',       cost:200,lvl:3, methods:['jig','topwater'],   baits:['worm'],    targets:['largemouth','smallmouth','bowfin'],                                 desc:'A salted stick bait on a slow fall. Junebug purple: +5% luck at night.',world:'fresh',fixedCost:true},
-  {id:'fw_lipless',   cat:'crankbait', zone:3,                      name:'Lipless Crankbait',         icon:'fish',       cost:260,lvl:4, methods:['topwater','troll'], baits:['shad'],    targets:['sowhitebass','sostripedbass','largemouth','chainpickerel'],            desc:'A rattling shad body you can burn over hydrilla or pull on a long line.',world:'fresh',fixedCost:true},
-  {id:'fw_craw',      cat:'softplastic',zone:3,color:'red',         name:'Rootbeer Craw Trailer',     icon:'crab',       cost:210,lvl:4, methods:['jig'],          baits:['crawfish'],targets:['largemouth','smallmouth','channelcat','sostripedbass'],              desc:'A flapping craw on a football head. Rootbeer: +5% bite while water is moving.',world:'fresh',fixedCost:true},
-  {id:'fw_frog',      cat:'topwater',  zone:3,                      name:'Hollow-Body Frog',          icon:'fish',       cost:300,lvl:5, methods:['topwater'],         baits:['shiner'],  targets:['largemouth','bowfin','chainpickerel','longnosegar'],                 desc:'Walked across matted pads for the loudest blow-ups in fresh water.',world:'fresh',fixedCost:true},
-  {id:'fw_deepdiver', cat:'crankbait', zone:3,                      name:'Deep-Diving Crankbait',     icon:'fish',       cost:340,lvl:6, methods:['troll','topwater'], baits:['shad'],    targets:['sostripedbass','sowhitebass','bluecat','longnosegar'],                 desc:'A long lip that digs to twenty feet and stays there on a troll pass.',world:'fresh',fixedCost:true},
-  {id:'fw_walkbait',  cat:'topwater',  zone:3,                      name:'Walking Topwater Bait',     icon:'fish',       cost:330,lvl:6, methods:['topwater'],         baits:['shad'],    targets:['largemouth','sostripedbass','sowhitebass','chainpickerel'],            desc:'Zig-zags across a slick surface with a rhythmic twitch.',world:'fresh',fixedCost:true},
-  {id:'fw_umbrella',  cat:'trolling',  zone:3,                      name:'Umbrella Rig',              icon:'tackle-lure',cost:560,lvl:8, methods:['troll'],        baits:['shad'],    targets:['sostripedbass','sowhitebass','bluecat','chainpickerel'],               desc:'Five wire arms of swimbaits pulled as a fleeing shad school.',world:'fresh',fixedCost:true},
-  {id:'fw_glidebait', cat:'plug',      zone:3,color:'gold',         name:'Gold Glide Bait',           icon:'fish',       cost:620,lvl:9, methods:['topwater','troll'], baits:['shiner'],  targets:['muskie','largemouth','chainpickerel','longnosegar'],                 desc:'A jointed 8 in glider that S-tracks on a slow pull. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
-  {id:'fw_bucktail10',cat:'spinnerbait',zone:3,                     name:'Double-10 Bucktail',        icon:'reel',       cost:700,lvl:10,methods:['topwater','troll'], baits:['shad'],    targets:['muskie','chainpickerel','sostripedbass','longnosegar'],              desc:'Two size-10 blades and a fistful of hair. The muskie bait, and it is brutal to throw.',world:'fresh',fixedCost:true},
-  // Lake flies
-  {id:'fly_popper',   cat:'fly',       zone:6,                      name:'Foam Bluegill Popper',      icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['bluegill','bluegill','largemouth','smallmouth'],                desc:'A tiny foam popper on a 4x leader. Bluegill will eat it until the foam is gone.',world:'fresh',fixedCost:true},
-  {id:'fly_clouser',  cat:'fly',       zone:6,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['largemouth','smallmouth','bluegill','bluegill'],                desc:'Dumbbell eyes and bucktail, jigging on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
+  {id:'fw_spinnerbait',cat:'spinnerbait',zone:3,color:'white',      name:'Double-Willow Spinnerbait', icon:'reel',       cost:190,lvl:2, methods:['topwater'],         baits:['shiner'],  targets:['largemouth','largemouth','yellowbass','longnosegar'],              desc:'Twin willow blades flashing through grass. White colour: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_curlytail', cat:'softplastic',zone:3,color:'chartreuse',  name:'Chartreuse Curly Tail Grub',icon:'reel',       cost:150,lvl:1, methods:['jig'],          baits:['minnow'],  targets:['blackcrappie','whitecrappie','yellowbass','largemouth'],                desc:'A 2 in curl tail on a ball head. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_squarebill',cat:'crankbait', zone:3,                      name:'Squarebill Crankbait',      icon:'fish',       cost:220,lvl:3, methods:['topwater'],         baits:['crawfish'],targets:['largemouth','largemouth','yellowbass','bluegill'],                     desc:'A square lip that deflects off wood and rock instead of hanging up.',world:'fresh',fixedCost:true},
+  {id:'fw_senko',     cat:'softplastic',zone:3,color:'purple',      name:'Junebug Stick Worm',        icon:'reel',       cost:200,lvl:3, methods:['jig','topwater'],   baits:['worm'],    targets:['largemouth','largemouth','blackcrappie','yellowbass'],                                 desc:'A salted stick bait on a slow fall. Junebug purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fw_lipless',   cat:'crankbait', zone:3,                      name:'Lipless Crankbait',         icon:'fish',       cost:260,lvl:4, methods:['topwater','troll'], baits:['shad'],    targets:['yellowbass','largemouth','longnosegar','bluecat'],            desc:'A rattling shad body you can burn over hydrilla or pull on a long line.',world:'fresh',fixedCost:true},
+  {id:'fw_craw',      cat:'softplastic',zone:3,color:'red',         name:'Rootbeer Craw Trailer',     icon:'crab',       cost:210,lvl:4, methods:['jig'],          baits:['crawfish'],targets:['largemouth','largemouth','yellowbass','whitecrappie'],              desc:'A flapping craw on a football head. Rootbeer: +5% bite while water is moving.',world:'fresh',fixedCost:true},
+  {id:'fw_frog',      cat:'topwater',  zone:3,                      name:'Hollow-Body Frog',          icon:'fish',       cost:300,lvl:5, methods:['topwater'],         baits:['shiner'],  targets:['largemouth','largemouth','longnosegar','yellowbass'],                 desc:'Walked across matted pads for the loudest blow-ups in fresh water.',world:'fresh',fixedCost:true},
+  {id:'fw_deepdiver', cat:'crankbait', zone:3,                      name:'Deep-Diving Crankbait',     icon:'fish',       cost:340,lvl:6, methods:['troll','topwater'], baits:['shad'],    targets:['bluecat','bluecat','longnosegar','largemouth'],                 desc:'A long lip that digs to twenty feet and stays there on a troll pass.',world:'fresh',fixedCost:true},
+  {id:'fw_walkbait',  cat:'topwater',  zone:3,                      name:'Walking Topwater Bait',     icon:'fish',       cost:330,lvl:6, methods:['topwater'],         baits:['shad'],    targets:['largemouth','yellowbass','yellowbass','longnosegar'],            desc:'Zig-zags across a slick surface with a rhythmic twitch.',world:'fresh',fixedCost:true},
+  {id:'fw_umbrella',  cat:'trolling',  zone:3,                      name:'Umbrella Rig',              icon:'tackle-lure',cost:560,lvl:8, methods:['troll'],        baits:['shad'],    targets:['bluecat','bluecat','longnosegar','longnosegar'],               desc:'Five wire arms of swimbaits pulled as a fleeing shad school.',world:'fresh',fixedCost:true},
+  {id:'fw_glidebait', cat:'plug',      zone:5,color:'gold',         name:'Gold Glide Bait',           icon:'fish',       cost:620,lvl:9, methods:['topwater','troll'], baits:['shiner'],  targets:['muskie','muskie','northernpike','walleye'],                 desc:'A jointed 8 in glider that S-tracks on a slow pull. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_bucktail10',cat:'spinnerbait',zone:5,                     name:'Double-10 Bucktail',        icon:'reel',       cost:700,lvl:10,methods:['topwater','troll'], baits:['shad'],    targets:['muskie','muskie','northernpike','northernpike'],              desc:'Two size-10 blades and a fistful of hair. The muskie bait, and it is brutal to throw.',world:'fresh',fixedCost:true},
+  // Mountains flies. Fly water is zone 6 only, so every fly targets zone-6 species.
+  {id:'fly_popper',   cat:'fly',       zone:6,                      name:'Foam Beetle',               icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['brooktrout','brooktrout','cutthroattrout','goldentrout'],                desc:'DRY FLY. A fat foam beetle plopped tight to the bank. Brook trout look up all summer.',world:'fresh',fixedCost:true},
+  {id:'fly_clouser',  cat:'fly',       zone:6,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['dollyvarden','dollyvarden','rainbowtrout','bulltrout'],                desc:'STREAMER. Dumbbell eyes and bucktail jigged on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
   // ---- RIVER (zone 4) ----
-  {id:'fw_inlinespin',   cat:'spinnerbait',zone:4,                  name:'Inline Spinner',            icon:'reel',       cost:170,lvl:2, methods:['topwater'],        baits:['minnow'],  targets:['smallmouth','smallmouth','sowhitebass','rockbass'],             desc:'A #3 blade thumping in current. Nothing in a river ignores it.',world:'fresh',fixedCost:true},
-  {id:'fw_tubejig',      cat:'softplastic',zone:4,color:'red',      name:'Rootbeer Tube Jig',         icon:'reel',       cost:190,lvl:3, methods:['jig'],         baits:['crawfish'],targets:['smallmouth','smallmouth','walleye','walleye'],                       desc:'A hollow tube dragged over gravel. Rootbeer: +5% bite while the current is moving.',world:'fresh',fixedCost:true},
-  {id:'fw_hairjig',      cat:'hairjig',   zone:4,color:'white',     name:'White Hair Jig',            icon:'reel',       cost:210,lvl:4, methods:['jig'],         baits:['minnow'],  targets:['walleye','walleye','sowhitebass','sowhitebass'],                           desc:'Craft-fur hair breathing in a seam. White: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_inlinespin',   cat:'spinnerbait',zone:4,                  name:'Inline Spinner',            icon:'reel',       cost:170,lvl:2, methods:['topwater'],        baits:['minnow'],  targets:['peacockbass','sowhitebass','sowhitebass','chainpickerel'],             desc:'A #3 blade thumping in current. Nothing in the bayous ignores it.',world:'fresh',fixedCost:true},
+  {id:'fw_tubejig',      cat:'softplastic',zone:4,color:'red',      name:'Rootbeer Tube Jig',         icon:'reel',       cost:190,lvl:3, methods:['jig'],         baits:['crawfish'],targets:['sostripedbass','sostripedbass','peacockbass','sowhitebass'],                       desc:'A hollow tube dragged over gravel. Rootbeer: +5% bite while the current is moving.',world:'fresh',fixedCost:true},
+  {id:'fw_hairjig',      cat:'hairjig',   zone:4,color:'white',     name:'White Hair Jig',            icon:'reel',       cost:210,lvl:4, methods:['jig'],         baits:['minnow'],  targets:['sowhitebass','sowhitebass','knifefish','sostripedbass'],                           desc:'Craft-fur hair breathing in a seam. White: +5% bite during the day.',world:'fresh',fixedCost:true},
   {id:'fw_blade',        cat:'metaljig',  zone:4,                   name:'Chrome Blade Bait',         icon:'anchor',     cost:240,lvl:4, methods:['jig','topwater'],  baits:['shad'],    targets:['sowhitebass','sowhitebass','sostripedbass','sostripedbass'],                desc:'A thin chrome blade that vibrates hard on the lift. Made for a tailrace.',world:'fresh',fixedCost:true},
-  {id:'fw_swimjig',      cat:'softplastic',zone:4,color:'chartreuse',name:'Swim Jig & Trailer',       icon:'reel',       cost:260,lvl:5, methods:['jig','topwater'],  baits:['shiner'],  targets:['smallmouth','smallmouth','sowhitebass','sostripedbass'],                desc:'A pointed head swum through wood. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
-  {id:'fw_jerkbait',     cat:'plug',      zone:4,                   name:'Suspending Jerkbait',       icon:'fish',       cost:320,lvl:6, methods:['topwater'],        baits:['minnow'],  targets:['smallmouth','walleye','smallmouth','sostripedbass'],                  desc:'Darts and hangs dead in the current. Cold-water smallmouth cannot stand it.',world:'fresh',fixedCost:true},
-  {id:'fw_topwalker',    cat:'topwater',  zone:4,color:'gold',      name:'Gold Topwater Walker',      icon:'fish',       cost:400,lvl:7, methods:['topwater'],        baits:['shiner'],  targets:['sostripedbass','smallmouth','sowhitebass','longnosegar'],                desc:'Walked over a boiling wing dam at first light. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
-  {id:'fw_shadrap',      cat:'crankbait', zone:5,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','topwater'],baits:['shad'],    targets:['walleye','walleye','sostripedbass','sostripedbass'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
-  {id:'fw_trollbucktail',cat:'trolling',  zone:5,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['sostripedbass','sostripedbass','longnosegar','walleye'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
-  // River flies
-  {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['smallmouth','smallmouth','rockbass','sowhitebass'],             desc:'Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
-  {id:'fly_crawfly',     cat:'fly',       zone:6,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['smallmouth','smallmouth','rockbass'],                         desc:'Rubber-leg claws crawled over a gravel bar. River smallmouth candy.',world:'fresh',fixedCost:true},
-  // ---- MOUNTAINS (zone 5) ----
-  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['topwater'],        baits:['worm'],    targets:['rainbowtrout','browntrout','cutthroattrout','brooktrout','grayling','brooktrout','goldentrout','cutthroattrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
-  {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['bulltrout','laketrout','browntrout','arcticchar'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
-  {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','sockeyesalmon'],                                               desc:'A 4 in white tube jigged over an alpine lake shelf. White: +5% bite during the day.',world:'fresh',fixedCost:true},
-  {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['sockeyesalmon','cohosalmon','laketrout','rainbowtrout'],             desc:'A flashing dodger ahead of a tipped squid. The kokanee troll, corn and all.',world:'fresh',fixedCost:true},
-  {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['cohosalmon','arcticchar','laketrout','sockeyesalmon'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
-  {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['topwater','troll'],baits:['minnow'],  targets:['bulltrout','bulltrout','browntrout','cohosalmon','arcticchar'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
+  {id:'fw_swimjig',      cat:'softplastic',zone:4,color:'chartreuse',name:'Swim Jig & Trailer',       icon:'reel',       cost:260,lvl:5, methods:['jig','topwater'],  baits:['shiner'],  targets:['snakehead','peacockbass','sowhitebass','sostripedbass'],                desc:'A pointed head swum through wood. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_jerkbait',     cat:'plug',      zone:4,                   name:'Suspending Jerkbait',       icon:'fish',       cost:320,lvl:6, methods:['topwater'],        baits:['minnow'],  targets:['peacockbass','peacockbass','chainpickerel','sowhitebass'],                  desc:'Darts and hangs dead in the current. Peacock bass cannot stand it.',world:'fresh',fixedCost:true},
+  {id:'fw_topwalker',    cat:'topwater',  zone:4,color:'gold',      name:'Gold Topwater Walker',      icon:'fish',       cost:400,lvl:7, methods:['topwater'],        baits:['shiner'],  targets:['snakehead','snakehead','peacockbass','bowfin'],                desc:'Walked over a boiling wing dam at first light. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_shadrap',      cat:'crankbait', zone:5,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','topwater'],baits:['shad'],    targets:['walleye','walleye','browntrout','smallmouth'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
+  {id:'fw_trollbucktail',cat:'trolling',  zone:5,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['northernpike','walleye','walleye','muskie'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
+  // Mountains flies (continued)
+  {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','brooktrout','cutthroattrout','bulltrout'],             desc:'STREAMER. Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
+  {id:'fly_crawfly',     cat:'fly',       zone:6,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['bulltrout','bulltrout','mtnwhitefish','rainbowtrout'],                         desc:'NYMPH. Rubber-leg claws crawled over a gravel bar. Bull trout candy.',world:'fresh',fixedCost:true},
+  // ---- NORTHERN (zone 5) & MOUNTAINS (zone 6) ----
+  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','brooktrout','goldentrout','cutthroattrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['laketrout','browntrout','cohosalmon','northernpike'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
+  {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','laketrout','lakewhitefish','yellowperch'],                                               desc:'A 4 in white tube jigged over a cold, deep shelf. White: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['cohosalmon','cohosalmon','kingsalmon','laketrout'],             desc:'A flashing dodger ahead of a tipped squid. The Great Lakes salmon troll, corn and all.',world:'fresh',fixedCost:true},
+  {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['cohosalmon','kingsalmon','laketrout','browntrout'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
+  {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['topwater','troll'],baits:['minnow'],  targets:['northernpike','northernpike','muskie','browntrout'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
+  {id:'fw_mtnspoon',   cat:'spoon',     zone:6,                    name:'Brass Wobbler Spoon',       icon:'reel',       cost:340,lvl:7, methods:['spincast'],    baits:['minnow'],  targets:['dollyvarden','bulltrout','sockeyesalmon','mtnking'],                 desc:'A hammered brass wobbler swung deep through the big pools. When nothing rises, go down.',world:'fresh',fixedCost:true},
   {id:'fly_adams',      cat:'fly',       zone:6,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cutthroattrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
-  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','browntrout','goldentrout','grayling','cutthroattrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
+  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','dollyvarden','goldentrout','grayling','cutthroattrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
   {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout','goldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
-  {id:'fly_stonefly',   cat:'fly',       zone:6,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['browntrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
-  {id:'fly_softhackle', cat:'fly',       zone:6,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['browntrout','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
-  {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','arcticchar','mtnwhitefish','brooktrout'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
-  {id:'fly_sculpin',    cat:'fly',       zone:6,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['browntrout','bulltrout','brooktrout','bulltrout','cohosalmon'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
-  {id:'fly_mouse',      cat:'fly',       zone:6,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','browntrout','arcticchar'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
+  {id:'fly_stonefly',   cat:'fly',       zone:6,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['bulltrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
+  {id:'fly_softhackle', cat:'fly',       zone:6,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['dollyvarden','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
+  {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','dollyvarden','sockeyesalmon','mtnwhitefish'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
+  {id:'fly_sculpin',    cat:'fly',       zone:6,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['bulltrout','bulltrout','dollyvarden','brooktrout','mtnking'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fly_mouse',      cat:'fly',       zone:6,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','rainbowtrout','mtnking'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
 ];
 function lureById(id){return LURES.find(function(l){return l.id===id;});}
 // Lure durability: unlike bait (consumed every cast), a lure survives several
@@ -4616,6 +4625,9 @@ const REELS=[
   {id:'spin1000', name:'1000 Ultralight Spinning', range:140, drag:8,  color:'#d0d4d8', cost:0,    lvl:1,  desc:'Tiny spool, short accurate flips to the bank.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'spin3000', name:'3000 Spinning',            range:210, drag:14, color:'#9aa0a6', cost:160,  lvl:2,  desc:'More line, more reach across the flat.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'baitcast', name:'Low-Profile Baitcaster',   range:370, drag:34, color:'#2b3a2f', cost:1800, lvl:8,  desc:'Cranking power for heavy cover and hard current.',world:'fresh',region:'midwest',fixedCost:true},
+  // V0.9.8.4: the region's fight ceiling. Paddlefish fight strength tops out at
+  // 48, above the baitcaster's 34, so every big one snapped off no matter the line.
+  {id:'mw_round',  name:'Round Baitcaster 400',    range:440, drag:50, color:'#3a3e44', cost:4000, lvl:11, desc:'A big round frame with a star drag. The paddlefish and big-blue winch.',world:'fresh',region:'midwest',fixedCost:true},
   // -- Southern --
   {id:'so_reel0', name:'Spincast 33',              range:150, drag:9,  color:'#c4c8cc', cost:0,    lvl:1,  desc:'A closed-face push-button reel. Nothing to backlash, nothing to go wrong.',world:'fresh',region:'southern',fixedCost:true},
   {id:'so_reel1', name:'Baitcaster 200',           range:280, drag:22, color:'#3a2f24', cost:900,  lvl:4,  desc:'Thumb-bar casting reel with enough torque to winch a bass out of the pads.',world:'fresh',region:'southern',fixedCost:true},
@@ -4626,6 +4638,10 @@ const REELS=[
   {id:'no_reel2', name:'Line-Counter Trolling Reel',range:460,drag:50, color:'#2a2f36', cost:4200, lvl:10, desc:'A counter on the spool so you can put the lure back at the exact depth that just bit.',world:'fresh',region:'northern',fixedCost:true},
   // -- Mountains --
   {id:'mt_reel0', name:'500 Ultralight Spinning',  range:130, drag:7,  color:'#c8d0c4', cost:0,    lvl:1,  desc:'A palm-sized spinner on 4 lb line. All a mountain creek ever asks for.',world:'fresh',region:'mountains',fixedCost:true},
+  // V0.9.8.4: without this the ultralight was the ONLY non-fly reel in the
+  // region, and a still-fished white sturgeon (fight strength up to 48 against
+  // 7 lb of drag) snapped off deterministically.
+  {id:'mt_reel1', name:'8000 Longcast Spinning',   range:420, drag:50, color:'#4a4e54', cost:3800, lvl:11, desc:'A surf-sized spinner packed up the canyon for one reason: sturgeon.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains \u2014 stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
@@ -4772,16 +4788,19 @@ const ZONE_STRUCTS=[
    {kind:'tailrace',xF:0.477,yF:0.938,tier:3}],
 
   // ---- zone 6: MOUNTAINS — freestone stream and alpine lake ----
-  [{kind:'riffle',xF:0.452,yF:0.64,tier:1},
-   {kind:'tailout',xF:0.512,yF:0.339,tier:1},
-   {kind:'run',xF:0.432,yF:0.49,tier:2},
-   {kind:'boulders',xF:0.646,yF:0.241,tier:2},
-   {kind:'undercut',xF:0.286,yF:0.74,tier:2},
-   {kind:'beaverpond',xF:0.182,yF:0.439,tier:2},
-   {kind:'plungepool',xF:0.48,yF:0.158,tier:3},
-   {kind:'springcreek',xF:0.878,yF:0.446,tier:3},
-   {kind:'alpinelake',xF:0.548,yF:0.918,tier:3},
-   {kind:'waterfall',xF:0.472,yF:0.046,tier:3}],
+  // V0.9.8.4 canyon layout: tailout below the plunge bowl, boulders on the
+  // Flume elbow, the run through the Narrows, undercut on the west wall bend,
+  // the beaver pond on its hanging meadow, spring creek up the side canyon.
+  [{kind:'riffle',xF:0.428,yF:0.492,tier:1},
+   {kind:'tailout',xF:0.505,yF:0.135,tier:1},
+   {kind:'run',xF:0.362,yF:0.40,tier:2},
+   {kind:'boulders',xF:0.617,yF:0.245,tier:2},
+   {kind:'undercut',xF:0.325,yF:0.73,tier:2},
+   {kind:'beaverpond',xF:0.175,yF:0.75,tier:2},
+   {kind:'plungepool',xF:0.478,yF:0.106,tier:3},
+   {kind:'springcreek',xF:0.685,yF:0.408,tier:3},
+   {kind:'alpinelake',xF:0.5,yF:0.916,tier:3},
+   {kind:'waterfall',xF:0.49,yF:0.068,tier:3}],
 
 ];
 // Deterministic RNG so a given worldSeed always lays out the same map.
@@ -4923,7 +4942,7 @@ const ZONES=[
    world:'fresh', region:true, structures:[]},
   {id:'northern', name:'Northern', sub:'Big Water & Shield Lakes', depth:'5-80 ft', baseWater:['#7fae9a','#3f7d74','#17414a'],
    world:'fresh', region:true, structures:[]},
-  {id:'mountains', name:'Mountains', sub:'Freestone & Alpine', depth:'1-20 ft', baseWater:['#a6dcd0','#57ab9d','#1f6058'],
+  {id:'mountains', name:'Mountains', sub:'Canyon River & Alpine', depth:'1-20 ft', baseWater:['#9fd6d6','#3f95a4','#123a4a'],
    world:'fresh', region:true, walk:true, structures:[]},
 ];
 
@@ -6250,6 +6269,12 @@ function normalizeState(){
       if(!arr)return;const i=arr.indexOf(bad);if(i>=0)arr.splice(i,1);
     });
   });
+  // Saves written by pre-V0.9.8.4 builds can hold the same gear id many times
+  // over (an old grant path pushed without checking). Harmless to `includes`
+  // checks but it bloats the save and poisons anything that counts.
+  ['ownedBoats','ownedRods','ownedReels','ownedBraids','ownedLeaders'].forEach(function(k){
+    if(Array.isArray(S[k]))S[k]=S[k].filter(function(id, i){return S[k].indexOf(id)===i;});
+  });
   // Every region you are entitled to stand in owns its free starter kit. The
   // Midwest is always free; the rest arrive with their licence.
   grantRegionStarter('midwest');
@@ -6700,12 +6725,13 @@ function zoneReachIn(w, z){
   if(req&&req.check&&!req.check())return false;
   if(req&&req.extra&&req.extra.check&&!req.extra.check())return false;
   if(w==='fresh'){
-    // Freshwater travel is gated by the LICENCE (checked above), not by boat
-    // tier — craft are region-scoped now, so what matters is owning something
-    // that floats in the destination. The licence grants that starter free, so
-    // this only bites on a save that predates the region split.
-    const rid=regionIdOf(z);
-    return BOATS.some(function(b){return (b.world==='fresh')&&itemInRegion(b, rid)&&(S.ownedBoats||[]).indexOf(b.id)>=0;});
+    // Licence-only, matching gateBlockReason's travel rule exactly (7306b0f).
+    // Requiring destination-region boat OWNERSHIP here looked harmless but
+    // wasn't: V0.9.8.3 made regions start empty, so a player standing in a
+    // just-entered region had maxZone() one region SHORT of where they stood,
+    // and every `S.zone>maxZone()` clamp (they run on load) yanked them home
+    // before they could buy the free starter craft.
+    return true;
   }
   const b=BOATS.find(function(x){return x.id===S.boat;});
   if(!b||b.maxZone<z)return false;
@@ -7303,25 +7329,38 @@ const WATER_SHAPE={
      {kind:'poly',pts:[[0.096,0.916],[0.11,0.896],[0.138,0.89],[0.164,0.9],[0.172,0.922],[0.158,0.942],[0.13,0.948],[0.102,0.938]]},
   ],islands:[{cx:0.3,cy:0.66,rx:0.072,ry:0.06,rot:0.35},{cx:0.435,cy:0.575,rx:0.038,ry:0.026,rot:-0.3},{cx:0.64,cy:0.59,rx:0.032,ry:0.024,rot:0.5},{cx:0.815,cy:0.69,rx:0.034,ry:0.026,rot:0.9},{cx:0.36,cy:0.24,rx:0.036,ry:0.03,rot:0.2},{cx:0.7,cy:0.25,rx:0.028,ry:0.023,rot:1},{cx:0.7,cy:0.78,rx:0.036,ry:0.028,rot:-0.6}]},
   // ---- zone 6: MOUNTAINS ----
-  // One continuous thread of water on a 1250x2900 canvas: a 33-point freestone stem that switchbacks four times down the canyon into an alpine lake, with 
+  // V0.9.8.4: a slot canyon. One narrow thread (channel 60-85px against the
+  // old 85-165) running long joint-line straights between ANGULAR doglegs,
+  // through a plunge bowl at the head, a choked Narrows, a hanging beaver
+  // meadow on the west bench and a spring side-canyon from the east, out into
+  // a small wall-pinched lake at the canyon mouth. The cliff pass in
+  // drawLandProps keys off this same path, so the walls follow the water.
   6:{parts:[
-       // main freestone stem: heads at y=0.020 under the top gate, drops through the falls chute into the plunge pool, then four switchbacks down the canyon and into the alpine lake
-     {kind:'ribbon',cs:[[0.5,0.02],[0.502,0.032],[0.5,0.07],[0.492,0.108],[0.484,0.146],[0.516,0.18],[0.572,0.204],[0.628,0.226],[0.664,0.256],[0.658,0.288],[0.61,0.314],[0.536,0.334],[0.456,0.352],[0.382,0.37],[0.322,0.392],[0.304,0.424],[0.33,0.456],[0.394,0.48],[0.47,0.5],[0.548,0.518],[0.628,0.536],[0.692,0.56],[0.69,0.59],[0.622,0.606],[0.532,0.62],[0.452,0.64],[0.386,0.668],[0.342,0.702],[0.324,0.74],[0.348,0.778],[0.396,0.81],[0.444,0.844],[0.482,0.888]],hw:[0.034,0.036,0.036,0.034,0.05,0.05,0.05,0.054,0.056,0.056,0.054,0.054,0.052,0.048,0.052,0.054,0.05,0.054,0.056,0.052,0.054,0.058,0.058,0.056,0.056,0.054,0.056,0.052,0.056,0.052,0.054,0.058,0.066]},
-       // plunge pool under the falls — pts REVERSED to match the ribbons' winding, otherwise the stem crossing it cancels to a land plug; the chute (cs pt4) drops in from above and the river leaves out the east side at cs pt6
-     {kind:'poly',pts:[[0.544,0.136],[0.5,0.124],[0.46,0.123],[0.426,0.13],[0.4,0.141],[0.388,0.155],[0.39,0.169],[0.414,0.182],[0.446,0.191],[0.482,0.194],[0.516,0.191],[0.545,0.183],[0.565,0.171],[0.572,0.157]]},
-       // short side channel west off the pt15 left bend into the beaver pond; starts at x=0.310 inside the main stem, ends at x=0.170 well inside the pond
-     {kind:'ribbon',cs:[[0.31,0.426],[0.262,0.424],[0.214,0.422],[0.17,0.42]],hw:[0.044,0.034,0.03,0.034]},
-       // beaver pond — flooded flat off the side channel, dam end on the south-east shore; pts REVERSED so the channel mouth stays open water
-     {kind:'poly',pts:[[0.214,0.406],[0.185,0.397],[0.152,0.393],[0.121,0.393],[0.094,0.397],[0.072,0.404],[0.06,0.414],[0.064,0.424],[0.084,0.434],[0.109,0.442],[0.136,0.447],[0.165,0.448],[0.192,0.445],[0.214,0.438],[0.228,0.429],[0.233,0.419]]},
-       // spring creek: cold seep in the northeast corner running down to the deep right-hand bend; ends at x=0.722 inside the main stem at cs pt21
-     {kind:'ribbon',cs:[[0.878,0.452],[0.848,0.484],[0.812,0.514],[0.768,0.54],[0.722,0.556]],hw:[0.024,0.026,0.03,0.034,0.044]},
-       // spring seep pool at the head of the creek — small, glassy, hardest water on the map to reach; pts REVERSED so the creek head is not punched out of it
-     {kind:'poly',pts:[[0.928,0.437],[0.906,0.43],[0.878,0.427],[0.85,0.429],[0.828,0.435],[0.82,0.445],[0.828,0.455],[0.85,0.463],[0.88,0.465],[0.908,0.462],[0.928,0.455],[0.936,0.445]]},
-       // alpine lake basin — the river enters at the north shore around x=0.48 and the outlet leaves the south shore; pts REVERSED so both junctions stay water, covers the bottom-entry spawn at (0.50,0.938)
-     {kind:'poly',pts:[[0.77,0.902],[0.74,0.892],[0.686,0.883],[0.616,0.876],[0.54,0.871],[0.462,0.869],[0.388,0.87],[0.32,0.874],[0.268,0.882],[0.238,0.893],[0.228,0.906],[0.243,0.92],[0.282,0.932],[0.338,0.944],[0.406,0.953],[0.482,0.959],[0.56,0.96],[0.634,0.956],[0.696,0.949],[0.742,0.939],[0.769,0.927],[0.78,0.913]]},
-       // lake outlet running to the bottom edge — the downstream travel gate; starts inside the lake at y=0.944 and ends at y=0.980, which the gate walk reaches at (625,2837)
-     {kind:'ribbon',cs:[[0.52,0.944],[0.522,0.962],[0.52,0.98]],hw:[0.036,0.034,0.034]},
-  ],islands:[{cx:0.652,cy:0.914,rx:0.032,ry:0.01,rot:0.35},{cx:0.348,cy:0.908,rx:0.026,ry:0.009,rot:-0.2},{cx:0.112,cy:0.42,rx:0.015,ry:0.004,rot:0}]},
+       // main canyon stem: heads under the top gate, over the falls into the
+       // plunge bowl, then the Flume (SE straight), the Narrows (hw 0.024
+       // choke), the spring-creek confluence, the west elbow under the
+       // undercut wall, and into the lake
+     {kind:'ribbon',cs:[[0.5,0.015],[0.502,0.048],[0.49,0.072],[0.48,0.098],[0.492,0.126],[0.53,0.158],[0.575,0.192],[0.612,0.228],[0.625,0.262],[0.575,0.29],[0.49,0.308],[0.41,0.326],[0.365,0.352],[0.358,0.39],[0.368,0.428],[0.39,0.462],[0.428,0.492],[0.472,0.518],[0.515,0.545],[0.53,0.578],[0.522,0.612],[0.49,0.645],[0.435,0.672],[0.37,0.696],[0.328,0.726],[0.312,0.762],[0.33,0.796],[0.376,0.826],[0.432,0.85],[0.478,0.868],[0.5,0.882]],hw:[0.028,0.026,0.026,0.03,0.028,0.028,0.03,0.03,0.028,0.028,0.03,0.028,0.026,0.024,0.024,0.026,0.028,0.028,0.03,0.03,0.03,0.028,0.028,0.026,0.026,0.026,0.028,0.028,0.03,0.032,0.034]},
+       // plunge bowl under the falls, carved wider than the channel; the stem
+       // passes straight through it (cs pts 3-4)
+     {kind:'poly',pts:[[0.545,0.107],[0.522,0.096],[0.494,0.09],[0.462,0.089],[0.432,0.094],[0.41,0.103],[0.402,0.114],[0.41,0.126],[0.432,0.136],[0.462,0.142],[0.494,0.143],[0.524,0.138],[0.544,0.128],[0.552,0.117]]},
+       // spring creek: a cold side canyon in from the east, joining the stem
+       // at the confluence (its last point sits on the stem centerline)
+     {kind:'ribbon',cs:[[0.665,0.418],[0.638,0.452],[0.6,0.487],[0.556,0.52],[0.518,0.546]],hw:[0.024,0.024,0.026,0.028,0.034]},
+       // spring seep pool at the head of the side canyon
+     {kind:'poly',pts:[[0.732,0.41],[0.712,0.402],[0.686,0.398],[0.66,0.4],[0.64,0.407],[0.633,0.417],[0.641,0.427],[0.662,0.434],[0.688,0.436],[0.714,0.432],[0.731,0.424],[0.737,0.417]]},
+       // beaver meadow channel west off the lower elbow; starts inside the
+       // stem, ends inside the pond
+     {kind:'ribbon',cs:[[0.325,0.768],[0.29,0.76],[0.252,0.754],[0.215,0.752]],hw:[0.03,0.026,0.026,0.03]},
+       // the hanging beaver pond on the west bench
+     {kind:'poly',pts:[[0.245,0.752],[0.228,0.741],[0.204,0.734],[0.176,0.731],[0.148,0.733],[0.124,0.74],[0.108,0.75],[0.112,0.761],[0.132,0.77],[0.158,0.776],[0.187,0.778],[0.214,0.774],[0.235,0.766],[0.246,0.758]]},
+       // canyon-mouth lake: smaller than the old basin and pinched by the
+       // walls; the stem enters the north shore, the outlet leaves the south;
+       // covers the bottom-entry spawn at (0.50,0.938)
+     {kind:'poly',pts:[[0.71,0.906],[0.688,0.894],[0.652,0.885],[0.604,0.879],[0.548,0.876],[0.49,0.875],[0.432,0.877],[0.378,0.882],[0.334,0.89],[0.304,0.9],[0.292,0.912],[0.303,0.924],[0.332,0.935],[0.376,0.944],[0.43,0.951],[0.49,0.954],[0.55,0.953],[0.607,0.948],[0.655,0.94],[0.69,0.929],[0.708,0.917]]},
+       // lake outlet to the bottom travel gate
+     {kind:'ribbon',cs:[[0.52,0.94],[0.522,0.964],[0.52,0.987]],hw:[0.032,0.03,0.03]},
+  ],islands:[{cx:0.6,cy:0.916,rx:0.026,ry:0.008,rot:0.3},{cx:0.385,cy:0.912,rx:0.02,ry:0.007,rot:-0.15}]},
 };
 // Spots that belong AGAINST the bank and must not be nudged into open water:
 // a dam spans the shore, a dock runs out from it, an undercut IS the bank.
@@ -9221,7 +9260,9 @@ const LAND_PAL={
   midwest:  {soil:'#7c8449',soil2:'#69713c',grass:'#8d9553',rock:'#928f81',sand:'#cdc08e',tree:['#33652f','#3f7a3a','#2a5427'],trunk:'#5b4229'},
   southern: {soil:'#7b854e',soil2:'#666f40',grass:'#8a9457',rock:'#8a8774',sand:'#c8bc8e',tree:['#2c5738','#376a42','#24472e'],trunk:'#54432c'},
   northern: {soil:'#6a7150',soil2:'#575d42',grass:'#767e58',rock:'#8d8d8a',sand:'#c2bb9a',tree:['#274c37','#316043','#1e3d2c'],trunk:'#4f3f2a'},
-  mountains:{soil:'#6a6f5c',soil2:'#585d4c',grass:'#74795e',rock:'#8b8f92',sand:'#b9b7a4',tree:['#2b4a3a','#356048','#223d30'],trunk:'#4e4030'},
+  // V0.9.8.4: dry canyon tans + strata browns, deliberately far from the
+  // Northern's boreal grey-green. cliff/cliff2 feed drawCliff/drawTalus.
+  mountains:{soil:'#8a7c60',soil2:'#6f634c',grass:'#84815c',rock:'#93887a',sand:'#c6b391',tree:['#2e4a38','#3a5f46','#26402e'],trunk:'#52402c',cliff:'#7e7263',cliff2:'#61584a'},
 };
 // A shade of THIS region's water, lightened or darkened. Bottom features drawn
 // with a hard-coded blue read as painted-on stripes in a green reservoir or a
@@ -9291,10 +9332,78 @@ function drawLandProps(t, sky, sparse){
       else drawPalmetto(px, py,(9+r*8)*sc, P, dk);
       continue;
     }
+    // Canyon country (V0.9.8.4): rock walls crowd the river — any cell within
+    // about a grid-step of water draws cliff or talus, and the conifers hang
+    // back on the benches. This near-water test is what makes the gorge read
+    // as a gorge: the walls follow every bend of the new slot-canyon shape.
+    if(rid==='mountains'&&!sparse){
+      if(_canyonNear(cx, cy, G, wp)){
+        if(k<0.66)drawCliff(px, py,(13+r*13)*sc, P, dk, cx*7+cy, winter);
+        else drawTalus(px, py,(8+r*8)*sc, P, dk, cx+cy*3, winter);
+      }
+      else if(k<0.34)drawConifer(px, py,(13+r*12)*sc, P, dk, t, cx+cy, winter);
+      else if(k<0.56)drawBoulder(px, py,(7+r*9)*sc, P, dk, winter);
+      else if(k<0.74)drawCliff(px, py,(9+r*9)*sc, P, dk, cx*7+cy, winter);
+      else drawScrub(px, py,(7+r*8)*sc, P, dk, winter);
+      continue;
+    }
     if(k<0.60)drawConifer(px, py,(15+r*14)*sc, P, dk, t, cx+cy, winter);
     else if(k<0.80)drawBoulder(px, py,(7+r*10)*sc, P, dk, winter);
     else drawScrub(px, py,(8+r*9)*sc, P, dk, winter);
   }
+}
+// Is this grid cell hard against the water? Cached forever per zone+cell —
+// the shape is static, so each cell pays for its eight point-in-path samples
+// exactly once, not per frame.
+const _canyonCell={};
+function _canyonNear(cx, cy, G, wp){
+  const key=S.zone+':'+cx+':'+cy;
+  const hit=_canyonCell[key];
+  if(hit!==undefined)return hit;
+  const x=cx*G+G*0.5, y=cy*G+G*0.5;
+  let near=false;
+  for(let a=0;a<8&&!near;a++){
+    const ang=a*0.785;
+    if(_inPathWorld(wp, x+Math.cos(ang)*G*1.15, y+Math.sin(ang)*G*1.15))near=true;
+  }
+  return _canyonCell[key]=near;
+}
+// A canyon wall block: an angular strata slab following the ground-prop idiom
+// (shadow -> body -> strata -> lit rim -> winter dusting -> night shade).
+// Overlapping the channel is intentional: the water fill paints after the land
+// pass and trims the slab at the shoreline, so walls drop straight into the
+// river.
+function drawCliff(x, y, r, P, dk, seed, winter){
+  const jj=_lh(seed*1.3, seed*0.7), lean=(jj-0.5)*0.5;
+  ctx.save();ctx.translate(x, y);ctx.rotate(lean);
+  ctx.fillStyle='rgba(16,22,20,.25)';
+  ctx.beginPath();ctx.ellipse(r*0.22, r*0.62, r*1.25, r*0.44,0,0,6.28);ctx.fill();
+  ctx.fillStyle=P.cliff||P.rock;
+  ctx.beginPath();
+  ctx.moveTo(-r*1.15, r*0.5);ctx.lineTo(-r*0.9,-r*0.55);ctx.lineTo(-r*0.25,-r*0.8);
+  ctx.lineTo(r*0.5,-r*0.62);ctx.lineTo(r*1.1,-r*0.1);ctx.lineTo(r, r*0.55);ctx.closePath();ctx.fill();
+  ctx.strokeStyle=P.cliff2||P.soil2;ctx.lineWidth=Math.max(1.2, r*0.11);
+  ctx.beginPath();ctx.moveTo(-r, r*0.08);ctx.lineTo(r, r*0.02);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(-r*0.95,-r*0.28);ctx.lineTo(r*0.85,-r*0.3);ctx.stroke();
+  ctx.fillStyle=winter?'rgba(240,248,252,.82)':'rgba(255,252,240,.20)';
+  ctx.beginPath();ctx.moveTo(-r*0.9,-r*0.55);ctx.lineTo(-r*0.25,-r*0.8);ctx.lineTo(r*0.5,-r*0.62);
+  ctx.lineTo(r*0.42,-r*0.45);ctx.lineTo(-r*0.7,-r*0.4);ctx.closePath();ctx.fill();
+  if(dk>0.35){ctx.fillStyle='rgba(8,16,30,'+(dk*0.42)+')';
+    ctx.beginPath();ctx.ellipse(0,0,r*1.2,r*0.8,0,0,6.28);ctx.fill();}
+  ctx.restore();
+}
+// A scree fan spilling toward the water.
+function drawTalus(x, y, r, P, dk, seed, winter){
+  for(let i=0;i<6;i++){
+    const a=_lh(seed+i, i*2.7), b=_lh(i*3.1, seed-i);
+    const sx=x+(a-0.5)*r*2.4, sy=y+(b-0.35)*r*1.6, sr=r*(0.22+a*0.3);
+    ctx.fillStyle=i%2?(P.cliff2||P.soil2):P.rock;
+    ctx.beginPath();ctx.ellipse(sx, sy, sr, sr*0.74, a*3,0,6.28);ctx.fill();
+    if(winter&&i%3===0){ctx.fillStyle='rgba(242,250,254,.75)';
+      ctx.beginPath();ctx.ellipse(sx-sr*0.2, sy-sr*0.3, sr*0.6, sr*0.3, a*3,0,6.28);ctx.fill();}
+  }
+  if(dk>0.35){ctx.fillStyle='rgba(8,16,30,'+(dk*0.35)+')';
+    ctx.beginPath();ctx.ellipse(x, y, r*1.3, r*0.9,0,0,6.28);ctx.fill();}
 }
 function drawConifer(x, y, h, P, dk, t, seed, winter){
   const sway=Math.sin(t*0.6+seed)*0.7;
@@ -10530,12 +10639,20 @@ const REGION_SCENERY={
     {k:'pine',    xF:.90,yF:.80},{k:'cabin',  xF:.16,yF:.88},
     {k:'loon',    xF:.70,yF:.66},
   ],
+  // V0.9.8.4: a serrated rim chain down BOTH flanks, not three lonely peaks
+  // at the top edge — the river should always read as running between
+  // mountains. 'bigpeak' is _scPeak drawn half again as large.
   mountains:[
-    {k:'peak',    xF:.18,yF:.04},{k:'peak',   xF:.52,yF:.02},
-    {k:'peak',    xF:.84,yF:.06},{k:'spruce', xF:.06,yF:.30},
-    {k:'spruce',  xF:.94,yF:.40},{k:'boulder',xF:.28,yF:.58},
-    {k:'spruce',  xF:.10,yF:.72},{k:'elk',    xF:.72,yF:.52},
-    {k:'boulder', xF:.86,yF:.78},{k:'spruce', xF:.40,yF:.90},
+    {k:'bigpeak', xF:.08,yF:.025},{k:'peak',   xF:.20,yF:.045},
+    {k:'bigpeak', xF:.33,yF:.02},{k:'peak',    xF:.68,yF:.05},
+    {k:'bigpeak', xF:.86,yF:.03},
+    {k:'peak',    xF:.06,yF:.22},{k:'bigpeak', xF:.94,yF:.18},
+    {k:'bigpeak', xF:.05,yF:.46},{k:'peak',    xF:.95,yF:.52},
+    {k:'peak',    xF:.06,yF:.66},{k:'bigpeak', xF:.94,yF:.72},
+    {k:'bigpeak', xF:.08,yF:.90},{k:'peak',    xF:.92,yF:.92},
+    {k:'spruce',  xF:.20,yF:.30},{k:'spruce',  xF:.78,yF:.62},
+    {k:'boulder', xF:.62,yF:.34},{k:'elk',     xF:.74,yF:.47},
+    {k:'spruce',  xF:.30,yF:.86},{k:'boulder', xF:.24,yF:.56},
   ],
 };
 // Small deterministic jitter so a prop is not pixel-identical to its twin.
@@ -10613,6 +10730,7 @@ function drawRegionScenery(t){
       case 'loon':     _scLoon(x,y,t,j);break;
       case 'cabin':    _scCabin(x,y,winter);break;
       case 'peak':     _scPeak(x,y,j);break;
+      case 'bigpeak':  _scPeak(x,y,j+1.7);break;
       case 'spruce':   _scSpruce(x,y,j,winter);break;
       case 'boulder':  _scBoulder(x,y,j,winter);break;
       case 'elk':      _scElk(x,y,t,j);break;
@@ -12199,6 +12317,13 @@ window.addEventListener('pointerup',function(e){
 canvas.addEventListener('click',e=>{
   // The cannon swallows the tap that fired it (and taps while armed) so it doesn't cast.
   if(_cannonArmed||Date.now()-(_cannonJustFired||0)<350)return;
+  // The fly loop owns the water while it is live. Pointer handlers can suppress
+  // compatibility mouse events but never the synthesized `click`, so the beat-1
+  // release that presents the fly lands here ~1ms later and — without this
+  // guard — fell into the phase==='waiting' reel-in below, corrupting the
+  // shared state under the drift: a perfectly timed set then did NOTHING
+  // (triggerBite bails when phase isn't 'waiting') while misses still spoke.
+  if(typeof flyPhase!=='undefined'&&flyPhase!=='idle')return;
   // V0.9: arming a tap-to-place item (snag/buoy),the next tap drops it anywhere.
   if(_placeItemMode){
     const rect=canvas.getBoundingClientRect();
@@ -12840,9 +12965,9 @@ function flyKind(){
   const l=activeLure();
   if(!l)return 'nymph';
   const n=(l.name||'').toLowerCase();
-  if(/popper|dry|adams|caddis|hopper|stimulator|drake|dun|spinner|elk/.test(n))return 'dry';
-  if(/streamer|clouser|sculpin|leech|bugger|minnow|zonker|muddler/.test(n))return 'streamer';
-  if(/soft.?hackle|wet|swing|emerger/.test(n))return 'wet';
+  if(/popper|dry|adams|caddis|hopper|beetle|stimulator|drake|dun|spinner|elk/.test(n))return 'dry';
+  if(/streamer|clouser|sculpin|leech|bugger|minnow|zonker|muddler|mouse/.test(n))return 'streamer';
+  if(/soft.?hackle|wet|swing|emerger|glo.?bug|egg/.test(n))return 'wet';
   return 'nymph';
 }
 // ---- Beat 1 rendering -------------------------------------------------------
@@ -12951,21 +13076,33 @@ function flyLoop(){
     }
     flyLastT=now;
   }else if(flyPhase==='drift'||flyPhase==='take'){
-    flyLastT=0;
+    // Real dt, not a per-frame constant: on a 120 Hz display the old /60 tick
+    // doubled the drag rate and halved every drift.
+    const dtF=(flyLastT&&now>flyLastT)?Math.min(0.1,(now-flyLastT)/1000):1/60;
+    flyLastT=now;
     if(meter)meter.classList.add('drift');
     if(flyPhase==='drift'){
-      flyDrag=Math.min(100, flyDrag+FLY_DRAG_PER_SEC/60);
+      flyDrag=Math.min(100, flyDrag+FLY_DRAG_PER_SEC*dtF);
       if(fill)fill.style.width=flyDrag+'%';
       // The fly swings downstream as drag builds, which is what kills the drift.
-      if(bobber&&bobber.active)bobber.y+=0.18+flyDrag*0.012;
+      if(bobber&&bobber.active)bobber.y+=(10.8+flyDrag*0.72)*dtF;
       if(flyDrag>=100){flyEndDrift('The fly dragged across the seam and the lie went quiet.');return;}
       if(now>=flyTakeAt&&flyTakeAt>0)flyTheTake();
       else if(now>=flyDriftEnd){flyEndDrift('The drift ran out. Pick it up and cast again.');return;}
     }else{
       // In the take window the meter shows the closing window, not drag.
       const spec=flySetSpec, since=now-flyTakeAt;
+      // A strip-set resolves DURING the hold. The button says "hold", so the
+      // window must not expire out from under an obedient finger: once the
+      // press has been held 220ms and the window is open, judge it here —
+      // waiting for the release let the hi+260 expiry force-fail the player.
+      if(spec.hold&&flyHoldSet&&now-flyHoldSet>=220&&since>=spec.lo){
+        if(flyHoldSet-flyTakeAt<=spec.hi){flyStripComplete();}
+        else{flyMissedSet('Too slow — it spat the fly.');}
+        return;
+      }
       if(fill)fill.style.width=Math.max(0,100-100*since/(spec.hi+260))+'%';
-      if(since>spec.hi+260){flyMissedSet();return;}
+      if(since>spec.hi+260&&!(spec.hold&&flyHoldSet)){flyMissedSet();return;}
     }
   }
   flyAnim=requestAnimationFrame(flyLoop);
@@ -13089,6 +13226,15 @@ function flyResolveSet(){
                            :'Too slow — it spat the fly.';
     flyMissedSet(why);
   }
+}
+// The success half of a held strip-set, fired from the rAF loop once the press
+// has been held long enough inside the window — mirrors flyResolveSet's ok
+// branch. The press moment was already judged by the caller.
+function flyStripComplete(){
+  if(flyPhase!=='take')return;
+  if(poolNow().strength<=0){flyEndDrift('You came tight on nothing — the fly pulled free.');return;}
+  flyFinish();
+  triggerBite();
 }
 function flyMissedSet(why){
   S.misses=(S.misses||0)+1;
@@ -13658,7 +13804,7 @@ function endSdewGame(success){
   if(!success){offerSdewRetry();return;}
   const f=hookedFish, w=hookW;
   // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
-  if(f.rarity==='ultra'&&!ultraGearOK()){snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');return;}
+  if(f.rarity==='ultra'&&!ultraGearOK()){snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... '+ultraNeedLabel());return;}
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f, w)>curReel().drag){snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(!f.surf&&f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<.72){snap(f, w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
@@ -13914,7 +14060,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   // During the tutorial catch, the fish always lands once you hit the green.
   if(!(tut&&tut.forceTargetActive)){
   // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
-  if(f.rarity==='ultra'&&!ultraGearOK()){return snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... An Ultra Legendary needs the Big-Game reel and 130 lb braid.');}
+  if(f.rarity==='ultra'&&!ultraGearOK()){return snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... '+ultraNeedLabel());}
   // drag ceiling: fish stronger than the reel's drag rating snaps automatically
   if(fightStrength(f, w)>curReel().drag){return snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
@@ -13928,7 +14074,29 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
 });
 
 // Ultra Legendary fish can only be landed with the top-tier reel + 130 lb braid.
-function ultraGearOK(){return S.reel==='reel4'&&curBraid().line>=130;}
+// Saltwater: the Big-Game reel + 130 lb braid, as ever. Freshwater (V0.9.8.4):
+// the old check read the raw saltwater reel slot and demanded line no
+// freshwater shop sells, so all three freshwater ultras snapped 100% of the
+// time. The freshwater bar is "the best of what THIS region sells, in the
+// kind you are fishing" — a fly-caught ultra wants the top fly line and fly
+// reel, a bottom-caught one the top conventional pair. Always satisfiable by
+// construction, never trivial.
+function ultraGearOK(){
+  if(isFresh()){
+    const b=curBraid(), r=curReel();
+    const bs=forHere(BRAIDS).filter(function(x){return !x.fly===!b.fly;});
+    const rs=forHere(REELS).filter(function(x){return !x.fly===!r.fly;});
+    const topLine=bs.length?Math.max.apply(null, bs.map(function(x){return x.line;})):0;
+    const topDrag=rs.length?Math.max.apply(null, rs.map(function(x){return x.drag;})):0;
+    return b.line>=topLine&&r.drag>=topDrag;
+  }
+  return S.reel==='reel4'&&curBraid().line>=130;
+}
+// The ultra snap message has to name gear the player can actually buy here.
+function ultraNeedLabel(){
+  return isFresh()?'An Ultra Legendary needs the heaviest line and strongest reel this region sells.'
+                  :'An Ultra Legendary needs the Big-Game reel and 130 lb braid.';
+}
 // Surf fishing gate: Big-Game reel + Bluewater rod (or Chainsaw) + 130 lb braid.
 function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||S.rod==='chainsaw')&&curBraid().line>=130;}
 function surfHookOK(){return S.surfHook||S.toothHook;}
@@ -14441,13 +14609,22 @@ function refreshMenu(){renderLogbook();renderShop();renderStats();renderTourname
 
 function renderLogbook(){
   let html='';
-  const fishCard=(f, showLock)=>{const c=S.caught[f.id]||0,caught=c>0;
+  // Three uncaught treatments (V0.9.8.4): a LOCKED zone shows a padlock; a
+  // reachable FRESHWATER fish keeps its question marks until it is actually
+  // caught (mystery=true \u2014 entering a region must not reveal the roster, which
+  // is what "the fish lost their question marks and turned into shadows"
+  // reported); a reachable SALTWATER fish still shows the named silhouette,
+  // because the onboarding tutorial sends new players to find the Sheepshead
+  // by name in the zone-0 grid.
+  const fishCard=(f, showLock, mystery)=>{const c=S.caught[f.id]||0,caught=c>0;
     let icon;
     if(showLock)icon='<span style="opacity:.4">'+svgIcon('lock',18)+'</span>';
     else if(caught)icon=buildFishArt(f.id,40,false);
+    else if(mystery)icon='<span style="font-family:Fredoka;font-weight:600;font-size:24px;color:var(--text-soft);opacity:.55;">?</span>';
     // Not yet caught: show a dark outline/silhouette of the fish, not its colours.
     else icon='<span style="filter:brightness(0) opacity(.42);display:inline-block;line-height:0;">'+buildFishArt(f.id,40,false)+'</span>';
-    return '<div class="fish-card '+(caught?'caught':'')+' '+(showLock?'locked':'')+' '+(f.rarity==='ultra'?'ultra':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(showLock?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
+    const hideName=showLock||(mystery&&!caught);
+    return '<div class="fish-card '+(caught?'caught':'')+' '+(hideName?'locked':'')+' '+(f.rarity==='ultra'?'ultra':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(hideName?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
   };
   // Fish are listed chronologically, in the order a player works up to them:
   // common first, on through to the ultra legendaries.
@@ -14468,7 +14645,7 @@ function renderLogbook(){
       if(!zfish.length)return;
       const zlock=zi>wmax;
       html+='<div class="zone-head">'+z.name+' <small>'+z.sub+' \u00b7 '+z.depth+'</small></div><div class="fish-grid">';
-      html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
+      html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0), wid==='fresh')).join('')+'</div>';
     });
   });
   // Through the ice: the Alaska and Northern hard-water rosters. These are real
@@ -14477,7 +14654,7 @@ function renderLogbook(){
   const iceFish=(_logWorld==='fresh')?FISH.filter(f=>f.ice).slice().sort(byProgress):[];
   if(iceFish.length){
     html+='<div class="zone-head">Through the Ice <small>Hard water \u00b7 drilled from the Northern lakes &amp; the Alaska range</small></div><div class="fish-grid">';
-    html+=iceFish.map(f=>fishCard(f, false)).join('')+'</div>';
+    html+=iceFish.map(f=>fishCard(f, false, true)).join('')+'</div>';
   }
   // Surf: beach sharks, caught only from the inshore surf. Saltwater only.
   const surfFish=(_logWorld==='salt')?FISH.filter(f=>f.surf).slice().sort(byProgress):[];
@@ -14496,8 +14673,9 @@ function renderLogbook(){
   document.getElementById('species-total').textContent=_inWorld.length;
 }
 
-// Boats, rods and reels must be purchased in order. Returns the name of the
-// previous required tier if the current one is gated by progression, else null.
+// Boats, rods, reels — and, since V0.9.8.4, lines — must be purchased in
+// order. Returns the name of the previous required tier if the current one is
+// gated by progression, else null.
 //
 // The ladder is per WORLD, per REGION in freshwater, and skips ultra-reward
 // gear. All three matter: BOATS/RODS/REELS are single flat arrays with the
@@ -14510,14 +14688,23 @@ function renderLogbook(){
 // down, where the Southern Cane Pole would have inherited the last MIDWEST rod.
 // Each region's first tier lands at index 0 with no prerequisite, and dropping
 // reward items keeps unbuyable gear out of the chain entirely.
+//
+// V0.9.8.4: fly gear is its OWN ladder, split from the host region's. The fly
+// rod/reel/line are dual-stocked at the Northern outfitter (regions:
+// ['northern','mountains'], the V0.9.8.3 deadlock fix) and were being chained
+// onto the tail of the Northern trolling run — the lvl-5 620-cash fly rod
+// demanded the lvl-10 4200-cash Downrigger first, which walled the Mountains
+// behind topping out the Northern and made the shop read as two merged combo
+// sets. Split by kind, the fly pieces ladder among themselves (5wt before
+// 8wt) and the spin ladders stay clean of them.
 function prereqLocked(kind, item){
-  const map={boat:[BOATS, S.ownedBoats],rod:[RODS, S.ownedRods],reel:[REELS, S.ownedReels]};
+  const map={boat:[BOATS, S.ownedBoats],rod:[RODS, S.ownedRods],reel:[REELS, S.ownedReels],braid:[BRAIDS, S.ownedBraids]};
   const entry=map[kind];if(!entry)return null;
   const owned=entry[1];
   const iw=item.world||'salt';
   let ladder=forWorld(entry[0], iw);
   if(iw==='fresh'){const rid=itemRegions(item)[0];ladder=ladder.filter(function(it){return itemInRegion(it, rid);});}
-  ladder=ladder.filter(function(it){return !it.reward;});
+  ladder=ladder.filter(function(it){return !it.reward&&!it.fly===!item.fly;});
   const idx=ladder.indexOf(item);
   if(idx<=0)return null;
   const prev=ladder[idx-1];
@@ -14530,6 +14717,20 @@ function prereqLocked(kind, item){
 // const, or every price in the freshwater shop renders a gold coin.
 function coinIcon(){
   return '<span class="'+(isFresh()?'cash-s':'coin-s')+'" style="width:12px;height:12px;vertical-align:-1px;margin-right:3px;"></span>';
+}
+// Combo leaves: the region's spin ladder first, then any fly gear under its
+// own header. Fly gear became a separate purchase ladder in V0.9.8.4, and at
+// the Northern outfitter the fly kit is guest stock for the Mountains — mixed
+// inline it read as "two sets of combos" chained into one another.
+function comboRows(rows, render){
+  const spin=rows.filter(function(r){return !r.fly;}), fly=rows.filter(function(r){return r.fly;});
+  let html=spin.map(render).join('');
+  if(fly.length){
+    html+='<div style="margin:10px 2px 5px;font-size:11px;font-weight:800;letter-spacing:.4px;color:var(--text-soft);">'
+      +(curRegionId()==='mountains'?'THE FLY COMBO':'FLY GEAR \u00b7 opens the Mountains \u2014 kit up before the trailhead')+'</div>';
+    html+=fly.map(render).join('');
+  }
+  return html;
 }
 function shopRow(item, kind, owned, equipped, extra, swatch){
   const canAfford=coinCanAfford(item.cost), meetsLvl=S.level>=item.lvl;
@@ -14612,9 +14813,9 @@ function renderShop(){
     const cust=(S.ownedBoats.includes(b.id)&&skinsForBase(b.id).length)?'<div style="text-align:right;margin:-9px 2px 9px;">'+customizeBtn(b.id)+'</div>':'';
     return row+cust;
   }).join('');}
-  else if(leaf==='rods')html=forHere(RODS).map(r=>shopRow(r,'rod',S.ownedRods.includes(r.id),gearGet('rod')===r.id,r.fly?' \u00b7 half the fly combo':'',true)).join('');
-  else if(leaf==='reels')html=forHere(REELS).map(r=>shopRow(r,'reel',S.ownedReels.includes(r.id),gearGet('reel')===r.id,' · '+r.drag+' lb drag'+(r.fly?' \u00b7 half the fly combo':''),true)).join('');
-  else if(leaf==='braid')html=forHere(BRAIDS).map(b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),gearGet('braid')===b.id,' \u00b7 lands up to '+b.line+' lb class',true)).join('');
+  else if(leaf==='rods')html=comboRows(forHere(RODS), r=>shopRow(r,'rod',S.ownedRods.includes(r.id),gearGet('rod')===r.id,r.fly?' \u00b7 half the fly combo':'',true));
+  else if(leaf==='reels')html=comboRows(forHere(REELS), r=>shopRow(r,'reel',S.ownedReels.includes(r.id),gearGet('reel')===r.id,' · '+r.drag+' lb drag'+(r.fly?' \u00b7 half the fly combo':''),true));
+  else if(leaf==='braid')html=comboRows(forHere(BRAIDS), b=>shopRow(b,'braid',S.ownedBraids.includes(b.id),gearGet('braid')===b.id,' \u00b7 lands up to '+b.line+' lb class',true));
   else if(leaf==='tackle'){
     const tsel=shopSub.tackle;
     html=TACKLE.filter(function(t){
@@ -14991,7 +15192,10 @@ function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
   // Judge reachability against the fish's OWN world, not whichever one we're
   // standing in — otherwise every freshwater fish reads as locked from the coast.
-  const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZoneIn(worldOf(f.zone)))return;
+  // Uncaught freshwater fish keep their mystery: the card says '? ? ?', so the
+  // modal must not open and print the real name (saltwater keeps the preview —
+  // the tutorial depends on looking a fish up before catching it).
+  const caught=(S.caught[f.id]||0)>0;if(!caught&&(f.zone>maxZoneIn(worldOf(f.zone))||worldOf(f.zone)==='fresh'))return;
   const seasons=f.season.includes('all')?'Year-round':f.season.map(s=>SEASON_LABEL[s]).join(', ');
   const times=f.time.includes('all')?'Any time':f.time.map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(', ');
   document.getElementById('modal').innerHTML=
