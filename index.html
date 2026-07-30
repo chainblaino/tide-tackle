@@ -9107,13 +9107,12 @@ function gateBlockReason(tz){
   if(req&&req.check&&!req.check())return 'Need '+req.label+' for '+ZONE_LBL[tz];
   if(req&&req.extra&&req.extra.check&&!req.extra.check())return 'Need '+req.extra.label+' for '+ZONE_LBL[tz];
   if(w==='fresh'){
-    // Craft are region-scoped: what matters is owning one for the DESTINATION.
-    const rid=regionIdOf(tz);
-    const owned=BOATS.some(function(x){return x.world==='fresh'&&itemInRegion(x, rid)&&(S.ownedBoats||[]).indexOf(x.id)>=0;});
-    if(!owned){
-      const need=BOATS.find(function(x){return x.world==='fresh'&&itemInRegion(x, rid);});
-      return 'Need the '+(need?need.name:'local craft')+' for '+ZONE_LBL[tz];
-    }
+    // The LICENCE is the wall, not the boat. Requiring a craft for the
+    // destination was unsatisfiable once regions started empty in V0.9.8.3:
+    // a region's boats are only sold while you are standing in that region, so
+    // "need the Levee Walk for Southern" could never be cleared from outside it.
+    // You arrive with nothing and buy the rig there — which is the point — and
+    // the empty rig bar is what stops you fishing until you do.
     return '';
   }
   const b=BOATS.find(function(x){return x.id===S.boat;});
