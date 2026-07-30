@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.4</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.5</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -206,7 +206,6 @@
   .cash-s{width:17px;height:12px;background:linear-gradient(160deg,#8fd6a4,#3f9e63 60%,#2f7d4c);border-radius:2.5px;border:1.5px solid #266b41;display:inline-block;vertical-align:-1px;position:relative;}
   .cash-s::after{content:"";position:absolute;inset:2.5px 3px;border-radius:1px;border:1px solid rgba(255,255,255,.55);}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
-  .pearl-s{width:13px;height:13px;border-radius:50%;display:inline-block;vertical-align:-2px;background:radial-gradient(circle at 34% 30%,#ffffff,#eaf6fb 42%,#a8c9da 100%);border:1.5px solid #dcecf4;box-shadow:0 0 5px rgba(168,201,218,.7);}
 
   /* drive controls (open world) */
   .drive-controls{position:absolute;left:14px;bottom:16px;display:flex;align-items:flex-end;pointer-events:none;z-index:7;}
@@ -327,6 +326,12 @@
   .catch-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#34c2a8,#34c2a8 6px,#2aa890 6px,#2aa890 12px);border-left:2px solid #1f7a6d;border-right:2px solid #1f7a6d;}
   .catch-bullseye{position:absolute;top:0;height:100%;background:#ffd400;box-shadow:inset 0 0 0 1px #d6ad00;pointer-events:none;}
   .catch-ind{position:absolute;top:-2px;width:5px;height:calc(100% + 4px);background:var(--accent-dark);border-radius:3px;box-shadow:0 0 6px rgba(196,111,40,.7);z-index:2;}
+  /* Shared timing bar (V0.9.8.5): a stationary target band and a sweeping
+     indicator. Used by the fly MEND and by Midwest SNAGGING — same input,
+     two names — so both read identically to the catch track above. */
+  .tbar{position:relative;height:20px;margin-top:7px;border-radius:8px;background:linear-gradient(180deg,#bfe0ec,#93c9da);border:2px solid var(--sea);overflow:hidden;display:none;}
+  .tbar.show{display:block;}
+  .tbar-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#ffd400,#ffd400 6px,#e8bf00 6px,#e8bf00 12px);border-left:2px solid #b89400;border-right:2px solid #b89400;pointer-events:none;}
   .reel-btn{width:100%;margin-top:9px;padding:10px;font-family:'Fredoka';font-size:16px;font-weight:600;color:#fff;background:var(--accent);border:2px solid var(--accent-dark);border-radius:11px;box-shadow:0 4px 0 var(--accent-dark);cursor:pointer;}
   .reel-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-dark);}
 
@@ -835,12 +840,6 @@
            saltwater, green note in freshwater. The two wallets never mix. -->
       <div class="pill" id="coin-pill"><span class="coin-s" id="coin-icon"></span> <span id="gold-pill">0</span></div>
       <div class="pill" id="rubies-pill" title="Rubies, won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
-      <!-- Pearls deliberately have NO HUD pill: the top bar was too crowded, and
-           pearls are only ever spent in two places (the skin chooser and a
-           competitive lobby's wager). Both of those screens show the balance
-           themselves, so it is surfaced exactly where it is needed instead of
-           taking up permanent space up here. updatePills() stays null-safe on
-           #pearls-count so nothing breaks by its absence. -->
       <div class="pill click clancy-pill" id="clancy-pill" onclick="openClancyInfo()" title="Ask Captain Clancy"><span class="clancy-face" id="clancy-face"></span></div>
     </div>
     </div>
@@ -860,9 +859,22 @@
     <div class="status-banner" id="status">Drive with the joystick. Reach a structure, then drop anchor to fish.</div>
 
     <!-- Fly fishing (V0.9.8): its own three-beat loop, not the catch-track bar. -->
+    <!-- Snagging (V0.9.8.5): the Midwest paddlefish loop. Same timing bar as
+         the fly mend, its own panel so the copy can talk about ripping. -->
+    <div class="fly-game" id="snag-game">
+      <div class="fly-hint" id="snag-hint">Rip the treble through the school \u2014 hit the yellow band.</div>
+      <div class="tbar show" id="snag-bar"><div class="tbar-zone" id="snag-zone"></div><div class="catch-ind" id="snag-ind"></div></div>
+      <div class="fly-stats"><span id="snag-sweeps">0 sweeps</span><span id="snag-feel"></span></div>
+      <div class="fly-row">
+        <button class="fly-btn primary" id="snag-main">Rip</button>
+        <button class="fly-btn" id="snag-alt">Reel In</button>
+      </div>
+    </div>
+
     <div class="fly-game" id="fly-game">
       <div class="fly-hint" id="fly-hint">Press and follow the green loop with your finger.</div>
       <div class="fly-meter"><div class="fly-band" id="fly-band"></div><div class="fly-fill" id="fly-fill"></div></div>
+      <div class="tbar" id="fly-mendbar"><div class="tbar-zone" id="fly-mendzone"></div><div class="catch-ind" id="fly-mendind"></div></div>
       <div class="fly-stats"><span id="fly-line">0 ft of line</span><span id="fly-loops"></span></div>
       <div class="fly-row">
         <button class="fly-btn primary" id="fly-main">Present</button>
@@ -936,7 +948,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.4</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.5</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1028,7 +1040,7 @@
   <div class="ws-card">
     <div class="ws-x" onclick="closeWorldSwap()">&times;</div>
     <div class="ws-h">Change Waters</div>
-    <div class="ws-sub">Your boats, rods, tackle and bait stay in the world they belong to. Gold, rubies, pearls, your logbook and your level follow you everywhere.</div>
+    <div class="ws-sub">Your boats, rods, tackle and bait stay in the world they belong to. Gold, rubies, your logbook and your level follow you everywhere.</div>
     <div class="ws-pair" id="ws-pair"></div>
     <div class="ws-why" id="ws-why"></div>
     <button class="ws-go" id="ws-go" onclick="confirmWorldSwap()">Head to the Freshwater</button>
@@ -1713,27 +1725,38 @@ function _equipCardCss(eq){return 'display:flex;align-items:center;gap:10px;padd
 function renderEquipSections(){
   const head=function(t,sub){return '<div style="font-size:13px;font-weight:800;color:var(--wood-dark);margin:16px 0 4px;">'+t+'</div><div style="font-size:11px;color:var(--text-soft);margin-bottom:9px;line-height:1.5;">'+sub+'</div>';};
   // ---- Pets ----
-  let pets=ownedPets();
-  let petHtml=head('Companions','Earned by Prestige. Only one pet floats with ye at a time, giving its buff.');
-  if(!pets.length){petHtml+='<div style="font-size:12px;color:var(--text-soft);padding:6px 2px;">No companions yet. Prestige to earn your first.</div>';}
-  else{
+  // Every companion is listed (V0.9.8.5), so you can see what there is to work
+  // toward; the ones you have not earned are greyed, unclickable and labelled
+  // with what earns them. ownedPets() is untouched — the buff logic still needs it.
+  const pets=PETS;
+  let petHtml=head('Companions','Earned by Prestige, and by landing certain Ultra Legendaries. Only one pet floats with ye at a time, giving its buff.');
+  {
     petHtml+='<div class="proj-equip" style="'+_equipCardCss(S.equippedPet==null)+'" onclick="equipPet(null)">'
       +'<span style="width:34px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--text-soft);">'+svgIcon('none',16)+'</span>'
       +'<span style="flex:1;"><b style="font-size:13px;">No pet</b></span>'
       +'<span style="font-size:11px;font-weight:800;color:'+(S.equippedPet==null?'var(--grass-dark)':'var(--text-soft)')+';">'+(S.equippedPet==null?'Selected':'Select')+'</span></div>';
     petHtml+=pets.map(function(p){
-      const eq=S.equippedPet===p.id;
+      const own=petOwned(p.id);
+      const eq=own&&S.equippedPet===p.id;
       // The Golden Trout is a timed burst, so its row reports the live state:
       // glowing while running, counting down while resting.
       let state='', glow='';
-      if(p.id==='goldentrout'){
+      if(own&&p.id==='goldentrout'){
         const st=goldenState();
         if(st==='running'){state='<div style="font-size:10.5px;font-weight:800;color:#e0a93c;">Glowing — '+fmtDur(goldenMsLeft())+' left</div>';glow='box-shadow:0 0 0 2px #e0a93c, 0 0 12px rgba(224,169,60,.55);';}
         else if(st==='cooling')state='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);">Resting — ready in '+fmtDur(goldenMsLeft())+'</div>';
         else state='<div style="font-size:10.5px;font-weight:800;color:#1f9d57;">Ready — equip to start the 10 min run</div>';
       }
+      if(!own){
+        return '<div class="proj-equip" style="'+_equipCardCss(false)+'opacity:.55;cursor:default;">'
+          +'<span style="width:34px;height:24px;border-radius:4px;overflow:hidden;background:#f4f6f8;flex:none;position:relative;display:flex;align-items:center;justify-content:center;">'
+            +'<img src="'+petImgSrc(p.id)+'" alt="" style="width:100%;height:100%;object-fit:cover;filter:grayscale(1) brightness(.72);" onerror="this.style.display=\'none\'">'
+            +'<span style="position:absolute;opacity:.55;">'+svgIcon('lock',14)+'</span></span>'
+          +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div></span>'
+          +'<span class="shop-action lvl" style="font-size:11px;">'+petCriteria(p)+'</span></div>';
+      }
       return '<div class="proj-equip" style="'+_equipCardCss(eq)+glow+'" onclick="equipPet(\''+p.id+'\')">'
-        +'<span style="width:34px;height:24px;border-radius:4px;overflow:hidden;background:#f4f6f8;flex:none;"><img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover;"></span>'
+        +'<span style="width:34px;height:24px;border-radius:4px;overflow:hidden;background:#f4f6f8;flex:none;"><img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'"></span>'
         +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div>'+state+'</span>'
         +'<span style="font-size:11px;font-weight:800;color:'+(eq?'var(--grass-dark)':'var(--accent)')+';">'+(eq?'Equipped':'Equip')+'</span></div>';
     }).join('');
@@ -2365,8 +2388,8 @@ function renderMpLobbyList(){
   let h=slice.map(function(d){
     const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
     const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
-    const wag=(d.settings&&d.settings.wager)||0, gb=(d.settings&&d.settings.goldBuyIn)||0;
-    const stake=(wag?' · '+wag+' pearls':'')+(gb?' · '+(gb>=1000?(gb/1000)+'k':gb)+' gold':'');
+    const gb=(d.settings&&d.settings.goldBuyIn)||0;
+    const stake=(gb?' · '+(gb>=1000?(gb/1000)+'k':gb)+' gold':'');
     return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+stake+' · host '+(d.hostName||'Angler')+'</div></div>'
       +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
   }).join('');
@@ -2774,10 +2797,10 @@ function endTournament(){
   const _lob=isLobby?gameLobby:null;   // kept alive so everyone returns to the lobby
   // The standings snapshot (player + bots + real-player ghosts), already sorted.
   const entries=_finalStand.length?_finalStand:[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),isPlayer:true}];
-  // Tournaments pay placement prizes (gold + rubies + pearls); lobbies pay only
-  // the host-set PEARL wager pot, settled below. Pearls are the sole stakeable
-  // currency: see the CURRENCIES note, they are never purchasable, so staking
-  // them stays a game mechanic and not real-money gaming.
+  // Tournaments pay placement prizes (gold + rubies); lobbies pay their own
+  // house rewards plus the host-set GOLD buy-in pot, settled below. Gold is the
+  // only stakeable currency: see the CURRENCIES note — it cannot be bought, so
+  // staking it stays a game mechanic and not real-money gaming.
   const boost=def.alwaysOn?1.5:1;
   // Competitive lobbies pay their own fixed HOUSE placement rewards (rubies +
   // gold), but only when a real opponent turned up, so a solo lobby can't be
@@ -2785,7 +2808,6 @@ function endTournament(){
   const houseOk=isLobby&&entries.length>=2;
   const prizes=isLobby?(houseOk?LOBBY_RUBY_PRIZES:[0,0,0]):tournPrizes(def.rarity, boost);
   const goldPrizes=isLobby?(houseOk?LOBBY_GOLD_PRIZES:[0,0,0]):tournGoldPrizes(def.rarity, boost);
-  const pearlPrizes=isLobby?[0,0,0]:PEARL_PRIZES.map(function(p){return Math.round(p*boost);});
   const rank=entries.findIndex(function(e){return e.isPlayer;});
   // Did the player put up a real result? (a species in variety modes, a catch in classic)
   const playerHasResult=variety?((activeTournament.speciesCount||0)>0):((activeTournament.biggestWeight||0)>0);
@@ -2793,21 +2815,18 @@ function endTournament(){
   const placed=(rank>=0&&rank<3&&playerHasResult);
   let winnings=placed?prizes[rank]:0;   // rubies
   let goldWin=placed?goldPrizes[rank]:0;
-  let pearlWin=placed?pearlPrizes[rank]:0;
-  // Lobby winner (1st with a real result) scoops the whole ante pots. The pearl
-  // wager pot and the gold buy-in pot are both player-funded but earned-only, so
-  // winner-take-all carries no cash value. Rubies are NEVER pooled from players.
-  let pot=0, goldPot=0;
+  // Lobby winner (1st with a real result) scoops the whole ante pot. The gold
+  // buy-in is player-funded but earned-only, so winner-take-all carries no cash
+  // value. Rubies are NEVER pooled from players.
+  let goldPot=0;
   if(isLobby&&rank===0&&playerHasResult){
-    if((def.wager||0)>0)pot=(def.wager||0)*entries.length;
     if((def.goldBuyIn||0)>0)goldPot=(def.goldBuyIn||0)*entries.length;
   }
   // Lobby rubies pass through the daily cap; tournament rubies are uncapped.
   if(isLobby)winnings=grantLobbyRubies(winnings);
   const goldTotal=goldWin+goldPot;
-  if(winnings>0||goldTotal>0||pearlWin>0||pot>0){
+  if(winnings>0||goldTotal>0){
     S.rubies=(S.rubies||0)+winnings;
-    S.pearls=(S.pearls||0)+pearlWin+pot;
     S.gold=(S.gold||0)+goldTotal;S.goldEarned=(S.goldEarned||0)+goldTotal;
     updatePills();queueSave();
   }
@@ -2831,7 +2850,7 @@ function endTournament(){
         +"<span style=\"font-size:12px;color:var(--text-soft);white-space:nowrap;\">"+resTxt+"</span>"
         +prizeTag+"</div>";
     }).join("")
-    +(pot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#d61f3a;\">You won the pot! <span class=\"gem-s\"></span> +"+pot+" rubies</div>"
+    +(goldPot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#b8860b;\">You won the pot! <span class=\"coin-s\"></span> +"+goldPot+" gold</div>"
        :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
     +(isLobby
       ? "<div style=\"display:flex;gap:8px;margin-top:14px;\"><button onclick=\"returnToLobbyRoom()\" style=\"flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Back to lobby</button><button onclick=\"leaveLobbyFromResults()\" style=\"flex:1;padding:11px;border-radius:10px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;\">Leave lobby</button></div>"
@@ -3176,7 +3195,7 @@ function _showChallengeResults(sess, ranked, stake, pot, winner, iWon){
 // competitive bounty / tournament / limited-casts match) and clicks Open; anyone
 // can browse open lobbies and join; the host starts when ready (10s countdown).
 // ─────────────────────────────────────────────────────────────
-const LOBBY_MAX=25, WAGER_MAX=50;
+const LOBBY_MAX=25;
 // Lobbies ride in the existing `challenges` collection (the brand-new `lobbies`
 // collection isn't covered by the Firestore security rules, so reads/writes there
 // silently fail and nothing shows up in Join). Lobby docs are tagged kind:'lobby'
@@ -3199,17 +3218,16 @@ function _lobbySummary(s){
   if(s.mode==='limited')bits.push(s.castLimit+' casts');
   bits.push((SEASON_LABEL[s.season]||s.season));
   if(s.timeLimitMin)bits.push(s.timeLimitMin+' min');
-  if(s.wager>0)bits.push(s.wager+' ruby wager');
   return bits.join(' · ');
 }
 // ── Create Lobby form ──
 function openCreateLobby(){
   if(!requireOnlineForLobby())return;
   _lobbyDraft={name:'', type:'competitive', mode:'bounty', zone:S.zone||0, targetFishId:null,
-    season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, wager:0, goldBuyIn:0, castLimit:10};
+    season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, goldBuyIn:0, castLimit:10};
   _renderLobbyForm();
 }
-function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='wager'||k==='goldBuyIn'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
+function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='goldBuyIn'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
   if(k==='zone')_lobbyDraft.targetFishId=null; _renderLobbyForm(); }
 function lobbyToggle(k){ if(!_lobbyDraft)return; _lobbyDraft[k]=!_lobbyDraft[k]; _renderLobbyForm(); }
 function _lchip(label, on, set){return '<button onclick="'+set+'" style="padding:8px 14px;border-radius:11px;border:none;background:'+(on?'var(--accent)':'var(--parchment)')+';color:'+(on?'#fff':'var(--ink)')+';font-family:Fredoka;font-weight:700;font-size:12.5px;cursor:pointer;'+(on?'box-shadow:0 2px 8px rgba(234,148,64,.34);':'')+'">'+label+'</button>';}
@@ -3241,9 +3259,6 @@ function _renderLobbyForm(){
   if(comp){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
-    // Balance shown inline: pearls have no HUD pill, and picking a wager you
-    // cannot cover is otherwise only caught by an error toast on Open.
-    h+='<div class="lob-lbl">Pearl wager (each) <span style="opacity:.75;font-weight:700;">· you have '+(S.pearls||0)+'</span></div><div class="lob-row">'+[0,5,10,25,50].map(function(w){return _lchip(w===0?'None':w+'',d.wager===w,"lobbySet('wager','"+w+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Gold buy-in (each)</div><div class="lob-row">'+GOLD_BUYIN_TIERS.map(function(g){return _lchip(g===0?'None':(g>=1000?(g/1000)+'k':g+''),d.goldBuyIn===g,"lobbySet('goldBuyIn','"+g+"')");}).join('')+'</div>';
   }
   h+='</div>';
@@ -3262,10 +3277,8 @@ function publishLobby(){
     targetFishId:(comp&&d.mode==='tournament')?d.targetFishId:null, season:d.season,
     size:Math.max(2,Math.min(LOBBY_MAX,d.size)), cannonsOn:(comp&&d.cannonsOn), cannonCount:d.cannonCount,
     timeLimitMin:(comp?d.timeLimitMin:0), shopOn:!!d.shopOn, mapsOn:!!d.mapsOn,
-    wager:(comp?Math.max(0,Math.min(WAGER_MAX,d.wager)):0),
     goldBuyIn:(comp&&GOLD_BUYIN_TIERS.indexOf(d.goldBuyIn)>=0)?d.goldBuyIn:0,
     castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
-  if(settings.wager>0&&(S.pearls||0)<settings.wager){toast('You need '+settings.wager+' pearls to host this wager — you have '+(S.pearls||0)+'.','#b3402a');return;}
   if(settings.goldBuyIn>0&&(S.gold||0)<settings.goldBuyIn){toast('You need '+settings.goldBuyIn+' gold to host this buy-in.','#b3402a');return;}
   const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
@@ -3414,8 +3427,6 @@ function joinLobby(id){
     if(data.status!=='open'){toast('That lobby already started.','#b58b53');return;}
     const cap=(data.settings&&data.settings.size)||25;
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
-    const w=(data.settings&&data.settings.wager)||0;
-    if(w>0&&(S.pearls||0)<w){toast('You need '+w+' pearls to join this wager — you have '+(S.pearls||0)+'.','#b3402a');return;}
     const gb=(data.settings&&data.settings.goldBuyIn)||0;
     if(gb>0&&(S.gold||0)<gb){toast('You need '+gb+' gold to join this buy-in.','#b3402a');return;}
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
@@ -3451,8 +3462,7 @@ function enterLobbyMatch(){
   if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
   const s=gameLobby.settings;
-  if(s.wager>0||s.goldBuyIn>0){
-    if(s.wager>0)S.pearls=Math.max(0,(S.pearls||0)-s.wager);
+  if(s.goldBuyIn>0){
     if(s.goldBuyIn>0)S.gold=Math.max(0,(S.gold||0)-s.goldBuyIn);
     updatePills();queueSave();
   }
@@ -3471,7 +3481,7 @@ function enterLobbyMatch(){
   const def={id:'lobby_'+gameLobby.id, name:gameLobby.name, zone:s.zone||0, rarity:fish?fish.rarity:'rare',
     targetFish:fish, bounty:(s.mode==='bounty'), limited:(s.mode==='limited'), castLimit:s.castLimit||10,
     season:s.season, maxP:s.size, cannonsOn:s.cannonsOn, cannonCount:s.cannonCount||0,
-    timeLimitMin:s.timeLimitMin||6, shopOn:s.shopOn, mapsOn:s.mapsOn, wager:s.wager||0, goldBuyIn:s.goldBuyIn||0,
+    timeLimitMin:s.timeLimitMin||6, shopOn:s.shopOn, mapsOn:s.mapsOn, goldBuyIn:s.goldBuyIn||0,
     lobby:true, lobbyId:gameLobby.id };
   if(s.mode==='bounty')def.bountyList=bountyDailyList(def.zone, strHash('lobby_'+gameLobby.id));
   activeSession={id:gameLobby.id, mode:s.mode, host:gameLobby.host, hostName:gameLobby.hostName, seed:gameLobby.seed, isHost:gameLobby.isHost, started:true, players:gameLobby.players, lobby:true, settings:s};
@@ -3776,7 +3786,7 @@ const METHODS=[
   // world as a whole. Midwest gets the full warmwater spread, the Southern
   // swamps lose trolling (no open water to pull through), the North adds ice,
   // and the Mountains drop bait-and-boat fishing entirely for stream tactics.
-  //   Midwest  (3): livebait, topwater, jig, bottom, troll
+  //   Midwest  (3): livebait, topwater, jig, bottom, troll, snagging
   //   Southern (4): livebait, topwater, jig, bottom
   //   Northern (5): livebait, topwater, jig, bottom, troll, ice
   //   Mountains(6): fly, spincast, still
@@ -3789,6 +3799,10 @@ const METHODS=[
   // first-person flasher instead of casting, exactly like the surf mode.
   {id:'ice',      name:'Ice fishing',cat:'fwjig',    bait:true,  zones:[5],     world:'fresh', ice:true,
    blurb:'Drill through and drop a jig down the hole. Northern region only, and only once the lakes lock up in winter.'},
+  // `snagging` carries neither bait nor lure: a bare treble is the whole rig.
+  // The `snag` flag is what tells poolNow and the cast gate to skip both.
+  {id:'snagging', name:'Snagging',   cat:'fwsnag',   bait:false, zones:[3],     world:'fresh', snag:true,
+   blurb:'A weighted treble ripped through a school of filter feeders. No bait, no lure \u2014 just the hook and your timing. The only way to take a paddlefish.'},
 ];
 // A method's TACKLE category depends on which world you're in: `bottom`, `troll`
 // and `jig` are the same technique in both worlds and keep one id (the fish
@@ -3853,6 +3867,7 @@ const TACKLE=[
   {id:'fwtrl_p', cat:'fwtroll',  name:'Lead Core & Dipsy Spread', icon:'tackle-lure',   cost:450, pack:3, dur:18, rare:1.35, lvl:7, desc:'Lead core line and diving discs put lures right on the thermocline.',regions:['midwest','northern'],world:'fresh',fixedCost:true},
   {id:'fwfly_b', cat:'fwfly',    name:'Tapered Leader & Tippet',  icon:'tackle-circle', cost:70,  pack:4, dur:7,  rare:1,    lvl:5, desc:'A 9 ft tapered leader and a spool of 4x tippet. The fly angler\u2019s terminal end.',regions:['mountains'],world:'fresh',fixedCost:true},
   {id:'fwfly_p', cat:'fwfly',    name:'Furled Leader & Fluoro Tippet',icon:'tackle-circle',cost:280,pack:4,dur:16,rare:1.3,  lvl:8, desc:'A hand-furled butt section turns over big streamers and still lands soft.',regions:['mountains'],world:'fresh',fixedCost:true},
+  {id:'fwsnag_b', cat:'fwsnag',   name:'Large Treble Hook',       icon:'tackle-hook', cost:210, pack:4, dur:10, rare:1.2, lvl:8, desc:'A weighted 8/0 treble on a heavy shank. Nothing to bait and nothing to tie on \u2014 you rip it through the school and hope it finds a shoulder.',regions:['midwest'],world:'fresh',fixedCost:true},
   {id:'iceauger', cat:'ice', name:'Hand Ice Auger', icon:'tackle-anchor', cost:700, pack:1, dur:9999, lvl:12, iceGear:true, desc:'A 8 in hand auger and a skimmer. The only way through hard water. One time buy.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
 ];
 
@@ -3972,8 +3987,8 @@ const LURES=[
   {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['topwater','troll'],baits:['minnow'],  targets:['northernpike','northernpike','muskie','browntrout'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
   {id:'fw_mtnspoon',   cat:'spoon',     zone:6,                    name:'Brass Wobbler Spoon',       icon:'reel',       cost:340,lvl:7, methods:['spincast'],    baits:['minnow'],  targets:['dollyvarden','bulltrout','sockeyesalmon','mtnking'],                 desc:'A hammered brass wobbler swung deep through the big pools. When nothing rises, go down.',world:'fresh',fixedCost:true},
   {id:'fly_adams',      cat:'fly',       zone:6,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cutthroattrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
-  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','dollyvarden','goldentrout','grayling','cutthroattrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
-  {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout','goldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
+  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','dollyvarden','goldentrout','grayling','cagoldentrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
+  {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','goldentrout','cagoldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
   {id:'fly_stonefly',   cat:'fly',       zone:6,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['bulltrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
   {id:'fly_softhackle', cat:'fly',       zone:6,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['dollyvarden','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
   {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','dollyvarden','sockeyesalmon','mtnwhitefish'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
@@ -4166,9 +4181,9 @@ SET_ART_IDS.forEach(function(id){
 // the base item must be owned before its skins can be bought/equipped. Set skins
 // swap the worn portrait; the boat skin swaps the drawn hull for a top-down PNG.
 const SKINS=[
-  {id:'princess_1', base:'princess', kind:'set',  name:'Princess Skin 1',    cost:100, file:'skins/princess skin 1.png'},
+  {id:'princess_1', base:'princess', kind:'set',  name:'Princess Skin 1',    cost:150, file:'skins/princess skin 1.png'},
   {id:'mermaid_1',  base:'mermaid',  kind:'set',  name:'Mermaid Skin 1',     cost:0,   file:'skins/mermaid skin 1.png'},
-  {id:'sport_1',    base:'sport',    kind:'boat', name:'Sportfisher Skin 1', cost:300, file:'skins/sportfisher boat skin 1.png'},
+  {id:'sport_1',    base:'sport',    kind:'boat', name:'Sportfisher Skin 1', cost:250, file:'skins/sportfisher boat skin 1.png'},
 ];
 const SKIN_SPRITE={};
 SKINS.forEach(function(sk){
@@ -4200,16 +4215,16 @@ function openSkinChooser(base){
     let act;
     if(equipped)act='<span class="shop-action equipped-tag">Wearing</span>';
     else if(owned)act='<span class="shop-action equip">Equip</span>';
-    else if((sk.cost||0)>0)act='<span class="shop-action buy '+(((S.pearls||0)>=sk.cost)?'':'cant')+'"><span class="pearl-s" style="width:11px;height:11px;margin-right:3px;"></span>'+sk.cost+'</span>';
+    else if((sk.cost||0)>0)act='<span class="shop-action buy '+(((S.rubies||0)>=sk.cost)?'':'cant')+'"><span class="gem-s"></span> '+sk.cost+'</span>';
     else act='<span class="shop-action buy">Claim free</span>';
     rows+='<div class="shop-item '+(equipped?'equipped':'')+'" onclick="pickSkin(\''+base+'\',\''+sk.id+'\')">'+_skinSwatch(sk.file)
-      +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' pearls':'Free')+' · alternate look</div></div>'+act+'</div>';
+      +'<div class="shop-info"><div class="shop-name">'+sk.name+'</div><div class="shop-desc">'+(sk.cost>0?sk.cost+' rubies':'Free')+' · alternate look</div></div>'+act+'</div>';
   });
   const note=owns?'':'<div style="font-size:11.5px;color:#b3402a;font-weight:700;margin-bottom:9px;">Buy the '+_skinBaseLabel(base)+' first to unlock its skins.</div>';
-  // Skins are the only thing pearls buy, and pearls have no HUD pill, so the
-  // balance is shown right here where it is about to be spent.
+  // The chooser is a full-screen modal that covers the HUD ruby pill, so the
+  // balance is repeated here where it is about to be spent.
   const bal='<div style="font-size:11.5px;font-weight:800;color:var(--text-soft);margin-bottom:9px;">'
-    +'<span class="pearl-s" style="width:11px;height:11px;margin-right:4px;"></span>'+(S.pearls||0)+' pearls</div>';
+    +'<span class="gem-s"></span> '+(S.rubies||0)+' rubies</div>';
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span><div class="mname" style="margin-bottom:8px;">Customize: '+_skinBaseLabel(base)+'</div>'+bal+note+rows;
   bg.classList.add('show');
@@ -4221,8 +4236,8 @@ function pickSkin(base, skinId){
   const owned=(S.ownedSkins||[]).includes(skinId);
   if(!owned){
     if((sk.cost||0)>0){
-      if((S.pearls||0)<sk.cost){toast('Not enough pearls — '+sk.name+' costs '+sk.cost+', you have '+(S.pearls||0)+'.','#b3402a');return;}
-      S.pearls-=sk.cost;if(typeof updatePills==='function')updatePills();
+      if((S.rubies||0)<sk.cost){toast('Not enough rubies — '+sk.name+' costs '+sk.cost+', you have '+(S.rubies||0)+'.','#b3402a');return;}
+      S.rubies-=sk.cost;if(typeof updatePills==='function')updatePills();
     }
     S.ownedSkins=S.ownedSkins||[];S.ownedSkins.push(skinId);
     toast('Unlocked '+sk.name+'!','#2aa890');try{AUDIO.sfx('coin');}catch(e){}
@@ -4379,6 +4394,11 @@ const NPC_BOAT={};
 // Reward pets are earned by catching their ultra, not by prestiging, so they
 // bypass the level comparison entirely.
 function petRewardHeld(def){return def&&def.reward==='cagoldentrout'&&!!S.goldenPet;}
+// What a locked companion is waiting on, in the player's terms.
+function petCriteria(p){
+  if(p.reward){const f=FISH.find(function(x){return x.id===p.reward;});return 'Catch the '+((f&&f.name)||'reward fish');}
+  return 'Prestige '+p.prestige;
+}
 function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.reward?petRewardHeld(x):x.prestige<=p;});}
 function petOwned(id){const def=PETS.find(function(x){return x.id===id;});if(!def)return false;
   if(def.reward)return petRewardHeld(def);
@@ -4707,9 +4727,9 @@ const BRAIDS=[
   {id:'fw_x2',  name:'2 lb Tippet',     line:2,  color:'#f6f6f0', cost:0,    lvl:1,  desc:'6x tippet. Brook trout, grayling and blackfish on a dead drift.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x4',  name:'4 lb Tippet',     line:4,  color:'#eef0e6', cost:180,  lvl:3,  desc:'4x tippet. The all-round trout size in a freestone stream.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x6',  name:'6 lb Fluorocarbon',line:6, color:'#dfe8dc', cost:450,  lvl:5,  desc:'Sinks faster than mono and disappears in clear pocket water.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyline5',name:'5wt Floating Fly Line',line:10,color:'#e8b23a',cost:620, lvl:5, desc:'Weight-forward floating taper on a 4x leader. The trout line.',fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
+  {id:'flyline5',name:'5wt Floating Fly Line',line:10,color:'#faff00',cost:620, lvl:5, desc:'Weight-forward floating taper on a 4x leader. The trout line.',fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'fw_x12', name:'12 lb Mono',      line:12, color:'#cfd8c8', cost:1400, lvl:8,  desc:'Backbone for bull trout and a hooked salmon in current.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyline8',name:'8wt Sink-Tip Fly Line',line:20,color:'#3f8a4a',cost:3600,lvl:10,desc:'A sinking-tip 8-weight head that turns over big streamers.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
+  {id:'flyline8',name:'8wt Sink-Tip Fly Line',line:20,color:'#ff7a00',cost:3600,lvl:10,desc:'A sinking-tip 8-weight head that turns over big streamers.',fly:true,world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:7000, lvl:13, desc:'White sturgeon line. You are wading; they are not.',world:'fresh',region:'mountains',fixedCost:true},
 ];
 // V8.5 economy pass (run ONCE at boot, after FISH is defined):
@@ -5026,7 +5046,7 @@ const FISH=[
   {id:'grasscarp',name:'Grass Carp',zone:3,rarity:'rare',size:[5,70],line:20,methods:['bottom'],baits:['corn','worm','powerbait'],leader:'fluoro',structure:['weedbed','lilypad','riprap','point'],season:['spring','summer'],time:['day','dawn'],xp:72,gold:40,weight:9,fact:'Stocked by the ton to eat problem weed, and most states will only sell you the sterile triploid version so it can never breed its way loose.'},
   {id:'longnosegar',name:'Longnose Gar',zone:3,rarity:'epic',size:[3,40],line:20,methods:['topwater','livebait','troll'],baits:['shiner','minnow','shad'],leader:'wire',structure:['weedbed','open','creekchan','lilypad'],season:['summer'],time:['day','dusk','night'],xp:120,gold:74,weight:7,fact:'Its interlocking ganoid scales are so hard that Native peoples used gar hide as armor plating and the scales as arrow points.'},
   {id:'bluecat',name:'Blue Catfish',zone:3,rarity:'epic',size:[5,90],line:20,methods:['bottom','troll'],baits:['shad','chickenliver','crawfish'],leader:'any',structure:['creekchan','dam','open','point'],season:['fall','winter'],time:['night','dawn'],xp:140,gold:105,weight:5,fact:'The all-tackle record is a 143 lb blue pulled out of Kerr Lake, Virginia, the largest catfish ever landed in North America.'},
-  {id:'paddlefish',name:'American Paddlefish',zone:3,rarity:'legendary',size:[20,100],line:40,methods:['jig','bottom'],baits:['shad','minnow'],leader:'any',structure:['creekchan','dam','open','point'],season:['winter','spring'],time:['dawn','day'],xp:280,gold:190,weight:2.4,fact:'A paddlefish filters plankton and never bites a bait — its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
+  {id:'paddlefish',name:'American Paddlefish',zone:3,rarity:'legendary',size:[20,100],line:40,methods:['snagging'],baits:['shad','minnow'],leader:'any',structure:['creekchan','dam','open','point'],season:['winter','spring'],time:['dawn','day'],xp:280,gold:190,weight:2.4,fact:'A paddlefish filters plankton and never bites a bait — its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
   // ---------- SOUTHERN (zone 4) ----------
   {id:'bluetilapia',name:'Blue Tilapia',zone:4,rarity:'common',size:[0.5,6],line:6,methods:['bottom','livebait'],baits:['corn','worm','powerbait'],leader:'any',structure:['boatdock','weedbed','creekchan','lilypad'],season:['all'],time:['day','dawn'],xp:12,gold:5,weight:52,fact:'An African import that escaped fish farms decades ago and now packs the warm canals so densely it out-competes almost everything native.'},
   {id:'sowhitebass',name:'White Bass',zone:4,rarity:'common',size:[0.4,4],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad','shiner'],leader:'any',structure:['creekchan','eddy','deephole','pilings'],season:['spring','fall'],time:['dawn','dusk','day'],xp:16,gold:8,weight:48,fact:'Spring sends white bass surging up the feeder creeks by the thousands to broadcast their eggs; they build no nest at all.'},
@@ -5051,7 +5071,7 @@ const FISH=[
   {id:'laketrout',name:'Lake Trout',zone:5,rarity:'rare',size:[5,60],line:20,methods:['troll','jig','bottom','ice'],baits:['shiner','shad','minnow'],leader:'any',structure:['deephole','rockledge','point','open'],season:['spring','fall','winter'],time:['day','dawn'],xp:150,gold:108,weight:9,fact:'The slowest-growing char in fresh water, a thirty-pounder out of a cold northern lake can be well over forty years old.'},
   {id:'kingsalmon',name:'King Salmon',zone:5,rarity:'rare',size:[5,45],line:20,methods:['troll','livebait'],baits:['shad','shiner','salmonegg'],leader:'fluoro',structure:['open','confluence','tailrace','point'],season:['fall','summer'],time:['dawn','dusk'],xp:160,gold:115,weight:8,fact:'The chinook is the biggest Pacific salmon, and a lake-run king will strip two hundred yards of line before it even thinks about turning.'},
   {id:'northernpike',name:'Northern Pike',zone:5,rarity:'epic',size:[2,30],line:20,methods:['topwater','troll','livebait','ice'],baits:['shiner','minnow'],leader:'wire',structure:['weedbed','timber','point','seam'],season:['all'],time:['day','dawn','dusk'],xp:165,gold:115,weight:7,fact:'A pike will not tolerate a bait escaping. Pull it away and it commits; let it hang and it studies the hook until it drifts off.'},
-  {id:'lakesturgeon',name:'Lake Sturgeon',zone:5,rarity:'epic',size:[10,80],line:40,methods:['bottom'],baits:['worm','crawfish','leech'],leader:'any',structure:['deephole','gravelbar','rockledge','confluence'],season:['spring','summer','fall'],time:['dawn','dusk','night'],xp:195,gold:140,weight:5,fact:'Lake sturgeon can live past a hundred years and do not spawn until their teens, so nearly every fishery for them is catch-and-release or limited-tag only.'},
+  {id:'lakesturgeon',name:'Lake Sturgeon',zone:5,rarity:'legendary',size:[10,80],line:40,methods:['bottom'],baits:['worm','crawfish','leech'],leader:'any',structure:['deephole','gravelbar','rockledge','confluence'],season:['spring','summer','fall'],time:['dawn','dusk','night'],xp:195,gold:140,weight:5,fact:'Lake sturgeon can live past a hundred years and do not spawn until their teens, so nearly every fishery for them is catch-and-release or limited-tag only.'},
   {id:'muskie',name:'Muskellunge',zone:5,rarity:'legendary',size:[10,55],line:20,methods:['topwater','troll'],baits:['shiner','shad'],leader:'wire',structure:['weedbed','point','timber','seam'],season:['fall'],time:['dawn','dusk','night'],xp:320,gold:190,weight:2.2,fact:'The fish of ten thousand casts, and the reason guides sweep a figure-eight beside the boat: muskies will follow a lure all the way to the transom before committing.'},
   // ---------- MOUNTAINS (zone 6) ----------
   {id:'mtnwhitefish',name:'Mountain Whitefish',zone:6,rarity:'common',size:[0.5,5],line:6,methods:['fly','still'],baits:['worm','salmonegg','leech'],leader:'fluoro',structure:['run','riffle','tailout','open'],season:['all'],time:['day','dawn'],xp:32,gold:19,weight:48,fact:'A small downturned sucker-like mouth lets it hoover nymphs off the streambed, which is why it keeps feeding hard all winter long.'},
@@ -5078,7 +5098,7 @@ const FISH=[
   {id:'arcticchar',name:'Arctic Char',zone:6,ice:true,alaska:true,rarity:'rare',size:[2,25],line:10,methods:['ice'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk'],xp:230,gold:0,weight:16,iceDepth:[20,44],icePatience:8000,iceTS:0.60,iceRise:1.10,iceChase:true,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
   {id:'lingcod',name:'Lingcod',zone:6,ice:true,alaska:true,rarity:'epic',size:[5,60],line:20,methods:['ice'],baits:['minnow','shiner','shad'],leader:'wire',structure:['icehole'],season:['winter'],time:['day','dawn','dusk'],xp:340,gold:0,weight:8,iceDepth:[38,60],icePatience:6000,iceTS:0.80,iceRise:1.40,iceChase:true,fact:'Not a cod at all but a greenling, with a mouth of needle teeth and flesh that can run bright blue-green until the moment it is cooked.'},
   {id:'sheefish',name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one" — the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
-  {id:'greenlandshark',name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:130,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0012,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
+  {id:'greenlandshark',name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0012,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
 ];
 
 // ===================== LENGTH (inches) =====================
@@ -5164,18 +5184,18 @@ function fishLenStr(f, w){
 //          bass boat and neither wallet is worth anything in the other world.
 //   RUBIES premium. Earned AND (later) purchasable with real money. Buys sets,
 //          skins, items and second chances. NEVER stakeable.
-//   PEARLS competitive. Earned ONLY, never for sale and never convertible to or
-//          from gold/rubies. The ONLY currency anglers can stake against each
-//          other. Because pearls can't be bought or cashed out they carry no
-//          real-world value, which keeps player-vs-player wagering a game
-//          mechanic rather than real-money gaming (App Store 5.3.4).
-// If you ever add a way to buy pearls, or to trade pearls for rubies, that wall
-// comes down and the wagering becomes a licensing problem. Don't.
+// (V0.9.8.5) PEARLS are gone. They existed only to be staked in competitive
+// lobbies and to buy skins; skins now cost rubies and the lobby ante is the
+// GOLD buy-in. The wall below is why the wager was NOT simply repointed at
+// rubies: rubies are purchasable, and staking a purchasable currency against
+// another player turns a game mechanic into real-money gaming. Gold cannot be
+// bought, so pooling it stays a mechanic. If you ever add a way to buy gold,
+// that wall comes down. Don't.
 // ---- The soft-currency wallet, split by world -------------------------------
 // Everything that spends or earns the SOFT currency goes through these helpers
 // instead of touching S.gold, so a freshwater price is paid in cash and a
 // freshwater catch pays out in cash without every call site knowing which world
-// it is in. Rubies and pearls stay global — they are account-wide, and the
+// it is in. Rubies stay global — they are account-wide, and the
 // competitive systems (tournaments, lobby buy-ins, achievements, prestige) stay
 // on GOLD on purpose so a cross-world match has one shared stake.
 // ---- Endless bait (ultra reward) --------------------------------------------
@@ -5248,8 +5268,6 @@ function buyLicense(zone){
   return true;
 }
 
-const PEARL_START=25;              // enough to enter the low-stake lobbies
-const PEARL_PRIZES=[12,6,3];       // competitive placement payout (1st/2nd/3rd)
 
 // Competitive-lobby rewards. These are HOUSE funded (paid by the game, fixed by
 // placement) and independent of any pot, so they read as "a reward for winning
@@ -5262,7 +5280,7 @@ const LOBBY_GOLD_PRIZES=[600,300,150];// 1st/2nd/3rd gold
 const LOBBY_RUBY_DAILY_CAP=15;        // max rubies earnable from lobbies per ET day
 // Optional GOLD buy-in: an ante the host sets, winner takes the pot. Safe to make
 // winner-take-all because gold is soft, earned only and never purchasable, so the
-// pot carries no cash value. (Contrast the pearl wager, also earned-only.)
+// pot carries no cash value.
 const GOLD_BUYIN_TIERS=[0,500,1000,2500,5000];
 
 // Eastern-time calendar day, "YYYY-MM-DD", so the lobby ruby cap resets on the
@@ -5284,7 +5302,7 @@ function grantLobbyRubies(n){
 
 // ===================== STATE =====================
 let S={
-  xp:0,level:1,gold:0,cash:0,cashEarned:0,licenses:{},rubies:0,pearls:PEARL_START,clock:360, // start 6:00 spring
+  xp:0,level:1,gold:0,cash:0,cashEarned:0,licenses:{},rubies:0,clock:360, // start 6:00 spring
   caught:{},best:{},
   ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['fluoro','wire'],
   ownedCosmetics:[],ownedSets:[],cosmetic:{hat:'none',shirt:'none',shades:'none',crown:'none'},gender:'',skinTone:'',
@@ -5906,8 +5924,10 @@ const PNG_FISH={
   hammerhead:{file:'great hammerhead.png',alt:'Great Hammerhead'},
   tigershark:{file:'tiger shark.png',alt:'Tiger Shark'},
   greatwhite:{file:'great white shark.png',alt:'Great White Shark'},
-  // ---- Freshwater raster art (V0.9.8.1). Source faces LEFT like the
-  //      saltwater art, so it is mirrored to face right in game. ----
+  // ---- Freshwater raster art (V0.9.8.1). MOST source art faces LEFT and
+  //      is mirrored to face right in game; art that ALREADY faces right
+  //      carries noMirror:true. The gars disagree with each other, so
+  //      check each new file rather than trusting the convention. ----
   redear:{file:'redear sunfish.png',alt:'Redear Sunfish',dir:'freshwater fish'},
   blackbullhead:{file:'black bullhead.png',alt:'Black Bullhead',dir:'freshwater fish'},
   yellowbass:{file:'yellow bass.png',alt:'Yellow Bass',dir:'freshwater fish'},
@@ -5916,15 +5936,15 @@ const PNG_FISH={
   channelcat:{file:'channel catfish.png',alt:'Channel Catfish',dir:'freshwater fish'},
   largemouth:{file:'largemouth bass.png',alt:'Largemouth Bass',dir:'freshwater fish'},
   grasscarp:{file:'grass carp.png',alt:'Grass Carp',dir:'freshwater fish'},
-  longnosegar:{file:'longnose gar.png',alt:'Longnose Gar',dir:'freshwater fish'},
+  longnosegar:{file:'longnose gar.png',alt:'Longnose Gar',dir:'freshwater fish',noMirror:true},
   bluecat:{file:'blue catfish.png',alt:'Blue Catfish',dir:'freshwater fish'},
-  paddlefish:{file:'paddlefish.png',alt:'American Paddlefish',dir:'freshwater fish'},
+  paddlefish:{file:'paddlefish.png',alt:'American Paddlefish',dir:'freshwater fish',noMirror:true},
   bluetilapia:{file:'blue tilapia.png',alt:'Blue Tilapia',dir:'freshwater fish'},
   sowhitebass:{file:'white bass.png',alt:'White Bass',dir:'freshwater fish'},
-  shortnosegar:{file:'shortnose gar.png',alt:'Shortnose Gar',dir:'freshwater fish'},
+  shortnosegar:{file:'shortnose gar.png',alt:'Shortnose Gar',dir:'freshwater fish',noMirror:true},
   chainpickerel:{file:'chain pickerel.png',alt:'Chain Pickerel',dir:'freshwater fish'},
   bowfin:{file:'bowfin.png',alt:'Bowfin',dir:'freshwater fish'},
-  knifefish:{file:'clown knifefish.png',alt:'Clown Knifefish',dir:'freshwater fish'},
+  knifefish:{file:'clown knifefish.png',alt:'Clown Knifefish',dir:'freshwater fish',noMirror:true},
   snakehead:{file:'snakehead.png',alt:'Snakehead',dir:'freshwater fish'},
   peacockbass:{file:'peacock bass.png',alt:'Peacock Bass',dir:'freshwater fish'},
   sostripedbass:{file:'striped bass.png',alt:'Striped Bass',dir:'freshwater fish'},
@@ -5959,8 +5979,8 @@ const PNG_FISH={
   yellowperch:{file:'yellow perch.png',alt:'Yellow Perch',dir:'freshwater fish'},
   // ---- the last six freshwater species ----
   brooktrout:{file:'brook trout.png',alt:'Brook Trout',dir:'freshwater fish'},
-  bulltrout:{file:'bulltrout.png',alt:'Bull Trout',dir:'freshwater fish'},
-  cutthroattrout:{file:'cutthroat trout.png',alt:'Cutthroat Trout',dir:'freshwater fish'},
+  bulltrout:{file:'bulltrout.png',alt:'Bull Trout',dir:'freshwater fish',noMirror:true},
+  cutthroattrout:{file:'cutthroat trout.png',alt:'Cutthroat Trout',dir:'freshwater fish',noMirror:true},
   lingcod:{file:'lingcod.png',alt:'Lingcod',dir:'freshwater fish'},
   sheefish:{file:'sheefish.png',alt:'Inconnu',dir:'freshwater fish'},
   sockeyesalmon:{file:'sockeye salmon.png',alt:'Sockeye Salmon',dir:'freshwater fish'},
@@ -6015,6 +6035,12 @@ function preloadFishSprites(){
       try{u=_keyOutFishBg(im);}catch(e){}
       // null means "already has real alpha" -> the file is usable as it stands.
       FISH_SPRITE_URL[id]=u||pngFishSrc(cfg.file, cfg.dir);
+      // Anything already on screen was built before the sprite was ready, so
+      // repaint it rather than leaving the old vector art sitting there.
+      try{
+        const cc=document.getElementById('catch-card');
+        if(cc&&cc.dataset&&cc.dataset.fid===id&&typeof _repaintCatchArt==='function')_repaintCatchArt(id);
+      }catch(e){}
       delete _fishSpritePending[id];
       const lz=document.getElementById('logbook-zones');
       if(lz&&lz.children.length&&typeof renderLogbook==='function')renderLogbook();
@@ -6178,9 +6204,9 @@ function normalizeState(){
     if((S.zone|0)===5)S.zone=6;
     S._fwRegions=1;
   }
-  // Existing saves predate pearls: grant the same starter bankroll a new angler
-  // gets, so nobody is locked out of wagering by having played earlier.
-  if(typeof S.pearls!=='number')S.pearls=PEARL_START;
+  // V0.9.8.5 removed pearls. Refund any balance as rubies at 1:1 so nobody
+  // loses a currency they earned, then drop the field.
+  if(typeof S.pearls==='number'){S.rubies=(S.rubies||0)+Math.max(0,S.pearls|0);delete S.pearls;}
   if(typeof S.bigCastWins!=='number')S.bigCastWins=0;
   // V0.9 prestige
   if(typeof S.prestige!=='number')S.prestige=0;
@@ -9168,6 +9194,37 @@ function gateNeedsLicense(tz){
   const req=ZONE_REQ[tz];
   return !!(req&&req.license&&!hasLicense(tz));
 }
+// ---- Region teleport (V0.9.8.5) ---------------------------------------
+// The location pill is a fast-travel board now. Checks run in the same order
+// worldSwapBlock() uses: session state, then activity, then destination.
+// Returns '' when the jump is legal, else a sentence to show the player.
+function regionTravelBlock(z){
+  if(!isFresh())return 'Region travel is a freshwater thing.';
+  if(activeTournament||tourn.active||tourn.coop)return 'You can\u2019t change regions during a match.';
+  if(_worldSwapping)return 'Already travelling.';
+  if(typeof surfActive!=='undefined'&&surfActive)return 'Leave the surf first.';
+  if(typeof iceActive!=='undefined'&&iceActive)return 'Come off the ice first.';
+  // bobber.active is false during a fly cast, so the fly phase needs its own test.
+  if(typeof flyPhase!=='undefined'&&flyPhase!=='idle')return 'Finish the drift first.';
+  if(typeof snagPhase!=='undefined'&&snagPhase!=='idle')return 'Reel the treble in first.';
+  if(typeof phase!=='undefined'&&phase!=='idle')return 'Reel your line in first.';
+  if(!freshUnlocked())return 'Reach Level '+FRESH_UNLOCK_LVL+' to unlock the freshwater.';
+  if(z===S.zone)return 'You\u2019re already here.';
+  return gateBlockReason(z);
+}
+// enterWorld() is the whole jump — it is also the only place that records
+// S.lastZone.fresh, so a later world swap returns you where you teleported to.
+function regionTeleport(z){
+  const why=regionTravelBlock(z);
+  if(why){
+    // A missing licence is a sale, not a dead end — same as walking into the gate.
+    if(gateNeedsLicense(z)){closeModal();openLicenseModal(z);return;}
+    toast(why,'#b3402a');return;
+  }
+  closeModal();
+  AUDIO.sfx('open');
+  enterWorld(z,'center');
+}
 function tryGate(g){
   const now=performance.now?performance.now():Date.now();
   if(now<_gateCoolUntil)return;
@@ -10589,6 +10646,18 @@ else if(s.kind==='crab_trap'){
 }
 const BOAT_ANCHORS={
   kayak:   {dx:  6, dy: -2, ang: 0.35},
+  // Freshwater hulls (V0.9.8.5). Without these every freshwater rod hung off
+  // the bay boat's mount and the line left a point that wasn't on the boat.
+  canoe:    {dx:  6, dy: -4, ang: 0.34},
+  jonboat:  {dx:  7, dy:-12, ang: 0.28},
+  so_boat0: {dx: 10, dy:  6, ang: 0.15},
+  so_boat1: {dx:  7, dy: -6, ang: 0.26},
+  bassboat: {dx: 10, dy:  7, ang: 0.18},
+  no_boat0: {dx: 10, dy:  6, ang: 0.15},
+  no_boat1: {dx:  8, dy: -4, ang: 0.24},
+  jetsled:  {dx: 10, dy:  8, ang: 0.18},
+  driftboat:{dx:  9, dy:  2, ang: 0.22},
+  waders:   {dx: 10, dy:  6, ang: 0.15},
   jon:     {dx:  7, dy:-14, ang: 0.28},
   bay:     {dx:  8, dy:  6, ang: 0.20},
   console: {dx: 10, dy:  8, ang: 0.18},
@@ -11750,11 +11819,18 @@ function drawMarlinBoat(dark){
   }
 }
 function drawRodAndReel(dark){
-  const a=BOAT_ANCHORS[S.boat]||BOAT_ANCHORS.bay;
-  const rodIdx=RODS.findIndex(r=>r.id===S.rod);
-  const reelIdx=REELS.findIndex(r=>r.id===S.reel);
+  // Read the EQUIPPED gear, not the saltwater slots: in freshwater the rig
+  // lives in S.fgear[rid] and S.rod/S.reel are never written, so this drew a
+  // Glass Rod and a 2500 Spinning on a Jet Sled and hung the line off the
+  // kayak's mount. lineRig.tipX/tipY below is where the line originates.
+  const a=BOAT_ANCHORS[gearGet('boat')]||BOAT_ANCHORS.bay;
+  const rod=curRod(), reel=curReel();
+  const rodIdx=RODS.indexOf(rod);
+  const reelIdx=REELS.indexOf(reel);
   const baseX=ORIGIN.x+a.dx, baseY=ORIGIN.y+a.dy;
-  const rodLen=[22,28,33,39,45,46][rodIdx]||30;
+  // Length from the rod's own power rating rather than a 6-slot table that
+  // only ever covered the saltwater run (every freshwater rod fell to ||30).
+  const rodLen=22+Math.round(((rod&&rod.zoneBonus)||0)*1.4);
   const sin=Math.sin(a.ang),cos=Math.cos(a.ang);
   const tipX=baseX+sin*rodLen, tipY=baseY+cos*rodLen;
   lineRig.tipX=tipX;lineRig.tipY=tipY;
@@ -11895,7 +11971,7 @@ function render(ts){
 
   // ---- boat physics + camera (open world) ----
   if(driving()){
-    const spd=boatSpeed(S.boat)*playerMoveMult();
+    const spd=boatSpeed(gearGet('boat'))*playerMoveMult();
     // Confuse ability: input is overridden with a wandering drift
     let jdx=joy.dx, jdy=joy.dy;
     // Confused: a wandering drift, but the player keeps partial control so they
@@ -11980,7 +12056,9 @@ function render(ts){
   const _frozen=(typeof lakeFrozen==='function')&&lakeFrozen()&&!tourn.active;
   if(_shore){ctx.save();ctx.translate(-camera.x,-camera.y);ctx.clip(_shore);ctx.setTransform(1,0,0,1,0,0);}
   // swells (fewer rows in low-detail mode). None of this runs on ice.
-  const _nsw=_frozen?0:(gfxLow?3:(_shore?3:5));
+  // Freshwater gets no rolling swell at all — those long sine crests are an
+  // ocean tell, and a lake or a canyon river should read as flat water.
+  const _nsw=(_frozen||isFresh())?0:(gfxLow?3:5);
   for(let i=0;i<_nsw;i++){const y0=(i/_nsw)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x, y);else ctx.lineTo(x, y);}ctx.stroke();}
   // night stars-on-water shimmer + moon glint
   if(_frozen){/* ice: no shimmer, no glint, no whitecaps */}
@@ -12097,7 +12175,7 @@ function render(ts){
     const tvx=boat.vx/tsp, tvy=boat.vy/tsp;          // travel direction
     const rbx=ORIGIN.x, rby=ORIGIN.y-2;              // angler's hands
     const rtx=ORIGIN.x-tvx*30, rty=ORIGIN.y-tvy*30-9; // rod tip: back and slightly up
-    const rodIdx=RODS.findIndex(r=>r.id===S.rod);
+    const rodIdx=RODS.indexOf(curRod());
     try{drawRod(rbx, rby, rtx, rty, rodIdx);}catch(e){
       ctx.strokeStyle='#7a4a1e';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(rbx,rby);ctx.lineTo(rtx,rty);ctx.stroke();
     }
@@ -12323,7 +12401,10 @@ canvas.addEventListener('click',e=>{
   // guard — fell into the phase==='waiting' reel-in below, corrupting the
   // shared state under the drift: a perfectly timed set then did NOTHING
   // (triggerBite bails when phase isn't 'waiting') while misses still spoke.
-  if(typeof flyPhase!=='undefined'&&flyPhase!=='idle')return;
+  if(typeof flyPhase!=='undefined'&&(flyPhase==='drift'||flyPhase==='take'))return;
+  // Snagging leaves phase==='waiting' for its whole sequence, so a stray tap
+  // would hit the reel-in branch below and silently end it.
+  if(typeof snagPhase!=='undefined'&&snagPhase!=='idle')return;
   // V0.9: arming a tap-to-place item (snag/buoy),the next tap drops it anywhere.
   if(_placeItemMode){
     const rect=canvas.getBoundingClientRect();
@@ -12494,8 +12575,9 @@ function cast(x, y){
   // Out of something: say WHERE to fix it and make the rig bar the button.
   if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle \u2014 tap the Tackle slot below to buy more.');flashRigGap();return;}
   if(m.bait){if(!gearGet('baitSel')||!(baitOwned(gearGet('baitSel')))){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait \u2014 tap the Bait slot below to restock.');flashRigGap();return;}}
-  // Artificial methods now require a lure tied on
-  if(!m.bait){
+  // Artificial methods now require a lure tied on (snagging is the exception:
+  // a bare treble IS the terminal tackle, so the check above is all it needs)
+  if(!m.bait&&!m.snag){
     const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
     if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first — tap the Lure slot below.');flashRigGap();return;}
     if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tap the Lure slot for '+ZONE_LBL[S.zone]+' lures.');flashRigGap();return;}
@@ -12505,6 +12587,8 @@ function cast(x, y){
   // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
   // gear checks above so a fly angler still needs a leader/tippet and a fly.
   if(m.fly){flyBeginCast(x, y);return;}
+  // Snagging likewise runs its own loop between the cast and the bite.
+  if(m.snag){snagBeginCast(x, y);return;}
   // Tutorial catch step: the lesson is to cast ONTO the spot, so a cast that lands
   // in open water is nudged back without spending tackle.
   if(tut&&tut.active&&tut.steps[tut.i]&&tut.steps[tut.i].await==='catch'&&tut.forceTargetActive){
@@ -12928,7 +13012,11 @@ const FLY_CATCH_R=34;          // how close the finger counts as "on" it, px
 const FLY_ORBIT_MIN=54, FLY_ORBIT_MAX=132;   // how far the loop wanders from the head
 const FLY_MIN_FT=6;            // below this there is not enough line to present
 const FLY_DRIFT_MS=9000;              // a drift runs about nine seconds
-const FLY_DRAG_PER_SEC=26;            // drag climbs this fast with no mending
+// V0.9.8.5: eased from 26. Mending used to be a free tap, so a 3.8 s fuse was
+// fair; now that a mend has to catch the sweeping band, the player needs time
+// to actually read it. At 19 an unmended drift dies in ~5.3 s, which is about
+// three passes of the marker — enough to react, still short enough to hurry you.
+const FLY_DRAG_PER_SEC=19;            // drag climbs this fast with no mending
 const FLY_MEND_RELIEF=42;             // one mend buys this much back
 // Per-fly-type set windows, ms after the take. This is the heart of the mechanic.
 const FLY_SET={
@@ -12940,6 +13028,29 @@ const FLY_SET={
 let flyPhase='idle';                  // idle | casting | drift | take
 let flyLineOut=0, flyStrokes=0, flyAcc=0, flyTangle=0;
 let flyAim=null, flyHoldStart=0, flyAnim=null, flyDrag=0, flyMends=0;
+
+// ---- Shared timing bar (V0.9.8.5) -------------------------------------
+// One sweeping indicator over one stationary target band. The band does NOT
+// move during an attempt — it is re-placed after every attempt — so the player
+// has to look each time instead of tapping out a rhythm. Only one bar is ever
+// live (you cannot mend in the Mountains and snag in the Midwest at once), so
+// a single state object serves both callers.
+const TBAR={pos:0, dir:1, speed:54, left:40, width:22};
+function tbarPlace(){TBAR.left=6+Math.random()*(94-TBAR.width);}
+function tbarInit(speed, width){TBAR.pos=0;TBAR.dir=1;TBAR.speed=speed||54;TBAR.width=width||22;tbarPlace();}
+function tbarStep(dtF){
+  TBAR.pos+=TBAR.dir*TBAR.speed*dtF;
+  if(TBAR.pos>=100){TBAR.pos=100;TBAR.dir=-1;}
+  else if(TBAR.pos<=0){TBAR.pos=0;TBAR.dir=1;}
+}
+function tbarHit(){return TBAR.pos>=TBAR.left&&TBAR.pos<=TBAR.left+TBAR.width;}
+function tbarPaint(zoneId, indId){
+  const z=document.getElementById(zoneId);
+  if(z){z.style.left=TBAR.left+'%';z.style.width=TBAR.width+'%';}
+  const i=document.getElementById(indId);
+  if(i)i.style.left=TBAR.pos+'%';
+}
+function tbarShow(barId, on){const b=document.getElementById(barId);if(b)b.classList.toggle('show',!!on);}
 let flyDriftEnd=0, flyTakeAt=0, flySetSpec=null, flyHoldSet=0, flyTargetFish=null;
 // ---- Beat 1 state: the tracked loop ----
 // The loop wanders on two out-of-phase sine pairs so its path is a slow
@@ -12994,7 +13105,8 @@ function drawFlyLoop(t){
   // The line: rod tip -> finger. It goes taut and bright while you are on target.
   if(flyTracking&&flyFinger){
     const tipX=ORIGIN.x+16, tipY=ORIGIN.y-30;
-    ctx.strokeStyle=on?'rgba(235,255,240,.95)':'rgba(220,235,225,.5)';
+    // Fly line is high-vis neon, matching the spooled line's own colour.
+    ctx.strokeStyle=on?(curBraid().color||'#faff00'):'rgba(250,255,0,.55)';
     ctx.lineWidth=on?2:1.3;
     ctx.beginPath();ctx.moveTo(tipX, tipY);
     // Sag when you are off the loop; straight when you are on it.
@@ -13016,6 +13128,14 @@ function flyShow(on){const p=flyPanel();if(p)p.classList.toggle('show',!!on);}
 
 // Entry point, called from cast() when the method is `fly`.
 function flyBeginCast(x, y){
+  // The tap IS the target (V0.9.8.5), so refuse a dry one up front rather than
+  // letting the player earn a whole line of shooting head and only then find
+  // out they were aiming at gravel. The canyon channel is narrow — this fires
+  // often, and it needs to fire before any effort is spent.
+  if(!isWaterAt(x+camera.x, y+camera.y)){
+    setStatus('That’s dry bank — pick a line on the water to drift the fly down.');
+    return;
+  }
   flyPhase='casting';flyLineOut=0;flyStrokes=0;flyAcc=0;flyTangle=0;flyDrag=0;flyMends=0;
   flyAim={x, y};flyTargetFish=null;
   flyLoopReseed();flyFinger=null;flyTracking=false;
@@ -13084,8 +13204,23 @@ function flyLoop(){
     if(flyPhase==='drift'){
       flyDrag=Math.min(100, flyDrag+FLY_DRAG_PER_SEC*dtF);
       if(fill)fill.style.width=flyDrag+'%';
-      // The fly swings downstream as drag builds, which is what kills the drift.
-      if(bobber&&bobber.active)bobber.y+=(10.8+flyDrag*0.72)*dtF;
+      tbarStep(dtF);tbarPaint('fly-mendzone','fly-mendind');
+      // The fly swings downstream as drag builds, which is what kills the
+      // drift — but a current does not run up the bank. Step only onto water;
+      // failing that, try to slide along the shore; failing that, the drift is
+      // over. bobber is SCREEN space and isWaterAt takes WORLD, so camera bridges.
+      if(bobber&&bobber.active){
+        const step=(10.8+flyDrag*0.72)*dtF;
+        if(isWaterAt(bobber.x+camera.x, bobber.y+step+camera.y))bobber.y+=step;
+        else{
+          let slid=false;
+          for(const a of [0.6,-0.6,1.1,-1.1]){
+            const nx=bobber.x+Math.sin(a)*step, ny=bobber.y+Math.cos(a)*step;
+            if(isWaterAt(nx+camera.x, ny+camera.y)){bobber.x=nx;bobber.y=ny;slid=true;break;}
+          }
+          if(!slid){flyEndDrift('The fly washed up against the bank.');return;}
+        }
+      }
       if(flyDrag>=100){flyEndDrift('The fly dragged across the seam and the lie went quiet.');return;}
       if(now>=flyTakeAt&&flyTakeAt>0)flyTheTake();
       else if(now>=flyDriftEnd){flyEndDrift('The drift ran out. Pick it up and cast again.');return;}
@@ -13151,11 +13286,22 @@ function flyPresent(){
   if(flyPhase!=='casting')return;
   if(flyLineOut<FLY_MIN_FT){flySay('Not enough line in the air yet. Follow the loop a little longer.');return;}
   flyHoldStart=0;flyTracking=false;flyFinger=null;
-  // The fly lands along the aim ray, only as far as the line you actually earned.
+  // The fly lands ON THE MARK YOU TAPPED (V0.9.8.5). It used to land at a
+  // fraction of the way there, scaled by the line you had earned, so the cast
+  // never went where you aimed. Line still matters: shoot too little and you
+  // fall short of the mark, but a full-length cast is exact.
   const ox=ORIGIN.x, oy=ORIGIN.y;
   const dx=flyAim.x-ox, dy=flyAim.y-oy, d=Math.max(1,Math.hypot(dx,dy));
-  const reach=Math.min(1, flyLineOut/FLY_MAX_FT);
-  const px=ox+dx/d*(d*reach), py=oy+dy/d*(d*reach);
+  const reach=Math.min(1, flyLineOut/FLY_MAX_FT);   // still read at 'bite odds' below
+  const need=d/Math.max(1,castRange());             // how much of your range the mark asked for
+  const f=(reach>=need)?1:(reach/need);
+  const px=ox+dx/d*(d*f), py=oy+dy/d*(d*f);
+  // A drifting fly belongs in the current, not on the gravel.
+  if(!isWaterAt(px+camera.x, py+camera.y)){
+    flySay('That is dry bank — pick a line on the water and present again.');
+    return;
+  }
+  if(f<1)flySay('Short of your mark — shoot more line next time.');
   bobber={x:px, y:py, active:true, struct:nearestStruct(px, py)};
   ripples.push({x:px, y:py, r:2,life:1},{x:px, y:py, r:6,life:.6});
   noteLastCast(bobber.struct);
@@ -13166,6 +13312,10 @@ function flyPresent(){
   }
   queueSave();
   flyPhase='drift';flyDrag=0;flyMends=0;
+  // A heavier line is harder to mend: the 8wt sweeps faster and aims smaller.
+  const _hv=(curBraid().line||10)>=20;
+  tbarInit(_hv?68:54, _hv?17:22);
+  tbarShow('fly-mendbar', true);
   const now=performance.now();
   flyDriftEnd=now+FLY_DRIFT_MS;
   document.getElementById('fly-main').textContent='Mend';
@@ -13187,10 +13337,23 @@ function flyPresent(){
 }
 function flyMend(){
   if(flyPhase!=='drift')return;
+  // A mend is a timed stroke now (V0.9.8.5): catch the sweeping marker inside
+  // the yellow band. Miss and you throw a belly in the line instead, which
+  // ADDS drag. The band moves after every attempt, hit or miss.
+  if(!tbarHit()){
+    flyDrag=Math.min(100, flyDrag+12);
+    tbarPlace();
+    try{AUDIO.sfx('fail');}catch(e){}
+    flySay('Botched mend \u2014 the line bellied and the fly skated.');
+    flyStats();
+    if(flyDrag>=100)flyEndDrift('The fly dragged across the seam and the lie went quiet.');
+    return;
+  }
   flyDrag=Math.max(0, flyDrag-FLY_MEND_RELIEF);
   flyMends++;
   // Mending buys drift time, but each mend risks a little less of it than the last.
   flyDriftEnd+=900;
+  tbarPlace();
   AUDIO.sfx('cast');
   flySay('Mended. The fly leads the line again.');
   flyStats();
@@ -13198,6 +13361,7 @@ function flyMend(){
 // ---- beat 3: the take, with a fly-specific correct answer ----
 function flyTheTake(){
   flyPhase='take';
+  tbarShow('fly-mendbar', false);     // nothing to mend once it has the fly
   flySetSpec=FLY_SET[flyKind()]||FLY_SET.nymph;
   flyTakeAt=performance.now();
   flyHoldSet=0;
@@ -13256,6 +13420,7 @@ function flyAbort(msg){
 // triggerBite() can take over cleanly.
 function flyFinish(){
   flyPhase='idle';flyHoldStart=0;flyTakeAt=0;
+  tbarShow('fly-mendbar', false);
   if(flyAnim){cancelAnimationFrame(flyAnim);flyAnim=null;}
   flyShow(false);
   const btn=document.getElementById('fly-main');if(btn)btn.classList.remove('hot');
@@ -13276,13 +13441,112 @@ function flyFinish(){
   });
 })();
 
+// ═══════════════ SNAGGING (V0.9.8.5): the Midwest paddlefish loop ═══════════
+// Cast the bare treble, then rip it back through the school on the timing bar.
+// Every clean rip is one sweep through the fish; a sweep that connects comes
+// tight and hands off to the ordinary fight at triggerBite(). Misses cost you
+// sweeps, and the school does not stay put forever.
+const SNAG_MAX_SWEEPS=14;      // after this the school has moved off
+let snagPhase='idle', snagAnim=null, snagSweeps=0, snagLastT=0, snagMisses=0;
+function snagShow(on){const p=document.getElementById('snag-game');if(p)p.classList.toggle('show',!!on);}
+function snagSay(t){const e=document.getElementById('snag-hint');if(e)e.innerHTML=t;}
+function snagStats(){
+  const a=document.getElementById('snag-sweeps');
+  if(a)a.textContent=snagSweeps+' / '+SNAG_MAX_SWEEPS+' sweeps';
+  const b=document.getElementById('snag-feel');
+  if(b)b.textContent=snagMisses?(snagMisses+' fouled'):'';
+}
+function snagBeginCast(x, y){
+  const tid=currentTackleId();
+  // Same durability rule as every other method: one decrement per CAST.
+  if(tid&&tid!=='tooth_hook'&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
+    const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
+  }
+  bobber={x, y, active:true, struct:nearestStruct(x, y)};
+  noteLastCast(bobber.struct);
+  ripples.push({x, y, r:3,life:1},{x, y, r:8,life:.7});
+  AUDIO.sfx('cast');
+  phase='waiting';S.totalCasts++;
+  if(bobber.struct){
+    if(!S.fishedStructures)S.fishedStructures=[];
+    if(!S.fishedStructures.includes(bobber.struct.kind))S.fishedStructures.push(bobber.struct.kind);
+  }
+  queueSave();
+  snagPhase='sweeping';snagSweeps=0;snagMisses=0;snagLastT=0;
+  tbarInit(62, 20);
+  snagShow(true);snagStats();
+  snagSay('Rip the treble through the school \u2014 hit the yellow band.');
+  setStatus('Snagging \u2014 rip the treble back through them.');
+  if(snagAnim)cancelAnimationFrame(snagAnim);
+  snagAnim=requestAnimationFrame(snagLoop);
+}
+function snagLoop(){
+  if(snagPhase!=='sweeping'){snagAnim=null;return;}
+  const now=performance.now();
+  // Real dt, never a /60 constant: a 120 Hz display would otherwise sweep twice
+  // as fast and make the band unhittable.
+  const dtF=(snagLastT&&now>snagLastT)?Math.min(0.1,(now-snagLastT)/1000):1/60;
+  snagLastT=now;
+  tbarStep(dtF);tbarPaint('snag-zone','snag-ind');
+  snagAnim=requestAnimationFrame(snagLoop);
+}
+// One rip. Judged against the band, exactly like a mend.
+function snagStroke(){
+  if(snagPhase!=='sweeping')return;
+  if(!tbarHit()){
+    snagMisses++;
+    tbarPlace();
+    try{AUDIO.sfx('fail');}catch(e){}
+    snagSay('The treble skated over the top of them. Rip again.');
+    snagStats();
+    if(snagMisses>=6){snagEnd('You fouled the hook once too often and put the school down.');return;}
+    return;
+  }
+  snagSweeps++;
+  tbarPlace();
+  AUDIO.sfx('cast');
+  snagStats();
+  const {strength}=poolNow();
+  if(strength<=0){snagEnd('Nothing is holding here. Try the creek channel, a deep hole or the dam.');return;}
+  // Each clean sweep is an independent roll, scaled by what is actually under
+  // the boat and by the conditions — the same shape retrieveLure() uses.
+  const chance=Math.min(0.9,(0.16+strength/240)*environmentBiteFactor());
+  if(Math.random()<chance){
+    snagSay('<b>Solid weight \u2014 you\u2019re into one!</b>');
+    snagFinish();
+    triggerBite();
+    return;
+  }
+  snagSay(snagSweeps>=SNAG_MAX_SWEEPS?'\u2026':'Clean sweep, nothing there. Again.');
+  if(snagSweeps>=SNAG_MAX_SWEEPS){snagEnd('You worked the school out. Reel up and cast back into them.');return;}
+}
+// Tear down WITHOUT touching phase/bobber, so triggerBite() can take over —
+// it bails unless phase is still 'waiting'.
+function snagFinish(){
+  snagPhase='idle';
+  if(snagAnim){cancelAnimationFrame(snagAnim);snagAnim=null;}
+  snagShow(false);
+}
+function snagEnd(msg){
+  snagFinish();
+  phase='idle';bobber.active=false;
+  setStatus(msg);
+  updateRigBar();queueSave();
+}
+(function wireSnagButtons(){
+  const main=document.getElementById('snag-main'), alt=document.getElementById('snag-alt');
+  if(!main||!alt)return;
+  main.addEventListener('pointerdown',function(e){e.preventDefault();snagStroke();});
+  alt.addEventListener('click',function(){if(snagPhase!=='idle')snagEnd('Reeled the treble back in.');});
+})();
+
 // Reeling a lure in: one retrieve rolls for a strike. The chance scales with the
 // pool strength, the conditions and the reel (better reel = better odds).
 function retrieveLure(){
   _lureRetrieve=false;
   const {strength}=poolNow();
   if(strength<=0){phase='idle';bobber.active=false;setStatus('Reeled it in, nothing was interested. Try another lure or spot.');return;}
-  const reelIdx=Math.max(0,REELS.findIndex(r=>r.id===gearGet('reel')));
+  const reelIdx=Math.max(0,forHere(REELS).indexOf(curReel()));
   let chance=Math.min(0.94,(0.22+strength/200)*environmentBiteFactor()*(1+reelIdx*0.07));
   if(_forcedBiteFish&&tut&&tut.forceTargetActive)chance=1;
   if(Math.random()<chance){triggerBite();}
@@ -13429,9 +13693,11 @@ function poolNow(){
       // STURGEON EGGS (Alabama Sturgeon ultra reward): an endless bait every
       // species will eat, so it skips the bait gate entirely.
       if(bait!=='sturgeoneggs'&&!f.baits.includes(bait))continue;   // wrong bait -> no bite
-    }else{
+    }else if(!m.snag){
       continue;                                            // artificial method, no valid lure tied on
     }
+    // (a snag method falls through: the treble is indiscriminate, so the
+    //  method gate above is the whole filter)
     // STRICT structure gate: a spot holds the species Clancy lists for it. A few
     // open-water roamers can still wander onto any spot, but only VERY rarely
     // (offSpot penalty below) so what bites closely matches Clancy's spot list.
@@ -13491,7 +13757,7 @@ function poolNow(){
     if(ri>=2){if(tier>=3)w*=1.9;else if(tier>=2)w*=1.4; if(tk)w*=tk.rare; if(finder)w*=1.3;}
     // bait-vs-lure preference: matching the fish's current mood helps, the wrong
     // presentation hurts (so switching baits/lures/methods finds what's biting)
-    {const favor=presentationPref(f);const match=lure?favor:(1-favor);w*=0.5+match;}
+    {const favor=presentationPref(f);const match=lure?favor:(m.snag?1:(1-favor));w*=0.5+match;}
     if(w>0.0001)out.push({f, w});
   }
   const strength=out.reduce((a, b)=>a+b.w,0);
@@ -13516,8 +13782,10 @@ function biteWait(strength, st, rarityDelay){
   boatFreq*=petBiteFreqMult();
   boatFreq*=playerBiteMult();
   // V0.9.5: a better reel works the bait/lure more effectively, higher bite chance.
-  const reelIdx=REELS.findIndex(r=>r.id===S.reel);
-  boatFreq*=(1+Math.max(0,reelIdx)*0.07);   // reel0..reel4 -> +0%..+28% bites
+  // Tier WITHIN the region you're fishing, not a position in the merged
+  // catalog — and from the equipped slot, which in freshwater is the region bag.
+  const reelIdx=forHere(REELS).indexOf(curReel());
+  boatFreq*=(1+Math.max(0,reelIdx)*0.07);   // starter -> top tier = +0%..+28% bites
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
   const envMul=environmentBiteFactor();
   // Global bite rate cut: bites come 35% slower across the board so fishing
@@ -14135,6 +14403,12 @@ function land(f, w, perfect, bullseye){
   const[a, b]=f.size;const sizeFrac=(w-a)/Math.max(0.01,(b-a));
   let xp=Math.round(f.xp*(0.8+sizeFrac*0.5)*0.7); // global 30% xp reduction
   let gold=Math.round(f.gold*(0.8+sizeFrac*0.6)*0.85); // global 15% coin reduction
+  // Fly fishing is the hardest way in the game to put a fish in the net —
+  // earn the line, land it on the mark, mend it clean, then time the set — so
+  // it pays triple. Applied before every display path reads xp/gold, so the
+  // wallet, the level bar and the catch card can never disagree.
+  const _flyBonus=!!(curMethod()&&curMethod().fly);
+  if(_flyBonus){xp*=3;gold*=3;}
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
@@ -14170,7 +14444,7 @@ function land(f, w, perfect, bullseye){
   if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
   // After surf is unlocked, jacks & amberjacks are kept as the only surf bait.
   if(S.surfUnlocked&&(f.id==='jack'||f.id==='amberjack')){S.surfBait=(S.surfBait||0)+1;setTimeout(function(){toast('Kept as surf bait (x'+S.surfBait+').','#2aa890');},950);}
-  showCatch(f, w,{isNew, perfect, bullseye, trophy, pb:pb&&!isNew, xp, gold, rubies:rubyReward});
+  showCatch(f, w,{isNew, perfect, bullseye, trophy, pb:pb&&!isNew, xp, gold, rubies:rubyReward, fly:_flyBonus});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
   if(typeof maybePrestigeOffer==='function')maybePrestigeOffer();
@@ -14206,28 +14480,38 @@ function grantUltraReward(f){
   }
 }
 
+// Soft currency is gold in saltwater and cash in freshwater; the two never
+// convert, so the reward line must name the one that actually went up.
+function _coinWord(){return isFresh()?'cash':'gold';}
 function showCatch(f, w, o){
   const ultra=f.rarity==='ultra';
   const badges=[];
   if(ultra)badges.push(['ULTRA LEGENDARY','ultra']);
-  if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 GOLD','#2aa890']);
+  if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 '+_coinWord().toUpperCase(),'#2aa890']);
+  if(o.fly)badges.push(['FLY ROD 3\u00d7 XP & '+_coinWord().toUpperCase(),'#2aa890']);
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
   if(o.bullseye)badges.push(['\ud83d\udfe1 BULLSEYE! 2\u00d7 COINS','#b8a000']);
   const card=document.getElementById('catch-card');
+  card.dataset.fid=f.id;
   card.classList.toggle('ultra-catch',ultra);
   card.innerHTML=
     '<div class="catch-badges">'+badges.map(b=>b[1]==='ultra'?'<span class="cbadge ultra-badge">'+b[0]+'</span>':'<span class="cbadge" style="background:'+b[1]+'">'+b[0]+'</span>').join('')+'</div>'+
-    '<div style="display:flex;justify-content:center;margin:4px 0 6px;" class="'+(ultra?'ultra-art':'')+'">'+buildFishArt(f.id,210)+'</div>'+
+    '<div style="display:flex;justify-content:center;margin:4px 0 6px;" class="'+(ultra?'ultra-art':'')+'" id="catch-art">'+buildFishArt(f.id,210)+'</div>'+
     '<div class="catch-name">'+f.name+'</div>'+
     '<div class="catch-rarity'+(ultra?' ultra-rarity':'')+'"'+(ultra?'':' style="color:'+RARITY_COLORS[f.rarity]+'"')+'>'+(RAR_LBL[f.rarity]||f.rarity)+' \u00b7 '+ZONES[f.zone].name+'</div>'+
     '<div class="catch-weight">'+fmtLb(w)+' lb</div>'+
     '<div class="catch-len">'+fishLenStr(f, w)+'</div>'+
-    '<div class="catch-rewards">+'+o.xp+' XP'+((activeTournament&&!(activeTournament.def&&activeTournament.def.coop))?' &nbsp;\u00b7&nbsp; tournament catch':(o.rubies>0?' &nbsp;\u00b7&nbsp; +'+o.gold+' gold &nbsp;\u00b7&nbsp; <span style="color:#d61f3a;">+'+o.rubies+' rubies</span>':' &nbsp;\u00b7&nbsp; +'+o.gold+' gold'))+'</div>'+
+    '<div class="catch-rewards">+'+o.xp+' XP'+((activeTournament&&!(activeTournament.def&&activeTournament.def.coop))?' &nbsp;\u00b7&nbsp; tournament catch':(o.rubies>0?' &nbsp;\u00b7&nbsp; +'+o.gold+' '+_coinWord()+' &nbsp;\u00b7&nbsp; <span style="color:#d61f3a;">+'+o.rubies+' rubies</span>':' &nbsp;\u00b7&nbsp; +'+o.gold+' '+_coinWord()))+'</div>'+
     '<div class="catch-fact">'+f.fact+'</div>'+
     '<button class="catch-ok" onclick="closeCatch()">'+(ultra?'Once in a lifetime!':'Nice!')+'</button>';
   document.getElementById('catch-bg').classList.add('show');
+}
+// Called when a sprite finishes background-keying while its catch card is up.
+function _repaintCatchArt(id){
+  const a=document.getElementById('catch-art');
+  if(a)a.innerHTML=buildFishArt(id,210);
 }
 function closeCatch(){document.getElementById('catch-bg').classList.remove('show');if(surfActive){surfPhase='idle';phase='idle';startSurfWait();return;}if(phase==='caught'){phase='idle';setStatus('Cast again, or rig up to target something new.');}}
 
@@ -14258,6 +14542,10 @@ function updateRigBar(){
       if(gearGet('baitSel')&&baitOwned(gearGet('baitSel'))){bEl.textContent=BAIT.find(x=>x.id===gearGet('baitSel')).name;bq.textContent=baitStock(gearGet('baitSel'));bslot.classList.remove('empty');}
       else{bEl.textContent='lure or bait';bq.textContent='tie one on';bslot.classList.add('empty');}
     }
+  } else if(m.snag){
+    // Nothing goes on the line but the treble, so the slot reports rather than shops.
+    if(baitLabel)baitLabel.textContent='Rig';
+    bEl.textContent='bare treble';bq.textContent='no bait or lure';bslot.classList.remove('empty');
   } else if(!m.bait){
     // Artificial method: this slot becomes the lure slot
     if(baitLabel)baitLabel.textContent='Lure';
@@ -14280,7 +14568,6 @@ function updateRigBar(){
   if(ci)ci.className=isFresh()?'cash-s':'coin-s';
   if(cp)cp.title=isFresh()?'Cash — the freshwater wallet. Buys freshwater gear and region licences.':'Gold — the saltwater wallet.';
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
-  var pc=document.getElementById('pearls-count');if(pc)pc.textContent=S.pearls||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
   const ib=document.getElementById('items-btn');if(ib)ib.classList.toggle('show',!(typeof surfActive!=='undefined'&&surfActive));
@@ -14458,7 +14745,7 @@ function flashRigGap(){
 document.getElementById('zone-pill').addEventListener('click',()=>{
   // Freshwater opens the Regions board (licences, lock state, where you are);
   // saltwater keeps the plain travel hint, since it has no licence system.
-  if(isFresh()&&!tourn.active&&!activeTournament){openRegionsModal();return;}
+  if(isFresh()&&!mpActive()&&!activeTournament){openRegionsModal();return;}
   const g=gatesFor();
   const move=isFresh()&&curZone().walk?'hike':'drive';
   const hint=g.map(x=>(gateBlockReason(x.tz)?'Locked: ':'')+x.label+(x.dir==='deeper'?' ('+move+' north)':' ('+move+' south)')).join(' · ');
@@ -14474,13 +14761,20 @@ function openRegionsModal(){
     const zn=ZONES[z], l=licenseFor(z), here=(S.zone===z);
     const owned=hasLicense(z);
     const reach=zoneReachIn('fresh', z);
-    let right;
-    if(!l)right='<span style="color:#1f9d57;font-weight:800;">Starter region</span>';
-    else if(owned&&reach)right='<span style="color:#1f9d57;font-weight:800;">Open</span>';
+    const block=regionTravelBlock(z);
+    let right, act='';
+    if(here)right='<span style="color:var(--text-soft);font-weight:800;">You are here</span>';
+    else if(l&&!owned){
+      right='<span style="color:var(--accent);font-weight:800;">'+l.cost.toLocaleString()+' cash</span>';
+      act=' style="cursor:pointer;" onclick="closeModal();openLicenseModal('+z+')"';
+    }
+    else if(!block){
+      right='<span style="color:#1f9d57;font-weight:800;">Travel \u203a</span>';
+      act=' style="cursor:pointer;" onclick="regionTeleport('+z+')" title="Travel to '+zn.name+'"';
+    }
     else if(owned&&!reach)right='<span style="color:#b58b53;font-weight:800;">Licensed · need gear</span>';
-    else right='<span style="color:var(--accent);font-weight:800;">'+l.cost.toLocaleString()+' cash</span>';
-    const clickable=(l&&!owned);
-    rows+='<div class="mrow"'+(clickable?' style="cursor:pointer;" onclick="closeModal();openLicenseModal('+z+')"':'')+'>'
+    else right='<span style="color:#b58b53;font-weight:800;">'+block+'</span>';
+    rows+='<div class="mrow"'+act+(act?'':' title="'+(block||'')+'"')+'>'
       +'<span class="ml">'+(here?'▸ ':'')+zn.name+'<span style="opacity:.6;font-weight:600;"> · '+zn.sub+'</span></span>'
       +'<span class="mv">'+right+'</span></div>';
   });
@@ -14490,7 +14784,7 @@ function openRegionsModal(){
     +'<div class="ws-sub" style="margin:4px 0 10px;">Regions open in order. Each licence is a one-time buy in cash, and your gear loadout follows you into the region you are standing in.</div>'
     +rows
     +'<div class="mrow"><span class="ml">Your cash</span><span class="mv">'+coinGet('fresh').toLocaleString()+'</span></div>'
-    +'<div class="mfact">Travel by heading to the edge gates — north for the next region, south to head back.</div>';
+    +'<div class="mfact">Tap any open region to travel there. The edge gates still work if you\u2019d rather drive it.</div>';
   document.getElementById('modal-bg').classList.add('show');
 }
 
@@ -14545,6 +14839,7 @@ function openShopAt(tab, sub){
 function rigGap(){
   const m=curMethod();
   if(!currentTackleId())return {tab:'tackle', sub:methodCat(m), label:m.name+' tackle', slot:'tackle'};
+  if(m.snag)return null;      // the treble above is the entire rig
   if(m.id==='troll'){
     const tl=_trollLureValid();
     if(!tl&&!(gearGet('baitSel')&&baitOwned(gearGet('baitSel'))))
@@ -14609,21 +14904,18 @@ function refreshMenu(){renderLogbook();renderShop();renderStats();renderTourname
 
 function renderLogbook(){
   let html='';
-  // Three uncaught treatments (V0.9.8.4): a LOCKED zone shows a padlock; a
-  // reachable FRESHWATER fish keeps its question marks until it is actually
-  // caught (mystery=true \u2014 entering a region must not reveal the roster, which
-  // is what "the fish lost their question marks and turned into shadows"
-  // reported); a reachable SALTWATER fish still shows the named silhouette,
-  // because the onboarding tutorial sends new players to find the Sheepshead
-  // by name in the zone-0 grid.
-  const fishCard=(f, showLock, mystery)=>{const c=S.caught[f.id]||0,caught=c>0;
+  // Two uncaught treatments, the same in BOTH worlds (V0.9.8.5): a fish in a
+  // region you have NOT unlocked is a padlock and '? ? ?'; a fish in a region
+  // you HAVE unlocked is a named dark silhouette. So the roster of the water
+  // you can actually reach is a set of shapes to go and find, and everything
+  // beyond it stays a mystery until you get there.
+  const fishCard=(f, showLock)=>{const c=S.caught[f.id]||0,caught=c>0;
     let icon;
     if(showLock)icon='<span style="opacity:.4">'+svgIcon('lock',18)+'</span>';
     else if(caught)icon=buildFishArt(f.id,40,false);
-    else if(mystery)icon='<span style="font-family:Fredoka;font-weight:600;font-size:24px;color:var(--text-soft);opacity:.55;">?</span>';
     // Not yet caught: show a dark outline/silhouette of the fish, not its colours.
     else icon='<span style="filter:brightness(0) opacity(.42);display:inline-block;line-height:0;">'+buildFishArt(f.id,40,false)+'</span>';
-    const hideName=showLock||(mystery&&!caught);
+    const hideName=showLock;
     return '<div class="fish-card '+(caught?'caught':'')+' '+(hideName?'locked':'')+' '+(f.rarity==='ultra'?'ultra':'')+'" data-fish="'+f.id+'"><span class="rarity-pip" style="background:'+RARITY_COLORS[f.rarity]+'"></span><div class="icon-slot">'+icon+'</div><div class="fname">'+(caught?f.name:(hideName?'? ? ?':f.name))+'</div><div class="fcount">'+(caught?'\u00d7'+c+(S.best[f.id]?' \u00b7 '+fmtLb(S.best[f.id])+' lb':''):(showLock?'locked':'undiscovered'))+'</div></div>';
   };
   // Fish are listed chronologically, in the order a player works up to them:
@@ -14645,7 +14937,7 @@ function renderLogbook(){
       if(!zfish.length)return;
       const zlock=zi>wmax;
       html+='<div class="zone-head">'+z.name+' <small>'+z.sub+' \u00b7 '+z.depth+'</small></div><div class="fish-grid">';
-      html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0), wid==='fresh')).join('')+'</div>';
+      html+=zfish.map(f=>fishCard(f, zlock&&!(S.caught[f.id]>0))).join('')+'</div>';
     });
   });
   // Through the ice: the Alaska and Northern hard-water rosters. These are real
@@ -14654,7 +14946,7 @@ function renderLogbook(){
   const iceFish=(_logWorld==='fresh')?FISH.filter(f=>f.ice).slice().sort(byProgress):[];
   if(iceFish.length){
     html+='<div class="zone-head">Through the Ice <small>Hard water \u00b7 drilled from the Northern lakes &amp; the Alaska range</small></div><div class="fish-grid">';
-    html+=iceFish.map(f=>fishCard(f, false, true)).join('')+'</div>';
+    html+=iceFish.map(f=>fishCard(f, false)).join('')+'</div>';
   }
   // Surf: beach sharks, caught only from the inshore surf. Saltwater only.
   const surfFish=(_logWorld==='salt')?FISH.filter(f=>f.surf).slice().sort(byProgress):[];
@@ -15192,10 +15484,7 @@ function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
   // Judge reachability against the fish's OWN world, not whichever one we're
   // standing in — otherwise every freshwater fish reads as locked from the coast.
-  // Uncaught freshwater fish keep their mystery: the card says '? ? ?', so the
-  // modal must not open and print the real name (saltwater keeps the preview —
-  // the tutorial depends on looking a fish up before catching it).
-  const caught=(S.caught[f.id]||0)>0;if(!caught&&(f.zone>maxZoneIn(worldOf(f.zone))||worldOf(f.zone)==='fresh'))return;
+  const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZoneIn(worldOf(f.zone)))return;
   const seasons=f.season.includes('all')?'Year-round':f.season.map(s=>SEASON_LABEL[s]).join(', ');
   const times=f.time.includes('all')?'Any time':f.time.map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(', ');
   document.getElementById('modal').innerHTML=
@@ -15234,6 +15523,7 @@ function clancyUsableMethods(f){
   return (f.methods||[]).filter(function(mid){
     const m=METHODS.find(function(x){return x.id===mid;});
     if(!m||!m.zones.includes(f.zone))return false;
+    if(m.snag)return true;                 // needs no lure, so nothing to look up
     if(!m.bait)return LURES.some(function(l){return l.methods.includes(mid)&&(typeof l.zone!=='number'||l.zone===f.zone)&&l.targets&&l.targets.includes(f.id);});
     return true;
   });
