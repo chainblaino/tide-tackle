@@ -6328,6 +6328,17 @@ function normalizeState(){
   if(typeof S.audio.sfx!=='number')S.audio.sfx=0.7;
   if(typeof S.audio.amb!=='number')S.audio.amb=0.5;
   if(typeof S.audio.muted!=='boolean')S.audio.muted=false;
+  // Repair gear the save says is equipped but that the player does not own. A
+  // ghost-render leak could strand another angler's rod (commonly a bot's
+  // Chainsaw Rod) in the real player's slot, where it then persisted and — via
+  // surfRigOK() — wrongly counted toward the surf-fishing unlock. The leak is
+  // closed at the source now; this cleans up saves that already caught it.
+  if(typeof validateEquipped==='function'){
+    const _fixedSlots=validateEquipped();
+    if(_fixedSlots>0)setTimeout(function(){
+      toast('Fixed '+_fixedSlots+' gear slot'+(_fixedSlots===1?'':'s')+' holding gear you don’t own.','#b58b53');
+    },1200);
+  }
   // Per-account world seed: same structures for everyone, shuffled placement.
   if(typeof S.worldSeed!=='number'||!isFinite(S.worldSeed)||S.worldSeed<=0){
     S.worldSeed=Math.floor(Math.random()*2147483646)+1;
@@ -7740,8 +7751,12 @@ function makeBotGhost(p, mseed){
   const home=tIdxs?tIdxs[Math.floor(r()*tIdxs.length)]:Math.floor(r()*nStruct);
   const g={uid:p.uid, name:p.username||'Angler',isBot:true, real:false,
     boat:GHOST_BOATS[bi],heading:0,
-    rod:RODS[Math.min(RODS.length-1,Math.max(0,bi-1+Math.floor(r()*2)))].id,
-    reel:REELS[Math.min(REELS.length-1,Math.max(0,bi-1+Math.floor(r()*2)))].id,
+    // Bots roll from the BUYABLE gear of the world the match is in. Indexing the
+    // raw arrays used to hand them ultra-reward gear (the Chainsaw Rod sits at
+    // index 5) and, since the freshwater region split grew these catalogs, a
+    // freshwater rod in a saltwater match.
+    rod:_botGear(RODS, bi, r).id,
+    reel:_botGear(REELS, bi, r).id,
     gender:r()<0.5?'male':'female',
     skinTone:SKIN_TONES[Math.floor(r()*SKIN_TONES.length)].id,
     cosmetic:cosmetic, set:set,_stash:8+Math.floor(r()*15),
@@ -8583,6 +8598,20 @@ function drawAbilityFx(){
     ctx.restore();
   }
 }
+// Pick a bot's rod/reel: the BUYABLE gear of the world this match is in, scaled
+// to the bot's boat tier. Never reward gear — a bot holding the Chainsaw Rod is
+// both wrong on its face and the thing that leaks it onto the real player when
+// drawGhostFull borrows the gear globals to render them.
+function _botGear(list, tier, r){
+  // S.zone is authoritative in both cases: entering a tournament sets it to that
+  // match's zone, so there is no separate tourn.zone to consult.
+  const w=worldOf(S.zone|0);
+  let pool=list.filter(function(x){return (x.world||'salt')===w&&!x.reward;});
+  if(!pool.length)pool=list.filter(function(x){return !x.reward;});
+  if(!pool.length)pool=list;
+  const i=Math.max(0,Math.min(pool.length-1, tier-1+Math.floor(r()*2)));
+  return pool[i];
+}
 // Draw a single other player at FULL size, reusing the player's own boat /
 // angler / rod / reel pipeline by temporarily swapping the globals those
 // functions read, then restoring them.
@@ -8590,16 +8619,24 @@ function drawGhostFull(g, dark){
   const sx=Math.round(g.wx-camera.x), sy=Math.round(g.wy-camera.y);
   const sv={boat:S.boat, cos:S.cosmetic, gen:S.gender, skin:S.skinTone, rod:S.rod, reel:S.reel, braid:S.braid,
             anchored:boat.anchored, ox:ORIGIN.x, oy:ORIGIN.y, ltx:lineRig.tipX, lty:lineRig.tipY};
-  S.boat=g.boat||'kayak';
-  S.cosmetic=g.cosmetic||{hat:'none',shirt:'none',shades:'none',crown:'none'};
-  S.gender=g.gender||'male'; S.skinTone=g.skinTone||'medlight';
-  S.rod=g.rod||'rod0'; S.reel=g.reel||'reel0'; S.braid=g.braid||'braid0';
-  boat.anchored=true;            // anchored pose so the rod & reel are shown
-  ORIGIN.x=sx; ORIGIN.y=sy+32;   // anchored boats render at ORIGIN.y-32
-  try{drawBoat(dark);}catch(e){}
-  // restore everything
-  S.boat=sv.boat;S.cosmetic=sv.cos;S.gender=sv.gen;S.skinTone=sv.skin;S.rod=sv.rod;S.reel=sv.reel;S.braid=sv.braid;
-  boat.anchored=sv.anchored;ORIGIN.x=sv.ox;ORIGIN.y=sv.oy;lineRig.tipX=sv.ltx;lineRig.tipY=sv.lty;
+  // try/FINALLY, not try/catch around the draw alone. This function borrows the
+  // real player's gear globals to render somebody else; if anything in here
+  // throws while they are swapped, the player is left wearing the ghost's rod
+  // and the next queueSave() writes it to disk. That is exactly how an unowned
+  // Chainsaw Rod ends up equipped — bots can roll one, and it survives the frame.
+  try{
+    S.boat=g.boat||'kayak';
+    S.cosmetic=g.cosmetic||{hat:'none',shirt:'none',shades:'none',crown:'none'};
+    S.gender=g.gender||'male'; S.skinTone=g.skinTone||'medlight';
+    S.rod=g.rod||'rod0'; S.reel=g.reel||'reel0'; S.braid=g.braid||'braid0';
+    boat.anchored=true;            // anchored pose so the rod & reel are shown
+    ORIGIN.x=sx; ORIGIN.y=sy+32;   // anchored boats render at ORIGIN.y-32
+    drawBoat(dark);
+  }catch(e){}
+  finally{
+    S.boat=sv.boat;S.cosmetic=sv.cos;S.gender=sv.gen;S.skinTone=sv.skin;S.rod=sv.rod;S.reel=sv.reel;S.braid=sv.braid;
+    boat.anchored=sv.anchored;ORIGIN.x=sv.ox;ORIGIN.y=sv.oy;lineRig.tipX=sv.ltx;lineRig.tipY=sv.lty;
+  }
 }
 function drawGhosts(t, dark){
   if(!mpActive()||!tourn.ghosts.length)return;
@@ -12327,7 +12364,48 @@ let _lureRetrieve=false;   // a lure has been cast and is waiting to be reeled i
 let biteTimeout=null, escapeTimeout=null, catchAnim=null;
 let zoneSel={left:35,width:30,dir:1,speed:1.3},marker={pos:50,dir:1,speed:0.39};
 
+// Repair any equipped slot pointing at gear the player does not own, or that is
+// not legal where it is equipped. Nothing used to check this: ensureRig()
+// validated the method, tackle and bait but never the rod, reel, boat or braid,
+// so once a bad id got into a slot it stayed there forever and saved. That is
+// what left players with a Chainsaw Rod equipped without owning one — and it
+// mattered, because surfRigOK() and the SLOW-MO button both key off the rod id.
+// Returns how many slots it had to fix.
+function validateEquipped(){
+  const slots=[['boat',BOATS,S.ownedBoats],['rod',RODS,S.ownedRods],
+               ['reel',REELS,S.ownedReels],['braid',BRAIDS,S.ownedBraids]];
+  // Saltwater keeps its equipped ids flat on S; each freshwater region has a bag.
+  const bags=[{w:'salt', rid:null, get:function(k){return S[k];}, set:function(k,v){S[k]=v;}}];
+  REGION_IDS.forEach(function(rid){
+    bags.push({w:'fresh', rid:rid,
+      get:function(k){return regionGearBag(rid)[k];},
+      set:function(k,v){regionGearBag(rid)[k]=v;}});
+  });
+  let fixed=0;
+  bags.forEach(function(bag){
+    slots.forEach(function(sl){
+      const key=sl[0], list=sl[1], owned=sl[2]||[];
+      const cur=bag.get(key);
+      const def=list.find(function(x){return x.id===cur;});
+      const legal=!!def && owned.indexOf(cur)>=0 && (def.world||'salt')===bag.w
+                  && (bag.w!=='fresh'||itemInRegion(def, bag.rid));
+      if(legal)return;
+      // Fall back to the best gear actually OWNED and legal here. Catalog order
+      // is tier order, so the last match is the strongest thing they can use.
+      const pool=list.filter(function(x){
+        if((x.world||'salt')!==bag.w)return false;
+        if(bag.w==='fresh'&&!itemInRegion(x, bag.rid))return false;
+        return owned.indexOf(x.id)>=0;
+      });
+      if(!pool.length)return;                 // owns nothing here; leave it alone
+      bag.set(key, pool[pool.length-1].id);
+      fixed++;
+    });
+  });
+  return fixed;
+}
 function ensureRig(){
+  validateEquipped();
   const zm=methodsForZone(S.zone);
   if(!zm.length)return;                                   // never crash on an unmapped zone
   if(!zm.find(m=>m.id===gearGet('method')))gearSet('method', zm[0].id);
@@ -13986,7 +14064,7 @@ function startSdewGame(fish){
   // Astronaut "Lunar Sun" (moon out): consume the pending buff so this catch fights slower.
   sdewLunar=!!_lunarSlowNext;_lunarSlowNext=false;
   const smBtn=document.getElementById('sdew-slowmo');
-  if(smBtn){const has=S.rod==='chainsaw';smBtn.style.display=has?'flex':'none';smBtn.disabled=false;}
+  if(smBtn){const has=hasChainsaw();smBtn.style.display=has?'flex':'none';smBtn.disabled=false;}
   document.getElementById('sdew-overlay').classList.add('show');
   updateSdewDOM();
   sdewAnimId=requestAnimationFrame(sdewLoop);
@@ -14048,7 +14126,7 @@ function updateSdewDOM(){
 }
 
 function useChainsawSlowmo(){
-  if(!sdewActive||S.rod!=='chainsaw'||sdewSlowmoUsed)return;
+  if(!sdewActive||!hasChainsaw()||sdewSlowmoUsed)return;
   sdewSlowmoUsed=true;
   const now=performance.now?performance.now():Date.now();
   sdewSlowmoUntil=now+3000;
@@ -14366,7 +14444,10 @@ function ultraNeedLabel(){
                   :'An Ultra Legendary needs the Big-Game reel and 130 lb braid.';
 }
 // Surf fishing gate: Big-Game reel + Bluewater rod (or Chainsaw) + 130 lb braid.
-function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||S.rod==='chainsaw')&&curBraid().line>=130;}
+// Equipped AND owned. Checking the id alone let a leaked Chainsaw Rod hand out
+// the SLOW-MO button and count toward the surf unlock.
+function hasChainsaw(){return S.rod==='chainsaw'&&(S.ownedRods||[]).indexOf('chainsaw')>=0;}
+function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||hasChainsaw())&&curBraid().line>=130;}
 function surfHookOK(){return S.surfHook||S.toothHook;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
 function snap(f, w, msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Rig up and cast again. Check the shop (\u2630).');}},2400);}
