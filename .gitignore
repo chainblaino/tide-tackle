@@ -10,3 +10,7 @@ package-lock.json
 # macOS
 .DS_Store
 **/.DS_Store
+
+# Local Clancy tuning/authoring tools — never ship these
+clancy-guide.html
+clancy-tuner.html

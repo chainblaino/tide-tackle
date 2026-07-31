@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.5</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.7</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -948,7 +948,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.5</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.7</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1729,15 +1729,21 @@ function renderEquipSections(){
   // toward; the ones you have not earned are greyed, unclickable and labelled
   // with what earns them. ownedPets() is untouched — the buff logic still needs it.
   const pets=PETS;
-  let petHtml=head('Companions','Earned by Prestige, and by landing certain Ultra Legendaries. Only one pet floats with ye at a time, giving its buff.');
+  const eqIds=equippedPets(), petCap=petEquipCap(), multiPet=petCap>1;
+  let petHtml=head('Companions','Earned by Prestige \u2014 saltwater and freshwater \u2014 and by landing certain Ultra Legendaries. '
+    +(multiPet
+      ? 'The <b>Dragon</b> is out: up to <b>'+petCap+'</b> companions ride with ye at once and every buff stacks. <b>'+eqIds.length+' / '+petCap+' equipped.</b>'
+      : 'Only one pet floats with ye at a time, giving its buff. Equip the <b>Dragon</b> to bring four more along.'));
   {
-    petHtml+='<div class="proj-equip" style="'+_equipCardCss(S.equippedPet==null)+'" onclick="equipPet(null)">'
+    petHtml+='<div class="proj-equip" style="'+_equipCardCss(eqIds.length===0)+'" onclick="equipPet(null)">'
       +'<span style="width:34px;height:24px;display:flex;align-items:center;justify-content:center;color:var(--text-soft);">'+svgIcon('none',16)+'</span>'
       +'<span style="flex:1;"><b style="font-size:13px;">No pet</b></span>'
-      +'<span style="font-size:11px;font-weight:800;color:'+(S.equippedPet==null?'var(--grass-dark)':'var(--text-soft)')+';">'+(S.equippedPet==null?'Selected':'Select')+'</span></div>';
+      +'<span style="font-size:11px;font-weight:800;color:'+(eqIds.length===0?'var(--grass-dark)':'var(--text-soft)')+';">'+(eqIds.length===0?'Selected':(multiPet?'Clear all':'Select'))+'</span></div>';
     petHtml+=pets.map(function(p){
       const own=petOwned(p.id);
-      const eq=own&&S.equippedPet===p.id;
+      const eq=own&&eqIds.indexOf(p.id)>=0;
+      // 'Full' only means anything in multi mode; at cap 1 a tap replaces.
+      const full=multiPet&&!eq&&eqIds.length>=petCap;
       // The Golden Trout is a timed burst, so its row reports the live state:
       // glowing while running, counting down while resting.
       let state='', glow='';
@@ -1755,10 +1761,13 @@ function renderEquipSections(){
           +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div></span>'
           +'<span class="shop-action lvl" style="font-size:11px;">'+petCriteria(p)+'</span></div>';
       }
-      return '<div class="proj-equip" style="'+_equipCardCss(eq)+glow+'" onclick="equipPet(\''+p.id+'\')">'
+      if(own&&p.id==='dragon'&&eq)state='<div style="font-size:10.5px;font-weight:800;color:#b3402a;">'+eqIds.length+' / '+petCap+' slots in use</div>';
+      const act=eq?(multiPet?'Equipped \u2713':'Equipped'):(full?'Full':'Equip');
+      const col=eq?'var(--grass-dark)':(full?'var(--text-soft)':'var(--accent)');
+      return '<div class="proj-equip" style="'+_equipCardCss(eq)+glow+(full?'opacity:.6;':'')+'" onclick="equipPet(\''+p.id+'\')">'
         +'<span style="width:34px;height:24px;border-radius:4px;overflow:hidden;background:#f4f6f8;flex:none;"><img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" style="width:100%;height:100%;object-fit:cover;" onerror="this.style.display=\'none\'"></span>'
         +'<span style="flex:1;min-width:0;"><b style="font-size:13px;">'+p.name+'</b><div style="font-size:10.5px;color:var(--text-soft);">'+p.buff+'</div>'+state+'</span>'
-        +'<span style="font-size:11px;font-weight:800;color:'+(eq?'var(--grass-dark)':'var(--accent)')+';">'+(eq?'Equipped':'Equip')+'</span></div>';
+        +'<span style="font-size:11px;font-weight:800;color:'+col+';">'+act+'</span></div>';
     }).join('');
   }
   // ---- Crowns ----
@@ -1783,15 +1792,36 @@ function renderEquipSections(){
   return petHtml+crownHtml;
 }
 function equipPet(id){
-  if(id&&!petOwned(id))return;
-  // Equipping the Golden Trout is what starts its 10-minute run — but only from
-  // a ready state, so re-equipping mid-cooldown never sneaks a second window.
-  if(id==='goldentrout'){
-    const st=goldenState();
-    if(st==='cooling'){toast('The Golden Trout is still resting — ready in '+fmtDur(goldenMsLeft())+'.','#b58b53');return;}
-    if(st==='ready')goldenTryStart();
+  S.equippedPets=equippedPets().filter(function(x){return petOwned(x);});
+  if(id===null||id===undefined){                       // the "No pet" row clears everything
+    S.equippedPets=[];syncEquippedPetAlias();queueSave();renderProjectsPanel();return;
   }
-  S.equippedPet=id;queueSave();renderProjectsPanel();
+  if(!petOwned(id))return;
+  if(petEquipped(id)){
+    S.equippedPets=S.equippedPets.filter(function(x){return x!==id;});
+    // Taking the Dragon off collapses the extra slots.
+    if(id==='dragon'&&S.equippedPets.length>PET_SOLO_CAP){
+      const kept=S.equippedPets[0];S.equippedPets=[kept];
+      toast('The Dragon left \u2014 only '+petNameOf(kept)+' stays with ye.','#b58b53');
+    }
+  }else{
+    // Equipping the Golden Trout is what starts its 10-minute run — but only
+    // from a ready state, so re-equipping mid-cooldown never sneaks a second one.
+    if(id==='goldentrout'){
+      const st=goldenState();
+      if(st==='cooling'){toast('The Golden Trout is still resting \u2014 ready in '+fmtDur(goldenMsLeft())+'.','#b58b53');return;}
+      if(st==='ready')goldenTryStart();
+    }
+    // The Dragon opens its slots the moment it goes on, so measure the cap
+    // against the set we are ABOUT to have, not the one we have now.
+    const next=S.equippedPets.concat([id]);
+    const cap=(next.indexOf('dragon')>=0)?PET_DRAGON_CAP:PET_SOLO_CAP;
+    if(next.length>cap){
+      if(cap===PET_SOLO_CAP)S.equippedPets=[id];                 // single slot: plain replace
+      else{toast('Only '+cap+' companions at a time, even for the Dragon.','#b58b53');return;}
+    }else S.equippedPets=next;
+  }
+  syncEquippedPetAlias();queueSave();renderProjectsPanel();
 }
 function equipCrown(id){
   if(!S.ownedCrowns)S.ownedCrowns=[];
@@ -2192,6 +2222,10 @@ function updateZonePill(){
   document.getElementById('zone-name').textContent=curZone().name;
   if(typeof updateWorldPill==='function')updateWorldPill();
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
+  // Salt <-> fresh (and Mountains) music + ambience. Every zone-changing path
+  // funnels through here, so this one line covers boot, gates, teleport,
+  // world swap, tournament start and the cloud-save merge.
+  if(typeof AUDIO!=='undefined'&&AUDIO.setScene)AUDIO.setScene();
 }
 
 // A monotonic day counter in US Eastern time, so the bounty's region and species
@@ -2649,6 +2683,8 @@ function startTournamentMode(def){
   // Co op worlds have no timer (leave when you like); everything else runs for the
   // configured time limit (lobbies) or the default 6 minutes.
   if(!def.coop)setTimeout(endTournament,(def.timeLimitMin||6)*60*1000);
+  // Freshwater Prestige 4 companion: one free target fish, once per match.
+  if(typeof scheduleOtterCatch==='function')scheduleOtterCatch();
 }
 // Co op friends world: the normal multi-zone world (with working zone gates),
 // shared with friends via live position sync, on the host's seed so structures
@@ -2690,6 +2726,55 @@ function initCoopGhosts(){
     });
   }
   startTournamentSync();
+}
+// ── OTTER (Freshwater Prestige 4) ────────────────────────────────────────────
+// Once per multiplayer match the otter surfaces with a fish of its own: one of
+// whatever species the match is SCORING, at a normally rolled size. It goes
+// through recordTournamentCatch() and nothing else — the same door the Jester's
+// steal uses — so it moves the standing but never writes S.caught / S.best /
+// S.biggest / S.totalCatches. That is what keeps the logbook and the pushed
+// leaderboard honest: neither reads tournament state.
+const OTTER_MIN_MS=20000, OTTER_MAX_MS=40000;
+function otterTargetFish(){
+  if(!activeTournament||!activeTournament.def)return null;
+  const def=activeTournament.def;
+  if(def.coop)return null;                       // friendly world: there is no score to add to
+  if(typeof isBounty==='function'&&isBounty())return currentTournTarget();
+  if(def.targetFish)return def.targetFish;
+  if(activeTournament.limited){                  // limited casts: score is DISTINCT species
+    const z=(typeof def.zone==='number')?def.zone:S.zone;
+    const seen=activeTournament.limitedSpecies||{};
+    const pool=FISH.filter(function(f){return f.zone===z&&!f.surf&&!f.ice&&f.rarity!=='ultra';});
+    const unseen=pool.filter(function(f){return !seen[f.id];});
+    const pick=unseen.length?unseen:pool;        // prefer one that actually scores
+    return pick.length?pick[Math.floor(Math.random()*pick.length)]:null;
+  }
+  return (typeof currentTournTarget==='function')?currentTournTarget():null;
+}
+// Armed once when a match starts. Identity-checks activeTournament in the
+// callback because def.id is NOT unique across two runs of the same daily.
+function scheduleOtterCatch(){
+  if(!activeTournament||activeTournament._otterFired)return;
+  if(!petActive('otter'))return;
+  if(activeTournament.def&&activeTournament.def.coop)return;
+  const match=activeTournament;
+  setTimeout(function(){
+    if(activeTournament!==match)return;          // ended, left, or a different match
+    fireOtterCatch();
+  }, OTTER_MIN_MS+Math.random()*(OTTER_MAX_MS-OTTER_MIN_MS));
+}
+function fireOtterCatch(){
+  if(!activeTournament||activeTournament._otterFired)return;
+  if(!petActive('otter'))return;                 // unequipping mid-match cancels it
+  const f=otterTargetFish();
+  if(!f)return;
+  activeTournament._otterFired=true;             // strictly once per match
+  const w=rollWeight(f);                         // ordinary size roll, record tail and all
+  toast('Your otter surfaced with a '+fmtLb(w)+' lb '+f.name+'!','#2aa890');
+  try{if(typeof spawnAbilityFx==='function')spawnAbilityFx(boat.wx, boat.wy,'#7ec8a9','swirl');}catch(e){}
+  recordTournamentCatch(f, w);
+  try{if(typeof updateTournBanner==='function')updateTournBanner();}catch(e){}
+  try{if(typeof publishMyPosition==='function')publishMyPosition(true);}catch(e){}
 }
 function recordTournamentCatch(fish, weight){
   recordChallengeBest(fish, weight);
@@ -3963,8 +4048,8 @@ const LURES=[
   {id:'fw_glidebait', cat:'plug',      zone:5,color:'gold',         name:'Gold Glide Bait',           icon:'fish',       cost:620,lvl:9, methods:['topwater','troll'], baits:['shiner'],  targets:['muskie','muskie','northernpike','walleye'],                 desc:'A jointed 8 in glider that S-tracks on a slow pull. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_bucktail10',cat:'spinnerbait',zone:5,                     name:'Double-10 Bucktail',        icon:'reel',       cost:700,lvl:10,methods:['topwater','troll'], baits:['shad'],    targets:['muskie','muskie','northernpike','northernpike'],              desc:'Two size-10 blades and a fistful of hair. The muskie bait, and it is brutal to throw.',world:'fresh',fixedCost:true},
   // Mountains flies. Fly water is zone 6 only, so every fly targets zone-6 species.
-  {id:'fly_popper',   cat:'fly',       zone:6,                      name:'Foam Beetle',               icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['brooktrout','brooktrout','cutthroattrout','goldentrout'],                desc:'DRY FLY. A fat foam beetle plopped tight to the bank. Brook trout look up all summer.',world:'fresh',fixedCost:true},
-  {id:'fly_clouser',  cat:'fly',       zone:6,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['dollyvarden','dollyvarden','rainbowtrout','bulltrout'],                desc:'STREAMER. Dumbbell eyes and bucktail jigged on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
+  {id:'fly_popper',   cat:'fly',       zone:6,                      name:'Foam Beetle',               icon:'bait-crab',  cost:120,lvl:5, methods:['fly'],          baits:['cricket'], targets:['brooktrout','brooktrout','cutthroattrout','goldentrout','apachetrout'],                desc:'DRY FLY. A fat foam beetle plopped tight to the bank. Brook trout look up all summer.',world:'fresh',fixedCost:true},
+  {id:'fly_clouser',  cat:'fly',       zone:6,color:'chartreuse',   name:'Chartreuse Clouser Minnow', icon:'bait-fish',  cost:160,lvl:6, methods:['fly'],          baits:['minnow'],  targets:['dollyvarden','dollyvarden','rainbowtrout','bulltrout','tigertrout','chumsalmon'],                desc:'STREAMER. Dumbbell eyes and bucktail jigged on the strip. Chartreuse: +5% bite in stained water.',world:'fresh',fixedCost:true},
   // ---- RIVER (zone 4) ----
   {id:'fw_inlinespin',   cat:'spinnerbait',zone:4,                  name:'Inline Spinner',            icon:'reel',       cost:170,lvl:2, methods:['topwater'],        baits:['minnow'],  targets:['peacockbass','sowhitebass','sowhitebass','chainpickerel'],             desc:'A #3 blade thumping in current. Nothing in the bayous ignores it.',world:'fresh',fixedCost:true},
   {id:'fw_tubejig',      cat:'softplastic',zone:4,color:'red',      name:'Rootbeer Tube Jig',         icon:'reel',       cost:190,lvl:3, methods:['jig'],         baits:['crawfish'],targets:['sostripedbass','sostripedbass','peacockbass','sowhitebass'],                       desc:'A hollow tube dragged over gravel. Rootbeer: +5% bite while the current is moving.',world:'fresh',fixedCost:true},
@@ -3976,24 +4061,24 @@ const LURES=[
   {id:'fw_shadrap',      cat:'crankbait', zone:5,                   name:'Deep Shad Rap',             icon:'fish',       cost:380,lvl:7, methods:['troll','topwater'],baits:['shad'],    targets:['walleye','walleye','browntrout','smallmouth'],                    desc:'A balsa shad body pulled slow along a channel edge.',world:'fresh',fixedCost:true},
   {id:'fw_trollbucktail',cat:'trolling',  zone:5,                   name:'Trolling Bucktail Rig',     icon:'tackle-lure',cost:520,lvl:8, methods:['troll'],       baits:['shad'],    targets:['northernpike','walleye','walleye','muskie'],               desc:'A weighted bucktail and trailer pulled long behind the boat in the main channel.',world:'fresh',fixedCost:true},
   // Mountains flies (continued)
-  {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','brooktrout','cutthroattrout','bulltrout'],             desc:'STREAMER. Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
+  {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','brooktrout','cutthroattrout','bulltrout','gilatrout'],             desc:'STREAMER. Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
   {id:'fly_crawfly',     cat:'fly',       zone:6,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['bulltrout','bulltrout','mtnwhitefish','rainbowtrout'],                         desc:'NYMPH. Rubber-leg claws crawled over a gravel bar. Bull trout candy.',world:'fresh',fixedCost:true},
   // ---- NORTHERN (zone 5) & MOUNTAINS (zone 6) ----
-  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','brooktrout','goldentrout','cutthroattrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','goldentrout','apachetrout','gilatrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['laketrout','browntrout','cohosalmon','northernpike'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
   {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','laketrout','lakewhitefish','yellowperch'],                                               desc:'A 4 in white tube jigged over a cold, deep shelf. White: +5% bite during the day.',world:'fresh',fixedCost:true},
   {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['cohosalmon','cohosalmon','kingsalmon','laketrout'],             desc:'A flashing dodger ahead of a tipped squid. The Great Lakes salmon troll, corn and all.',world:'fresh',fixedCost:true},
   {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['cohosalmon','kingsalmon','laketrout','browntrout'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
   {id:'fw_jerkminnow',  cat:'plug',      zone:5,                    name:'Jointed Minnow Plug',       icon:'fish',       cost:520,lvl:9, methods:['topwater','troll'],baits:['minnow'],  targets:['northernpike','northernpike','muskie','browntrout'],   desc:'A jointed 6 in minnow with a lazy roll. What the truly big predators eat.',world:'fresh',fixedCost:true},
-  {id:'fw_mtnspoon',   cat:'spoon',     zone:6,                    name:'Brass Wobbler Spoon',       icon:'reel',       cost:340,lvl:7, methods:['spincast'],    baits:['minnow'],  targets:['dollyvarden','bulltrout','sockeyesalmon','mtnking'],                 desc:'A hammered brass wobbler swung deep through the big pools. When nothing rises, go down.',world:'fresh',fixedCost:true},
-  {id:'fly_adams',      cat:'fly',       zone:6,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','cutthroattrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
-  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','dollyvarden','goldentrout','grayling','cagoldentrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
-  {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','goldentrout','cagoldentrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
+  {id:'fw_mtnspoon',   cat:'spoon',     zone:6,                    name:'Brass Wobbler Spoon',       icon:'reel',       cost:340,lvl:7, methods:['spincast'],    baits:['minnow'],  targets:['dollyvarden','bulltrout','sockeyesalmon','mtnking','tigertrout','chumsalmon'],                 desc:'A hammered brass wobbler swung deep through the big pools. When nothing rises, go down.',world:'fresh',fixedCost:true},
+  {id:'fly_adams',      cat:'fly',       zone:6,                    name:'Parachute Adams',           icon:'bait-crab',  cost:110,lvl:5, methods:['fly'],         baits:['cricket'], targets:['rainbowtrout','brooktrout','cutthroattrout','grayling','apachetrout'],   desc:'DRY FLY. The one pattern that matches almost any mayfly on the water.',world:'fresh',fixedCost:true},
+  {id:'fly_hopper',     cat:'fly',       zone:6,                    name:'Foam Hopper',               icon:'bait-crab',  cost:140,lvl:6, methods:['fly'],         baits:['cricket'], targets:['cutthroattrout','dollyvarden','goldentrout','cagoldentrout','gilatrout'],    desc:'DRY FLY. A fat foam grasshopper slapped against the bank in late summer.',world:'fresh',fixedCost:true},
+  {id:'fly_pheasant',   cat:'fly',       zone:6,                    name:'Pheasant Tail Nymph',       icon:'bait-crab',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','mtnwhitefish','brooktrout','cagoldentrout','apachetrout','gilatrout'], desc:'NYMPH. A slim beadhead drifted dead along the bottom of a run.',world:'fresh',fixedCost:true},
   {id:'fly_stonefly',   cat:'fly',       zone:6,                    name:'Stonefly Nymph',            icon:'bait-crab',  cost:175,lvl:7, methods:['fly'],         baits:['worm'],    targets:['bulltrout','rainbowtrout','mtnwhitefish','brooktrout','cutthroattrout'],      desc:'NYMPH. A big rubber-leg stone tumbling through a plunge pool.',world:'fresh',fixedCost:true},
   {id:'fly_softhackle', cat:'fly',       zone:6,                    name:'Soft Hackle Wet Fly',       icon:'bait-crab',  cost:150,lvl:6, methods:['fly'],         baits:['leech'],   targets:['dollyvarden','cutthroattrout','grayling','mtnwhitefish','brooktrout'],desc:'WET FLY. Swung on a tight line below you, hackle pulsing in the current.',world:'fresh',fixedCost:true},
-  {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','rainbowtrout','dollyvarden','sockeyesalmon','mtnwhitefish'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
-  {id:'fly_sculpin',    cat:'fly',       zone:6,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['bulltrout','bulltrout','dollyvarden','brooktrout','mtnking'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
-  {id:'fly_mouse',      cat:'fly',       zone:6,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','rainbowtrout','mtnking'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
+  {id:'fly_globug',     cat:'fly',       zone:6,                    name:'Glo-Bug Egg Fly',           icon:'bait-shrimp',cost:165,lvl:7, methods:['fly'],         baits:['salmonegg'],targets:['rainbowtrout','dollyvarden','sockeyesalmon','mtnwhitefish','chumsalmon'],desc:'WET FLY. A ball of orange yarn. Nothing subtle about it, and nothing works better.',world:'fresh',fixedCost:true},
+  {id:'fly_sculpin',    cat:'fly',       zone:6,color:'purple',     name:'Purple Sculpin Streamer',   icon:'bait-fish',  cost:260,lvl:9, methods:['fly'],         baits:['minnow'],  targets:['bulltrout','bulltrout','dollyvarden','brooktrout','tigertrout'],   desc:'STREAMER. A weighted sculpin stripped hard off an undercut. Purple: +5% luck at night.',world:'fresh',fixedCost:true},
+  {id:'fly_mouse',      cat:'fly',       zone:6,                    name:'Deer-Hair Mouse',           icon:'bait-fish',  cost:340,lvl:11,methods:['fly'],         baits:['shiner'],  targets:['bulltrout','bulltrout','rainbowtrout','mtnking','tigertrout'],                      desc:'STREAMER. Skated across a tailout after dark. The take will stop your heart.',world:'fresh',fixedCost:true},
 ];
 function lureById(id){return LURES.find(function(l){return l.id===id;});}
 // Lure durability: unlike bait (consumed every cast), a lure survives several
@@ -4303,9 +4388,11 @@ const PETS=[
   // ---- Freshwater prestige ladder (S.fprestige), V0.9.8.6 ----
   // world:'fresh' is what sends petOwned() to the freshwater counter instead of
   // the saltwater one; the two ladders are unlocked entirely independently.
-  {id:'snowowl',  name:'Snow Owl',  prestige:1, world:'fresh', buff:'+20% fish spawn rate during winter'},
+  {id:'snowowl',  name:'Snow Owl',  prestige:1, world:'fresh', art:'snow owl.png', buff:'+20% fish spawn rate during winter'},
   {id:'bear',     name:'Bear',      prestige:2, world:'fresh', buff:'+20% cash earned from catches'},
-  {id:'alligator',name:'Alligator', prestige:3, world:'fresh', buff:'+100% sight-fishing spawn rate'},
+  {id:'alligator',name:'Alligator', prestige:3, world:'fresh', art:'alligator swimming.png', buff:'+100% sight-fishing spawn rate'},
+  {id:'otter',    name:'Otter',     prestige:4, world:'fresh', buff:'Lands one target fish for ye, once per multiplayer match'},
+  {id:'dragon',   name:'Dragon',    prestige:5, world:'fresh', buff:'Take 4 other companions along at once \u2014 every buff stacks'},
   // Earned, not prestiged: landing the California Golden Trout. prestige:99 keeps
   // it out of ownedPets()'s level check; petOwned() special-cases it.
   {id:'goldentrout', name:'Golden Trout', prestige:99, reward:'cagoldentrout',
@@ -4324,7 +4411,7 @@ function goldenState(){
   if(S.goldenReadyAt&&now<S.goldenReadyAt)return 'cooling';
   return 'ready';
 }
-function goldenActive(){return S.equippedPet==='goldentrout'&&goldenState()==='running';}
+function goldenActive(){return petActive('goldentrout')&&goldenState()==='running';}
 function goldenMsLeft(){
   const now=Date.now();
   if(goldenState()==='running')return Math.max(0,S.goldenUntil-now);
@@ -4378,9 +4465,14 @@ PETS.forEach(function(p){
   const im=new Image();
   im.onload=function(){try{PET_SPRITE[id]=_keyOutPetBg(im);}catch(e){PET_SPRITE[id]=im;}};
   im.onerror=function(){};   // art not in the folder yet: stay silent
-  im.src='pets/'+id+'.png';PET_IMG[id]=im;
+  im.src=petImgSrc(id);PET_IMG[id]=im;
 });
-function petImgSrc(id){return 'pets/'+id+'.png';}
+// Most pets are pets/<id>.png. `art` overrides that for the rows whose art
+// arrived under a different filename (a space, or a pose suffix).
+function petImgSrc(id){
+  const p=PETS.find(function(x){return x.id===id;});
+  return 'pets/'+encodeURIComponent((p&&p.art)||(id+'.png'));
+}
 // Clancy NPC art: the full figure (drawn in his offshore sailboat) and a
 // background-keyed sprite for the game canvas.
 const CLANCY_IMG=new Image(); let CLANCY_SPRITE=null;
@@ -4421,9 +4513,21 @@ function petOwned(id){const def=PETS.find(function(x){return x.id===id;});if(!de
   if(def.reward)return petRewardHeld(def);
   return def.prestige<=petPrestigeOf(def);}
 function hasPet(id){return petOwned(id);}
-// V0.9.6: only ONE pet can be equipped at a time, so only the equipped pet's buff
-// applies. petActive() is true only for the currently-equipped, owned pet.
-function petActive(id){return S.equippedPet===id&&petOwned(id);}
+// V0.9.8.7: pets are an equipped SET. Normally exactly ONE may be equipped; the
+// Dragon (Freshwater Prestige 5) is the exception — while it is on, four OTHER
+// companions ride with it (5 slots total, the Dragon holding one) and every buff
+// stacks, because each buff reads petActive() independently.
+const PET_SOLO_CAP=1, PET_DRAGON_CAP=5;
+function equippedPets(){return Array.isArray(S.equippedPets)?S.equippedPets:[];}
+function petEquipped(id){return equippedPets().indexOf(id)>=0;}
+function petEquipCap(){return (petEquipped('dragon')&&petOwned('dragon'))?PET_DRAGON_CAP:PET_SOLO_CAP;}
+// The single chokepoint every buff reads.
+function petActive(id){return petOwned(id)&&petEquipped(id);}
+// S.equippedPet survives as a DERIVED alias of the first equipped pet so old
+// saves round-trip and any straggler reader keeps working. Never assign it
+// directly — the save is JSON.stringify(S), so a getter would not deserialise.
+function syncEquippedPetAlias(){S.equippedPet=equippedPets()[0]||null;}
+function petNameOf(id){const p=PETS.find(function(x){return x.id===id;});return p?p.name:'that companion';}
 // ---- Prestige multipliers -----------------------------------------------
 // The two worlds prestige INDEPENDENTLY and each bonus applies only to its own
 // wallet: saltwater prestige boosts gold, freshwater prestige boosts cash.
@@ -4883,14 +4987,14 @@ const ZONE_STRUCTS=[
 
   // ---- zone 4: SOUTHERN — blackwater swamp, canal and oxbow ----
   [{kind:'lilypad',xF:0.604,yF:0.142,tier:1},
-   {kind:'laydown',xF:0.15,yF:0.209,tier:1},
+   {kind:'laydown',xF:0.396,yF:0.733,tier:1},
    {kind:'boatdock',xF:0.3125,yF:0.085,tier:1},
    {kind:'weedbed',xF:0.196,yF:0.414,tier:2},
-   {kind:'logjam',xF:0.448,yF:0.571,tier:2},
-   {kind:'pilings',xF:0.753,yF:0.318,tier:2},
+   {kind:'logjam',xF:0.237,yF:0.811,tier:2},
+   {kind:'pilings',xF:0.7517,yF:0.4305,tier:2},
    {kind:'timber',xF:0.585,yF:0.468,tier:2},
    {kind:'eddy',xF:0.292,yF:0.662,tier:3},
-   {kind:'creekchan',xF:0.837,yF:0.79,tier:3},
+   {kind:'creekchan',xF:0.5125,yF:0.681,tier:3},
    {kind:'deephole',xF:0.519,yF:0.852,tier:3}],
 
   // ---- zone 5: NORTHERN — shield lakes, big water and the tailrace ----
@@ -4909,16 +5013,21 @@ const ZONE_STRUCTS=[
   // V0.9.8.4 canyon layout: tailout below the plunge bowl, boulders on the
   // Flume elbow, the run through the Narrows, undercut on the west wall bend,
   // the beaver pond on its hanging meadow, spring creek up the side canyon.
-  [{kind:'riffle',xF:0.428,yF:0.492,tier:1},
-   {kind:'tailout',xF:0.505,yF:0.135,tier:1},
-   {kind:'run',xF:0.362,yF:0.40,tier:2},
-   {kind:'boulders',xF:0.617,yF:0.245,tier:2},
-   {kind:'undercut',xF:0.325,yF:0.73,tier:2},
-   {kind:'beaverpond',xF:0.175,yF:0.75,tier:2},
-   {kind:'plungepool',xF:0.478,yF:0.106,tier:3},
-   {kind:'springcreek',xF:0.685,yF:0.408,tier:3},
-   {kind:'alpinelake',xF:0.5,yF:0.916,tier:3},
-   {kind:'waterfall',xF:0.49,yF:0.068,tier:3}],
+  // V0.9.8.7: respaced down the canyon so no two spots sit closer than ~233px
+  // (they were bunched at the head). Every point below is a LOCAL CLEARANCE
+  // MAXIMUM, which is what makes initStructures' snap and its 140px push both
+  // no-ops — move one without re-checking the others and it will silently slide
+  // into whichever neighbouring water is wider.
+  [{kind:'riffle',xF:0.4144,yF:0.4817,tier:1},
+   {kind:'tailout',xF:0.4888,yF:0.3079,tier:1},
+   {kind:'run',xF:0.3576,yF:0.3893,tier:2},
+   {kind:'boulders',xF:0.6024,yF:0.2190,tier:2},
+   {kind:'undercut',xF:0.4776,yF:0.6507,tier:2},
+   {kind:'beaverpond',xF:0.1832,yF:0.7534,tier:2},
+   {kind:'plungepool',xF:0.5160,yF:0.1479,tier:3},
+   {kind:'springcreek',xF:0.6848,yF:0.4176,tier:3},
+   {kind:'alpinelake',xF:0.5040,yF:0.9203,tier:3},
+   {kind:'waterfall',xF:0.4904,yF:0.0655,tier:3}],
 
 ];
 // Deterministic RNG so a given worldSeed always lays out the same map.
@@ -5135,7 +5244,7 @@ const FISH=[
   // ---------- MIDWEST (zone 3) ----------
   {id:'bluegill',name:'Bluegill',zone:3,rarity:'common',size:[0.1,2],line:4,methods:['livebait','topwater'],baits:['worm','cricket'],leader:'any',structure:['lilypad','boatdock','laydown','brushpile'],season:['all'],time:['day','dawn','dusk'],xp:6,gold:2,weight:52,fact:'Male bluegill fan saucer-shaped nests into the shallows in dense colonies and guard the eggs alone until they hatch.'},
   {id:'redear',name:'Redear Sunfish',zone:3,rarity:'common',size:[0.3,4],line:6,methods:['livebait','bottom'],baits:['worm','leech','crawfish'],leader:'fluoro',structure:['weedbed','lilypad','point'],season:['spring','summer'],time:['day'],xp:10,gold:4,weight:46,fact:'Nicknamed the shellcracker for the grinding throat teeth it uses to crush snails and small clams other sunfish cannot touch.'},
-  {id:'blackbullhead',name:'Black Bullhead',zone:3,rarity:'common',size:[0.2,3],line:6,methods:['bottom','livebait'],baits:['worm','chickenliver','stinkbait'],leader:'any',structure:['laydown','brushpile','creekchan','boatdock'],season:['all'],time:['dusk','night'],xp:11,gold:5,weight:44,fact:'It will live in water too warm, too muddy and too starved of oxygen for anything else, which is why a farm pond that holds nothing else still holds bullhead.'},
+  {id:'blackbullhead',name:'Black Bullhead',zone:3,rarity:'rare',size:[0.2,3],line:6,methods:['bottom','livebait'],baits:['worm','chickenliver','stinkbait'],leader:'any',structure:['laydown','brushpile','creekchan','boatdock'],season:['all'],time:['dusk','night'],xp:11,gold:5,weight:9,fact:'It will live in water too warm, too muddy and too starved of oxygen for anything else, which is why a farm pond that holds nothing else still holds bullhead.'},
   {id:'yellowbass',name:'Yellow Bass',zone:3,rarity:'common',size:[0.2,2],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad'],leader:'any',structure:['point','open','riprap','dam'],season:['spring','fall'],time:['dawn','dusk','day'],xp:13,gold:6,weight:42,fact:'The broken, offset lower stripes are the tell — no other temperate bass has them — and they school so thick that finding one usually means finding fifty.'},
   {id:'whitecrappie',name:'White Crappie',zone:3,rarity:'common',size:[0.3,4],line:6,methods:['jig','livebait'],baits:['minnow','shiner'],leader:'fluoro',structure:['brushpile','timber','boatdock','laydown'],season:['spring','summer'],time:['dawn','dusk'],xp:16,gold:8,weight:40,fact:'Count the dorsal spines to tell it from a black crappie: white crappie carry six, black crappie seven or eight, and white crappie handle muddy water far better.'},
   {id:'blackcrappie',name:'Black Crappie',zone:3,rarity:'uncommon',size:[0.3,4.5],line:6,methods:['jig','livebait'],baits:['minnow','shiner'],leader:'fluoro',structure:['brushpile','timber','boatdock','laydown'],season:['winter','spring'],time:['dawn','dusk','night'],xp:22,gold:12,weight:28,fact:'They are called papermouths for good reason: the mouth membrane tears easily, so steady pressure lands more of them than a hard hookset.'},
@@ -5143,16 +5252,16 @@ const FISH=[
   {id:'largemouth',name:'Largemouth Bass',zone:3,rarity:'rare',size:[1,14],line:10,methods:['topwater','jig','livebait'],baits:['shiner','crawfish','minnow','worm'],leader:'fluoro',structure:['lilypad','laydown','weedbed','boatdock','brushpile'],season:['spring','summer','fall'],time:['dawn','dusk','day'],xp:68,gold:36,weight:10,fact:'George Perry\'s 22 lb 4 oz Georgia bass from 1932 stood alone for seventy-seven years until a Japanese angler tied it in 2009.'},
   {id:'grasscarp',name:'Grass Carp',zone:3,rarity:'rare',size:[5,70],line:20,methods:['bottom'],baits:['corn','worm','powerbait'],leader:'fluoro',structure:['weedbed','lilypad','riprap','point'],season:['spring','summer'],time:['day','dawn'],xp:72,gold:40,weight:9,fact:'Stocked by the ton to eat problem weed, and most states will only sell you the sterile triploid version so it can never breed its way loose.'},
   {id:'longnosegar',name:'Longnose Gar',zone:3,rarity:'epic',size:[3,40],line:20,methods:['topwater','livebait','troll'],baits:['shiner','minnow','shad'],leader:'wire',structure:['weedbed','open','creekchan','lilypad'],season:['summer'],time:['day','dusk','night'],xp:120,gold:74,weight:7,fact:'Its interlocking ganoid scales are so hard that Native peoples used gar hide as armor plating and the scales as arrow points.'},
-  {id:'bluecat',name:'Blue Catfish',zone:3,rarity:'epic',size:[5,90],line:20,methods:['bottom','troll'],baits:['shad','chickenliver','crawfish'],leader:'any',structure:['creekchan','dam','open','point'],season:['fall','winter'],time:['night','dawn'],xp:140,gold:105,weight:5,fact:'The all-tackle record is a 143 lb blue pulled out of Kerr Lake, Virginia, the largest catfish ever landed in North America.'},
+  {id:'bluecat',name:'Blue Catfish',zone:3,rarity:'legendary',size:[5,90],line:30,methods:['bottom','troll'],baits:['shad','chickenliver','crawfish'],leader:'any',structure:['creekchan','dam','open','point'],season:['fall','winter'],time:['night','dawn'],xp:140,gold:105,weight:2.4,fact:'The all-tackle record is a 143 lb blue pulled out of Kerr Lake, Virginia, the largest catfish ever landed in North America.'},
   {id:'paddlefish',name:'American Paddlefish',zone:3,rarity:'legendary',size:[20,100],line:40,methods:['snagging'],baits:['shad','minnow'],leader:'any',structure:['creekchan','dam','open','point'],season:['winter','spring'],time:['dawn','day'],xp:280,gold:190,weight:2.4,fact:'A paddlefish filters plankton and never bites a bait — its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
   // ---------- SOUTHERN (zone 4) ----------
   {id:'bluetilapia',name:'Blue Tilapia',zone:4,rarity:'common',size:[0.5,6],line:6,methods:['bottom','livebait'],baits:['corn','worm','powerbait'],leader:'any',structure:['boatdock','weedbed','creekchan','lilypad'],season:['all'],time:['day','dawn'],xp:12,gold:5,weight:52,fact:'An African import that escaped fish farms decades ago and now packs the warm canals so densely it out-competes almost everything native.'},
   {id:'sowhitebass',name:'White Bass',zone:4,rarity:'common',size:[0.4,4],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad','shiner'],leader:'any',structure:['creekchan','eddy','deephole','pilings'],season:['spring','fall'],time:['dawn','dusk','day'],xp:16,gold:8,weight:48,fact:'Spring sends white bass surging up the feeder creeks by the thousands to broadcast their eggs; they build no nest at all.'},
   {id:'shortnosegar',name:'Shortnose Gar',zone:4,rarity:'common',size:[1,8],line:10,methods:['livebait','topwater'],baits:['shiner','minnow'],leader:'wire',structure:['logjam','eddy','lilypad','timber'],season:['all'],time:['day','dusk','night'],xp:20,gold:10,weight:44,fact:'The stubbiest snout of all the gars, and the one most willing to sit in still backwater and gulp air where the current never reaches.'},
   {id:'chainpickerel',name:'Chain Pickerel',zone:4,rarity:'uncommon',size:[1,8],line:10,methods:['topwater','livebait'],baits:['shiner','minnow'],leader:'any',structure:['lilypad','weedbed','laydown'],season:['fall','winter'],time:['day','dawn'],xp:30,gold:17,weight:28,fact:'Named for the chain-link pattern down its flanks, it is one of the few gamefish that keeps feeding hard through the coldest weeks of the year.'},
-  {id:'bowfin',name:'Bowfin',zone:4,rarity:'uncommon',size:[2,16],line:20,methods:['topwater','livebait','bottom'],baits:['shiner','crawfish','minnow'],leader:'any',structure:['lilypad','weedbed','laydown','logjam'],season:['summer'],time:['dawn','dusk','night'],xp:78,gold:42,weight:24,fact:'A living fossil with a lung-like gas bladder, the bowfin gulps air at the surface and survives water too stagnant for anything else to breathe.'},
-  {id:'knifefish',name:'Clown Knifefish',zone:4,rarity:'uncommon',size:[2,12],line:10,methods:['livebait','jig'],baits:['shiner','minnow'],leader:'fluoro',structure:['boatdock','pilings','deephole','timber'],season:['all'],time:['dusk','night'],xp:64,gold:36,weight:22,fact:'A blade-shaped aquarium release now loose in South Florida, it swims backwards as easily as forwards on one long rippling fin and wears a row of inky spots.'},
-  {id:'snakehead',name:'Snakehead',zone:4,rarity:'rare',size:[1,18],line:20,methods:['topwater','jig','livebait'],baits:['shiner','minnow','crawfish'],leader:'wire',structure:['lilypad','weedbed','laydown','creekchan'],season:['all'],time:['day','dawn','dusk'],xp:86,gold:50,weight:14,fact:'It breathes air, crosses wet ground to reach new water, and both parents guard the young — which is exactly why moving one live is a crime in most states.'},
+  {id:'bowfin',name:'Bowfin',zone:4,rarity:'rare',size:[2,16],line:20,methods:['topwater','livebait','bottom'],baits:['shiner','crawfish','minnow'],leader:'any',structure:['lilypad','weedbed','laydown','logjam'],season:['summer'],time:['dawn','dusk','night'],xp:78,gold:42,weight:12,fact:'A living fossil with a lung-like gas bladder, the bowfin gulps air at the surface and survives water too stagnant for anything else to breathe.'},
+  {id:'knifefish',name:'Clown Knifefish',zone:4,rarity:'legendary',size:[2,12],line:20,methods:['livebait','jig'],baits:['shiner','minnow'],leader:'fluoro',structure:['boatdock','pilings','deephole','timber'],season:['all'],time:['dusk','night'],xp:64,gold:36,weight:2.2,fact:'A blade-shaped aquarium release now loose in South Florida, it swims backwards as easily as forwards on one long rippling fin and wears a row of inky spots.'},
+  {id:'snakehead',name:'Snakehead',zone:4,rarity:'epic',size:[1,18],line:20,methods:['topwater','jig','livebait'],baits:['shiner','minnow','crawfish'],leader:'wire',structure:['lilypad','weedbed','laydown','creekchan'],season:['all'],time:['day','dawn','dusk'],xp:86,gold:50,weight:7,fact:'It breathes air, crosses wet ground to reach new water, and both parents guard the young — which is exactly why moving one live is a crime in most states.'},
   {id:'peacockbass',name:'Peacock Bass',zone:4,rarity:'rare',size:[1,12],line:10,methods:['topwater','jig','livebait'],baits:['shiner','minnow'],leader:'fluoro',structure:['boatdock','pilings','creekchan','eddy'],season:['summer','spring'],time:['day','dawn'],xp:92,gold:56,weight:12,fact:'Stocked into Miami canals in 1984 to eat the loose tilapia, this Amazon cichlid hits a topwater harder than anything else swimming in fresh water.'},
   {id:'sostripedbass',name:'Striped Bass',zone:4,rarity:'rare',size:[5,40],line:20,methods:['livebait','jig','bottom'],baits:['shad','shiner','minnow'],leader:'any',structure:['deephole','creekchan','pilings','eddy'],season:['spring','fall','winter'],time:['dawn','dusk','night'],xp:130,gold:82,weight:10,fact:'Stripers are born to run upriver to spawn, and landlocked populations still stack against the dam every spring trying to keep going.'},
   {id:'soflathead',name:'Flathead Catfish',zone:4,rarity:'epic',size:[5,70],line:20,methods:['bottom','livebait'],baits:['shiner','minnow','crawfish'],leader:'any',structure:['logjam','timber','deephole','pilings'],season:['summer','fall'],time:['night','dusk'],xp:150,gold:100,weight:7,fact:'Flatheads want live fish and almost nothing else, which is why the stinkbaits that pile up channel cats will sit untouched all night.'},
@@ -5179,10 +5288,14 @@ const FISH=[
   {id:'grayling',name:'Arctic Grayling',zone:6,rarity:'uncommon',size:[0.3,4],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['riffle','run','tailout'],season:['spring','summer'],time:['day','dusk'],xp:62,gold:44,weight:26,fact:'That enormous sail of a dorsal fin flares like a flag, and in the lower 48 native river grayling now survive only in Montana.'},
   {id:'dollyvarden',name:'Dolly Varden',zone:6,rarity:'uncommon',size:[1,12],line:10,methods:['fly','spincast','still'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['plungepool','run','undercut','boulders'],season:['summer','fall'],time:['dawn','dusk'],xp:80,gold:55,weight:24,fact:'Named after a Dickens character who wore a dress covered in pink spots, and it trails spawning salmon upriver to feed on the loose eggs.'},
   {id:'bulltrout',name:'Bull Trout',zone:6,rarity:'uncommon',size:[3,30],line:20,methods:['spincast','fly'],baits:['minnow','shiner','leech'],leader:'any',structure:['plungepool','logjam','boulders','undercut'],season:['summer','fall'],time:['dawn','dusk','night'],xp:145,gold:100,weight:20,fact:'A char that demands the coldest, cleanest water of any salmonid in the West, which is why it sits on the federal threatened list.'},
-  {id:'goldentrout',name:'Golden Trout',zone:6,rarity:'rare',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:130,gold:95,weight:11,fact:'Stocked high into the Rockies and the Sierra from Californian brood stock, and almost every population sits at the end of a long hike.'},
+  {id:'goldentrout',name:'Palomino Trout',zone:6,rarity:'rare',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:130,gold:95,weight:11,fact:'A butter-yellow rainbow descended from a single golden mutant found in a West Virginia hatchery in 1955, bred on ever since for one reason: a fish that colour is impossible to lose sight of in the water.'},
   {id:'sockeyesalmon',name:'Sockeye Salmon',zone:6,rarity:'rare',size:[3,12],line:10,methods:['fly','spincast'],baits:['salmonegg','shad'],leader:'fluoro',structure:['run','tailout','alpinelake','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:140,gold:100,weight:9,fact:'The only salmon that turns fire-engine red with a green head to spawn, and the only one that feeds on plankton rather than fish out at sea.'},
   {id:'mtnking',name:'King Salmon',zone:6,rarity:'epic',size:[8,50],line:20,methods:['fly','spincast'],baits:['salmonegg','shiner','minnow'],leader:'fluoro',structure:['plungepool','run','waterfall','tailout'],season:['summer','fall'],time:['dawn','dusk'],xp:260,gold:185,weight:5,fact:'A river-run chinook fights the current for hundreds of miles without eating a thing, living entirely off the fat it built at sea.'},
+  {id:'chumsalmon',name:'Chum Salmon',zone:6,rarity:'epic',size:[4,35],line:20,methods:['fly','spincast'],baits:['salmonegg','minnow','shiner'],leader:'fluoro',structure:['run','tailout','plungepool','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:250,gold:175,weight:4.5,fact:'A spawning male grows a set of dog-like canine teeth and a wall of purple tiger stripes down its flank, which is why Alaskans have always called it the dog salmon.'},
   {id:'whitesturgeon',name:'White Sturgeon',zone:6,rarity:'legendary',size:[20,300],line:40,methods:['still'],baits:['worm','crawfish','shad'],leader:'any',structure:['deephole','plungepool','run','alpinelake'],season:['all'],time:['dawn','dusk','night'],xp:420,gold:320,weight:2,fact:'The largest freshwater fish in North America, armoured in bony plates instead of scales, and the biggest ever recorded topped 1,500 lb. Always released.'},
+  {id:'tigertrout',name:'Tiger Trout',zone:6,rarity:'legendary',size:[1,18],line:12,methods:['fly','spincast'],baits:['minnow','shiner','leech'],leader:'fluoro',structure:['undercut','boulders','beaverpond','plungepool'],season:['summer','fall'],time:['dawn','dusk','night'],xp:300,gold:215,weight:2.4,fact:'A sterile cross between a female brown trout and a male brook trout, named for the maze of dark vermiculation across its flanks; because it cannot reproduce, almost every one you meet arrived on a hatchery truck.'},
+  {id:'apachetrout',name:'Apache Trout',zone:6,rarity:'legendary',size:[0.3,6],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','riffle','run','boulders'],season:['summer'],time:['day','dawn'],xp:260,gold:200,weight:2.2,fact:'Arizona\u2019s state fish, native only to the headwaters of the White Mountains, and in 2024 it became the first sportfish recovered well enough to come off the endangered species list.'},
+  {id:'gilatrout',name:'Gila Trout',zone:6,rarity:'legendary',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','plungepool','riffle','run'],season:['summer'],time:['day','dawn'],xp:250,gold:195,weight:2.2,fact:'Down to five relict streams in the Gila headwaters when it was first listed, it is now packed out by hand ahead of wildfires and has recovered enough to reopen a handful of tightly limited catch-and-release waters.'},
   {id:'cagoldentrout',name:'California Golden Trout',zone:6,rarity:'ultra',size:[0.5,6],line:4,methods:['fly'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:1300,gold:1900,weight:1,spawnChance:0.0002,fact:'California\'s state fish in its pure Sierra strain, above 10,000 feet in water that never warms. The most beautiful trout on earth and one almost nobody has seen alive.'},
   // ---- ALASKAN ICE FISHING (V0.9.8.1). Its own mode, unlocked after the
   //      Mountains licence and open only from mid-fall through winter. Caught
@@ -5259,6 +5372,9 @@ const SHAPE_K={
   akblackfish:3000, burbot:4300, arcticchar:2500, lingcod:3100,
   sheefish:3100, greenlandshark:4200,
 };
+// V0.9.8.7 Mountains additions.
+const SHAPE_K_ADD={tigertrout:2300, apachetrout:2400, gilatrout:2400, chumsalmon:2500};
+Object.keys(SHAPE_K_ADD).forEach(function(k){SHAPE_K[k]=SHAPE_K_ADD[k];});
 const SHAPE_K_DEFAULT=2600;   // generic fusiform fish, roughly trout/bass shaped
 // Length in inches for a fish of weight w (lb).
 function fishLen(f, w){return Math.cbrt(Math.max(0.01,w)*((f&&SHAPE_K[f.id])||SHAPE_K_DEFAULT));}
@@ -6062,7 +6178,7 @@ const PNG_FISH={
   cagoldentrout:{file:'california golden trout.png',alt:'California Golden Trout',dir:'freshwater fish'},
   cohosalmon:{file:'coho salmon.png',alt:'Coho Salmon',dir:'freshwater fish'},
   dollyvarden:{file:'dolly varden.png',alt:'Dolly Varden',dir:'freshwater fish'},
-  goldentrout:{file:'golden trout.png',alt:'Golden Trout',dir:'freshwater fish'},
+  goldentrout:{file:'golden trout.png',alt:'Palomino Trout',dir:'freshwater fish'},
   greenlandshark:{file:'greenland shark.png',alt:'Greenland Shark',dir:'freshwater fish'},
   kingsalmon:{file:'king salmon.png',alt:'King Salmon',dir:'freshwater fish'},
   mtnking:{file:'king salmon.png',alt:'King Salmon',dir:'freshwater fish'},
@@ -6079,6 +6195,11 @@ const PNG_FISH={
   brooktrout:{file:'brook trout.png',alt:'Brook Trout',dir:'freshwater fish'},
   bulltrout:{file:'bulltrout.png',alt:'Bull Trout',dir:'freshwater fish',noMirror:true},
   cutthroattrout:{file:'cutthroat trout.png',alt:'Cutthroat Trout',dir:'freshwater fish',noMirror:true},
+  // ---- V0.9.8.7 Mountains additions (all four sources face LEFT) ----
+  tigertrout:{file:'tiger trout.png',alt:'Tiger Trout',dir:'freshwater fish'},
+  apachetrout:{file:'apache trout.png',alt:'Apache Trout',dir:'freshwater fish'},
+  gilatrout:{file:'gila trout.png',alt:'Gila Trout',dir:'freshwater fish'},
+  chumsalmon:{file:'chum salmon.png',alt:'Chum Salmon',dir:'freshwater fish'},
   lingcod:{file:'lingcod.png',alt:'Lingcod',dir:'freshwater fish'},
   sheefish:{file:'sheefish.png',alt:'Inconnu',dir:'freshwater fish'},
   sockeyesalmon:{file:'sockeye salmon.png',alt:'Sockeye Salmon',dir:'freshwater fish'},
@@ -6332,8 +6453,19 @@ function normalizeState(){
   if(!S.challengerState||typeof S.challengerState!=='object')S.challengerState={};
   // V0.9.6: a single equipped pet (was: every owned pet at once). On first
   // migration default to the best owned pet; afterwards respect the player's pick.
-  if(typeof S.equippedPet==='undefined'){const op=ownedPets();S.equippedPet=op.length?op[op.length-1].id:null;}
-  if(S.equippedPet&&!petOwned(S.equippedPet))S.equippedPet=null;
+  // V0.9.8.7: pets are an equipped SET (the Dragon opens four extra slots). Old
+  // saves carry a single S.equippedPet; fold it into the array. S.equippedPet is
+  // KEPT as a derived alias so a save written here still loads in a build that
+  // reads the singular field.
+  if(!Array.isArray(S.equippedPets)){
+    if(typeof S.equippedPet==='string'&&S.equippedPet)S.equippedPets=[S.equippedPet];
+    else if(typeof S.equippedPet==='undefined'){const op=ownedPets();S.equippedPets=op.length?[op[op.length-1].id]:[];}
+    else S.equippedPets=[];                       // explicit null: the player chose "No pet"
+  }
+  S.equippedPets=S.equippedPets.filter(function(id, i, a){return a.indexOf(id)===i&&petOwned(id);});
+  {const cap=(S.equippedPets.indexOf('dragon')>=0)?PET_DRAGON_CAP:PET_SOLO_CAP;
+   if(S.equippedPets.length>cap)S.equippedPets=S.equippedPets.slice(0,cap);}
+  syncEquippedPetAlias();
   // V0.9.6: mono leader retired. Everyone owns fluoro + wire from the start.
   if(!Array.isArray(S.ownedLeaders))S.ownedLeaders=[];
   S.ownedLeaders=S.ownedLeaders.filter(function(l){return l==='fluoro'||l==='wire';});
@@ -6456,6 +6588,11 @@ const AUDIO=(function(){
   let noiseBuf=null, ambNodes=null, musicTimer=null, musicOn=false;
   let rainNodes=null, rainOn=false, rainHeavy=false, crankTimer=null;
   let nextNote=0, step=0, musicMood='calm';
+  // The game only ever asks for 'calm' or 'tourn'. The real mood key is that
+  // crossed with the WORLD, so freshwater gets its own palette without touching
+  // a single existing AUDIO.setMood() call site.
+  let moodBase='calm', ambWorld=null;
+  function sceneWorld(){return ((typeof isFresh==='function')&&isFresh())?'fresh':'salt';}
   function vols(){return (typeof S!=='undefined'&&S.audio)?S.audio:{music:0.45,sfx:0.7,amb:0.5,muted:false};}
   function ensure(){
     if(ctx||!ok)return ctx;
@@ -6482,27 +6619,89 @@ const AUDIO=(function(){
     const d=noiseBuf.getChannelData(0);let last=0;
     for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.0;}
   }
-  // ---- ocean ambience: filtered noise with a slow wave-swell LFO ----
+  // ---- ambience: one bed per world, swapped by applyScene() ----
+  // Saltwater: filtered noise under a slow wave-swell LFO. Unchanged apart from
+  // the unity-gain `bed` node, which gives stopAmbience one handle to fade.
+  function startAmbienceSalt(){
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+    const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;lp.Q.value=0.4;
+    const swellG=ctx.createGain();swellG.gain.value=0.5;
+    const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.12;
+    const lfoG=ctx.createGain();lfoG.gain.value=0.28;
+    lfo.connect(lfoG);lfoG.connect(swellG.gain);
+    const lfo2=ctx.createOscillator();lfo2.type='sine';lfo2.frequency.value=0.37;
+    const lfoG2=ctx.createGain();lfoG2.gain.value=180;
+    lfo2.connect(lfoG2);lfoG2.connect(lp.frequency);
+    const bed=ctx.createGain();bed.gain.value=1;
+    src.connect(lp);lp.connect(swellG);swellG.connect(bed);bed.connect(ambGain);
+    src.start();lfo.start();lfo2.start();
+    return {g:bed, stop:[src,lfo,lfo2], timer:null};
+  }
+  // Freshwater: a river riffle (brighter and tighter than surf), wind working
+  // through timber underneath it, and sparse birdsong over the top.
+  function startAmbienceFresh(){
+    const bed=ctx.createGain();bed.gain.value=1;bed.connect(ambGain);
+    // 1. the current: brown noise pushed up into the riffle band, tumbling
+    const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
+    const hp=ctx.createBiquadFilter();hp.type='highpass';hp.frequency.value=240;
+    const bp=ctx.createBiquadFilter();bp.type='bandpass';bp.frequency.value=860;bp.Q.value=0.75;
+    const riffG=ctx.createGain();riffG.gain.value=0.34;
+    const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.11;
+    const lfoG=ctx.createGain();lfoG.gain.value=240;
+    lfo.connect(lfoG);lfoG.connect(bp.frequency);          // water turning over rock
+    const lfo2=ctx.createOscillator();lfo2.type='sine';lfo2.frequency.value=0.07;
+    const lfoG2=ctx.createGain();lfoG2.gain.value=0.09;
+    lfo2.connect(lfoG2);lfoG2.connect(riffG.gain);         // the current breathing
+    src.connect(hp);hp.connect(bp);bp.connect(riffG);riffG.connect(bed);
+    // 2. wind in the timber: the same noise, dark and very slow
+    const wsrc=ctx.createBufferSource();wsrc.buffer=noiseBuf;wsrc.loop=true;
+    const wlp=ctx.createBiquadFilter();wlp.type='lowpass';wlp.frequency.value=300;wlp.Q.value=0.3;
+    const windG=ctx.createGain();windG.gain.value=0.17;
+    const lfo3=ctx.createOscillator();lfo3.type='sine';lfo3.frequency.value=0.045;
+    const lfoG3=ctx.createGain();lfoG3.gain.value=0.12;
+    lfo3.connect(lfoG3);lfoG3.connect(windG.gain);
+    wsrc.connect(wlp);wlp.connect(windG);windG.connect(bed);
+    src.start();wsrc.start();lfo.start();lfo2.start();lfo3.start();
+    // 3. birdsong, on the AMBIENCE bus so it follows the ambience slider and
+    //    dies with the bed rather than reading as a sound effect.
+    const timer=setInterval(function(){birdCall(bed);},4200);
+    return {g:bed, stop:[src,wsrc,lfo,lfo2,lfo3], timer:timer};
+  }
+  // A short whistled phrase. Most windows stay quiet on purpose.
+  const BIRD=[1046.50,1174.66,1396.91,1567.98,2093.00];   // C pentatonic, up high
+  function birdCall(dest){
+    if(!ctx||Math.random()<0.45)return;
+    const t0=ctx.currentTime+Math.random()*1.6;
+    const cnt=2+Math.floor(Math.random()*3);
+    const base=Math.floor(Math.random()*(BIRD.length-1));
+    for(let i=0;i<cnt;i++){
+      const f=BIRD[Math.min(BIRD.length-1,base+(Math.random()<0.5?i:0))];
+      const t=t0+i*0.11, dur=0.09+Math.random()*0.05;
+      const o=ctx.createOscillator();o.type='sine';o.frequency.setValueAtTime(f,t);
+      o.frequency.exponentialRampToValueAtTime(f*(0.98+Math.random()*0.14),t+dur);
+      const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
+      g.gain.exponentialRampToValueAtTime(0.05,t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+      o.connect(g);g.connect(dest);o.start(t);o.stop(t+dur+0.05);
+    }
+  }
   function startAmbience(){
     if(!ensure()||ambNodes)return;
     try{
-      const src=ctx.createBufferSource();src.buffer=noiseBuf;src.loop=true;
-      const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=520;lp.Q.value=0.4;
-      const swellG=ctx.createGain();swellG.gain.value=0.5;
-      const lfo=ctx.createOscillator();lfo.type='sine';lfo.frequency.value=0.12;
-      const lfoG=ctx.createGain();lfoG.gain.value=0.28;
-      lfo.connect(lfoG);lfoG.connect(swellG.gain);
-      const lfo2=ctx.createOscillator();lfo2.type='sine';lfo2.frequency.value=0.37;
-      const lfoG2=ctx.createGain();lfoG2.gain.value=180;
-      lfo2.connect(lfoG2);lfoG2.connect(lp.frequency);
-      src.connect(lp);lp.connect(swellG);swellG.connect(ambGain);
-      src.start();lfo.start();lfo2.start();
-      ambNodes={src:src, lfo:lfo, lfo2:lfo2};
-    }catch(e){}
+      const w=sceneWorld();
+      ambNodes=(w==='fresh')?startAmbienceFresh():startAmbienceSalt();
+      ambWorld=w;
+    }catch(e){ambNodes=null;ambWorld=null;}
   }
   function stopAmbience(){
-    if(!ambNodes)return;try{ambNodes.src.stop();ambNodes.lfo.stop();ambNodes.lfo2.stop();}catch(e){}
-    ambNodes=null;
+    if(!ambNodes)return;
+    const a=ambNodes;ambNodes=null;ambWorld=null;   // clear first: the new bed may start immediately
+    try{
+      if(a.timer)clearInterval(a.timer);
+      const t=ctx.currentTime;
+      if(a.g)a.g.gain.setTargetAtTime(0,t,0.45);    // fade, so a world swap crossfades
+      a.stop.forEach(function(nd){try{nd.stop(t+1.6);}catch(e){}});
+    }catch(e){}
   }
   // ---- rain: a steady hiss (high-passed noise) + soft patter, heavier in storms ----
   function startRainNodes(heavy){
@@ -6601,38 +6800,70 @@ const AUDIO=(function(){
     }
   }
   // ---- generative music bed: gentle pads + sparse pentatonic melody ----
+  // Saltwater is close triads. Freshwater is open fifths and suspended 2nds with
+  // barely a third in it — that interval set reads as outdoors rather than as a key.
   const CHORDS={
     calm:[[261.63,329.63,392.00],[220.00,261.63,329.63],[174.61,261.63,349.23],[196.00,246.94,392.00]],
-    tourn:[[261.63,311.13,392.00],[233.08,293.66,349.23],[196.00,261.63,329.63],[207.65,261.63,311.13]]
+    tourn:[[261.63,311.13,392.00],[233.08,293.66,349.23],[196.00,261.63,329.63],[207.65,261.63,311.13]],
+    // FRESHWATER, D mixolydian, stacked fifths + 9ths: Dsus2 - Gadd9 - Asus2 - Cadd9
+    creek:[[146.83,220.00,329.63],[196.00,293.66,440.00],[220.00,329.63,493.88],[130.81,196.00,293.66]],
+    // Mountains: the same colours an octave of air higher, and barer still
+    alpine:[[220.00,329.63,493.88],[146.83,220.00,440.00],[164.81,246.94,369.99],[196.00,293.66,440.00]],
+    // Freshwater match: D dorian. Motion without menace.
+    timber:[[146.83,220.00,349.23],[130.81,196.00,329.63],[196.00,293.66,493.88],[220.00,329.63,523.25]]
   };
-  const MEL={calm:[392,440,523.25,587.33,659.25],tourn:[392,466.16,523.25,622.25,659.25]};
+  const MEL={
+    calm:[392,440,523.25,587.33,659.25],
+    tourn:[392,466.16,523.25,622.25,659.25],
+    creek:[293.66,329.63,369.99,440.00,493.88,587.33],   // D major pentatonic + 6th
+    alpine:[440.00,493.88,587.33,659.25,739.99,880.00],  // A pentatonic, high and thin
+    timber:[293.66,349.23,392.00,440.00,523.25]          // D minor pentatonic
+  };
+  // Tempo and voicing per mood. `beat` is seconds per beat: 0.92 is the original
+  // ~65 bpm, and the two saltwater rows reproduce the old hard-coded voice exactly.
+  const VOICE={
+    calm  :{beat:0.92,dens:0.70,pad:'sine',    sh:'triangle',shMul:2.001,shG:0.012,padG:0.050,atk:0.60,lp:0,   mel:'triangle',melG:0.070,melAtk:0.040},
+    tourn :{beat:0.92,dens:0.70,pad:'sine',    sh:'triangle',shMul:2.001,shG:0.012,padG:0.050,atk:0.60,lp:0,   mel:'triangle',melG:0.070,melAtk:0.040},
+    creek :{beat:1.15,dens:0.42,pad:'triangle',sh:'sine',    shMul:2.001,shG:0.010,padG:0.055,atk:1.20,lp:900, mel:'sine',    melG:0.060,melAtk:0.090},
+    alpine:{beat:1.30,dens:0.32,pad:'sine',    sh:'sine',    shMul:3.002,shG:0.008,padG:0.045,atk:1.60,lp:1400,mel:'sine',    melG:0.055,melAtk:0.110},
+    timber:{beat:1.00,dens:0.60,pad:'triangle',sh:'triangle',shMul:2.001,shG:0.013,padG:0.055,atk:0.80,lp:1200,mel:'triangle',melG:0.065,melAtk:0.050}
+  };
+  function voice(){return VOICE[musicMood]||VOICE.calm;}
   function pad(freqs, t, dur){
+    const v=voice();
+    // One lowpass per chord keeps the warm freshwater pads felt rather than
+    // glassy. Same throwaway-filter idiom as the noise voices: it is collected
+    // when the oscillators feeding it stop.
+    let out=musicGain;
+    if(v.lp){const lp=ctx.createBiquadFilter();lp.type='lowpass';lp.frequency.value=v.lp;lp.Q.value=0.5;
+      lp.connect(musicGain);out=lp;}
     freqs.forEach(function(f){
-      const o=ctx.createOscillator();o.type='sine';o.frequency.value=f;
-      const o2=ctx.createOscillator();o2.type='triangle';o2.frequency.value=f*2.001;
+      const o=ctx.createOscillator();o.type=v.pad;o.frequency.value=f;
+      const o2=ctx.createOscillator();o2.type=v.sh;o2.frequency.value=f*v.shMul;
       const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
-      g.gain.linearRampToValueAtTime(0.05,t+0.6);
+      g.gain.linearRampToValueAtTime(v.padG,t+v.atk);
       g.gain.linearRampToValueAtTime(0.0001,t+dur);
-      const g2=ctx.createGain();g2.gain.value=0.012;
-      o.connect(g);o2.connect(g2);g2.connect(g);g.connect(musicGain);
+      const g2=ctx.createGain();g2.gain.value=v.shG;
+      o.connect(g);o2.connect(g2);g2.connect(g);g.connect(out);
       o.start(t);o2.start(t);o.stop(t+dur+0.1);o2.stop(t+dur+0.1);
     });
   }
   function melNote(f, t, dur){
-    const o=ctx.createOscillator();o.type='triangle';o.frequency.value=f;
+    const v=voice();
+    const o=ctx.createOscillator();o.type=v.mel;o.frequency.value=f;
     const g=ctx.createGain();g.gain.setValueAtTime(0.0001,t);
-    g.gain.exponentialRampToValueAtTime(0.07,t+0.04);
+    g.gain.exponentialRampToValueAtTime(v.melG,t+v.melAtk);
     g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
     o.connect(g);g.connect(musicGain);o.start(t);o.stop(t+dur+0.05);
   }
   function scheduler(){
     if(!ctx||!musicOn)return;
-    const beat=0.92; // ~65 bpm, calming
     while(nextNote<ctx.currentTime+0.2){
+      const v=voice(), beat=v.beat;                             // tempo is per-mood now
       const prog=CHORDS[musicMood]||CHORDS.calm, mel=MEL[musicMood]||MEL.calm;
       const bar=Math.floor(step/4)%prog.length;
       if(step%4===0)pad(prog[bar],nextNote, beat*4);            // new chord every bar
-      if(step%2===1&&Math.random()<0.7)melNote(mel[Math.floor(Math.random()*mel.length)],nextNote, beat*0.9);
+      if(step%2===1&&Math.random()<v.dens)melNote(mel[Math.floor(Math.random()*mel.length)],nextNote, beat*0.9);
       nextNote+=beat;step++;
     }
   }
@@ -6642,7 +6873,29 @@ const AUDIO=(function(){
     musicTimer=setInterval(scheduler,60);
   }
   function stopMusic(){musicOn=false;if(musicTimer){clearInterval(musicTimer);musicTimer=null;}}
-  function setMood(m){if(m!==musicMood){musicMood=m;}}
+  // 'calm'/'tourn' crossed with the world. Every existing AUDIO.setMood() call
+  // site keeps working untouched and simply lands on its world's variant.
+  function moodKey(){
+    if(sceneWorld()==='fresh'){
+      if(moodBase==='tourn')return 'timber';
+      // The mountains sit high and thin: same palette, airier voicing.
+      if((typeof curRegionId==='function')&&curRegionId()==='mountains')return 'alpine';
+      return 'creek';
+    }
+    return moodBase==='tourn'?'tourn':'calm';
+  }
+  // Reconcile music + ambience with where the player actually is. Safe to call
+  // at any time, including before the first gesture unlocks the context.
+  function applyScene(){
+    if(!ctx)return;                                   // pre-unlock: unlock() picks it up
+    const k=moodKey();
+    if(k!==musicMood){musicMood=k;step=Math.ceil(step/4)*4;}   // switch chords on the bar
+    if(ambWorld&&ambWorld!==sceneWorld())stopAmbience();
+    const v=vols();
+    if(unlocked&&!v.muted&&v.amb>0&&!ambNodes)startAmbience();
+  }
+  function setMood(m){moodBase=(m==='tourn')?'tourn':'calm';applyScene();}
+  function setScene(){applyScene();}
   function unlock(){
     if(unlocked||!ensure())return;
     try{ctx.resume&&ctx.resume();}catch(e){}
@@ -6650,7 +6903,7 @@ const AUDIO=(function(){
     try{const b=ctx.createBufferSource();b.buffer=ctx.createBuffer(1,1,ctx.sampleRate);b.connect(ctx.destination);b.start(0);}catch(e){}
     unlocked=true;
     const v=vols();
-    if(!v.muted){ if(v.amb>0)startAmbience(); if(v.music>0)startMusic(); }
+    if(!v.muted){ applyScene(); if(v.amb>0)startAmbience(); if(v.music>0)startMusic(); }
     if(rainOn&&!rainNodes)startRainNodes(rainHeavy); // rain requested before first gesture
   }
   function refresh(){
@@ -6662,7 +6915,7 @@ const AUDIO=(function(){
       if(v.music>0&&!musicOn)startMusic(); if(v.music<=0&&musicOn)stopMusic();
     }
   }
-  return {unlock:unlock, sfx:sfx, refresh:refresh, setMood:setMood,
+  return {unlock:unlock, sfx:sfx, refresh:refresh, setMood:setMood, setScene:setScene,
           startMusic:startMusic, stopMusic:stopMusic, setRain:setRain, crank:crank,
           available:function(){return ok;}};
 })();
@@ -7217,6 +7470,32 @@ const SIGHT_FISH_WEIGHTS={
   // Mountains
   rainbowtrout:20,cutthroattrout:18,bulltrout:10,sockeyesalmon:12,
 };
+// ---- keeping a sight fish in the water (V0.9.8.7) -------------------------
+// V0.9.8.6 opened sight fishing up to freshwater, but the spawn point was still
+// a blind dart at the map. Saltwater is water to every edge so nothing noticed;
+// the freshwater maps have real banks and a Mountains channel only 65-85px
+// wide, so a fish has to be PLACED and STEERED against the shoreline the way
+// keepOffWater() steers the boat, or it swims straight up the gravel.
+const SIGHT_LEN_K=1.28;      // half the drawn length, in units of sf.size
+const SIGHT_MIN_SIZE=11;     // below this it stops reading as a fish
+const SIGHT_MAX_PROBE=48;    // ring-probe cap; 36 already fits a full-size fish
+function sightWaterOK(wx, wy){
+  if(tourn.active)return true;                    // tournament worlds have no shape
+  if(wx<40||wy<40||wx>worldW()-40||wy>worldH()-40)return false;
+  if(S.zone===0&&wy>worldH()-215)return false;    // the inshore surf beach is dry sand
+  if(!WATER_SHAPE[S.zone])return true;
+  return isWaterAt(wx, wy);
+}
+// How much clear water surrounds a point, in px, capped at SIGHT_MAX_PROBE.
+function sightClearance(wx, wy){
+  for(let r=12;r<=SIGHT_MAX_PROBE;r+=12){
+    for(let a=0;a<12;a++){
+      const ang=a*(6.283/12);
+      if(!sightWaterOK(wx+Math.cos(ang)*r, wy+Math.sin(ang)*r))return r-12;
+    }
+  }
+  return SIGHT_MAX_PROBE;
+}
 let _spawnLastHour=-1;
 let _forcedBiteFish=null;
 function trySightFishSpawn(){
@@ -7224,7 +7503,7 @@ function trySightFishSpawn(){
   // as a sight-fishing fish so you can sight-cast straight onto it.
   if(typeof mermaidOn==='function'&&mermaidOn()&&activeTournament&&!(activeTournament.def&&activeTournament.def.coop)){
     const tgt=currentTournTarget();
-    if(tgt&&Math.random()<0.55){spawnSightFish(tgt);return;}
+    if(tgt&&Math.random()<0.55&&spawnSightFish(tgt))return;
   }
   // Base 25% per in-game hour; the Alligator companion doubles it.
   if(Math.random()>=0.25*petSightMult())return;
@@ -7239,30 +7518,90 @@ function trySightFishSpawn(){
   for(const c of cands){r-=c.w;if(r<=0){pick=c.f;break;}}
   spawnSightFish(pick);
 }
-function spawnSightFish(species){
-  // Spawn anywhere on the map, with a small margin from the edges.
+function spawnSightFish(species, atX, atY){
   const W=worldW(),H=worldH();
-  const wx=60+Math.random()*(W-120);
-  const wy=60+Math.random()*(H-120);
+  let wx, wy, room;
+  if(atX!==undefined&&atY!==undefined&&sightWaterOK(atX, atY)){
+    wx=atX;wy=atY;room=sightClearance(wx, wy);
+  }else{
+    // Dart at the map until one lands in water with room for the sprite. The
+    // cheap point test runs first, so only darts that hit water pay for a ring
+    // probe. This runs once per in-game hour, not per frame.
+    let bx=0,by=0,best=-1;
+    for(let i=0;i<160;i++){
+      const px=60+Math.random()*(W-120), py=60+Math.random()*(H-120);
+      if(!sightWaterOK(px, py))continue;
+      const c=sightClearance(px, py);
+      if(c>best){best=c;bx=px;by=py;}
+      if(c>=SIGHT_MAX_PROBE-12)break;                  // room for a full-size fish
+    }
+    if(best<SIGHT_MIN_SIZE*SIGHT_LEN_K)return null;    // no water big enough this hour
+    wx=bx;wy=by;room=best;
+  }
   const now=performance.now?performance.now():Date.now();
   const lifetime=10000+Math.random()*5000;
-  sightFish.push({
-    species, wx, wy,
-    heading:Math.random()*Math.PI*2,
+  // Shrink to fit: in a narrow canyon slot this is a 48px fish rather than a
+  // 70px one lying across both banks.
+  const size=Math.max(SIGHT_MIN_SIZE, Math.min(22+Math.random()*8, room/SIGHT_LEN_K));
+  // Point it DOWN the channel rather than at the bank: whichever heading has the
+  // most open water ahead of it.
+  let heading=Math.random()*Math.PI*2, hbest=-1;
+  for(let a=0;a<12;a++){
+    const ang=a*(6.283/12)+Math.random()*0.2;
+    let reach=0;
+    for(let r=size*SIGHT_LEN_K;r<=140;r+=14){
+      if(!sightWaterOK(wx+Math.cos(ang)*r, wy+Math.sin(ang)*r))break;
+      reach=r;
+    }
+    if(reach>hbest){hbest=reach;heading=ang;}
+  }
+  const sf={
+    species, wx, wy, heading,
     turnRate:(Math.random()-0.5)*0.012,
     speed:0.55+Math.random()*0.45,
-    size:22+Math.random()*8,
+    size,
     spawnTime:now, lifetime,
     fadeStart:now+lifetime,
     phase:Math.random()*6.28,alpha:1,
-  });
+  };
+  sightFish.push(sf);
+  return sf;
 }
 function updateSightFish(now){
   for(let i=sightFish.length-1;i>=0;i--){
     const sf=sightFish[i];
     sf.heading+=sf.turnRate;
-    sf.wx+=Math.cos(sf.heading)*sf.speed;
-    sf.wy+=Math.sin(sf.heading)*sf.speed*0.6;
+    // Steer WITH the water instead of straight through the bank: try the wanted
+    // heading, then fan out either side until one keeps the nose over water. In
+    // a canyon this makes the fish track the channel round its doglegs.
+    const step=sf.speed, pad=sf.size*SIGHT_LEN_K;
+    let moved=false;
+    for(let k=0;k<8&&!moved;k++){
+      const arms=k?[-1,1]:[0];
+      for(let j=0;j<arms.length;j++){
+        const h=sf.heading+arms[j]*k*0.45;
+        const nx=sf.wx+Math.cos(h)*step, ny=sf.wy+Math.sin(h)*step*0.6;
+        if(!sightWaterOK(nx+Math.cos(h)*pad, ny+Math.sin(h)*pad))continue;
+        if(!sightWaterOK(nx, ny))continue;
+        sf.wx=nx;sf.wy=ny;sf.heading=h;moved=true;
+        if(k)sf.turnRate=(Math.random()-0.5)*0.012;   // shook a bank, don't spiral into it
+        break;
+      }
+    }
+    if(!moved){
+      sf.heading+=Math.PI;                            // boxed in: turn around
+      if(!sightWaterOK(sf.wx, sf.wy)){
+        let ok=false;
+        for(let r=8;r<=140&&!ok;r+=8){
+          for(let a=0;a<12;a++){
+            const ang=a*(6.283/12);
+            const nx=sf.wx+Math.cos(ang)*r, ny=sf.wy+Math.sin(ang)*r;
+            if(sightWaterOK(nx, ny)){sf.wx=nx;sf.wy=ny;ok=true;break;}
+          }
+        }
+        if(!ok){sightFish.splice(i,1);continue;}       // ashore with no way back
+      }
+    }
     if(sf.wx<40||sf.wx>worldW()-40)sf.heading=Math.PI-sf.heading;
     if(sf.wy<40||sf.wy>worldH()-40)sf.heading=-sf.heading;
     let alpha=1;
@@ -7444,6 +7783,16 @@ const WATER_SHAPE={
      {kind:'poly',pts:[[0.499,0.462],[0.505,0.433],[0.525,0.412],[0.553,0.4],[0.585,0.395],[0.619,0.402],[0.648,0.419],[0.666,0.443],[0.672,0.47],[0.664,0.499],[0.646,0.521],[0.618,0.534],[0.587,0.539],[0.555,0.534],[0.528,0.521],[0.508,0.497]]},
        // mid-south cut - second lacing between the braid and the east canal, the narrowest water on the map
      {kind:'ribbon',cs:[[0.372,0.564],[0.446,0.58],[0.52,0.602],[0.594,0.614],[0.668,0.602]],hw:[0.021,0.019,0.019,0.019,0.023]},
+       // south lake (V0.9.8.7) - the ONE wide-open basin in a region that is
+       // otherwise all skinny paths, and the reason it exists: the big spot arts
+       // (creekchan, laydown, logjam) were wider than the channels they sat in
+       // and blocked them, and sight fish had nowhere to swim. 625x445px, with
+       // ~360px of clear water in the middle. The mid-south cut spills into it
+       // from the north and it drains east into the east canal lower, so it is a
+       // NODE on the existing ring, not a replacement for it. Both mouths
+       // overlap their channel by more than a raster cell, so _ensureConnected
+       // never carves a straight canal to reach it.
+     {kind:'poly',pts:[[0.516,0.574],[0.548,0.586],[0.570,0.610],[0.582,0.642],[0.588,0.676],[0.596,0.710],[0.620,0.742],[0.600,0.762],[0.570,0.762],[0.536,0.768],[0.502,0.772],[0.470,0.776],[0.442,0.786],[0.412,0.790],[0.384,0.782],[0.364,0.764],[0.354,0.738],[0.354,0.708],[0.358,0.678],[0.368,0.652],[0.386,0.634],[0.408,0.626],[0.434,0.634],[0.458,0.624],[0.478,0.606],[0.494,0.586]]},
        // lower run - confluence down into the duck pond
      {kind:'ribbon',cs:[[0.292,0.662],[0.262,0.706],[0.228,0.744],[0.206,0.766]],hw:[0.046,0.03,0.027,0.026]},
        // duck pond - weedy open pond in the south west
@@ -7495,10 +7844,10 @@ const WATER_SHAPE={
        // plunge bowl, then the Flume (SE straight), the Narrows (hw 0.024
        // choke), the spring-creek confluence, the west elbow under the
        // undercut wall, and into the lake
-     {kind:'ribbon',cs:[[0.5,0.015],[0.502,0.048],[0.49,0.072],[0.48,0.098],[0.492,0.126],[0.53,0.158],[0.575,0.192],[0.612,0.228],[0.625,0.262],[0.575,0.29],[0.49,0.308],[0.41,0.326],[0.365,0.352],[0.358,0.39],[0.368,0.428],[0.39,0.462],[0.428,0.492],[0.472,0.518],[0.515,0.545],[0.53,0.578],[0.522,0.612],[0.49,0.645],[0.435,0.672],[0.37,0.696],[0.328,0.726],[0.312,0.762],[0.33,0.796],[0.376,0.826],[0.432,0.85],[0.478,0.868],[0.5,0.882]],hw:[0.028,0.026,0.026,0.03,0.028,0.028,0.03,0.03,0.028,0.028,0.03,0.028,0.026,0.024,0.024,0.026,0.028,0.028,0.03,0.03,0.03,0.028,0.028,0.026,0.026,0.026,0.028,0.028,0.03,0.032,0.034]},
+     {kind:'ribbon',cs:[[0.5,0.015],[0.502,0.048],[0.49,0.072],[0.48,0.098],[0.492,0.126],[0.53,0.158],[0.575,0.192],[0.612,0.228],[0.625,0.262],[0.575,0.29],[0.49,0.308],[0.41,0.326],[0.365,0.352],[0.358,0.39],[0.368,0.428],[0.39,0.462],[0.428,0.492],[0.472,0.518],[0.515,0.545],[0.53,0.578],[0.522,0.612],[0.49,0.645],[0.435,0.672],[0.37,0.696],[0.328,0.726],[0.312,0.762],[0.33,0.796],[0.376,0.826],[0.432,0.85],[0.478,0.868],[0.5,0.882]],hw:[0.028,0.032,0.032,0.032,0.028,0.028,0.03,0.03,0.028,0.028,0.034,0.028,0.026,0.026,0.026,0.026,0.028,0.028,0.03,0.03,0.03,0.028,0.028,0.026,0.026,0.026,0.028,0.028,0.03,0.032,0.034]},
        // plunge bowl under the falls, carved wider than the channel; the stem
        // passes straight through it (cs pts 3-4)
-     {kind:'poly',pts:[[0.545,0.107],[0.522,0.096],[0.494,0.09],[0.462,0.089],[0.432,0.094],[0.41,0.103],[0.402,0.114],[0.41,0.126],[0.432,0.136],[0.462,0.142],[0.494,0.143],[0.524,0.138],[0.544,0.128],[0.552,0.117]]},
+     {kind:'poly',pts:[[0.584,0.139],[0.561,0.128],[0.533,0.122],[0.501,0.121],[0.471,0.126],[0.449,0.135],[0.441,0.146],[0.449,0.158],[0.471,0.168],[0.501,0.174],[0.533,0.175],[0.563,0.170],[0.583,0.160],[0.591,0.149]]},
        // spring creek: a cold side canyon in from the east, joining the stem
        // at the confluence (its last point sits on the stem centerline)
      {kind:'ribbon',cs:[[0.665,0.418],[0.638,0.452],[0.6,0.487],[0.556,0.52],[0.518,0.546]],hw:[0.024,0.024,0.026,0.028,0.034]},
@@ -7716,6 +8065,10 @@ function keepOffWater(o){
   if(tourn.active)return;
   if(!WATER_SHAPE[S.zone])return;
   if(isWaterAt(o.wx, o.wy))return;
+  // Two passes. The near pass is the common case and stays tight so a boat that
+  // clips a bank is nudged, not teleported. The far pass only ever runs when the
+  // object is genuinely stranded — the Southern's top spawn sits ~164px from the
+  // nearest channel, so at 140px the player used to arrive standing in the swamp.
   for(let r=8;r<=140;r+=8){
     for(let a=0;a<12;a++){
       const ang=a*(6.283/12);
@@ -7723,6 +8076,17 @@ function keepOffWater(o){
       if(isWaterAt(nx, ny)){
         o.wx=nx;o.wy=ny;
         if(o===boat){o.vx*=0.25;o.vy*=0.25;}
+        return;
+      }
+    }
+  }
+  for(let r=160;r<=900;r+=20){
+    for(let a=0;a<24;a++){
+      const ang=a*(6.283/24);
+      const nx=o.wx+Math.cos(ang)*r, ny=o.wy+Math.sin(ang)*r;
+      if(isWaterAt(nx, ny)){
+        o.wx=nx;o.wy=ny;
+        if(o===boat){o.vx=0;o.vy=0;}
         return;
       }
     }
@@ -11152,6 +11516,7 @@ function _scElk(x,y,t,j){
 // Southern swamp is deliberately excluded — it does not snow on a Florida
 // canal, and leaving it out is what makes the other three read as cold.
 const SNOW=[];
+let _snowLastT=0;
 const SNOW_REGIONS={midwest:1, northern:1, mountains:1};
 function snowingNow(){
   if(!isFresh())return false;
@@ -11163,23 +11528,31 @@ function _initSnow(n){
   for(let i=0;i<n;i++)SNOW.push({
     x:Math.random()*CW, y:Math.random()*CH,
     r:0.9+Math.random()*2.2,                 // flake size
-    vy:8+Math.random()*22,                   // fall speed, px/sec
-    sway:14+Math.random()*30,                // horizontal drift amplitude
+    // V0.9.8.7: slower and softer. Fall speed roughly halved and the sway
+    // amplitude cut, so the field drifts rather than streaks — the old 8-30px/s
+    // with a 44px swing read as sleet.
+    vy:4+Math.random()*11,                   // fall speed, px/sec
+    sway:8+Math.random()*16,                 // horizontal drift amplitude
     ph:Math.random()*6.28,                   // sway phase
-    a:0.35+Math.random()*0.5                 // opacity: depth cue
+    swayHz:0.22+Math.random()*0.30,          // its own unhurried sway rate
+    a:0.30+Math.random()*0.42                // opacity: depth cue
   });
 }
 function updateAndDrawSnow(t){
   if(!snowingNow()){if(SNOW.length)SNOW.length=0;return;}
   const want=gfxLow?55:130;
   if(SNOW.length!==want)_initSnow(want);
-  const dt=1/60;
+  // Real elapsed time, so the snow falls at the same rate on a 120Hz display as
+  // on a 60Hz one instead of twice as fast.
+  const _now=(typeof performance!=='undefined'&&performance.now)?performance.now():Date.now();
+  const dt=Math.min(0.05,(_snowLastT&&_now>_snowLastT)?(_now-_snowLastT)/1000:1/60);
+  _snowLastT=_now;
   ctx.save();
   for(const f of SNOW){
     f.y+=f.vy*dt;
-    // Each flake swings on its own phase so the field never marches in step.
-    const dx=Math.sin(t*0.8+f.ph)*f.sway*dt*6;
-    f.x+=dx;
+    // Each flake swings on its own phase AND its own rate, so the field never
+    // marches in step. Drift is a velocity now, not a per-frame displacement.
+    f.x+=Math.cos(t*f.swayHz+f.ph)*f.sway*dt;
     if(f.y>CH+4){f.y=-4;f.x=Math.random()*CW;}
     if(f.x<-6)f.x=CW+6;else if(f.x>CW+6)f.x=-6;
     ctx.globalAlpha=f.a;
@@ -11541,22 +11914,30 @@ function drawAnglerCrown(cx, cy, r){
 
 // V0.9.6: only the ONE equipped pet floats beside the boat (earned by prestige,
 // equipped in the Projects tab).
+// EVERY equipped companion floats beside the boat — normally one, up to five
+// while the Dragon is out. Pet #1 keeps its historical spot exactly; the rest
+// fan out to port so a five-pet raft still reads clearly.
+const PET_RAFT=[[-46,0],[-70,-16],[-70,16],[-40,-30],[-40,30]];
 function drawPets(){
-  const id=S.equippedPet;
-  if(!id||(typeof petOwned==='function'&&!petOwned(id)))return;
+  const ids=(typeof equippedPets==='function'?equippedPets():[]).filter(function(id){
+    return typeof petOwned!=='function'||petOwned(id);
+  });
+  if(!ids.length)return;
   const t=performance.now?performance.now():Date.now();
   const cx=ORIGIN.x, cy=ORIGIN.y;
   const PW=30,PH=Math.round(PW*1024/1536); // 3:2 art
-  const px=cx-46, py=cy-4+Math.sin(t*0.003)*4;
-  ctx.save();
-  ctx.globalAlpha=0.16;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px, py+PH*0.55,PW*0.34,3,0,0,6.28);ctx.fill();ctx.globalAlpha=1;
-  const spr=PET_SPRITE[id]||PET_IMG[id];
-  if(spr&&(spr.tagName==='CANVAS'||(spr.complete&&spr.naturalWidth))){
+  for(let i=0;i<ids.length;i++){
+    const spr=PET_SPRITE[ids[i]]||PET_IMG[ids[i]];
+    if(!(spr&&(spr.tagName==='CANVAS'||(spr.complete&&spr.naturalWidth))))continue;
+    const o=PET_RAFT[i]||[-46-i*12,0];
+    const px=cx+o[0], py=cy-4+o[1]+Math.sin(t*0.003+i*1.1)*4;
+    ctx.save();
+    ctx.globalAlpha=0.16;ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(px, py+PH*0.55,PW*0.34,3,0,0,6.28);ctx.fill();ctx.globalAlpha=1;
     ctx.translate(px, py);
     ctx.scale(-1,1); // mirror to face the boat
     ctx.drawImage(spr,-PW/2,-PH/2,PW, PH);
+    ctx.restore();
   }
-  ctx.restore();
 }
 // V0.9: tap-to-place snag rocks & slow buoys, drawn in world space.
 function drawPlacedItems(){
