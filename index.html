@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.7</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.8</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -58,8 +58,9 @@
     box-shadow:0 0 0 9px #e6f1f6, 0 0 0 13px #c3d9e4, inset 0 5px 14px rgba(0,0,0,.6);}
   .ice-shavings{position:absolute;left:50%;transform:translateX(-50%);bottom:17%;width:min(340px,70vw);height:48px;
     background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,0) 68%);}
-  .ice-jigline{position:absolute;left:50%;bottom:19%;width:2px;height:34%;
-    background:linear-gradient(180deg,rgba(255,255,255,0),rgba(240,250,255,.85));transform:translateX(-50%);}
+  /* The line is drawn, not stacked: one SVG spanning the whole scene, so it can
+     start at the rod tip wherever the bend has put it and finish in the hole. */
+  .ice-lineart{position:absolute;inset:0;pointer-events:none;overflow:visible;}
   .ice-rod{position:absolute;right:9%;bottom:0;width:150px;height:52%;transform-origin:100% 100%;
     transform:rotate(-13deg);transition:transform .1s;}
   .ice-rod.bent{transform:rotate(-30deg);}
@@ -783,6 +784,11 @@
 .sdew-overlay{position:fixed;inset:0;z-index:450;background:rgba(5,12,22,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
 .sdew-overlay.show{display:flex;}
 .sdew-title{font-family:'Fredoka';font-size:22px;color:#e0a93c;font-weight:600;text-align:center;letter-spacing:.5px;}
+.sdew-round{display:flex;align-items:center;gap:7px;margin-top:-8px;}
+.sdew-rlbl{font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:rgba(255,255,255,.5);margin-right:3px;}
+.sdew-pip{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);}
+.sdew-pip.done{background:#2aa890;box-shadow:0 0 8px rgba(42,168,144,.7);}
+.sdew-pip.now{background:#e0a93c;box-shadow:0 0 9px rgba(224,169,60,.8);}
 .sdew-arena{display:flex;gap:12px;align-items:stretch;}
 .sdew-track{position:relative;width:64px;height:280px;background:linear-gradient(180deg,#071628,#0d2540);border:2px solid rgba(255,255,255,.15);border-radius:12px;overflow:hidden;}
 .sdew-bar{position:absolute;left:0;right:0;height:88px;background:linear-gradient(180deg, rgba(60,210,160,.95),rgba(30,160,120,.85));border-radius:6px;box-shadow:0 0 14px rgba(50,200,140,.5);}
@@ -948,7 +954,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.7</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.8</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1004,6 +1010,7 @@
 </div>
 <div class="sdew-overlay" id="sdew-overlay">
   <div class="sdew-title" id="sdew-title">Tarpon</div>
+  <div class="sdew-round" id="sdew-round" style="display:none"></div>
   <div class="sdew-arena">
     <div class="sdew-track" id="sdew-track">
       <div class="sdew-bar" id="sdew-bar"></div>
@@ -1023,8 +1030,11 @@
   <div class="ice-field"></div>
   <div class="ice-shavings"></div>
   <div class="ice-hole"></div>
-  <div class="ice-jigline" id="ice-jigline"></div>
   <div class="ice-rod" id="ice-rod"></div>
+  <svg class="ice-lineart" id="ice-lineart" width="100%" height="100%">
+    <path id="ice-linetip" fill="none" stroke="#f2fbff" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
+    <path id="ice-linewet" fill="none" stroke="#bfe4f2" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+  </svg>
   <div class="ice-snowfall"></div>
   <div class="ice-night" id="ice-night"></div>
   <div class="ice-panel"><div class="ice-h">Ice Fishing</div><div class="ice-status" id="ice-status">Drop the jig and watch the flasher.</div></div>
@@ -5281,22 +5291,22 @@ const FISH=[
   {id:'lakesturgeon',name:'Lake Sturgeon',zone:5,rarity:'legendary',size:[10,80],line:40,methods:['bottom'],baits:['worm','crawfish','leech'],leader:'any',structure:['deephole','gravelbar','rockledge','confluence'],season:['spring','summer','fall'],time:['dawn','dusk','night'],xp:195,gold:140,weight:5,fact:'Lake sturgeon can live past a hundred years and do not spawn until their teens, so nearly every fishery for them is catch-and-release or limited-tag only.'},
   {id:'muskie',name:'Muskellunge',zone:5,rarity:'legendary',size:[10,55],line:20,methods:['topwater','troll'],baits:['shiner','shad'],leader:'wire',structure:['weedbed','point','timber','seam'],season:['fall'],time:['dawn','dusk','night'],xp:320,gold:190,weight:2.2,fact:'The fish of ten thousand casts, and the reason guides sweep a figure-eight beside the boat: muskies will follow a lure all the way to the transom before committing.'},
   // ---------- MOUNTAINS (zone 6) ----------
-  {id:'mtnwhitefish',name:'Mountain Whitefish',zone:6,rarity:'common',size:[0.5,5],line:6,methods:['fly','still'],baits:['worm','salmonegg','leech'],leader:'fluoro',structure:['run','riffle','tailout','open'],season:['all'],time:['day','dawn'],xp:32,gold:19,weight:48,fact:'A small downturned sucker-like mouth lets it hoover nymphs off the streambed, which is why it keeps feeding hard all winter long.'},
-  {id:'brooktrout',name:'Brook Trout',zone:6,rarity:'common',size:[0.2,4],line:4,methods:['fly','spincast','still'],baits:['worm','cricket','salmonegg'],leader:'fluoro',structure:['riffle','plungepool','springcreek','open'],season:['spring','summer','fall'],time:['all'],xp:34,gold:20,weight:46,fact:'Not a true trout but a char, and the pale worm-track vermiculation across its back and the white-edged fins give it away.'},
-  {id:'rainbowtrout',name:'Rainbow Trout',zone:6,rarity:'common',size:[0.5,12],line:6,methods:['fly','spincast','still'],baits:['powerbait','worm','salmonegg','minnow'],leader:'fluoro',structure:['run','riffle','boulders','open'],season:['all'],time:['dawn','day','dusk'],xp:40,gold:26,weight:44,fact:'Native only to Pacific drainages, it has since been stocked onto every continent except Antarctica.'},
-  {id:'cutthroattrout',name:'Cutthroat Trout',zone:6,rarity:'common',size:[0.5,10],line:6,methods:['fly','spincast'],baits:['cricket','worm','leech'],leader:'fluoro',structure:['run','undercut','boulders','open'],season:['spring','summer','fall'],time:['day','dawn'],xp:42,gold:28,weight:42,fact:'Named for the red-orange slash under each side of the lower jaw, and it hybridizes so readily with stocked rainbows that pure strains are now hard to find.'},
-  {id:'grayling',name:'Arctic Grayling',zone:6,rarity:'uncommon',size:[0.3,4],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['riffle','run','tailout'],season:['spring','summer'],time:['day','dusk'],xp:62,gold:44,weight:26,fact:'That enormous sail of a dorsal fin flares like a flag, and in the lower 48 native river grayling now survive only in Montana.'},
-  {id:'dollyvarden',name:'Dolly Varden',zone:6,rarity:'uncommon',size:[1,12],line:10,methods:['fly','spincast','still'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['plungepool','run','undercut','boulders'],season:['summer','fall'],time:['dawn','dusk'],xp:80,gold:55,weight:24,fact:'Named after a Dickens character who wore a dress covered in pink spots, and it trails spawning salmon upriver to feed on the loose eggs.'},
-  {id:'bulltrout',name:'Bull Trout',zone:6,rarity:'uncommon',size:[3,30],line:20,methods:['spincast','fly'],baits:['minnow','shiner','leech'],leader:'any',structure:['plungepool','logjam','boulders','undercut'],season:['summer','fall'],time:['dawn','dusk','night'],xp:145,gold:100,weight:20,fact:'A char that demands the coldest, cleanest water of any salmonid in the West, which is why it sits on the federal threatened list.'},
-  {id:'goldentrout',name:'Palomino Trout',zone:6,rarity:'rare',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:130,gold:95,weight:11,fact:'A butter-yellow rainbow descended from a single golden mutant found in a West Virginia hatchery in 1955, bred on ever since for one reason: a fish that colour is impossible to lose sight of in the water.'},
-  {id:'sockeyesalmon',name:'Sockeye Salmon',zone:6,rarity:'rare',size:[3,12],line:10,methods:['fly','spincast'],baits:['salmonegg','shad'],leader:'fluoro',structure:['run','tailout','alpinelake','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:140,gold:100,weight:9,fact:'The only salmon that turns fire-engine red with a green head to spawn, and the only one that feeds on plankton rather than fish out at sea.'},
-  {id:'mtnking',name:'King Salmon',zone:6,rarity:'epic',size:[8,50],line:20,methods:['fly','spincast'],baits:['salmonegg','shiner','minnow'],leader:'fluoro',structure:['plungepool','run','waterfall','tailout'],season:['summer','fall'],time:['dawn','dusk'],xp:260,gold:185,weight:5,fact:'A river-run chinook fights the current for hundreds of miles without eating a thing, living entirely off the fat it built at sea.'},
-  {id:'chumsalmon',name:'Chum Salmon',zone:6,rarity:'epic',size:[4,35],line:20,methods:['fly','spincast'],baits:['salmonegg','minnow','shiner'],leader:'fluoro',structure:['run','tailout','plungepool','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:250,gold:175,weight:4.5,fact:'A spawning male grows a set of dog-like canine teeth and a wall of purple tiger stripes down its flank, which is why Alaskans have always called it the dog salmon.'},
-  {id:'whitesturgeon',name:'White Sturgeon',zone:6,rarity:'legendary',size:[20,300],line:40,methods:['still'],baits:['worm','crawfish','shad'],leader:'any',structure:['deephole','plungepool','run','alpinelake'],season:['all'],time:['dawn','dusk','night'],xp:420,gold:320,weight:2,fact:'The largest freshwater fish in North America, armoured in bony plates instead of scales, and the biggest ever recorded topped 1,500 lb. Always released.'},
-  {id:'tigertrout',name:'Tiger Trout',zone:6,rarity:'legendary',size:[1,18],line:12,methods:['fly','spincast'],baits:['minnow','shiner','leech'],leader:'fluoro',structure:['undercut','boulders','beaverpond','plungepool'],season:['summer','fall'],time:['dawn','dusk','night'],xp:300,gold:215,weight:2.4,fact:'A sterile cross between a female brown trout and a male brook trout, named for the maze of dark vermiculation across its flanks; because it cannot reproduce, almost every one you meet arrived on a hatchery truck.'},
-  {id:'apachetrout',name:'Apache Trout',zone:6,rarity:'legendary',size:[0.3,6],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','riffle','run','boulders'],season:['summer'],time:['day','dawn'],xp:260,gold:200,weight:2.2,fact:'Arizona\u2019s state fish, native only to the headwaters of the White Mountains, and in 2024 it became the first sportfish recovered well enough to come off the endangered species list.'},
-  {id:'gilatrout',name:'Gila Trout',zone:6,rarity:'legendary',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','plungepool','riffle','run'],season:['summer'],time:['day','dawn'],xp:250,gold:195,weight:2.2,fact:'Down to five relict streams in the Gila headwaters when it was first listed, it is now packed out by hand ahead of wildfires and has recovered enough to reopen a handful of tightly limited catch-and-release waters.'},
-  {id:'cagoldentrout',name:'California Golden Trout',zone:6,rarity:'ultra',size:[0.5,6],line:4,methods:['fly'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:1300,gold:1900,weight:1,spawnChance:0.0002,fact:'California\'s state fish in its pure Sierra strain, above 10,000 feet in water that never warms. The most beautiful trout on earth and one almost nobody has seen alive.'},
+  {id:'mtnwhitefish',name:'Mountain Whitefish',zone:6,rarity:'common',size:[0.5,5],line:6,methods:['fly','still'],baits:['worm','salmonegg','leech'],leader:'fluoro',structure:['run','riffle','tailout','open'],season:['all'],time:['day','dawn'],xp:32,gold:76,weight:48,fact:'A small downturned sucker-like mouth lets it hoover nymphs off the streambed, which is why it keeps feeding hard all winter long.'},
+  {id:'brooktrout',name:'Brook Trout',zone:6,rarity:'common',size:[0.2,4],line:4,methods:['fly','spincast','still'],baits:['worm','cricket','salmonegg'],leader:'fluoro',structure:['riffle','plungepool','springcreek','open'],season:['spring','summer','fall'],time:['all'],xp:34,gold:80,weight:46,fact:'Not a true trout but a char, and the pale worm-track vermiculation across its back and the white-edged fins give it away.'},
+  {id:'rainbowtrout',name:'Rainbow Trout',zone:6,rarity:'common',size:[0.5,12],line:6,methods:['fly','spincast','still'],baits:['powerbait','worm','salmonegg','minnow'],leader:'fluoro',structure:['run','riffle','boulders','open'],season:['all'],time:['dawn','day','dusk'],xp:40,gold:104,weight:44,fact:'Native only to Pacific drainages, it has since been stocked onto every continent except Antarctica.'},
+  {id:'cutthroattrout',name:'Cutthroat Trout',zone:6,rarity:'common',size:[0.5,10],line:6,methods:['fly','spincast'],baits:['cricket','worm','leech'],leader:'fluoro',structure:['run','undercut','boulders','open'],season:['spring','summer','fall'],time:['day','dawn'],xp:42,gold:112,weight:42,fact:'Named for the red-orange slash under each side of the lower jaw, and it hybridizes so readily with stocked rainbows that pure strains are now hard to find.'},
+  {id:'grayling',name:'Arctic Grayling',zone:6,rarity:'uncommon',size:[0.3,4],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['riffle','run','tailout'],season:['spring','summer'],time:['day','dusk'],xp:62,gold:176,weight:26,fact:'That enormous sail of a dorsal fin flares like a flag, and in the lower 48 native river grayling now survive only in Montana.'},
+  {id:'dollyvarden',name:'Dolly Varden',zone:6,rarity:'uncommon',size:[1,12],line:10,methods:['fly','spincast','still'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['plungepool','run','undercut','boulders'],season:['summer','fall'],time:['dawn','dusk'],xp:80,gold:220,weight:24,fact:'Named after a Dickens character who wore a dress covered in pink spots, and it trails spawning salmon upriver to feed on the loose eggs.'},
+  {id:'bulltrout',name:'Bull Trout',zone:6,rarity:'uncommon',size:[3,30],line:20,methods:['spincast','fly'],baits:['minnow','shiner','leech'],leader:'any',structure:['plungepool','logjam','boulders','undercut'],season:['summer','fall'],time:['dawn','dusk','night'],xp:145,gold:400,weight:20,fact:'A char that demands the coldest, cleanest water of any salmonid in the West, which is why it sits on the federal threatened list.'},
+  {id:'goldentrout',name:'Palomino Trout',zone:6,rarity:'rare',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:130,gold:380,weight:11,fact:'A butter-yellow rainbow descended from a single golden mutant found in a West Virginia hatchery in 1955, bred on ever since for one reason: a fish that colour is impossible to lose sight of in the water.'},
+  {id:'sockeyesalmon',name:'Sockeye Salmon',zone:6,rarity:'rare',size:[3,12],line:10,methods:['fly','spincast'],baits:['salmonegg','shad'],leader:'fluoro',structure:['run','tailout','alpinelake','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:140,gold:400,weight:9,fact:'The only salmon that turns fire-engine red with a green head to spawn, and the only one that feeds on plankton rather than fish out at sea.'},
+  {id:'mtnking',name:'King Salmon',zone:6,rarity:'epic',size:[8,50],line:20,methods:['fly','spincast'],baits:['salmonegg','shiner','minnow'],leader:'fluoro',structure:['plungepool','run','waterfall','tailout'],season:['summer','fall'],time:['dawn','dusk'],xp:260,gold:740,weight:5,fact:'A river-run chinook fights the current for hundreds of miles without eating a thing, living entirely off the fat it built at sea.'},
+  {id:'chumsalmon',name:'Chum Salmon',zone:6,rarity:'epic',size:[4,35],line:20,methods:['fly','spincast'],baits:['salmonegg','minnow','shiner'],leader:'fluoro',structure:['run','tailout','plungepool','waterfall'],season:['summer','fall'],time:['dawn','day','dusk'],xp:250,gold:700,weight:4.5,fact:'A spawning male grows a set of dog-like canine teeth and a wall of purple tiger stripes down its flank, which is why Alaskans have always called it the dog salmon.'},
+  {id:'whitesturgeon',name:'White Sturgeon',zone:6,rarity:'legendary',size:[20,300],line:40,methods:['still'],baits:['worm','crawfish','shad'],leader:'any',structure:['deephole','plungepool','run','alpinelake'],season:['all'],time:['dawn','dusk','night'],xp:420,gold:1280,weight:2,fact:'The largest freshwater fish in North America, armoured in bony plates instead of scales, and the biggest ever recorded topped 1,500 lb. Always released.'},
+  {id:'tigertrout',name:'Tiger Trout',zone:6,rarity:'legendary',size:[1,18],line:12,methods:['fly','spincast'],baits:['minnow','shiner','leech'],leader:'fluoro',structure:['undercut','boulders','beaverpond','plungepool'],season:['summer','fall'],time:['dawn','dusk','night'],xp:300,gold:860,weight:2.4,fact:'A sterile cross between a female brown trout and a male brook trout, named for the maze of dark vermiculation across its flanks; because it cannot reproduce, almost every one you meet arrived on a hatchery truck.'},
+  {id:'apachetrout',name:'Apache Trout',zone:6,rarity:'legendary',size:[0.3,6],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','riffle','run','boulders'],season:['summer'],time:['day','dawn'],xp:260,gold:800,weight:2.2,fact:'Arizona\u2019s state fish, native only to the headwaters of the White Mountains, and in 2024 it became the first sportfish recovered well enough to come off the endangered species list.'},
+  {id:'gilatrout',name:'Gila Trout',zone:6,rarity:'legendary',size:[0.3,5],line:4,methods:['fly','spincast'],baits:['cricket','worm'],leader:'fluoro',structure:['springcreek','plungepool','riffle','run'],season:['summer'],time:['day','dawn'],xp:250,gold:780,weight:2.2,fact:'Down to five relict streams in the Gila headwaters when it was first listed, it is now packed out by hand ahead of wildfires and has recovered enough to reopen a handful of tightly limited catch-and-release waters.'},
+  {id:'cagoldentrout',name:'California Golden Trout',zone:6,rarity:'ultra',size:[0.5,6],line:4,methods:['fly'],baits:['cricket','worm'],leader:'fluoro',structure:['alpinelake','springcreek','riffle'],season:['summer'],time:['day'],xp:1300,gold:7600,weight:1,spawnChance:0.0002,fact:'California\'s state fish in its pure Sierra strain, above 10,000 feet in water that never warms. The most beautiful trout on earth and one almost nobody has seen alive.'},
   // ---- ALASKAN ICE FISHING (V0.9.8.1). Its own mode, unlocked after the
   //      Mountains licence and open only from mid-fall through winter. Caught
   //      ONLY through a drilled hole, never from a normal cast: methods:['ice']
@@ -5304,12 +5314,12 @@ const FISH=[
   //      `alaska:true` separates them from the Northern region's ice METHOD,
   //      which fishes the ordinary Northern roster. These pay out in RUBIES.
   //      iceDepth/icePatience/iceTS/iceRise/iceChase are inert outside the flasher. ----
-  {id:'akblackfish',name:'Alaska Blackfish',zone:6,ice:true,alaska:true,rarity:'common',size:[0.05,0.5],line:4,methods:['ice'],baits:['waxworm','worm'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['all'],xp:40,gold:0,weight:50,iceDepth:[4,14],icePatience:9000,iceTS:0.20,iceRise:0.40,fact:'A finger-long survivor that breathes air through its gut and has been found alive in tundra pools frozen most of the way to the bottom.'},
-  {id:'burbot',name:'Burbot',zone:6,ice:true,alaska:true,rarity:'uncommon',size:[1,18],line:10,methods:['ice'],baits:['minnow','shiner'],leader:'any',structure:['icehole'],season:['winter'],time:['dusk','night'],xp:90,gold:0,weight:30,iceDepth:[46,60],icePatience:14000,iceTS:0.50,iceRise:0.30,fact:'The only cod that lives its whole life in fresh water, and it spawns under the ice in January in a writhing ball of fish. Anglers call it the lawyer.'},
-  {id:'arcticchar',name:'Arctic Char',zone:6,ice:true,alaska:true,rarity:'rare',size:[2,25],line:10,methods:['ice'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk'],xp:230,gold:0,weight:16,iceDepth:[20,44],icePatience:8000,iceTS:0.60,iceRise:1.10,iceChase:true,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
-  {id:'lingcod',name:'Lingcod',zone:6,ice:true,alaska:true,rarity:'epic',size:[5,60],line:20,methods:['ice'],baits:['minnow','shiner','shad'],leader:'wire',structure:['icehole'],season:['winter'],time:['day','dawn','dusk'],xp:340,gold:0,weight:8,iceDepth:[38,60],icePatience:6000,iceTS:0.80,iceRise:1.40,iceChase:true,fact:'Not a cod at all but a greenling, with a mouth of needle teeth and flesh that can run bright blue-green until the moment it is cooked.'},
-  {id:'sheefish',name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one" — the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
-  {id:'greenlandshark',name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0012,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
+  {id:'akblackfish',ruby:2,name:'Alaska Blackfish',zone:6,ice:true,alaska:true,rarity:'common',size:[0.05,0.5],line:4,methods:['ice'],baits:['waxworm','worm'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['all'],xp:40,gold:0,weight:50,iceDepth:[4,14],icePatience:9000,iceTS:0.20,iceRise:0.40,fact:'A finger-long survivor that breathes air through its gut and has been found alive in tundra pools frozen most of the way to the bottom.'},
+  {id:'burbot',ruby:3,name:'Burbot',zone:6,ice:true,alaska:true,rarity:'uncommon',size:[1,18],line:10,methods:['ice'],baits:['minnow','shiner'],leader:'any',structure:['icehole'],season:['winter'],time:['dusk','night'],xp:90,gold:0,weight:30,iceDepth:[46,60],icePatience:14000,iceTS:0.50,iceRise:0.30,fact:'The only cod that lives its whole life in fresh water, and it spawns under the ice in January in a writhing ball of fish. Anglers call it the lawyer.'},
+  {id:'arcticchar',ruby:5,name:'Arctic Char',zone:6,ice:true,alaska:true,rarity:'rare',size:[2,25],line:10,methods:['ice'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk'],xp:230,gold:0,weight:16,iceDepth:[20,44],icePatience:8000,iceTS:0.60,iceRise:1.10,iceChase:true,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
+  {id:'lingcod',ruby:10,name:'Lingcod',zone:6,ice:true,alaska:true,rarity:'epic',size:[5,60],line:20,methods:['ice'],baits:['minnow','shiner','shad'],leader:'wire',structure:['icehole'],season:['winter'],time:['day','dawn','dusk'],xp:340,gold:0,weight:8,iceDepth:[38,60],icePatience:6000,iceTS:0.80,iceRise:1.40,iceChase:true,fact:'Not a cod at all but a greenling, with a mouth of needle teeth and flesh that can run bright blue-green until the moment it is cooked.'},
+  {id:'sheefish',ruby:30,name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one" — the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
+  {id:'greenlandshark',ruby:100,name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0012,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
 ];
 
 // ===================== LENGTH (inches) =====================
@@ -13247,12 +13257,28 @@ const ICE_DOUBLETAP=300;
 const ICE_TOL_FT=1.6, ICE_TOL_TIGHT=0.9;    // "on it" window; tighter for legendary+
 const ICE_LOCK_MS=1400, ICE_LOCK_HARD=2000; // dwell needed to make it eat
 const ICE_DRAIN_X=1.6;                  // dwell drains faster than it fills
+// V0.9.8.8 — a live fish under the hole does not hold one depth. It sways, and
+// every second or so it JUMPS. How hard it does both scales with rarity, so
+// parking the jig on a blackfish is nothing like staying with an Inconnu.
+const ICE_MOVE={common:0.55,uncommon:0.80,rare:1.15,epic:1.55,legendary:2.10,ultra:2.90};
+// Sway AMPLITUDE and sway RATE both scale with rarity — scaling only the speed
+// leaves every fish covering the same ground, just quicker, which is not what
+// "rarer fish move more" should feel like. A blackfish breathes ±0.2 ft once
+// every nine seconds; an Inconnu swings ±0.9 ft twice as often again.
+const ICE_SWAY_A=0.46;     // sway amplitude in ft at rarity 1.0
+const ICE_SWAY_F=0.21;     // sway cycles per second at rarity 1.0
+// The jump rate is deliberately FLAT across rarities: it is the tell that the
+// mark is alive, and a legendary that jumped three times a second would just be
+// unholdable rather than hard. Rarity buys distance per jump, not frequency.
+const ICE_JUMP_HZ=0.40;    // jumps per second, every species
+const ICE_JUMP_FT=0.50;    // ft per jump at rarity 1.0, before its own 0.6-1.8x roll
 function iceAng(ft){return -Math.PI/2+(ft/ICE_MAX_FT)*Math.PI*2;}
 
 let iceActive=false, icePhase='idle';
 let iceHoleFt=44, iceJigFt=0, iceJigTarget=0, iceAnimId=null, iceLastT=0;
 let iceDragging=false, iceDragY0=0, iceDragFt0=0, iceLastTap=0;
 let iceFish=null, iceFishState='none', iceFishFt=0, iceFishTS=0.4, iceFishW=0;
+let iceFishPh=0, iceFishSway=0;         // this mark's sway phase and its last applied offset
 let iceDwell=0, iceLockMs=ICE_LOCK_MS, iceTol=ICE_TOL_FT, iceStateT=0;
 let iceTrailJig=[], iceTrailFish=[], iceRevs=[], iceAttract=0, iceLastTick=0, iceSpawnAt=0;
 // Which fishery this session of the flasher is: 'alaska' (rubies, own roster) or
@@ -13351,6 +13377,7 @@ function enterIce(mode){
   document.getElementById('ice-rod').innerHTML=buildIceRod();
   document.getElementById('ice-hole-depth').textContent=iceHoleFt+' ft of water';
   document.getElementById('ice-overlay').classList.add('show');
+  iceDrawLine();                       // before the first frame, or it snaps into place
   setIceStatus('Drop the jig. Jig it to call something up.');
   iceLastT=0;if(iceAnimId)cancelAnimationFrame(iceAnimId);
   iceAnimId=requestAnimationFrame(iceLoop);
@@ -13368,7 +13395,7 @@ function buildIceRod(){
   return '<svg viewBox="0 0 150 200" preserveAspectRatio="none">'
     +'<path d="M148,196 L34,26" stroke="#2f3a42" stroke-width="7" stroke-linecap="round" fill="none"/>'
     +'<path d="M148,196 L34,26" stroke="#57646e" stroke-width="3" stroke-linecap="round" fill="none"/>'
-    +'<circle cx="34" cy="26" r="4" fill="#cfe0ea"/>'
+    +'<circle id="ice-rodtip" cx="34" cy="26" r="4" fill="#cfe0ea"/>'
     +'<rect x="112" y="150" width="26" height="17" rx="5" fill="#1d2830"/>'
     +'<circle cx="106" cy="140" r="13" fill="#39454e" stroke="#8f9ea8" stroke-width="2.5"/>'
     +'<circle cx="106" cy="140" r="4" fill="#c9a24a"/></svg>';
@@ -13418,6 +13445,7 @@ function iceSpawn(){
   iceTol=hard?ICE_TOL_TIGHT:ICE_TOL_FT;
   iceLockMs=hard?ICE_LOCK_HARD:ICE_LOCK_MS;
   iceFishState='approach';iceStateT=performance.now();iceDwell=0;iceTrailFish=[];
+  iceFishPh=Math.random()*6.283;iceFishSway=0;
   setIceStatus('Mark at '+Math.round(iceFishFt)+' ft — get on it.');
   AUDIO.sfx('tick');
 }
@@ -13459,6 +13487,24 @@ function iceLoop(ts){
   }else{
     const f=iceFish, gap=Math.abs(iceJigFt-iceFishFt);
     const rise=(f.iceRise||0.8)*(0.55+iceAttract*0.9);
+    // ---- the mark's own restlessness, laid on top of whatever the state
+    // machine below decides. Rarer fish drift faster and jump further; a
+    // legendary will not hold still long enough for you to stop steering.
+    // A sine, not a random walk: the sway has to be READABLE or chasing it is
+    // luck rather than skill. Only the CHANGE in the sine is applied, so the
+    // state machine below still owns the fish's base depth and the two never
+    // fight each other or drift apart over a long inspect.
+    const jk=ICE_MOVE[f.rarity]||1;
+    const sw=Math.sin(now*(6.283*ICE_SWAY_F*jk/1000)+iceFishPh)*ICE_SWAY_A*jk;
+    iceFishFt+=sw-iceFishSway;iceFishSway=sw;
+    // And on top of the sway, the jump: the thing that stops you parking the jig
+    // and looking away. A common barely twitches; an Inconnu clears its whole
+    // tolerance window in one and you have to go and find it again.
+    if(Math.random()<ICE_JUMP_HZ*dt){
+      iceFishFt+=(Math.random()<0.5?-1:1)*ICE_JUMP_FT*jk*(0.6+Math.random()*1.2);
+    }
+    // It can leave neither the water column nor the top of the dial.
+    iceFishFt=Math.max(1.2, Math.min(iceHoleFt-0.6, iceFishFt));
     if(iceFishState==='approach'){
       // Climbs toward the jig's level; a chaser closes much harder.
       const dir=Math.sign(iceJigFt-iceFishFt);
@@ -13483,12 +13529,40 @@ function iceLoop(ts){
   }
   iceDrawDial(now/1000);
   const dn=document.getElementById('ice-depth-num');if(dn)dn.textContent=Math.round(iceJigFt);
-  const jl=document.getElementById('ice-jigline');
-  if(jl)jl.style.height=(14+26*Math.min(1,iceJigFt/Math.max(1,iceHoleFt)))+'%';
+  iceDrawLine();
   const nightEl=document.getElementById('ice-night');
   if(nightEl){const dk=skyState(hourNow()).darkness;nightEl.style.opacity=(dk*0.72).toFixed(2);
     const au=document.getElementById('ice-aurora');if(au)au.style.opacity=(Math.max(0,dk-0.45)*1.6).toFixed(2);}
   iceAnimId=requestAnimationFrame(iceLoop);
+}
+// The line, rod tip to hole. Both ends move — the rod bends on a hookup, and
+// the hole and tip both shift with the viewport — so rather than guess at
+// percentages we ask the DOM where the tip circle actually ended up this frame
+// and draw to it. A slack curve between them, because 4 lb mono does not hang
+// straight, and a short wet segment into the hole that lengthens as the jig
+// drops, which is the only depth cue you get looking down.
+function iceDrawLine(){
+  const svg=document.getElementById('ice-lineart');if(!svg)return;
+  const ov=document.getElementById('ice-overlay');
+  const tip=document.getElementById('ice-rodtip');
+  const hole=document.querySelector('.ice-hole');
+  const dry=document.getElementById('ice-linetip'), wet=document.getElementById('ice-linewet');
+  if(!ov||!tip||!hole||!dry||!wet)return;
+  const ob=ov.getBoundingClientRect(), tb=tip.getBoundingClientRect(), hb=hole.getBoundingClientRect();
+  if(!ob.width||!hb.width)return;
+  const tx=tb.left+tb.width/2-ob.left, ty=tb.top+tb.height/2-ob.top;
+  const hx=hb.left+hb.width/2-ob.left, hy=hb.top+hb.height*0.44-ob.top;
+  const frac=Math.min(1, iceJigFt/Math.max(1, iceHoleFt));
+  // Slack: a little always, more as line pays out, none at all while it's bent
+  // into a fish — that moment is the one time the line should be a straight bar.
+  const bent=document.getElementById('ice-rod');
+  const slack=(bent&&bent.classList.contains('bent'))?2:(9+frac*13);
+  dry.setAttribute('d','M'+tx.toFixed(1)+','+ty.toFixed(1)
+    +' Q'+((tx+hx)/2).toFixed(1)+','+((ty+hy)/2+slack).toFixed(1)
+    +' '+hx.toFixed(1)+','+hy.toFixed(1));
+  const wetLen=hb.height*(0.10+frac*0.34);
+  wet.setAttribute('d','M'+hx.toFixed(1)+','+hy.toFixed(1)+' L'+hx.toFixed(1)+','+(hy+wetLen).toFixed(1));
+  wet.setAttribute('opacity',(0.5-frac*0.22).toFixed(2));
 }
 // One helper draws every mark on the dial: an arc of the signal band.
 function iceMark(g, ft, wFt, col, a, glow){
@@ -13549,9 +13623,13 @@ function iceDrawDial(t){
     g.beginPath();g.arc(ICE_CX,ICE_CY,ICE_R_OUT+13,-Math.PI/2,-Math.PI/2+(iceDwell/iceLockMs)*Math.PI*2);
     g.stroke();g.restore();
   }
-  // cosmetic sweep, deliberately NOT gating mark visibility (that strobes)
-  const sa=-Math.PI/2+((t*2.4)%1)*Math.PI*2;
-  g.strokeStyle='rgba(220,245,255,.30)';g.lineWidth=2;
+  // Cosmetic sweep, deliberately NOT gating mark visibility (that strobes).
+  // V0.9.8.8: it was turning 2.4 times a SECOND, which reads as a strobe in the
+  // corner of your eye for the whole session. Down to one turn every ~3.5s and
+  // barely there, so it still says "this thing is running" without pulling the
+  // eye off the marks, which are the only part you actually read.
+  const sa=-Math.PI/2+((t*0.28)%1)*Math.PI*2;
+  g.strokeStyle='rgba(220,245,255,.11)';g.lineWidth=1.5;
   g.beginPath();g.moveTo(ICE_CX+Math.cos(sa)*(ICE_R_IN-6), ICE_CY+Math.sin(sa)*(ICE_R_IN-6));
   g.lineTo(ICE_CX+Math.cos(sa)*(ICE_R_OUT+4), ICE_CY+Math.sin(sa)*(ICE_R_OUT+4));g.stroke();
 }
@@ -14554,6 +14632,47 @@ let sdewSlowmoUsed=false, sdewSlowmoUntil=0;   // Chainsaw Rod: one slow mo per 
 let sdewSurf=false;                            // surf shark fight: slower bar & fish
 let sdewIce=false;                             // ice-hole fight: same idea, tuned for a short jigging rod
 let sdewLunar=false;                           // Astronaut "Lunar Sun": this fight is 15% slower
+// ---- multi-round fights (V0.9.8.8) ------------------------------------------
+// The two modes that pay rubies now take THREE full bars. Max the meter and the
+// fight resets for the next round rather than ending; only the third one puts
+// the fish in the net. Losing at any point is still one loss — the paid retry
+// starts you back at round 1, which is what the 5 rubies are actually buying.
+let sdewRound=1, sdewRounds=1;
+function sdewRoundsFor(){
+  if(sdewSurf)return 3;
+  if(sdewIce&&iceMode==='alaska')return 3;
+  return 1;
+}
+// How much slower the meter moves in these modes, applied to the fill AND the
+// drain. Slowing only the fill would not lengthen the fight, it would just make
+// it unwinnable — the ratio between the two is the difficulty, the scale is the
+// duration, and the ask here was duration.
+function sdewMeterScale(){
+  if(sdewSurf)return 0.46;
+  if(sdewIce)return 0.64;
+  return 1;
+}
+// ...and how much faster the fish itself runs in them. Both ice modes get this,
+// not just the Alaskan one: a mark under the hole should be lively either way.
+// Sanity-checked by driving the bar with a time-optimal controller and counting
+// the frames the fish spends inside it: at these values a clean controller holds
+// it ~100%, so the ceiling is skill and not the tuning. Break-even — the point
+// where the meter stops resolving in either direction — is 52.4% in the bar, and
+// a human somewhere in the 75-85% band lands a round in about five seconds,
+// which is the intended pace for three of them back to back.
+function sdewFishSpeed(){
+  if(sdewSurf)return 1.10;
+  if(sdewIce)return 1.12;
+  return 1;
+}
+function sdewSetRoundLabel(){
+  const el=document.getElementById('sdew-round');if(!el)return;
+  if(sdewRounds<2){el.style.display='none';el.innerHTML='';return;}
+  el.style.display='';
+  let pips='';
+  for(let i=1;i<=sdewRounds;i++)pips+='<span class="sdew-pip'+(i<sdewRound?' done':(i===sdewRound?' now':''))+'"></span>';
+  el.innerHTML='<span class="sdew-rlbl">ROUND '+sdewRound+' OF '+sdewRounds+'</span>'+pips;
+}
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
 function sdewDifficultyFor(fish){
@@ -14576,6 +14695,7 @@ function showLegendaryAlert(fish){
 
 function startSdewGame(fish){
   sdewActive=true;sdewHolding=false;
+  sdewRound=1;sdewRounds=sdewRoundsFor();
   sdewDiff=sdewDifficultyFor(fish);
   sdewStartTime=performance.now?performance.now():Date.now();
   document.getElementById('rig-bar').style.pointerEvents='none';
@@ -14586,6 +14706,7 @@ function startSdewGame(fish){
   sdewMeter=30;
   document.getElementById('sdew-fish-icon').innerHTML=svgIcon('fish',26);
   document.getElementById('sdew-title').textContent=fish.name;
+  sdewSetRoundLabel();
   sdewSlowmoUsed=false;sdewSlowmoUntil=0;
   // Astronaut "Lunar Sun" (moon out): consume the pending buff so this catch fights slower.
   sdewLunar=!!_lunarSlowNext;_lunarSlowNext=false;
@@ -14594,7 +14715,31 @@ function startSdewGame(fish){
   document.getElementById('sdew-overlay').classList.add('show');
   updateSdewDOM();
   sdewAnimId=requestAnimationFrame(sdewLoop);
-  setStatus('Keep the fish in the green bar! Hold REEL to rise, release to sink.');
+  setStatus(sdewRounds>1
+    ? 'Round 1 of '+sdewRounds+'. Fill the bar to move up a round — three rounds lands it.'
+    : 'Keep the fish in the green bar! Hold REEL to rise, release to sink.');
+}
+
+// A round is won: reset the arena and go again with the SAME fish. Everything
+// that is per-fight rather than per-round — the Chainsaw slow-mo, the retry
+// flag, the Lunar buff — is deliberately left alone, so one slow-mo covers the
+// whole three-round fight and not one per bar.
+function sdewNextRound(){
+  sdewRound++;
+  sdewBarTop=SDEW_TRACK_H/2-SDEW_BAR_H/2;
+  sdewBarVel=0;
+  sdewFishCy=sdewBarTop+SDEW_BAR_H/2;
+  sdewFishVel=0;
+  sdewMeter=30;
+  // A fresh grace window between rounds: a beat to breathe and line back up,
+  // rather than being dropped straight into a moving fish at full speed.
+  sdewStartTime=performance.now?performance.now():Date.now();
+  sdewSetRoundLabel();
+  updateSdewDOM();
+  AUDIO.sfx('tick');
+  toast('Round '+sdewRound+' of '+sdewRounds+'! It’s still on.','#2aa890');
+  setStatus('Round '+sdewRound+' of '+sdewRounds+' — hold on.');
+  sdewAnimId=requestAnimationFrame(sdewLoop);
 }
 
 function sdewLoop(){
@@ -14617,7 +14762,10 @@ function sdewLoop(){
   // Chainsaw Rod slow-mo: fish at half speed/activity for 3 seconds.
   // Surf sharks move slightly slower than normal.
   // Tutorial trial tarpon moves noticeably slower so newcomers can win it.
-  const slow=((now<sdewSlowmoUntil)?0.5:1)*(sdewSurf?0.85:1)*(sdewIce?0.9:1)*(sdewLunar?0.85:1)*((tut&&tut.trialActive)?0.72:1);
+  // V0.9.8.8: surf and ice used to run the fish SLOWER than open water (0.85 /
+  // 0.9). That read as sluggish in the two modes that are meant to be the
+  // hardest fights in the game, so they now run it faster instead.
+  const slow=((now<sdewSlowmoUntil)?0.5:1)*sdewFishSpeed()*(sdewLunar?0.85:1)*((tut&&tut.trialActive)?0.72:1);
   const spd=0.9; // fish icon moves 10% slower (a touch more catchable)
   const erratic=(grace?beh.erratic*0.15:beh.erratic)*sdewDiff*ease*slow*spd;
   const dartChance=grace?0:beh.dartChance*sdewDiff*ease*slow;
@@ -14632,13 +14780,17 @@ function sdewLoop(){
   // at all until the buffer is over, giving the player a moment to line up.
   const inBar=sdewFishCy>=sdewBarTop&&sdewFishCy<=sdewBarTop+SDEW_BAR_H;
   if(!grace){
-    let gain=0.6;
-    if(sdewSurf)gain*=0.5;   // surf progress bar grows much slower
-    else if(sdewIce)gain*=0.72; // through the ice: a short rod, but nowhere for it to run
-    sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?gain:-0.66)*fs));
+    // Fill and drain scale together, so these modes are LONGER rather than
+    // simply harder: the 0.6 / 0.66 ratio that decides how much of the time you
+    // have to be on the fish is identical to open water.
+    const ms=sdewMeterScale();
+    sdewMeter=Math.max(0,Math.min(100,sdewMeter+(inBar?0.6:-0.66)*ms*fs));
   }
   updateSdewDOM();
-  if(sdewMeter>=100){endSdewGame(true);return;}
+  if(sdewMeter>=100){
+    if(sdewRound<sdewRounds){sdewNextRound();return;}
+    endSdewGame(true);return;
+  }
   if(sdewMeter<=0){endSdewGame(false);return;}
   sdewAnimId=requestAnimationFrame(sdewLoop);
 }
@@ -14979,8 +15131,12 @@ function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){cons
 function snap(f, w, msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Rig up and cast again. Check the shop (\u2630).');}},2400);}
 function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
-// Ruby payout for a surf shark: 5-25, set by rarity with a size kicker on top.
+// Ruby payout. The Alaskan ice roster carries a FIXED, published price on the
+// species row (V0.9.8.8) — a Burbot is always 3 rubies, an Inconnu always 30, so
+// a player can decide which mark is worth chasing before they commit to it. Surf
+// sharks keep the original 5-25 rarity curve with a size kicker.
 function sharkRubyReward(f, w){
+  if(f.ruby)return f.ruby;
   const rarIdx={common:0,uncommon:1,rare:2,epic:3,legendary:4,ultra:5}[f.rarity]||0;
   const a=f.size[0],b=f.size[1];
   const sizeFrac=Math.max(0,Math.min(1,(w-a)/Math.max(0.01,b-a)));
@@ -15043,7 +15199,7 @@ function land(f, w, perfect, bullseye){
   // Surf sharks and the Alaskan ice roster pay out in RUBIES (5-25), scaled by
   // rarity with a size kicker. Both carry gold:0 so they never double-dip.
   let rubyReward=0;
-  if(f.surf||f.alaska){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' rubies!','#d61f3a');},1200);}}
+  if(f.surf||f.alaska){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' ruby'+(rubyReward===1?'':'s')+'!','#d61f3a');},1200);}}
   // GOLDEN TROUT companion: while its 10-minute window is glowing, every catch
   // pays a ruby, three for a legendary. Stacks on top of a surf/Alaskan payout.
   if(goldenActive()){
