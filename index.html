@@ -8282,18 +8282,53 @@ function activeStructures(){
   if(z.tempStruct&&!surfActive&&currentWeather().id===z.tempStruct.weather)return base.concat([z.tempStruct]);
   return base;
 }
+// The radius of the largest all-water circle centred on a point, capped. Used to
+// size anything that has to FIT INSIDE a freshwater channel rather than assume
+// open sea. Cheap: eight rays, coarse steps, and it stops at the first bank.
+function waterRoomAt(x, y, cap){
+  cap=cap||96;
+  if(!shoreScene())return cap;
+  let r=0;
+  for(let t=8;t<=cap;t+=6){
+    let open=true;
+    for(let a=0;a<8;a++){
+      const ang=a*(6.283/8);
+      if(!isWaterAt(x+Math.cos(ang)*t, y+Math.sin(ang)*t)){open=false;break;}
+    }
+    if(!open)break;
+    r=t;
+  }
+  return r;
+}
 // During multiplayer (tournaments & co op challenges) every structure gets a small
 // invisible no-park radius: boats are pushed to its edge so nobody can sit on top
 // of a spot and block its visibility from other anglers. Open world is unaffected.
 const NOPARK_R=46;
+const NOPARK_PASS=30;   // open water that must remain between the circle and the bank
+const NOPARK_MIN=14;    // below this the push is not worth having
+// A 46px radius is a 92px-wide blocked circle. The Mountains canyon runs 65-85px
+// across, so in a freshwater match a mid-channel spot sealed the waterway and
+// there was simply no way past it. Size the circle to what the channel can spare
+// and drop it where there is nothing to spare — a spot can never be truly hidden
+// anyway, because drawStructBeacons() floats a marker above every boat that
+// covers one.
+function noParkRadiusAt(x, y){
+  if(!shoreScene())return NOPARK_R;             // saltwater match: unchanged
+  const room=waterRoomAt(x, y, NOPARK_R+NOPARK_PASS);
+  const r=Math.min(NOPARK_R, room-NOPARK_PASS);
+  return r>=NOPARK_MIN?r:0;
+}
 function keepOffStructures(o){
   if(!mpActive())return;
   const list=activeStructures();
   for(const s of list){
+    if(s._noParkZ!==S.zone){s._noPark=noParkRadiusAt(s.x, s.y);s._noParkZ=S.zone;}
+    const R=s._noPark;
+    if(R<=0)continue;                            // too narrow here to spare any
     const dx=o.wx-s.x, dy=o.wy-s.y, d=Math.hypot(dx, dy);
-    if(d<NOPARK_R){
-      if(d>0.01){const k=NOPARK_R/d;o.wx=s.x+dx*k;o.wy=s.y+dy*k;}
-      else{o.wx=s.x+NOPARK_R;o.wy=s.y;}
+    if(d<R){
+      if(d>0.01){const k=R/d;o.wx=s.x+dx*k;o.wy=s.y+dy*k;}
+      else{o.wx=s.x+R;o.wy=s.y;}
       if(o===boat){o.vx*=0.5;o.vy*=0.5;}
     }
   }
@@ -8369,17 +8404,31 @@ function initTournamentWorld(def){
   // A freshwater spot has to sit ON the water or it cannot be fished, and the
   // channels are narrow, so spacing relaxes rather than dropping the spot.
   const minGap=fresh?190:300;
+  // ...and it has to sit in the MIDDLE of the channel, not jammed against a bank.
+  // Testing the centre point alone put spots within a few px of the shore, which
+  // left no room to work them and sent every bot homing on one straight into the
+  // gravel. Keep the roomiest candidate found rather than the first legal one.
+  const WANT_ROOM=24;
   for(const d of defs){
     let x, y, tries=0,ok;
+    let bx=0,by=0,bRoom=-1;
     do{
       x=140+rng()*(tourn.W-280);
       y=140+rng()*(tourn.H-280);
       ok=true;
       if(fresh&&!isWaterAt(x, y, def.zone))ok=false;
       if(ok)for(const s of tourn.structs){if(dist(x, y, s.x, s.y)<minGap){ok=false;break;}}
+      if(ok&&fresh){
+        const room=waterRoomAt(x, y, 60);
+        if(room>bRoom){bRoom=room;bx=x;by=y;}
+        if(room<WANT_ROOM)ok=false;             // keep looking for open water
+      }
       tries++;
     }while(!ok&&tries<(fresh?400:50));
-    if(fresh&&!isWaterAt(x, y, def.zone))continue;   // never strand a spot on the bank
+    if(fresh&&!ok){                              // nothing roomy enough: take the best seen
+      if(bRoom<0)continue;                       // never strand a spot on the bank
+      x=bx;y=by;
+    }
     tourn.structs.push({kind:d.kind, x:Math.round(x),y:Math.round(y),tier:d.tier});
   }
   tourn.active=true;
@@ -8502,8 +8551,18 @@ function botTargetPos(g, tSec){
   const p=g._path;
   // pack followers ride a wider ring around the shared spot (no boat pile-ups)
   const ring=(g._packFollow&&(tourn._leaderBots||[]).indexOf(g)<0)?(g._packRing||0):0;
-  const x=st.x+Math.cos(tSec*p.osp+p.ox)*(p.orx+ring)+Math.sin(tSec*p.osp*0.43+p.ox2)*9;
-  const y=st.y+Math.sin(tSec*p.osp*0.86+p.oy)*(p.ory+ring*0.8)+Math.cos(tSec*p.osp*0.51+p.oy2)*9;
+  // The orbit is 50-94px wide, which is wider than the Mountains canyon. Aiming a
+  // bot at a point that far off the spot sent it at the bank every single lap and
+  // left it grinding along the shore. Shrink the lap to fit the water actually
+  // there, so a bot in a narrow channel works its spot in tight little passes.
+  let ox=p.orx+ring, oy=p.ory+ring*0.8;
+  if(shoreScene()){
+    if(st._roomZ!==S.zone){st._room=waterRoomAt(st.x, st.y, 110);st._roomZ=S.zone;}
+    const fit=Math.max(10, st._room-14);
+    ox=Math.min(ox, fit);oy=Math.min(oy, fit);
+  }
+  const x=st.x+Math.cos(tSec*p.osp+p.ox)*ox+Math.sin(tSec*p.osp*0.43+p.ox2)*9;
+  const y=st.y+Math.sin(tSec*p.osp*0.86+p.oy)*oy+Math.cos(tSec*p.osp*0.51+p.oy2)*9;
   return {x:x, y:y};
 }
 // ----- Bot fishing: each bot lands 1-3 of the target species over the match -----
@@ -8769,6 +8828,10 @@ function updateGhosts(){
         let dh=target.h-g.heading;
         while(dh>Math.PI)dh-=6.28;while(dh<-Math.PI)dh+=6.28;
         g.heading+=dh*he;
+        // Interpolating between two water positions can still cut the inside of
+        // a bend and clip the bank. Their real track is valid, so this is a
+        // pixel-scale nudge, never a teleport.
+        if(shoreScene())keepOffWater(g);
       }
       continue;
     }
@@ -8825,6 +8888,12 @@ function updateGhosts(){
     }
     clampGhost(g);
     keepOffStructures(g);   // bots can't park on a spot either
+    // ...and they cannot walk on water's opposite. clampGhost only ever held them
+    // inside the world RECTANGLE, which is all the sea a saltwater match has, but
+    // a freshwater match is mostly bank. Water is the hard constraint and goes
+    // last: being nudged back off a spot is cosmetic, standing in a pine forest
+    // is not.
+    if(shoreScene())keepOffWater(g);
 
     // face the direction of travel
     const dxh=g.wx-px, dyh=g.wy-py;
