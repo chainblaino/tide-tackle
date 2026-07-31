@@ -8282,6 +8282,118 @@ function activeStructures(){
   if(z.tempStruct&&!surfActive&&currentWeather().id===z.tempStruct.weather)return base.concat([z.tempStruct]);
   return base;
 }
+// ---- Channel centrelines (V0.9.8.9) -----------------------------------------
+// A freshwater region is drawn from ribbons, and a ribbon already knows where the
+// middle of its waterway is: cs[] is the centreline and hw[] the half-width at
+// each control point. Resampling that gives a travel line bots can follow, with
+// the local room carried along it so they know how far off-centre they may sit.
+//
+// The centreline is resampled as straight chords while the shoreline is drawn as
+// a spline through the same points, so a chord can cut a sharp bend and land just
+// outside the water. Every sample is therefore water-tested and dropped if it
+// misses — the line is for steering, and a steering point on the bank is worse
+// than no point at all.
+const _chanCache={};
+function channelsFor(zi){
+  if(_chanCache[zi])return _chanCache[zi];
+  const shape=WATER_SHAPE[zi], out=[];
+  if(shape&&WORLD_DIMS[zi]){
+    const W=WORLD_DIMS[zi][0], H=WORLD_DIMS[zi][1];
+    (shape.parts||[]).forEach(function(part){
+      if(part.kind!=='ribbon'||!part.cs||part.cs.length<2)return;
+      const cs=part.cs, hw=part.hw||[], raw=[];
+      function hwAt(i){return (hw[i]!==undefined?hw[i]:0.03)*W;}
+      for(let i=0;i<cs.length-1;i++){
+        const ax=cs[i][0]*W, ay=cs[i][1]*H, bx=cs[i+1][0]*W, by=cs[i+1][1]*H;
+        const aw=hwAt(i), bw=hwAt(i+1);
+        const steps=Math.max(1,Math.round(Math.hypot(bx-ax, by-ay)/26));
+        for(let k=0;k<steps;k++){
+          const t=k/steps;
+          raw.push({x:ax+(bx-ax)*t, y:ay+(by-ay)*t, hw:aw+(bw-aw)*t});
+        }
+      }
+      const L=cs.length-1;
+      raw.push({x:cs[L][0]*W, y:cs[L][1]*H, hw:hwAt(L)});
+      const pts=raw.filter(function(p){return isWaterAt(p.x, p.y, zi);});
+      if(pts.length<2)return;
+      // arc length and the perpendicular, both needed to steer along and offset
+      let acc=0;pts[0].s=0;
+      for(let i=1;i<pts.length;i++){acc+=Math.hypot(pts[i].x-pts[i-1].x, pts[i].y-pts[i-1].y);pts[i].s=acc;}
+      for(let i=0;i<pts.length;i++){
+        const a=pts[Math.max(0,i-1)], b=pts[Math.min(pts.length-1,i+1)];
+        let tx=b.x-a.x, ty=b.y-a.y;const m=Math.hypot(tx, ty)||1;
+        pts[i].nx=-ty/m;pts[i].ny=tx/m;
+      }
+      out.push({pts:pts, len:acc});
+    });
+  }
+  _chanCache[zi]=out;
+  return out;
+}
+// Nearest point on any channel, or null when this region has none (an open basin
+// like the Northern is all poly and needs no steering help).
+function nearestChannelPt(zi, x, y){
+  const chans=channelsFor(zi);
+  let best=null, bd=1e9;
+  for(let c=0;c<chans.length;c++){
+    const pts=chans[c].pts;
+    for(let i=0;i<pts.length;i++){
+      const dx=pts[i].x-x, dy=pts[i].y-y, d=dx*dx+dy*dy;
+      if(d<bd){bd=d;best=pts[i];}
+    }
+  }
+  return best?{pt:best, d:Math.sqrt(bd)}:null;
+}
+// A point a given distance ALONG a channel, plus the perpendicular and the room
+// there. Driving a bot by arc length makes it work a stretch of river; merely
+// projecting its circular orbit onto the line leaves almost no motion at all,
+// because a small circle flattened onto a line is a very short segment.
+function channelPointAt(ch, s){
+  const pts=ch.pts;
+  s=Math.max(0, Math.min(ch.len, s));
+  let lo=0, hi=pts.length-1;
+  while(lo<hi-1){const mid=(lo+hi)>>1;if(pts[mid].s<=s)lo=mid;else hi=mid;}
+  const a=pts[lo], b=pts[Math.min(pts.length-1, lo+1)];
+  const seg=Math.max(0.001, b.s-a.s), t=Math.max(0,Math.min(1,(s-a.s)/seg));
+  return {x:a.x+(b.x-a.x)*t, y:a.y+(b.y-a.y)*t,
+          hw:a.hw+(b.hw-a.hw)*t, nx:a.nx, ny:a.ny};
+}
+// How far along ONE channel a point sits. Used to place a bot into channel space
+// the first time it adopts a channel.
+function nearestSOn(ch, x, y){
+  let bs=0, bd=1e9;
+  for(let i=0;i<ch.pts.length;i++){
+    const dx=ch.pts[i].x-x, dy=ch.pts[i].y-y, d=dx*dx+dy*dy;
+    if(d<bd){bd=d;bs=ch.pts[i].s;}
+  }
+  return bs;
+}
+// Which channel a point belongs to, and how far along it — cached per structure.
+function channelAnchor(zi, x, y){
+  const chans=channelsFor(zi);
+  let best=null, bd=1e9;
+  for(let c=0;c<chans.length;c++){
+    const pts=chans[c].pts;
+    for(let i=0;i<pts.length;i++){
+      const dx=pts[i].x-x, dy=pts[i].y-y, d=dx*dx+dy*dy;
+      if(d<bd){bd=d;best={ci:c, s:pts[i].s};}
+    }
+  }
+  return (best&&Math.sqrt(bd)<=CHAN_SNAP_MAX)?best:null;
+}
+// Pull a destination onto the middle of the nearest channel, then let it sit a
+// little off-centre so a whole fleet does not queue up on one line. The offset is
+// capped by the room actually there, so it can never push anyone back ashore.
+const CHAN_SNAP_MAX=260;   // beyond this the point belongs to an open basin
+const CHAN_EDGE_KEEP=26;   // water to leave between a bot and the bank
+function snapToChannel(zi, x, y, lat){
+  const near=nearestChannelPt(zi, x, y);
+  if(!near||near.d>CHAN_SNAP_MAX)return null;
+  const p=near.pt;
+  const room=Math.max(0, p.hw-CHAN_EDGE_KEEP);
+  const off=Math.max(-room, Math.min(room, lat||0));
+  return {x:p.x+p.nx*off, y:p.y+p.ny*off};
+}
 // The radius of the largest all-water circle centred on a point, capped. Used to
 // size anything that has to FIT INSIDE a freshwater channel rather than assume
 // open sea. Cheap: eight rays, coarse steps, and it stops at the first bank.
@@ -8545,22 +8657,67 @@ function botHomeStruct(g){
 // home structure, so it looks like it's working the spot. Purely a function of
 // time, so motion is identical and jitter-free on every screen.
 function botTargetPos(g, tSec){
-  if(g.roamer)return botBasePos(g, tSec);   // roamers just wander the open water
+  if(g.roamer){
+    // In fresh water a roamer patrols the LENGTH of a channel. Left on the open
+    // wander it aimed clean across the map, and every bend between it and that
+    // target was bank — which is why half the fleet was still being dragged back
+    // even once the spot-workers had settled.
+    if(shoreScene()){
+      const chans=channelsFor(S.zone);
+      if(chans.length){
+        if(g._roamCi===undefined||g._roamZ!==S.zone){
+          g._roamZ=S.zone;
+          // Weighted by length: a 140px stub is not a patrol route, and picking
+          // uniformly parked three roamers in four on one.
+          let total=0;for(let i=0;i<chans.length;i++)total+=chans[i].len;
+          let pick=(strHash(g.uid+'_roam')%1000)/1000*total, ci=0;
+          for(let i=0;i<chans.length;i++){pick-=chans[i].len;if(pick<=0){ci=i;break;}ci=i;}
+          g._roamCi=ci;
+          g._roamPh=(strHash(g.uid+'_ph')%628)/100;
+        }
+        const ch=chans[g._roamCi];
+        const p=g._path;
+        // a run up and down the whole channel, each roamer on its own beat
+        const frac=0.5+0.46*Math.sin(tSec*(0.06+p.osp*0.5)+g._roamPh);
+        const ts=ch.len*frac;
+        const q=channelPointAt(ch, ts);
+        const room=Math.max(0, q.hw-CHAN_EDGE_KEEP);
+        const lat=Math.max(-room, Math.min(room, Math.sin(tSec*0.3+g._roamPh)*room));
+        return {x:q.x+q.nx*lat, y:q.y+q.ny*lat, chan:{ci:g._roamCi, s:ts, lat:lat}};
+      }
+    }
+    return botBasePos(g, tSec);   // open water: wander freely
+  }
   const st=botHomeStruct(g);
   if(!st)return botBasePos(g, tSec);
   const p=g._path;
   // pack followers ride a wider ring around the shared spot (no boat pile-ups)
   const ring=(g._packFollow&&(tourn._leaderBots||[]).indexOf(g)<0)?(g._packRing||0):0;
-  // The orbit is 50-94px wide, which is wider than the Mountains canyon. Aiming a
-  // bot at a point that far off the spot sent it at the bank every single lap and
-  // left it grinding along the shore. Shrink the lap to fit the water actually
-  // there, so a bot in a narrow channel works its spot in tight little passes.
-  let ox=p.orx+ring, oy=p.ory+ring*0.8;
+  // In a channel, work a STRETCH of river either side of the spot rather than a
+  // circle around it: the canyon is 60-86px wide and the orbit is 50-94px, so a
+  // lap simply does not fit. Driving along the arc length keeps the bot moving
+  // like a boat working a run, and it can never aim across the bank.
   if(shoreScene()){
+    if(st._anchZ!==S.zone){st._anch=channelAnchor(S.zone, st.x, st.y);st._anchZ=S.zone;}
+    if(st._anch){
+      const ch=channelsFor(S.zone)[st._anch.ci];
+      const sweep=110+ring*0.8;
+      const ts=st._anch.s+Math.sin(tSec*p.osp*3.4+p.ox)*sweep;
+      const q=channelPointAt(ch, ts);
+      const room=Math.max(0, q.hw-CHAN_EDGE_KEEP);
+      const lat=Math.max(-room, Math.min(room, Math.sin(tSec*p.osp*2.2+p.oy)*room));
+      // The channel coordinates ride along so updateGhosts can move the bot ALONG
+      // the river. A straight line to (x,y) would cut every dogleg across the bank.
+      return {x:q.x+q.nx*lat, y:q.y+q.ny*lat, chan:{ci:st._anch.ci, s:ts, lat:lat}};
+    }
+    // no channel here (an open basin): keep the lap inside the water that is there
     if(st._roomZ!==S.zone){st._room=waterRoomAt(st.x, st.y, 110);st._roomZ=S.zone;}
     const fit=Math.max(10, st._room-14);
-    ox=Math.min(ox, fit);oy=Math.min(oy, fit);
+    const fx=st.x+Math.cos(tSec*p.osp+p.ox)*Math.min(p.orx+ring, fit);
+    const fy=st.y+Math.sin(tSec*p.osp*0.86+p.oy)*Math.min(p.ory+ring*0.8, fit);
+    return {x:fx, y:fy};
   }
+  const ox=p.orx+ring, oy=p.ory+ring*0.8;
   const x=st.x+Math.cos(tSec*p.osp+p.ox)*ox+Math.sin(tSec*p.osp*0.43+p.ox2)*9;
   const y=st.y+Math.sin(tSec*p.osp*0.86+p.oy)*oy+Math.cos(tSec*p.osp*0.51+p.oy2)*9;
   return {x:x, y:y};
@@ -8874,12 +9031,48 @@ function updateGhosts(){
     const tSec=now/1000;
     let tp=botTargetPos(g, tSec);
     if(pTop3&&pVisible){tp={x:tp.x+(boat.wx-tp.x)*0.40,y:tp.y+(boat.wy-tp.y)*0.40};}
+    // ---- fresh water: travel the channel, don't try to cross it ----
+    // Projected AFTER the hunt-the-leader pull, so this one line covers orbits,
+    // roamers and chasing alike — every destination a bot can be given ends up
+    // on the waterway. Without it a bot aims through the bank, gets shoved back
+    // by keepOffWater every frame, and grinds along the shoreline going nowhere.
+    let chanMove=null;
+    if(shoreScene()){
+      if(g._latPh===undefined)g._latPh=strHash(g.uid)%628/100;
+      if(tp.chan){
+        chanMove=tp.chan;
+        // Hunting the leader stays ON the river: pull toward where the player is
+        // along the channel rather than straight at them across a bend.
+        if(pTop3&&pVisible){
+          const ch=channelsFor(S.zone)[chanMove.ci];
+          chanMove={ci:chanMove.ci, lat:chanMove.lat,
+                    s:chanMove.s+(nearestSOn(ch, boat.wx, boat.wy)-chanMove.s)*0.40};
+        }
+      }else{
+        const snapped=snapToChannel(S.zone, tp.x, tp.y, Math.sin(tSec*0.32+g._latPh)*20);
+        if(snapped)tp=snapped;
+      }
+    }
     const px=g.wx, py=g.wy;
     if(g._knockVX||g._knockVY){
       // knockback impulse from a punch, then it decays and the bot rejoins its path
       g.wx+=g._knockVX*frameScale;g.wy+=g._knockVY*frameScale;
       g._knockVX*=Math.pow(0.86,frameScale);g._knockVY*=Math.pow(0.86,frameScale);
       if(Math.abs(g._knockVX)<0.1)g._knockVX=0;if(Math.abs(g._knockVY)<0.1)g._knockVY=0;clampGhost(g);
+    }else if(chanMove){
+      // ---- channel space: advance ALONG the river ----
+      // Easing x/y toward a point on the centreline still travels in a straight
+      // line, and a straight line across a dogleg goes over the bank — which is
+      // what kept dragging bots back roughly 960px/sec each. Advancing the arc
+      // length instead means the bot's path IS the channel, bends and all.
+      const ch=channelsFor(S.zone)[chanMove.ci];
+      if(g._cci!==chanMove.ci){g._cci=chanMove.ci;g._cs=nearestSOn(ch, g.wx, g.wy);}
+      const ease=Math.min(1,0.14*frameScale);
+      g._cs+=(chanMove.s-g._cs)*ease;
+      const q=channelPointAt(ch, g._cs);
+      const room=Math.max(0, q.hw-CHAN_EDGE_KEEP);
+      const lat=Math.max(-room, Math.min(room, chanMove.lat));
+      g.wx=q.x+q.nx*lat;g.wy=q.y+q.ny*lat;
     }else{
       // gentle critically-damped follow; the target already moves smoothly so a
       // soft lerp keeps motion fluid with no twitch or teleporting
