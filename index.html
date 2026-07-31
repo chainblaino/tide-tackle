@@ -14660,9 +14660,14 @@ function sdewMeterScale(){
 // where the meter stops resolving in either direction — is 52.4% in the bar, and
 // a human somewhere in the 75-85% band lands a round in about five seconds,
 // which is the intended pace for three of them back to back.
+// Each round the fish is a little quicker than the last, so a three-round fight
+// escalates instead of being the same bar three times. Applied off sdewRound, so
+// a one-round fight is always the base speed and nothing else has to know.
+const SDEW_ROUND_RAMP=0.07;   // +7% per round: 1.00x, 1.07x, 1.14x
+function sdewRoundRamp(){return 1+(Math.max(1,sdewRound)-1)*SDEW_ROUND_RAMP;}
 function sdewFishSpeed(){
-  if(sdewSurf)return 1.10;
-  if(sdewIce)return 1.12;
+  if(sdewSurf)return 1.10*sdewRoundRamp();
+  if(sdewIce)return 1.12*sdewRoundRamp();
   return 1;
 }
 function sdewSetRoundLabel(){
