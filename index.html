@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.8</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -784,6 +784,9 @@
 .sdew-overlay{position:fixed;inset:0;z-index:450;background:rgba(5,12,22,.96);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
 .sdew-overlay.show{display:flex;}
 .sdew-title{font-family:'Fredoka';font-size:22px;color:#e0a93c;font-weight:600;text-align:center;letter-spacing:.5px;}
+.lob-world{display:inline-block;margin-right:6px;padding:2px 6px;border-radius:6px;background:#3d7fb8;color:#fff;
+  font-family:'Fredoka';font-size:9.5px;font-weight:800;letter-spacing:.6px;vertical-align:1px;}
+.lob-world.fw{background:#2aa890;}
 .sdew-round{display:flex;align-items:center;gap:7px;margin-top:-8px;}
 .sdew-rlbl{font-size:10.5px;font-weight:800;letter-spacing:1.2px;color:rgba(255,255,255,.5);margin-right:3px;}
 .sdew-pip{width:9px;height:9px;border-radius:50%;background:rgba(255,255,255,.16);box-shadow:inset 0 0 0 1px rgba(255,255,255,.22);}
@@ -954,7 +957,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.8</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.9</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -2142,11 +2145,28 @@ const TOURN_FEES=[
   {rare:300, epic:500,  legendary:1200}, // zone 0 inshore
   {rare:400, epic:700,  legendary:1500}, // zone 1 nearshore
   {rare:500, epic:800,  legendary:2000}, // zone 2 offshore
-  {rare:300, epic:500,  legendary:1200}, // zone 3 lake
-  {rare:400, epic:700,  legendary:1500}, // zone 4 river
-  {rare:500, epic:800,  legendary:2000}, // zone 5 mountains
+  // Freshwater. These rows were labelled lake/river/mountains from before the
+  // region rework and stopped at zone 5, so a Mountains match (zone 6) fell
+  // through to the inshore row and charged the cheapest fee in the game.
+  {rare:300, epic:500,  legendary:1200}, // zone 3 midwest
+  {rare:400, epic:700,  legendary:1500}, // zone 4 southern
+  {rare:500, epic:800,  legendary:2000}, // zone 5 northern
+  {rare:600, epic:1000, legendary:2400}, // zone 6 mountains
 ];
 function tournFee(zone, rarity){return (TOURN_FEES[zone]||TOURN_FEES[0])[rarity]||300;}
+// Every match plays for the wallet of the world it is held in: gold in salt
+// water, cash in fresh. Both are earned-only, so either can be staked without
+// turning a lobby into real-money gaming — see the CURRENCIES note. Rubies are
+// still never pooled from players.
+function matchWorld(def){return worldOf((def&&def.zone)||0);}
+function matchCoinLabel(def){return matchWorld(def)==='fresh'?'cash':'gold';}
+// The tournament cards are rendered as HTML, so they can carry the same
+// currency icon the shop uses rather than inventing a letter for cash.
+function matchCoinIcon(def){
+  return '<span class="'+(matchWorld(def)==='fresh'?'cash-s':'coin-s')+'" style="width:11px;height:11px;vertical-align:-1px;margin:0 2px;"></span>';
+}
+function matchCoinShort(def){return matchWorld(def)==='fresh'?' cash':'g';}
+function matchCoinGet(def){return coinGet(matchWorld(def));}
 const ALWAYS_TOURN_NAMES=["Open Saltwater Challenge","Coastal Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
 // Short travel/gate labels, indexed by zone. Must stay the same length as ZONES —
 // a missing entry shows up as `undefined` in every gate hint and licence toast.
@@ -2265,6 +2285,62 @@ function getAlwaysTournament(){
   return {id:"always",zone:zone, name:"The Big Cast",maxP:25,rarity:rarity, fee:fee,
           targetFish:list[0]||null, bounty:true, bountyList:list, alwaysOn:true};
 }
+// ---- FLY HIGH (V0.9.8.9) ----------------------------------------------------
+// Mountains only, fly only, 10 anglers. The target is drawn from the Mountains
+// species that can ACTUALLY be taken on a fly and are worth a tournament fee —
+// picking one that only eats a bottom rig would make the room unwinnable, which
+// is the whole risk of a method-locked mode.
+function flyHighPool(){
+  if(typeof FISH==='undefined')return [];
+  return FISH.filter(function(f){
+    return f.zone===6 && !f.ice && !f.alaska && !f.surf
+        && TOURN_RARITIES.indexOf(f.rarity)>=0
+        && (f.methods||[]).indexOf('fly')>=0;
+  });
+}
+function getFlyHighTournament(){
+  const day=etDayIndex();
+  const pool=flyHighPool();
+  const r=mulberry32((strHash('flyhigh_'+day))>>>0);
+  const target=pool.length?pool[Math.floor(r()*pool.length)]:null;
+  const rarity=target?target.rarity:'rare';
+  return {id:'flyhigh', zone:6, name:'Fly High', maxP:10, rarity:rarity,
+          fee:tournFee(6, rarity), targetFish:target, alwaysOn:true,
+          flyOnly:true, timeLimitMin:6,
+          blurb:'Fly tackle only · Mountains'};
+}
+// ---- GONE FISHIN (V0.9.8.9) -------------------------------------------------
+// The wildcard room: a random freshwater region AND a random one of the three
+// competitive modes, 15 anglers. Rolled from one seeded stream so the region and
+// the mode always agree with each other on every client.
+const GONE_MODES=['bounty','tournament','limited'];
+function getGoneFishinTournament(){
+  const day=etDayIndex();
+  const r=mulberry32((strHash('gonefishin_'+day))>>>0);
+  const fz=worldZones('fresh');
+  const zone=fz[Math.floor(r()*fz.length)];
+  const mode=GONE_MODES[Math.floor(r()*GONE_MODES.length)];
+  const pool=(typeof FISH!=='undefined')?FISH.filter(function(f){
+    return f.zone===zone&&!f.ice&&!f.alaska&&!f.surf&&TOURN_RARITIES.indexOf(f.rarity)>=0;}):[];
+  const target=(mode==='tournament'&&pool.length)?pool[Math.floor(r()*pool.length)]:null;
+  const rarity=target?target.rarity:TOURN_RARITIES[Math.floor(r()*TOURN_RARITIES.length)];
+  const def={id:'gonefishin', zone:zone, name:'Gone Fishin', maxP:15, rarity:rarity,
+             fee:tournFee(zone, rarity), targetFish:target, alwaysOn:true,
+             timeLimitMin:6, goneMode:mode,
+             blurb:_modeLabel(mode)+' · '+ZONE_LBL[zone]};
+  if(mode==='bounty'){def.bounty=true;def.bountyList=bountyDailyList(zone, day);}
+  if(mode==='limited'){def.limited=true;def.castLimit=12;}
+  return def;
+}
+// Every always-on room, in the order they are shown. The Big Cast keeps id
+// "always" so older callers and saved invites still resolve to it.
+function getAlwaysTournaments(){
+  return [getAlwaysTournament(), getFlyHighTournament(), getGoneFishinTournament()];
+}
+function findAlwaysDef(id){
+  if(id==='always')return getAlwaysTournament();
+  return getAlwaysTournaments().find(function(d){return d.id===id;})||null;
+}
 function etDateSeed(){
   const s=new Date().toLocaleString("en-US",{timeZone:"America/New_York",year:"numeric",month:"2-digit",day:"2-digit"});
   return s.replace(/\D/g,""); // e.g. "05282026" unique per day
@@ -2360,16 +2436,35 @@ function showTournInfo(rarity, boost){
 }
 function renderTournCard(def){
   const rc=RARITY_COLORS[def.rarity];
-  const canAfford=S.gold>=def.fee;
+  // A freshwater room is paid for out of the CASH wallet, so the affordability
+  // check and the button have to read that one, not gold.
+  const canAfford=matchCoinGet(def)>=def.fee;
+  const cs=matchCoinIcon(def);
   const fishLabel=def.targetFish
     ?"<b style=\"color:"+rc+"\">"+def.targetFish.name+"</b> <span style=\"color:"+rc+";font-size:10px;\">("+RAR_LBL[def.rarity]+")</span>"
     :"<b style=\"color:"+rc+"\">"+RAR_LBL[def.rarity]+"</b> fish";
   if(def.alwaysOn){
+    const fresh=(matchWorld(def)==='fresh');
+    // What this room actually asks of you, in one line.
+    let what;
+    if(def.flyOnly){
+      what="<b style=\"color:#2aa890;\">Fly only</b> &middot; "+ZONE_LBL[def.zone]+" &middot; biggest "
+          +(def.targetFish?("<b style=\"color:"+rc+"\">"+def.targetFish.name+"</b>"):"target");
+    }else if(def.bounty){
+      what="<b style=\"color:#e0a93c;\">Bounty</b> &middot; "+ZONE_LBL[def.zone]+" &middot; land "+BOUNTY_GOAL+" species in order";
+    }else if(def.limited){
+      what="<b style=\"color:#e0a93c;\">Limited Casts</b> &middot; "+ZONE_LBL[def.zone]+" &middot; "+(def.castLimit||12)+" casts, most species wins";
+    }else{
+      what="<b style=\"color:#e0a93c;\">Tournament</b> &middot; "+ZONE_LBL[def.zone]+" &middot; biggest "
+          +(def.targetFish?("<b style=\"color:"+rc+"\">"+def.targetFish.name+"</b>"):"target");
+    }
+    const rotates=(def.id==='gonefishin')?"New region &amp; mode daily"
+                 :(def.id==='flyhigh'?"New target daily":"New list daily");
     return "<div class=\"tourn-card always-on\">"
-      +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"',1.5)\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
-      +"<div class=\"tourn-row\"><span><b style=\"color:#e0a93c;\">Bounty</b> &middot; "+ZONE_LBL[def.zone]+" &middot; land "+BOUNTY_GOAL+" species in order</span></div>"
-      +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Up to "+def.maxP+" anglers &middot; New list daily</span></div>"
-      +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('always')\">Sign Up:"+def.fee+"g entry</button>"
+      +"<div class=\"tourn-card-head\"><span class=\"tourn-name-row\">"+_worldBadge(def)+"<span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"',1.5)\">i</button></span><span class=\"always-live\">LIVE 24/7</span></div>"
+      +"<div class=\"tourn-row\"><span>"+what+"</span></div>"
+      +"<div class=\"tourn-row\"><span>Entry: "+cs+def.fee+" &middot; Up to "+def.maxP+" anglers &middot; "+rotates+"</span></div>"
+      +"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up: "+cs+def.fee+" entry</button>"
       +"</div>";
   }
   const st=tStatus(def);
@@ -2377,11 +2472,11 @@ function renderTournCard(def){
     ?"<span class=\"tourn-status open\">OPEN &middot; closes in "+tClosesIn(def)+"</span>"
     :"<span class=\"tourn-status soon\">Opens in "+tCountdown(def)+"</span>";
   const btn=st==="open"
-    ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up:"+def.fee+"g entry</button>"
+    ?"<button class=\"tourn-enter-btn\""+(canAfford?"":" disabled")+" onclick=\"enterTournament('"+def.id+"')\">Sign Up: "+cs+def.fee+" entry</button>"
     :"";
   return "<div class=\"tourn-card\"><div class=\"tourn-card-head\"><span class=\"tourn-name-row\"><span class=\"tourn-name\">"+def.name+"</span><button class=\"tourn-info-btn\" title=\"Potential winnings\" onclick=\"showTournInfo('"+def.rarity+"')\">i</button></span><span class=\"tourn-zone-badge\">"+ZONE_LBL[def.zone]+"</span></div>"
     +"<div class=\"tourn-row\"><span>Target: "+fishLabel+"</span>"+statusHtml+"</div>"
-    +"<div class=\"tourn-row\"><span>Entry: "+def.fee+"g &middot; Max "+def.maxP+" anglers</span><span>Window: "+_fmtMin(tournDurMin(def))+"</span></div>"
+    +"<div class=\"tourn-row\"><span>Entry: "+cs+def.fee+" &middot; Max "+def.maxP+" anglers</span><span>Window: "+_fmtMin(tournDurMin(def))+"</span></div>"
     +btn+"</div>";
 }
 function renderTournamentPanel(){
@@ -2401,8 +2496,7 @@ function renderTournamentPanel(){
   // Build the shell ONCE. The panel is re-run on a timer (for live data); rebuilding
   // it every tick would nuke the live lobby list, so bail if it's already built.
   if(document.getElementById('mp-lobby-list'))return;
-  const always=getAlwaysTournament();
-  el.innerHTML=renderTournCard(always)
+  el.innerHTML=getAlwaysTournaments().map(renderTournCard).join('')
     +"<div class=\"mp-lobbies-head\"><span>Open Lobbies</span><button class=\"mp-create-btn\" onclick=\"openCreateLobby()\">Create Lobby</button></div>"
     +"<div id=\"mp-lobby-list\"><div class=\"lb-empty\">Loading…</div></div>";
   const panel=el.closest('.mpanel');
@@ -2433,8 +2527,8 @@ function renderMpLobbyList(){
     const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
     const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
     const gb=(d.settings&&d.settings.goldBuyIn)||0;
-    const stake=(gb?' · '+(gb>=1000?(gb/1000)+'k':gb)+' gold':'');
-    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+stake+' · host '+(d.hostName||'Angler')+'</div></div>'
+    const stake=(gb?' · '+(gb>=1000?(gb/1000)+'k':gb)+' '+coinLabel(_lobbyWorldId(d.settings)):'');
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+_worldBadge(d.settings)+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+stake+' · host '+(d.hostName||'Angler')+'</div></div>'
       +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
   }).join('');
   if(pages>1){
@@ -2449,16 +2543,28 @@ function mpLobbyPageStep(d){_mpLobbyPage+=d;renderMpLobbyList();}
 function stopLobbyBrowse(){if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;}}
 function enterTournament(defId){
   if((S.level||1)<5){toast("Tournaments unlock at Level 5.","#b58b53");return;}
-  const def=defId==="always"?getAlwaysTournament():getDailyTournaments().find(function(d){return d.id===defId;});
+  const def=findAlwaysDef(defId)||getDailyTournaments().find(function(d){return d.id===defId;});
   if(!def)return;
-  if(S.gold<def.fee){toast("Not enough gold!","#b3402a");return;}
+  const mw=matchWorld(def);
+  // A freshwater room still respects the region licence — the match teleports
+  // you there, so without this a level 5 angler could fish the Mountains
+  // without ever buying their way up to them.
+  if(mw==='fresh'&&typeof hasLicense==='function'&&!hasLicense(def.zone)){
+    toast("You need the "+ZONE_LBL[def.zone]+" Licence to fish "+def.name+".","#b58b53");return;
+  }
+  // Fly High is fly tackle only, so a rod and reel you cannot cast a fly with
+  // means a room you cannot fish at all. Better to say so than take the fee.
+  if(def.flyOnly&&typeof hasFlyCombo==='function'&&!hasFlyCombo()){
+    toast("Fly High is fly tackle only — you need a fly rod and reel first.","#b58b53");return;
+  }
+  if(!coinCanAfford(def.fee, mw)){toast("Not enough "+coinLabel(mw)+"!","#b3402a");return;}
   if(!def.alwaysOn&&tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
-  S.gold-=def.fee;updatePills();queueSave();
+  coinSpend(def.fee, mw);updatePills();queueSave();
   const meEntry={uid:fbUser?fbUser.uid:"guest",username:fbUsername, isBot:false};
   activeLobby={def:def, players:[meEntry],timeLeft:60};
   document.getElementById("lobby-title").textContent=def.name;
   const fishStr=def.bounty?("Bounty · "+BOUNTY_GOAL+" species in order"):(def.targetFish?def.targetFish.name+" ("+RAR_LBL[def.rarity]+")":RAR_LBL[def.rarity]+" fish");
-  document.getElementById("lobby-sub").textContent=fishStr+" · "+def.fee+"g entry · "+ZONE_LBL[def.zone];
+  document.getElementById("lobby-sub").textContent=fishStr+" · "+def.fee+" "+coinLabel(matchWorld(def))+" entry · "+ZONE_LBL[def.zone];
   document.getElementById("lobby-overlay").style.display="flex";
   document.getElementById("menu-panel").classList.remove("show");
   document.getElementById("menu-bg").classList.remove("show");
@@ -2645,6 +2751,12 @@ function startTournamentMode(def){
   freezeClockForMatch();   // remember the player's real clock/season
   if(typeof AUDIO!=='undefined')AUDIO.setMood('tourn');
   S.zone=def.zone;
+  // Fly High: put the fly rod in their hands before the world builds, so the
+  // very first cast of the match is already the right one.
+  if(def.flyOnly){
+    const fm=METHODS.find(function(m){return m.fly&&m.zones.includes(def.zone);});
+    if(fm)gearSet('method', fm.id);
+  }
   // The match clock is driven from elapsed time (see render): it starts at the
   // beginning of the day and ends exactly at the end of the night, one full cycle.
   S.clock=TOURN_DAY_START;
@@ -2678,6 +2790,8 @@ function startTournamentMode(def){
     toast("Limited Casts! "+activeTournament.castLimit+" casts to land the most DIFFERENT species. "+_tmin+" min.","#e0a93c");
   }else if(def.session){
     toast(def.coop?'Fishing with friends! Catch anything you like.':('Challenge on! Biggest '+(def.targetFish?def.targetFish.name:'fish')+' in 6 minutes wins.'),'#e0a93c');
+  }else if(def.flyOnly){
+    toast("Fly High! Fly tackle only — biggest "+(def.targetFish?def.targetFish.name:'fish')+" in "+_tmin+" min.","#2aa890");
   }else if(isBounty()){
     const first=activeTournament.bountyList&&activeTournament.bountyList[0];
     toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". "+_tmin+" min.","#e0a93c");
@@ -2922,12 +3036,15 @@ function endTournament(){
   const goldTotal=goldWin+goldPot;
   if(winnings>0||goldTotal>0){
     S.rubies=(S.rubies||0)+winnings;
-    S.gold=(S.gold||0)+goldTotal;S.goldEarned=(S.goldEarned||0)+goldTotal;
+    // Freshwater matches settle in CASH. Paying a Mountains lobby out in gold
+    // would quietly convert between two economies the game keeps apart on
+    // purpose — grinding trout would buy you an offshore boat.
+    coinAdd(goldTotal, matchWorld(def));
     updatePills();queueSave();
   }
   if(rank===0&&playerHasResult){
     S.tournamentWins=(S.tournamentWins||0)+1;
-    if(def.alwaysOn)S.bigCastWins=(S.bigCastWins||0)+1;
+    if(def.id==='always')S.bigCastWins=(S.bigCastWins||0)+1;   // the Big Cast only
     queueSave();checkAchievements();
   }
   const title=isBounty()?"Bounty Over!":(activeTournament.limited?"Limited Casts Over!":"Tournament Over!");
@@ -3305,25 +3422,43 @@ function requireOnlineForLobby(){
   return true;
 }
 function _modeLabel(m){return {bounty:'Bounty',tournament:'Tournament',limited:'Limited Casts',friendly:'Friendly'}[m]||m;}
+// Which world a lobby is in, shown on every card BEFORE you join: the two worlds
+// use different gear, different licences and different money, so turning up in
+// the wrong one with the wrong rig is the single most confusing thing a lobby
+// can do to you. Derived from the zone, never stored on its own, so it cannot
+// disagree with where the match actually puts you.
+function _lobbyWorldId(s){return worldOf((s&&s.zone)||0);}
+function _lobbyWorldLabel(s){return _lobbyWorldId(s)==='fresh'?'Freshwater':'Saltwater';}
+function _worldBadge(s){
+  const fresh=_lobbyWorldId(s)==='fresh';
+  return '<span class="lob-world'+(fresh?' fw':'')+'">'+(fresh?'FRESH':'SALT')+'</span>';
+}
 function _lobbySummary(s){
   if(!s)return '';
-  if(s.type==='friendly')return 'Friendly · fish '+ZONE_LBL[s.zone||0]+' together · no stakes';
-  let bits=[_modeLabel(s.mode), ZONE_LBL[s.zone||0]];
+  if(s.type==='friendly')return 'Friendly · '+_lobbyWorldLabel(s)+' · fish '+ZONE_LBL[s.zone||0]+' together · no stakes';
+  let bits=[_modeLabel(s.mode), _lobbyWorldLabel(s), ZONE_LBL[s.zone||0]];
   if(s.mode==='tournament'&&s.targetFishId){const f=FISH.find(function(x){return x.id===s.targetFishId;});if(f)bits.push('target '+f.name);}
   if(s.mode==='limited')bits.push(s.castLimit+' casts');
-  bits.push((SEASON_LABEL[s.season]||s.season));
+  if(_lobbyWorldId(s)==='fresh')bits.push('any season');
+  else bits.push((SEASON_LABEL[s.season]||s.season));
   if(s.timeLimitMin)bits.push(s.timeLimitMin+' min');
   return bits.join(' · ');
 }
 // ── Create Lobby form ──
 function openCreateLobby(){
   if(!requireOnlineForLobby())return;
-  _lobbyDraft={name:'', type:'competitive', mode:'bounty', zone:S.zone||0, targetFishId:null,
+  _lobbyDraft={name:'', type:'competitive', mode:'bounty', world:curWorldId(), zone:S.zone||0, targetFishId:null,
     season:seasonNow(), size:8, cannonsOn:false, cannonCount:5, timeLimitMin:6, shopOn:false, mapsOn:true, goldBuyIn:0, castLimit:10};
   _renderLobbyForm();
 }
 function lobbySet(k, v){ if(!_lobbyDraft)return; if(k==='zone'||k==='size'||k==='cannonCount'||k==='timeLimitMin'||k==='goldBuyIn'||k==='castLimit')v=+v; _lobbyDraft[k]=v;
-  if(k==='zone')_lobbyDraft.targetFishId=null; _renderLobbyForm(); }
+  if(k==='zone')_lobbyDraft.targetFishId=null;
+  // Switching world has to drag the region and the target with it, or the draft
+  // keeps a saltwater zone under a freshwater heading and publishes a lobby
+  // nobody can fish.
+  if(k==='world'){_lobbyDraft.zone=worldZones(v)[0];_lobbyDraft.targetFishId=null;
+    if(_lobbyDraft.goldBuyIn>coinGet(v))_lobbyDraft.goldBuyIn=0;}
+  _renderLobbyForm(); }
 function lobbyToggle(k){ if(!_lobbyDraft)return; _lobbyDraft[k]=!_lobbyDraft[k]; _renderLobbyForm(); }
 function _lchip(label, on, set){return '<button onclick="'+set+'" style="padding:8px 14px;border-radius:11px;border:none;background:'+(on?'var(--accent)':'var(--parchment)')+';color:'+(on?'#fff':'var(--ink)')+';font-family:Fredoka;font-weight:700;font-size:12.5px;cursor:pointer;'+(on?'box-shadow:0 2px 8px rgba(234,148,64,.34);':'')+'">'+label+'</button>';}
 function _renderLobbyForm(){
@@ -3336,8 +3471,12 @@ function _renderLobbyForm(){
   if(comp){
     h+='<div class="lob-lbl">Mode</div><div class="lob-row">'+_lchip('Bounty',d.mode==='bounty',"lobbySet('mode','bounty')")+_lchip('Tournament',d.mode==='tournament',"lobbySet('mode','tournament')")+_lchip('Limited Casts',d.mode==='limited',"lobbySet('mode','limited')")+'</div>';
   }
-  // region (friendly + all competitive modes pick a zone)
-  h+='<div class="lob-lbl">Region</div><div class="lob-row">'+[0,1,2].map(function(z){return _lchip(ZONE_LBL[z],d.zone===z,"lobbySet('zone','"+z+"')");}).join('')+'</div>';
+  // World first, then the regions belonging to it. Anyone can host either world.
+  h+='<div class="lob-lbl">World</div><div class="lob-row">'
+    +_lchip('Saltwater',d.world==='salt',"lobbySet('world','salt')")
+    +_lchip('Freshwater',d.world==='fresh',"lobbySet('world','fresh')")+'</div>';
+  if(worldZones(d.world).indexOf(d.zone)<0)d.zone=worldZones(d.world)[0];
+  h+='<div class="lob-lbl">Region</div><div class="lob-row">'+worldZones(d.world).map(function(z){return _lchip(ZONE_LBL[z],d.zone===z,"lobbySet('zone','"+z+"')");}).join('')+'</div>';
   if(comp&&d.mode==='tournament'){
     const pool=FISH.filter(function(f){return f.zone===d.zone&&!f.surf&&!f.ice&&f.rarity!=='ultra';});
     if(!d.targetFishId&&pool.length)d.targetFishId=pool[0].id;
@@ -3347,14 +3486,19 @@ function _renderLobbyForm(){
   if(comp&&d.mode==='limited'){
     h+='<div class="lob-lbl">Casts per angler</div><div class="lob-row">'+[5,10,15,20].map(function(n){return _lchip(n+'',d.castLimit===n,"lobbySet('castLimit','"+n+"')");}).join('')+'</div>';
   }
-  h+='<div class="lob-lbl">Season</div><div class="lob-row">'+SEASONS.map(function(se){return _lchip(SEASON_LABEL[se]||se,d.season===se,"lobbySet('season','"+se+"')");}).join('')+'</div>';
+  if(d.world==='fresh'){
+    h+='<div class="lob-lbl">Season</div><div class="lob-row" style="font-size:12px;color:var(--text-soft);font-weight:700;padding:2px 0 8px;">Every species bites — freshwater matches ignore the calendar.</div>';
+  }else{
+    h+='<div class="lob-lbl">Season</div><div class="lob-row">'+SEASONS.map(function(se){return _lchip(SEASON_LABEL[se]||se,d.season===se,"lobbySet('season','"+se+"')");}).join('')+'</div>';
+  }
   h+='<div class="lob-lbl">Lobby size: '+d.size+' max</div><div class="lob-row">'+_lchip('−',false,"lobbyStep('size',-1,2,"+LOBBY_MAX+")")+'<span class="lob-val">'+d.size+'</span>'+_lchip('+',false,"lobbyStep('size',1,2,"+LOBBY_MAX+")")+'</div>';
   h+='<div class="lob-lbl">Shop during match</div><div class="lob-row">'+_lchip(d.shopOn?'On':'Off',d.shopOn,"lobbyToggle('shopOn')")+'</div>';
   h+='<div class="lob-lbl">Maps</div><div class="lob-row">'+_lchip(d.mapsOn?'On':'Off',d.mapsOn,"lobbyToggle('mapsOn')")+'</div>';
   if(comp){
     h+='<div class="lob-lbl">Time limit</div><div class="lob-row">'+[3,6,10].map(function(n){return _lchip(n+' min',d.timeLimitMin===n,"lobbySet('timeLimitMin','"+n+"')");}).join('')+'</div>';
     h+='<div class="lob-lbl">Cannons</div><div class="lob-row">'+_lchip(d.cannonsOn?'On':'Off',d.cannonsOn,"lobbyToggle('cannonsOn')")+(d.cannonsOn?(_lchip('−',false,"lobbyStep('cannonCount',-1,1,10)")+'<span class="lob-val">'+d.cannonCount+'</span>'+_lchip('+',false,"lobbyStep('cannonCount',1,1,10)")):'')+'</div>';
-    h+='<div class="lob-lbl">Gold buy-in (each)</div><div class="lob-row">'+GOLD_BUYIN_TIERS.map(function(g){return _lchip(g===0?'None':(g>=1000?(g/1000)+'k':g+''),d.goldBuyIn===g,"lobbySet('goldBuyIn','"+g+"')");}).join('')+'</div>';
+    const _cw=(d.world==='fresh')?'Cash':'Gold';
+    h+='<div class="lob-lbl">'+_cw+' buy-in (each)</div><div class="lob-row">'+GOLD_BUYIN_TIERS.map(function(g){return _lchip(g===0?'None':(g>=1000?(g/1000)+'k':g+''),d.goldBuyIn===g,"lobbySet('goldBuyIn','"+g+"')");}).join('')+'</div>';
   }
   h+='</div>';
   h+='<div style="display:flex;justify-content:flex-end;margin-top:14px;"><button onclick="publishLobby()" style="padding:12px 32px;border-radius:13px;border:none;background:var(--grass,#2aa890);color:#fff;font-family:Fredoka;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 4px 14px rgba(47,167,149,.4);">Open</button></div>';
@@ -3368,13 +3512,14 @@ function publishLobby(){
   const d=_lobbyDraft; if(!d)return;
   if(!d.name||!d.name.trim()){toast('Give your lobby a name.','#b58b53');return;}
   const comp=d.type==='competitive';
-  const settings={ type:d.type, mode:(comp?d.mode:'friendly'), zone:d.zone,
+  const settings={ type:d.type, mode:(comp?d.mode:'friendly'), zone:d.zone, world:worldOf(d.zone),
     targetFishId:(comp&&d.mode==='tournament')?d.targetFishId:null, season:d.season,
     size:Math.max(2,Math.min(LOBBY_MAX,d.size)), cannonsOn:(comp&&d.cannonsOn), cannonCount:d.cannonCount,
     timeLimitMin:(comp?d.timeLimitMin:0), shopOn:!!d.shopOn, mapsOn:!!d.mapsOn,
     goldBuyIn:(comp&&GOLD_BUYIN_TIERS.indexOf(d.goldBuyIn)>=0)?d.goldBuyIn:0,
     castLimit:(comp&&d.mode==='limited')?d.castLimit:0 };
-  if(settings.goldBuyIn>0&&(S.gold||0)<settings.goldBuyIn){toast('You need '+settings.goldBuyIn+' gold to host this buy-in.','#b3402a');return;}
+  const _pw=worldOf(settings.zone), _pl=coinLabel(_pw);
+  if(settings.goldBuyIn>0&&coinGet(_pw)<settings.goldBuyIn){toast('You need '+settings.goldBuyIn+' '+_pl+' to host this buy-in.','#b3402a');return;}
   const id=_newSessionId(), seed=Math.floor(Math.random()*2147483646)+1;
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
   gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
@@ -3508,7 +3653,7 @@ function _renderLobbyList(){
   el.innerHTML=list.map(function(d){
     const n=Object.keys(d.players||{}).length, cap=(d.settings&&d.settings.size)||25, full=n>=cap;
     const mode=d.settings?(d.settings.type==='friendly'?'Friendly':_modeLabel(d.settings.mode)):'';
-    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+' · host '+(d.hostName||'Angler')+'</div></div>'
+    return '<div class="friend-card"><div style="min-width:0;"><div class="friend-name">'+_worldBadge(d.settings)+(d.name||'Lobby')+'</div><div class="friend-lvl">'+mode+' · '+(d.settings?ZONE_LBL[d.settings.zone||0]:'')+' · host '+(d.hostName||'Angler')+'</div></div>'
       +'<button class="friend-add-btn" '+(full?'disabled style="opacity:.5;"':'onclick="joinLobby(\''+d._id+'\')"')+'>'+n+'/'+cap+(full?' full':'')+'</button></div>';
   }).join('');
 }
@@ -3523,7 +3668,8 @@ function joinLobby(id){
     const cap=(data.settings&&data.settings.size)||25;
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
     const gb=(data.settings&&data.settings.goldBuyIn)||0;
-    if(gb>0&&(S.gold||0)<gb){toast('You need '+gb+' gold to join this buy-in.','#b3402a');return;}
+    const jw=worldOf((data.settings&&data.settings.zone)||0);
+    if(gb>0&&coinGet(jw)<gb){toast('You need '+gb+' '+coinLabel(jw)+' to join this buy-in.','#b3402a');return;}
     const upd={};upd['players.'+fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
     ref.update(upd).catch(function(){});
     gameLobby={id:id, name:data.name, host:data.host, hostName:data.hostName, seed:data.seed||(strHash('lobby_'+id)>>>0),
@@ -3558,7 +3704,7 @@ function enterLobbyMatch(){
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
   const s=gameLobby.settings;
   if(s.goldBuyIn>0){
-    if(s.goldBuyIn>0)S.gold=Math.max(0,(S.gold||0)-s.goldBuyIn);
+    coinSpend(s.goldBuyIn, worldOf(s.zone||0));
     updatePills();queueSave();
   }
   const players=Object.keys(gameLobby.players||{}).map(function(uid){return {uid:uid, username:(gameLobby.players[uid]||{}).username||'Angler',isBot:false};});
@@ -3906,13 +4052,19 @@ const METHODS=[
 function methodCat(m){m=m||curMethod();return (isFresh()&&m&&m.fwcat)?m.fwcat:(m?m.cat:null);}
 // Methods legal in a zone. A method tagged `fly` also needs the fly combo in hand,
 // which is what keeps fly water off the rig bar until you have actually bought one.
+// Fly High locks the rig to fly tackle. Filtering the list here covers both the
+// chooser and ensureRig()'s auto-correct, so there is no route — picker, save
+// file or region default — that leaves you holding a spinning rod in it.
+function flyOnlyMatch(){return !!(activeTournament&&activeTournament.def&&activeTournament.def.flyOnly);}
 function methodsForZone(z){
   // Once the Northern lakes lock up, the surface IS ice: there is no open water
   // to cast into, so ice fishing is not merely available, it is the only thing
   // you can do. Out of season it isn't offered at all.
   const frozen=(typeof lakeFrozenAt==='function')&&lakeFrozenAt(z);
+  const flyOnly=flyOnlyMatch();
   return METHODS.filter(function(m){
     if(!m.zones.includes(z))return false;
+    if(flyOnly)return !!m.fly;
     if(m.fly&&!hasFlyCombo())return false;
     if(m.ice)return frozen;
     return !frozen;
@@ -4605,7 +4757,8 @@ function maybePrestigeOffer(){
 function prestigeRewardLine(next, w){
   const cur=(w==='fresh')?'cash':'coin';
   const lines=['You’ll keep your <b>rubies</b>, <b>stats</b> and <b>Ultra</b> catches'
-    +(w==='fresh'?', and everything ye own in <b>saltwater</b>.':', and everything ye own in <b>freshwater</b>.'),
+    +(w==='fresh'?', yer <b>cash</b>, yer <b>region licences</b>, and everything ye own in <b>saltwater</b>.'
+                 :', and everything ye own in <b>freshwater</b>.'),
     'A permanent <b>+'+(next*10)+'% '+cur+' bonus</b> on every catch.'];
   const pool=PETS.filter(function(p){return p.prestige===next&&((p.world||'salt')===(w||'salt'))&&!p.reward;});
   const pet=pool.map(function(p){return p.name;}).join(' & ');
@@ -4621,7 +4774,8 @@ function showPrestigeOffer(w){
   document.getElementById('tut-npc-say').innerHTML=
     (w==='fresh'
       ? "Well I'll be — ye've caught <b>every fish in fresh water!</b> That earns ye a <b>Freshwater Prestige</b>. "
-        +"It wipes yer cash, licences and freshwater gear back to the start, but yer saltwater rig is untouched:<br>"
+        +"It wipes yer freshwater gear and logbook back to the start — but ye <b>keep every penny of yer cash</b>, "
+        +"and yer <b>licences are bought for good</b>, so every region stays open. Saltwater is untouched:<br>"
       : "Blow me down, ye’ve caught <b>every fish in the sea!</b> That earns ye a <b>Saltwater Prestige</b>. "
         +"It wipes yer coins, saltwater gear and level back to the start, but in return:<br>")
     +prestigeRewardLine(next, w)
@@ -4656,8 +4810,12 @@ function doPrestige(w){
     delete S.caught[f.id];delete S.best[f.id];
   });
   if(fresh){
-    // Cash, licences and every region loadout go; saltwater is untouched.
-    S.cash=0;S.licenses={};
+    // V0.9.8.9: cash and LICENCES both survive a freshwater prestige. A licence
+    // is a one-time purchase — having bought your way up to the Mountains once,
+    // you keep that access through every prestige after it — and the wallet
+    // carries over with it. Saltwater still does the full economic reset; the
+    // two ladders are deliberately different. What a freshwater prestige costs
+    // you is the logbook, the gear and every region loadout.
     S.fgear={};grantRegionStarter('midwest');
     S.zone=3;S.lastZone=S.lastZone||{};S.lastZone.fresh=3;
     // Freshwater consumables only.
@@ -8071,8 +8229,15 @@ function isWaterAt(wx, wy, zi){
 }
 // Freshwater banks are solid. On hitting one we search outward for the nearest
 // water and slide there, so the shore feels like a nudge rather than a wall.
+// Does the scene on screen right now have a real shoreline? True in the ordinary
+// world, and true in a FRESHWATER match (those run 1:1 in the region's own
+// geometry). False in a saltwater match, which is open bay blown up 1.85x.
+// Everything that cares about banks — the renderer, the spawn, the boat clamp —
+// reads this one predicate, so the drawn shore and the solid shore are always
+// the same shore. Getting this wrong once meant invisible walls.
+function shoreScene(){return !!WATER_SHAPE[S.zone]&&(!tourn.active||isFresh());}
 function keepOffWater(o){
-  if(tourn.active)return;
+  if(tourn.active&&!isFresh())return;
   if(!WATER_SHAPE[S.zone])return;
   if(isWaterAt(o.wx, o.wy))return;
   // Two passes. The near pass is the common case and stays tight so a boat that
@@ -8148,7 +8313,7 @@ function initWorld(entry, anchored){
   boat.wy=entry==='top'?180:entry==='bottom'?H-180:H*0.62;
   // In freshwater the middle of the map is often dry land (a swamp or a canyon
   // is mostly bank), so slide to the nearest water before the camera settles.
-  if(WATER_SHAPE[S.zone]&&!tourn.active)keepOffWater(boat);
+  if(shoreScene())keepOffWater(boat);
   boat.vx=0;boat.vy=0;boat.heading=0;
   boat.anchored=(anchored!==false);
   _gateCoolUntil=performance.now?performance.now()+2000:Date.now()+2000;
@@ -8186,22 +8351,35 @@ function gatesFor(){
 // have to search the water to find good spots.
 function initTournamentWorld(def){
   const base=WORLD_DIMS[def.zone];
-  tourn.W=Math.round(base[0]*1.85);
-  tourn.H=Math.round(base[1]*1.85);
+  // Saltwater matches blow the world up to 1.85x — it is open bay, so a bigger
+  // arena is just a bigger arena. Fresh water CANNOT be scaled: WATER_SHAPE and
+  // waterPathFor() are both keyed to WORLD_DIMS, so a 1.85x match world would
+  // put the river channel in one place and the water test in another, and the
+  // whole region would read as land. Freshwater matches run 1:1 in the region's
+  // own geometry, banks and all.
+  const fresh=(worldOf(def.zone)==='fresh');
+  const k=fresh?1:1.85;
+  tourn.W=Math.round(base[0]*k);
+  tourn.H=Math.round(base[1]*k);
   const defs=ZONE_STRUCTS[def.zone];
   // Seeded scatter so every player in this tournament/challenge sees the very
   // same structures in the very same spots.
   const rng=mulberry32((defSeed(def)^0x5f3759df)>>>0);
   tourn.structs=[];
+  // A freshwater spot has to sit ON the water or it cannot be fished, and the
+  // channels are narrow, so spacing relaxes rather than dropping the spot.
+  const minGap=fresh?190:300;
   for(const d of defs){
     let x, y, tries=0,ok;
     do{
       x=140+rng()*(tourn.W-280);
       y=140+rng()*(tourn.H-280);
       ok=true;
-      for(const s of tourn.structs){if(dist(x, y, s.x, s.y)<300){ok=false;break;}}
+      if(fresh&&!isWaterAt(x, y, def.zone))ok=false;
+      if(ok)for(const s of tourn.structs){if(dist(x, y, s.x, s.y)<minGap){ok=false;break;}}
       tries++;
-    }while(!ok&&tries<50);
+    }while(!ok&&tries<(fresh?400:50));
+    if(fresh&&!isWaterAt(x, y, def.zone))continue;   // never strand a spot on the bank
     tourn.structs.push({kind:d.kind, x:Math.round(x),y:Math.round(y),tier:d.tier});
   }
   tourn.active=true;
@@ -12593,7 +12771,7 @@ function render(ts){
   // has a real shoreline: paint land over everything, punch the water body back
   // through it, put the islands back on top, and clip every water decoration to
   // that body so nothing can float on the bank.
-  const _shore=(!tourn.active)?waterPathFor(S.zone):null;
+  const _shore=shoreScene()?waterPathFor(S.zone):null;
   if(_shore){
     ctx.save();
     ctx.translate(-camera.x,-camera.y);          // world space for the whole block
@@ -14420,16 +14598,30 @@ function poolNow(){
       if(S.chumCasts>0)w*=1.3;
       if(ledActive())w*=1.2;
     }
-    // season, still a strong modifier (the right season makes a fish far more
-    // likely). Bounty mode and the Mermaid set both switch this off so any species
-    // is fair game regardless of the calendar.
-    if((typeof isBounty!=='function'||!isBounty())&&!(typeof mermaidOn==='function'&&mermaidOn()))w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
+    // Season, still a strong modifier — the right season makes a fish far more
+    // likely. Three things switch it off entirely:
+    //   BOUNTY      you are handed a species list, so the calendar must not veto it
+    //   MERMAID SET the set's whole point is that anything is fair game
+    //   FRESHWATER MULTIPLAYER (V0.9.8.9) a match is six minutes long and the host
+    //     cannot pick everyone's season, so gating on it would quietly make most
+    //     of the region uncatchable for the whole match.
+    // These used to be one if/else, which tied "skip the season" to "apply the
+    // bounty boost" — two unrelated things. Splitting them means a freshwater
+    // match skips the calendar WITHOUT inheriting bounty targeting, and the
+    // bounty deref below is null-guarded rather than relying on the branch it
+    // sits in (the Mermaid set could reach it with no tournament running at all).
+    const _seasonFree=(typeof isBounty==='function'&&isBounty())
+                    ||(typeof mermaidOn==='function'&&mermaidOn())
+                    ||!!(activeTournament&&isFresh());
+    if(!_seasonFree)w*=(f.season.includes('all')||f.season.includes(season))?1:0.18;
     // Bounty: heavily favour the species CURRENTLY on the list so it bites without
     // endless waiting. The boost also cancels the rarity penalty above, so an epic
     // or legendary target still shows up reliably (the rest of the region still
     // appears so it feels alive).
-    else{const _bl=activeTournament.bountyList||[],_bt=_bl[activeTournament.bountyIdx||0];
-      if(_bt&&f.id===_bt.id)w*=3.5*({common:1,uncommon:1,rare:1.5,epic:9,legendary:26}[f.rarity]||1);}
+    if(activeTournament&&typeof isBounty==='function'&&isBounty()){
+      const _bl=activeTournament.bountyList||[],_bt=_bl[activeTournament.bountyIdx||0];
+      if(_bt&&f.id===_bt.id)w*=3.5*({common:1,uncommon:1,rare:1.5,epic:9,legendary:26}[f.rarity]||1);
+    }
     // time
     if(f.time.includes('all'))w*=1; else if(f.time.includes(ph))w*=1.8; else w*=0.5;
     // on-structure / matching-bait fish get an extra nudge over the baseline gate
