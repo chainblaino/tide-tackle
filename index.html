@@ -13565,8 +13565,11 @@ function startIceFight(){
   setTimeout(function(){if(rod)rod.classList.remove('bent');},900);
   iceFish=null;iceFishState='none';iceDwell=0;
   iceSpawnAt=performance.now()+2600;
-  if((f.rarity==='legendary'||f.rarity==='ultra')&&typeof showLegendaryAlert==='function')showLegendaryAlert();
-  else startSdewGame();
+  // Both of these take the fish as an argument. Calling them bare threw
+  // ("cannot read 'rarity' of undefined") the instant anything ate, so from the
+  // day the mode shipped no ice fish — Alaskan or Northern — could be landed.
+  if((f.rarity==='legendary'||f.rarity==='ultra')&&typeof showLegendaryAlert==='function')showLegendaryAlert(f);
+  else startSdewGame(f);
 }
 (function wireIceJigPad(){
   const pad=document.getElementById('ice-jigpad');if(!pad)return;
@@ -15014,7 +15017,13 @@ function land(f, w, perfect, bullseye){
   // bullseye and personal best rather than replacing them. Computed before any
   // display path reads xp/gold, so the wallet, the level bar and the catch card
   // can never disagree.
-  const _flyBonus=!!(curMethod()&&curMethod().fly);
+  // ...but only when you are actually fly fishing. The rig bar still reads "Fly"
+  // while you are down the ice hole or out in the surf, because those modes take
+  // over the screen without changing the region's equipped method — so an ice
+  // fish was collecting the fly bonus for a jig dropped through a hole.
+  const _flyBonus=!!(curMethod()&&curMethod().fly)
+    &&!(typeof sdewIce!=='undefined'&&sdewIce)
+    &&!(typeof surfActive!=='undefined'&&surfActive);
   if(_flyBonus){xp*=2;gold*=2;}
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
