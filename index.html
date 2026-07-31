@@ -13446,7 +13446,9 @@ function iceSpawn(){
   iceLockMs=hard?ICE_LOCK_HARD:ICE_LOCK_MS;
   iceFishState='approach';iceStateT=performance.now();iceDwell=0;iceTrailFish=[];
   iceFishPh=Math.random()*6.283;iceFishSway=0;
-  setIceStatus('Mark at '+Math.round(iceFishFt)+' ft — get on it.');
+  setIceStatus(f.rarity==='ultra'
+    ? 'SOMETHING ENORMOUS at '+Math.round(iceFishFt)+' ft. It is not leaving — take your time.'
+    : 'Mark at '+Math.round(iceFishFt)+' ft — get on it.');
   AUDIO.sfx('tick');
 }
 function iceClearFish(msg){
@@ -13505,12 +13507,19 @@ function iceLoop(ts){
     }
     // It can leave neither the water column nor the top of the dial.
     iceFishFt=Math.max(1.2, Math.min(iceHoleFt-0.6, iceFishFt));
+    // An ultra legendary that shows on the dial does NOT leave. The Greenland
+    // Shark carries the shortest patience on the roster (4.5s) on top of a
+    // 0.12% spawn, so the old behaviour was to flash up and vanish before most
+    // players had found it with the jig — the rarest mark in the game was also
+    // the one you were least likely to get a fair crack at. It now holds under
+    // the hole until it eats, however long that takes.
+    const staysDown=(f.rarity==='ultra');
     if(iceFishState==='approach'){
       // Climbs toward the jig's level; a chaser closes much harder.
       const dir=Math.sign(iceJigFt-iceFishFt);
       iceFishFt+=dir*rise*dt*(f.iceChase?1.8:1);
       if(gap<6){iceFishState='inspect';iceStateT=now;}
-      else if(now-iceStateT>(f.icePatience||8000)*1.5)iceClearFish('The mark drifted off.');
+      else if(!staysDown&&now-iceStateT>(f.icePatience||8000)*1.5)iceClearFish('The mark drifted off.');
     }else if(iceFishState==='inspect'){
       // Hovers near the bait, tracking it loosely, and decides.
       const dir=Math.sign(iceJigFt-iceFishFt);
@@ -13519,9 +13528,10 @@ function iceLoop(ts){
       iceDwell=Math.max(0,Math.min(iceLockMs, iceDwell+(onIt?dtMs:-ICE_DRAIN_X*dtMs)));
       if(onIt&&now-iceLastTick>200){iceLastTick=now;AUDIO.sfx('tick');}
       if(onIt&&iceDwell<iceLockMs)setIceStatus('ON IT — hold…');
-      // Thrashing the rod, or dropping it on their head, sends them away.
-      if(rate>13&&Math.random()<0.02)iceClearFish('You jigged too hard and spooked it.');
-      else if(now-iceStateT>(f.icePatience||8000))iceClearFish('It looked and left.');
+      // Thrashing the rod, or dropping it on their head, sends them away —
+      // unless it is the ultra, which cannot be spooked or waited out.
+      if(!staysDown&&rate>13&&Math.random()<0.02)iceClearFish('You jigged too hard and spooked it.');
+      else if(!staysDown&&now-iceStateT>(f.icePatience||8000))iceClearFish('It looked and left.');
       else if(iceDwell>=iceLockMs){iceFishState='commit';iceStateT=now;setIceStatus('IT’S EATING!');AUDIO.sfx('bite');
         if(navigator.vibrate)try{navigator.vibrate(22);}catch(e){}
         setTimeout(function(){if(iceActive&&iceFishState==='commit')startIceFight();},520);}
@@ -14661,10 +14671,26 @@ function sdewMeterScale(){
 // a human somewhere in the 75-85% band lands a round in about five seconds,
 // which is the intended pace for three of them back to back.
 // Each round the fish is a little quicker than the last, so a three-round fight
-// escalates instead of being the same bar three times. Applied off sdewRound, so
-// a one-round fight is always the base speed and nothing else has to know.
-const SDEW_ROUND_RAMP=0.07;   // +7% per round: 1.00x, 1.07x, 1.14x
-function sdewRoundRamp(){return 1+(Math.max(1,sdewRound)-1)*SDEW_ROUND_RAMP;}
+// escalates instead of being the same bar three times.
+//
+// The ramp is PER RARITY, not flat. A flat +7% made round 3 of an Alaska
+// Blackfish ramp exactly as hard as round 3 of an Inconnu, which is what made
+// the last round read as inconsistent: the escalation had nothing to do with
+// what you were fighting. Now the step size itself scales, so the difficulty
+// ladder stays in rarity order in every round rather than only in the first.
+//
+//   round 3 multiplier:  common 1.06 · uncommon 1.08 · rare 1.10
+//                        epic 1.12 · legendary 1.14 · ultra 1.16
+//
+// Combined with sdewDifficultyFor()'s own rarity curve (0.55 common .. 1.2
+// ultra), the product is monotonic in rarity at round 1, 2 and 3 alike — a
+// common's hardest round stays easier than a legendary's easiest.
+const SDEW_ROUND_RAMP={common:0.03,uncommon:0.04,rare:0.05,epic:0.06,legendary:0.07,ultra:0.08};
+const SDEW_ROUND_RAMP_DEF=0.05;
+function sdewRoundRamp(){
+  const r=(hookedFish&&SDEW_ROUND_RAMP[hookedFish.rarity])||SDEW_ROUND_RAMP_DEF;
+  return 1+(Math.max(1,sdewRound)-1)*r;
+}
 function sdewFishSpeed(){
   if(sdewSurf)return 1.10*sdewRoundRamp();
   if(sdewIce)return 1.12*sdewRoundRamp();
@@ -14843,15 +14869,18 @@ function endSdewGame(success){
   land(f, w, true, false);
 }
 
-// Lose the Stardew fight: offer a paid retry. One chance for normal fish;
-// ultra legendary can be retried indefinitely as long as you keep paying.
+// Lose the Stardew fight: offer a retry. One PAID chance for a normal fish.
+// An ultra legendary is a once-in-a-lifetime spawn — often a fraction of a
+// percent — so losing one to a wallet balance is the worst possible outcome.
+// Those are retried as many times as it takes, and they cost nothing.
 const SDEW_RETRY_COST=5;
+function sdewRetryCost(){return (hookedFish&&hookedFish.rarity==='ultra')?0:SDEW_RETRY_COST;}
 function offerSdewRetry(){
   const f=hookedFish;
   const ultra=f&&f.rarity==='ultra';
-  const canRetry=f&&(ultra||!sdewRetryUsed)&&(S.rubies||0)>=SDEW_RETRY_COST;
+  const canRetry=!!f&&(ultra||(!sdewRetryUsed&&(S.rubies||0)>=SDEW_RETRY_COST));
   if(!canRetry){
-    if(f&&(ultra||!sdewRetryUsed)&&(S.rubies||0)<SDEW_RETRY_COST){
+    if(f&&!sdewRetryUsed&&(S.rubies||0)<SDEW_RETRY_COST){
       fail('The '+f.name+' got away! Not enough rubies for another chance.');
     }else{
       fail('The '+(f?f.name:'fish')+' got away! So close...');
@@ -14860,17 +14889,24 @@ function offerSdewRetry(){
   }
   document.getElementById('retry-title').textContent='The '+f.name+' is winning!';
   document.getElementById('retry-sub').innerHTML=ultra
-    ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b>, a once in a lifetime fish. Pay <b>'+SDEW_RETRY_COST+'</b> rubies for another shot. You can keep trying as long as you pay.'
+    ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b>, a once in a lifetime fish. Grab the rod again — <b>free</b>, as many times as it takes. You will not lose this one.'
     : 'Pay <b>'+SDEW_RETRY_COST+'</b> rubies to grab the rod again. You get <b>one</b> more chance.';
   const pay=document.getElementById('retry-pay');
-  pay.innerHTML='<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+',Try again ('+(S.rubies||0)+')';
+  // The separator here was a comma, rendering "Pay 5,Try again" — a mangled
+  // em dash; the static markup this replaces uses &mdash;.
+  pay.innerHTML=ultra
+    ? 'Grab the rod again — FREE'
+    : '<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+' — Try again ('+(S.rubies||0)+')';
   document.getElementById('retry-overlay').classList.add('show');
 }
 function sdewRetryPay(){
   const f=hookedFish;if(!f)return;
-  if((S.rubies||0)<SDEW_RETRY_COST){toast('Not enough rubies.','#b3402a');return;}
-  S.rubies-=SDEW_RETRY_COST;updatePills();queueSave();
-  if(f.rarity!=='ultra')sdewRetryUsed=true;
+  const cost=sdewRetryCost();
+  if(cost>0){
+    if((S.rubies||0)<cost){toast('Not enough rubies.','#b3402a');return;}
+    S.rubies-=cost;updatePills();queueSave();
+    sdewRetryUsed=true;
+  }
   document.getElementById('retry-overlay').classList.remove('show');
   startSdewGame(f);
 }
