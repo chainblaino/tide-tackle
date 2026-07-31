@@ -4293,12 +4293,19 @@ function baseAvatarSprite(){return BASE_SPRITE[(S.gender||'male')+'_'+skinIdx(S.
 const PRESTIGE_MAX=5;
 // Pets accumulate as the player prestiges; each floats beside the boat with a buff.
 const PETS=[
+  // ---- Saltwater prestige ladder (S.prestige) ----
   {id:'cat',     name:'Cat',     prestige:1, buff:'+10% fish spawn rate'},
   {id:'dog',     name:'Dog',     prestige:1, buff:'+10% fish spawn rate'},
   {id:'pig',     name:'Pig',     prestige:2, buff:'+20% coins earned from catches'},
   {id:'tiger',   name:'Tiger',   prestige:3, buff:'+20% tournament winnings'},
   {id:'bat',     name:'Bat',     prestige:4, buff:'+100% night fish spawn rate'},
   {id:'penguin', name:'Penguin', prestige:5, buff:'+100% ultra legendary spawn rate'},
+  // ---- Freshwater prestige ladder (S.fprestige), V0.9.8.6 ----
+  // world:'fresh' is what sends petOwned() to the freshwater counter instead of
+  // the saltwater one; the two ladders are unlocked entirely independently.
+  {id:'snowowl',  name:'Snow Owl',  prestige:1, world:'fresh', buff:'+20% fish spawn rate during winter'},
+  {id:'bear',     name:'Bear',      prestige:2, world:'fresh', buff:'+20% cash earned from catches'},
+  {id:'alligator',name:'Alligator', prestige:3, world:'fresh', buff:'+100% sight-fishing spawn rate'},
   // Earned, not prestiged: landing the California Golden Trout. prestige:99 keeps
   // it out of ownedPets()'s level check; petOwned() special-cases it.
   {id:'goldentrout', name:'Golden Trout', prestige:99, reward:'cagoldentrout',
@@ -4362,9 +4369,15 @@ function _keyOutPetBg(im, thr){
   g.putImageData(img,0,0);
   return c;
 }
-['cat','dog','pig','tiger','bat','penguin'].forEach(function(id){
+// Derived from PETS rather than a hardcoded list, so a pet added to the roster
+// is preloaded automatically. Art that does not exist yet simply never fires
+// onload — PET_SPRITE stays empty for it and drawPets() skips it — so a new pet
+// is fully playable before its PNG lands.
+PETS.forEach(function(p){
+  const id=p.id;
   const im=new Image();
   im.onload=function(){try{PET_SPRITE[id]=_keyOutPetBg(im);}catch(e){PET_SPRITE[id]=im;}};
+  im.onerror=function(){};   // art not in the folder yet: stay silent
   im.src='pets/'+id+'.png';PET_IMG[id]=im;
 });
 function petImgSrc(id){return 'pets/'+id+'.png';}
@@ -4397,29 +4410,43 @@ function petRewardHeld(def){return def&&def.reward==='cagoldentrout'&&!!S.golden
 // What a locked companion is waiting on, in the player's terms.
 function petCriteria(p){
   if(p.reward){const f=FISH.find(function(x){return x.id===p.reward;});return 'Catch the '+((f&&f.name)||'reward fish');}
-  return 'Prestige '+p.prestige;
+  // Two ladders now, so name which one — "Prestige 2" alone is ambiguous.
+  return (p.world==='fresh'?'Freshwater':'Saltwater')+' Prestige '+p.prestige;
 }
-function ownedPets(){const p=S.prestige||0;return PETS.filter(function(x){return x.reward?petRewardHeld(x):x.prestige<=p;});}
+// Which prestige counter governs a pet: freshwater pets read S.fprestige, the
+// original ladder reads S.prestige.
+function petPrestigeOf(def){return (def&&def.world==='fresh')?(S.fprestige||0):(S.prestige||0);}
+function ownedPets(){return PETS.filter(function(x){return x.reward?petRewardHeld(x):x.prestige<=petPrestigeOf(x);});}
 function petOwned(id){const def=PETS.find(function(x){return x.id===id;});if(!def)return false;
   if(def.reward)return petRewardHeld(def);
-  return def.prestige<=(S.prestige||0);}
+  return def.prestige<=petPrestigeOf(def);}
 function hasPet(id){return petOwned(id);}
 // V0.9.6: only ONE pet can be equipped at a time, so only the equipped pet's buff
 // applies. petActive() is true only for the currently-equipped, owned pet.
 function petActive(id){return S.equippedPet===id&&petOwned(id);}
-// Coins multiplier: +10% per prestige level, plus +20% if the Pig is equipped.
-function prestigeCoinMult(){return 1+0.10*Math.min(PRESTIGE_MAX, S.prestige||0);}
-function coinMult(){return prestigeCoinMult()*(petActive('pig')?1.20:1);}
+// ---- Prestige multipliers -----------------------------------------------
+// The two worlds prestige INDEPENDENTLY and each bonus applies only to its own
+// wallet: saltwater prestige boosts gold, freshwater prestige boosts cash.
+function prestigeOf(w){return ((w||curWorldId())==='fresh')?(S.fprestige||0):(S.prestige||0);}
+function prestigeCoinMult(w){return 1+0.10*Math.min(PRESTIGE_MAX, prestigeOf(w));}
+// Pig boosts either wallet; Bear is a freshwater companion and boosts cash only.
+function coinMult(){
+  return prestigeCoinMult()
+    *(petActive('pig')?1.20:1)
+    *((petActive('bear')&&isFresh())?1.20:1);
+}
 // How much more often a fish bites (general spawn + the Bat's night boost).
 function petBiteFreqMult(){
   let m=1;
   if(petActive('cat'))m*=1.10;
   if(petActive('dog'))m*=1.10;
   if(petActive('bat')&&phaseOf(hourNow())==='night')m*=2.0; // +100% at night
+  if(petActive('snowowl')&&seasonNow()==='winter')m*=1.20;  // +20% through the winter
   return m;
 }
 function petUltraMult(){return petActive('penguin')?2:1;}         // +100% ultra spawn chance
 function petTournMult(){return petActive('tiger')?1.20:1;}        // +20% tournament winnings
+function petSightMult(){return petActive('alligator')?2:1;}       // +100% sight-fishing spawns
 
 // ---- Prestige: unlocks once every non-ultra species is in the logbook ----
 // Prestige requires every inshore/nearshore/offshore species, excluding ultra
@@ -4429,35 +4456,62 @@ function petTournMult(){return petActive('tiger')?1.20:1;}        // +20% tourna
 // un-qualify every player who had already completed the saltwater dex and yank
 // their "ready to prestige" state away. Freshwater completion is recognised by
 // its own achievements instead.
-function nonUltraSpecies(){return FISH.filter(function(f){return f.rarity!=='ultra'&&!f.surf&&!f.ice&&worldOf(f.zone)==='salt';});}
-function prestigeEligible(){
-  if((S.prestige||0)>=PRESTIGE_MAX)return false;
-  return nonUltraSpecies().every(function(f){return (S.caught[f.id]||0)>0;});
+// V0.9.8.6: freshwater has its OWN prestige with the same rule — every species
+// in that world except the ultra legendaries and the Alaskan ice roster. Pass a
+// world id; defaults to the one you are standing in.
+function nonUltraSpecies(w){
+  w=w||curWorldId();
+  return FISH.filter(function(f){
+    if(f.rarity==='ultra')return false;
+    if(f.surf)return false;              // surf sharks are their own thing
+    if(f.ice||f.alaska)return false;     // Alaskan ice roster excluded in both worlds
+    return worldOf(f.zone)===w;
+  });
 }
+function prestigeEligible(w){
+  w=w||curWorldId();
+  if(prestigeOf(w)>=PRESTIGE_MAX)return false;
+  const pool=nonUltraSpecies(w);
+  if(!pool.length)return false;
+  return pool.every(function(f){return (S.caught[f.id]||0)>0;});
+}
+// The "already asked this cycle" flag is per world, so declining the saltwater
+// offer never suppresses the freshwater one.
+function prestigeOfferedFlag(w){return (w==='fresh')?'fprestigeOffered':'prestigeOffered';}
 // Show Clancy's prestige offer when newly eligible (unless already declined this cycle).
 function maybePrestigeOffer(){
-  if(!prestigeEligible())return;
-  if(S.prestigeOffered)return;               // already asked this cycle
+  const w=curWorldId();
+  if(!prestigeEligible(w))return;
+  const flag=prestigeOfferedFlag(w);
+  if(S[flag])return;                         // already asked this cycle
   if(tut.active||_clancySeq||surfActive)return;
-  S.prestigeOffered=true;queueSave();
-  setTimeout(showPrestigeOffer,900);
+  S[flag]=true;queueSave();
+  setTimeout(function(){showPrestigeOffer(w);},900);
 }
-function prestigeRewardLine(next){
-  const lines=['You’ll keep your <b>rubies</b>, <b>stats</b> and <b>Ultra</b> catches.',
-    'A permanent <b>+'+(next*10)+'% coin bonus</b> on every catch.'];
-  const pet=PETS.filter(function(p){return p.prestige===next;}).map(function(p){return p.name;}).join(' & ');
-  if(pet)lines.push('A new companion: the <b>'+pet+'</b> ('+PETS.find(function(p){return p.prestige===next;}).buff+').');
+function prestigeRewardLine(next, w){
+  const cur=(w==='fresh')?'cash':'coin';
+  const lines=['You’ll keep your <b>rubies</b>, <b>stats</b> and <b>Ultra</b> catches'
+    +(w==='fresh'?', and everything ye own in <b>saltwater</b>.':', and everything ye own in <b>freshwater</b>.'),
+    'A permanent <b>+'+(next*10)+'% '+cur+' bonus</b> on every catch.'];
+  const pool=PETS.filter(function(p){return p.prestige===next&&((p.world||'salt')===(w||'salt'))&&!p.reward;});
+  const pet=pool.map(function(p){return p.name;}).join(' & ');
+  if(pet)lines.push('A new companion: the <b>'+pet+'</b> ('+pool[0].buff+').');
   return lines.map(function(l){return '• '+l;}).join('<br>');
 }
 // A two-button Clancy prompt (uses the NPC bar directly so we get Yes/No choices).
-function showPrestigeOffer(){
+function showPrestigeOffer(w){
   if(tut.active)return;
-  const next=Math.min(PRESTIGE_MAX,(S.prestige||0)+1);
+  w=w||curWorldId();
+  const next=Math.min(PRESTIGE_MAX, prestigeOf(w)+1);
   document.getElementById('tut-npc-portrait').innerHTML=CLANCY_SVG;
   document.getElementById('tut-npc-say').innerHTML=
-    "Blow me down, ye’ve caught <b>every fish in the sea!</b> That earns ye a <b>Prestige</b>. "
-    +"It wipes your coins, gear and level back to the start, but in return:<br>"+prestigeRewardLine(next)
-    +"<br>Prestige <b>"+(S.prestige||0)+" → "+next+"</b>. Ready to start fresh, angler?";
+    (w==='fresh'
+      ? "Well I'll be — ye've caught <b>every fish in fresh water!</b> That earns ye a <b>Freshwater Prestige</b>. "
+        +"It wipes yer cash, licences and freshwater gear back to the start, but yer saltwater rig is untouched:<br>"
+      : "Blow me down, ye’ve caught <b>every fish in the sea!</b> That earns ye a <b>Saltwater Prestige</b>. "
+        +"It wipes yer coins, saltwater gear and level back to the start, but in return:<br>")
+    +prestigeRewardLine(next, w)
+    +"<br>"+(w==='fresh'?'Freshwater':'Saltwater')+" Prestige <b>"+prestigeOf(w)+" → "+next+"</b>. Ready to start fresh, angler?";
   document.getElementById('tut-npc-actions').innerHTML=
     '<button class="tut-npc-btn" id="prestige-yes">Prestige!</button>'
     +'<button class="tut-npc-skip" id="prestige-no">Not yet</button>';
@@ -4465,54 +4519,98 @@ function showPrestigeOffer(){
   if(typeof tutPlaceBar==='function')tutPlaceBar();
   const yes=document.getElementById('prestige-yes');
   const no=document.getElementById('prestige-no');
-  if(yes)yes.onclick=function(){document.getElementById('tut-npc').classList.remove('show');doPrestige();};
+  if(yes)yes.onclick=function(){document.getElementById('tut-npc').classList.remove('show');doPrestige(w);};
   if(no)no.onclick=function(){document.getElementById('tut-npc').classList.remove('show');toast('No worries, prestige any time from the Stats tab.','#b58b53');};
 }
 // Reset progression, keep rubies/stats/ultra; bump prestige & grant the next pet.
-function doPrestige(){
-  if((S.prestige||0)>=PRESTIGE_MAX){toast('You’re already at max prestige.','#b58b53');return;}
-  const next=(S.prestige||0)+1;
-  // keep ultra catches + their best weights; drop everything else from the logbook
-  const keepCaught={},keepBest={};
-  FISH.forEach(function(f){if(f.rarity==='ultra'&&S.caught[f.id]){keepCaught[f.id]=S.caught[f.id];if(S.best[f.id])keepBest[f.id]=S.best[f.id];}});
-  S.caught=keepCaught;S.best=keepBest;
-  // reset coins, level & xp. Both soft wallets go, and so do the region
-  // licences — freshwater progression restarts in the Midwest alongside
-  // everything else, which is the whole point of a prestige.
-  S.gold=0;S.cash=0;S.licenses={};S.xp=0;S.level=1;
-  // gear back to starters (ultra-reward gear is kept since ultra catches persist)
-  const keepMarlin=S.ownedBoats&&S.ownedBoats.indexOf('marlinboat')>=0;
-  const keepChainsaw=S.ownedRods&&S.ownedRods.indexOf('chainsaw')>=0;
-  S.ownedBoats=['kayak'].concat(keepMarlin?['marlinboat']:[]);
-  S.ownedRods=['rod0'].concat(keepChainsaw?['chainsaw']:[]);
-  S.ownedReels=['reel0'];S.ownedBraids=['braid0'];S.ownedLeaders=['fluoro','wire'];
-  S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='fluoro';
-  // Freshwater restarts in the Midwest with only its starter kit; the other
-  // three regions come back when their licences are re-bought.
-  S.fgear={};grantRegionStarter('midwest');
-  // consumables back to the starter kit
-  S.tackleInv={cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}};
-  S.baitInv={shrimp:20};S.lureInv={};S.lureDur={};S.ownedLures=[];
-  S.method='cork';S.tackleSel={};S.baitSel='shrimp';S.lureSel='';S.zone=0;
-  S.lastZone={salt:0,fresh:3};
-  S.baitInv.worm=20;
-  // bump prestige (grants the next pet automatically via ownedPets())
-  S.prestige=next;S.prestigeOffered=false;
+//
+// V0.9.8.6: scoped to ONE world. The two worlds prestige independently, so a
+// freshwater prestige must not wipe the saltwater rig and vice versa — otherwise
+// finishing one dex would cost you the other. Level and XP are shared between the
+// worlds and are reset only by the SALTWATER prestige, which is how it has always
+// behaved; wiping the shared level on a freshwater prestige would lock the player
+// out of saltwater gear they had already earned.
+function doPrestige(w){
+  w=w||curWorldId();
+  const fresh=(w==='fresh');
+  if(prestigeOf(w)>=PRESTIGE_MAX){toast('You’re already at max '+(fresh?'freshwater':'saltwater')+' prestige.','#b58b53');return;}
+  const next=prestigeOf(w)+1;
+  // Drop this world's logbook, keeping ultras (and the whole of the other world).
+  FISH.forEach(function(f){
+    if(f.rarity==='ultra')return;                 // ultra catches always persist
+    if(worldOf(f.zone)!==w)return;                // the other world is untouched
+    delete S.caught[f.id];delete S.best[f.id];
+  });
+  if(fresh){
+    // Cash, licences and every region loadout go; saltwater is untouched.
+    S.cash=0;S.licenses={};
+    S.fgear={};grantRegionStarter('midwest');
+    S.zone=3;S.lastZone=S.lastZone||{};S.lastZone.fresh=3;
+    // Freshwater consumables only.
+    ['worm','cricket','corn','stinkbait','powerbait','chickenliver','minnow','shiner',
+     'shad','leech','crawfish','salmonegg','waxworm'].forEach(function(b){delete S.baitInv[b];});
+    S.baitInv.worm=20;
+    Object.keys(S.tackleInv||{}).forEach(function(tid){
+      const tk=TACKLE.find(function(x){return x.id===tid;});
+      if(tk&&tk.world==='fresh')delete S.tackleInv[tid];
+    });
+    S.tackleInv.fwbob_b={qty:5,dur:7};S.tackleInv.fwbot_b={qty:5,dur:6};
+    Object.keys(S.lureInv||{}).forEach(function(lid){
+      const l=LURES.find(function(x){return x.id===lid;});
+      if(l&&l.world==='fresh'){delete S.lureInv[lid];if(S.lureDur)delete S.lureDur[lid];}
+    });
+    S.fprestige=next;S.fprestigeOffered=false;
+  }else{
+    S.gold=0;S.xp=0;S.level=1;
+    // gear back to starters (ultra-reward gear is kept since ultra catches persist)
+    const keepMarlin=S.ownedBoats&&S.ownedBoats.indexOf('marlinboat')>=0;
+    const keepChainsaw=S.ownedRods&&S.ownedRods.indexOf('chainsaw')>=0;
+    const keepFresh=function(arr, list){return (arr||[]).filter(function(id){
+      const it=list.find(function(x){return x.id===id;});return it&&it.world==='fresh';});};
+    // Keep everything freshwater; reset only the saltwater run.
+    S.ownedBoats=['kayak'].concat(keepMarlin?['marlinboat']:[]).concat(keepFresh(S.ownedBoats,BOATS));
+    S.ownedRods=['rod0'].concat(keepChainsaw?['chainsaw']:[]).concat(keepFresh(S.ownedRods,RODS));
+    S.ownedReels=['reel0'].concat(keepFresh(S.ownedReels,REELS));
+    S.ownedBraids=['braid0'].concat(keepFresh(S.ownedBraids,BRAIDS));
+    S.ownedLeaders=['fluoro','wire'];
+    S.boat='kayak';S.rod='rod0';S.reel='reel0';S.braid='braid0';S.leader='fluoro';
+    // Saltwater consumables only.
+    ['shrimp','squid','cutbait','ballyhoo','menhaden','pinfish','pilchard','crab','blue_crab']
+      .forEach(function(b){delete S.baitInv[b];});
+    S.baitInv.shrimp=20;
+    Object.keys(S.tackleInv||{}).forEach(function(tid){
+      const tk=TACKLE.find(function(x){return x.id===tid;});
+      if(tk&&(tk.world||'salt')==='salt')delete S.tackleInv[tid];
+    });
+    S.tackleInv.cork_b={qty:5,dur:7};S.tackleInv.jig_b={qty:5,dur:7};
+    S.tackleInv.fin_b={qty:5,dur:7};S.tackleInv.lh_b={qty:5,dur:8};
+    Object.keys(S.lureInv||{}).forEach(function(lid){
+      const l=LURES.find(function(x){return x.id===lid;});
+      if(l&&(l.world||'salt')==='salt'){delete S.lureInv[lid];if(S.lureDur)delete S.lureDur[lid];}
+    });
+    S.method='cork';S.baitSel='shrimp';S.lureSel='';S.zone=0;
+    S.lastZone=S.lastZone||{};S.lastZone.salt=0;
+    S.prestige=next;S.prestigeOffered=false;
+  }
+  S.tackleSel={};
   // auto-equip the freshly earned pet if no companion is currently equipped
-  const newPet=PETS.find(function(p){return p.prestige===next;});
+  const newPet=PETS.find(function(p){return p.prestige===next&&(p.world||'salt')===w&&!p.reward;});
   if(newPet&&!S.equippedPet)S.equippedPet=newPet.id;
   updatePills&&updatePills();updateRigBar&&updateRigBar();ensureRig&&ensureRig();
+  if(typeof initStructures==='function')initStructures();
+  if(typeof initWorld==='function')initWorld('center',true);
   if(typeof refreshMenu==='function')refreshMenu();
   queueSave();
-  const pet=PETS.filter(function(p){return p.prestige===next;}).map(function(p){return p.name;}).join(' & ');
-  toast('PRESTIGE '+next+'! +'+(next*10)+'% coins forever'+(pet?' · '+pet+' joined ye!':'')+'','#ff8a3a');
+  toast((fresh?'FRESHWATER':'SALTWATER')+' PRESTIGE '+next+'! +'+(next*10)+'% '+(fresh?'cash':'coins')+' forever'
+    +(newPet?' · '+newPet.name+' joined ye!':''),'#ff8a3a');
   if(typeof AUDIO!=='undefined')AUDIO.sfx('level');
 }
 // Prestige from the Stats tab (player declined Clancy's offer earlier).
-function prestigeFromStats(){
-  if(!prestigeEligible()){toast('Catch every non-Ultra species first.','#b58b53');return;}
+function prestigeFromStats(w){
+  w=w||curWorldId();
+  if(!prestigeEligible(w)){toast('Catch every non-Ultra species in '+(w==='fresh'?'fresh water':'saltwater')+' first.','#b58b53');return;}
   if(typeof closeMenu==='function')closeMenu();
-  setTimeout(showPrestigeOffer,250);
+  setTimeout(function(){showPrestigeOffer(w);},250);
 }
 // ---- Fail-safe: if a player is out of gear AND broke, Clancy spots them a starter kit ----
 let _failsafeAt=0;
@@ -6211,6 +6309,9 @@ function normalizeState(){
   // V0.9 prestige
   if(typeof S.prestige!=='number')S.prestige=0;
   if(typeof S.prestigeOffered!=='boolean')S.prestigeOffered=false;
+  // V0.9.8.6: freshwater prestiges on its own counter.
+  if(typeof S.fprestige!=='number')S.fprestige=0;
+  if(typeof S.fprestigeOffered!=='boolean')S.fprestigeOffered=false;
   if(!Array.isArray(S.ownedSets))S.ownedSets=[];
   if(!Array.isArray(S.ownedSkins))S.ownedSkins=[];
   if(!S.skins||typeof S.skins!=='object')S.skins={};
@@ -7099,7 +7200,23 @@ const BOAT_FOOT={bottom:136,halfW:62};
 let sightFish=[],ripples=[];
 
 // ===================== SIGHT FISHING =====================
-const SIGHT_FISH_WEIGHTS={tarpon:5,cobia:5,mahi:12,permit:12,barracuda:12,bonefish:14,roosterfish:12,redfish:23,snook:23};
+// Species that surface where you can SEE them and cast at the fish rather than
+// the spot. V0.9.8.6 adds freshwater: without these the Alligator companion
+// (+100% sight-fishing spawns) would have been inert in the very world you earn
+// it in. Each pick is one that genuinely shows itself — bass cruising a flat,
+// gar and bowfin rolling for air, carp tailing, a muskie following the boat.
+const SIGHT_FISH_WEIGHTS={
+  // saltwater
+  tarpon:5,cobia:5,mahi:12,permit:12,barracuda:12,bonefish:14,roosterfish:12,redfish:23,snook:23,
+  // Midwest
+  largemouth:20,grasscarp:14,longnosegar:12,
+  // Southern
+  peacockbass:16,snakehead:12,alligatorgar:6,bowfin:14,
+  // Northern
+  muskie:6,northernpike:12,smallmouth:18,
+  // Mountains
+  rainbowtrout:20,cutthroattrout:18,bulltrout:10,sockeyesalmon:12,
+};
 let _spawnLastHour=-1;
 let _forcedBiteFish=null;
 function trySightFishSpawn(){
@@ -7109,7 +7226,8 @@ function trySightFishSpawn(){
     const tgt=currentTournTarget();
     if(tgt&&Math.random()<0.55){spawnSightFish(tgt);return;}
   }
-  if(Math.random()>=0.75)return;
+  // Base 25% per in-game hour; the Alligator companion doubles it.
+  if(Math.random()>=0.25*petSightMult())return;
   const cands=[];let total=0;
   for(const f of FISH){
     const w=SIGHT_FISH_WEIGHTS[f.id];if(!w)continue;
@@ -14510,10 +14628,13 @@ function land(f, w, perfect, bullseye){
   let gold=Math.round(f.gold*(0.8+sizeFrac*0.6)*0.85); // global 15% coin reduction
   // Fly fishing is the hardest way in the game to put a fish in the net —
   // earn the line, land it on the mark, mend it clean, then time the set — so
-  // it pays triple. Applied before every display path reads xp/gold, so the
-  // wallet, the level bar and the catch card can never disagree.
+  // it pays DOUBLE on both xp and cash. Applied first, before every other
+  // bonus multiplies on top, so it stacks with new-species, perfect fight,
+  // bullseye and personal best rather than replacing them. Computed before any
+  // display path reads xp/gold, so the wallet, the level bar and the catch card
+  // can never disagree.
   const _flyBonus=!!(curMethod()&&curMethod().fly);
-  if(_flyBonus){xp*=3;gold*=3;}
+  if(_flyBonus){xp*=2;gold*=2;}
   if(isNew){xp*=3;gold*=2;}
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
@@ -14593,7 +14714,7 @@ function showCatch(f, w, o){
   const badges=[];
   if(ultra)badges.push(['ULTRA LEGENDARY','ultra']);
   if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 '+_coinWord().toUpperCase(),'#2aa890']);
-  if(o.fly)badges.push(['FLY ROD 3\u00d7 XP & '+_coinWord().toUpperCase(),'#2aa890']);
+  if(o.fly)badges.push(['FLY ROD 2\u00d7 XP & '+_coinWord().toUpperCase(),'#2aa890']);
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
@@ -15430,22 +15551,31 @@ function renderStats(){
   const acc=S.totalCatches+S.misses>0?Math.round(S.totalCatches/(S.totalCatches+S.misses)*100):0;
   const rows=[['Total casts',S.totalCasts],['Fish landed',S.totalCatches],['Catch rate',acc+'%'],['Break-offs',S.breakoffs],['Gold earned (all time)',(S.goldEarned||0).toLocaleString()],['Cash earned (all time)',(S.cashEarned||0).toLocaleString()],['Region licences',(function(){const h=FRESH_LICENSES.filter(function(l){return hasLicense(l.zone);});return h.length?('Midwest + '+h.map(function(l){return ZONE_LBL[l.zone];}).join(', ')):'Midwest only';})()],['Species discovered',Object.keys(S.caught).length+' / '+FISH.length],['Biggest catch',S.biggest>0?fmtLb(S.biggest)+' lb '+S.biggestName:'none yet'],['Bullseye hits',(S.bullseyeTotal||0)+' (best streak '+(S.bullseyeBest||0)+')'],['Tournament wins',(S.tournamentWins||0)]];
   let html=rows.map(r=>'<div class="stat-line"><span class="sl-label">'+r[0]+'</span><span class="sl-val">'+r[1]+'</span></div>').join('');
-  // V0.9 Prestige
-  const pl=S.prestige||0;
-  html+='<div class="stat-line"><span class="sl-label">Prestige</span><span class="sl-val">'+pl+' / '+PRESTIGE_MAX+(pl>0?' (+'+(pl*10)+'% coins)':'')+'</span></div>';
+  // V0.9.8.6: the two worlds prestige independently, so both are reported.
+  [['salt','Saltwater','coins'],['fresh','Freshwater','cash']].forEach(function(row){
+    const wid=row[0], label=row[1], cur=row[2];
+    const lvl=prestigeOf(wid);
+    html+='<div class="stat-line"><span class="sl-label">'+label+' prestige</span><span class="sl-val">'
+      +lvl+' / '+PRESTIGE_MAX+(lvl>0?' (+'+(lvl*10)+'% '+cur+')':'')+'</span></div>';
+  });
   const pets=ownedPets();
   if(pets.length)html+='<div class="stat-line"><span class="sl-label">Pets</span><span class="sl-val" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;">'+pets.map(function(p){return '<img src="'+petImgSrc(p.id)+'" alt="'+p.name+'" title="'+p.name+'" style="width:22px;height:15px;object-fit:cover;border-radius:3px;vertical-align:middle;">';}).join('')+'</span></div>';
-  if(prestigeEligible()){
-    const caught=nonUltraSpecies().filter(function(f){return S.caught[f.id]>0;}).length;
-    html+='<div style="margin-top:10px;padding:11px;border-radius:12px;background:linear-gradient(135deg,#3a2150,#5a2a8a);color:#fff;text-align:center;">'
-      +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">Prestige available!</div>'
-      +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every inshore, nearshore &amp; offshore species ('+caught+'). Reset progress for a permanent +'+((pl+1)*10)+'% coin bonus and a new pet.</div>'
-      +'<button onclick="prestigeFromStats()" style="padding:8px 18px;border:none;border-radius:9px;background:#ffb347;color:#3a2a08;font-family:\'Fredoka\';font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #c47f1f;">Prestige '+pl+' → '+(pl+1)+'</button>'
-      +'</div>';
-  }else if(pl<PRESTIGE_MAX){
-    const remain=nonUltraSpecies().filter(function(f){return !(S.caught[f.id]>0);}).length;
-    html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">Catch every non-Ultra species to Prestige, <b>'+remain+'</b> to go.</div>';
-  }
+  [['salt','Saltwater','coin','inshore, nearshore &amp; offshore'],
+   ['fresh','Freshwater','cash','Midwest, Southern, Northern &amp; Mountains']].forEach(function(row){
+    const wid=row[0], label=row[1], cur=row[2], blurb=row[3];
+    const lvl=prestigeOf(wid), pool=nonUltraSpecies(wid);
+    if(prestigeEligible(wid)){
+      const caught=pool.filter(function(f){return S.caught[f.id]>0;}).length;
+      html+='<div style="margin-top:10px;padding:11px;border-radius:12px;background:linear-gradient(135deg,#3a2150,#5a2a8a);color:#fff;text-align:center;">'
+        +'<div style="font-weight:800;font-family:\'Fredoka\';font-size:14px;">'+label+' prestige available!</div>'
+        +'<div style="font-size:11.5px;opacity:.9;margin:4px 0 8px;">You’ve caught every '+blurb+' species ('+caught+'). Resets only your '+label.toLowerCase()+' progress, for a permanent +'+((lvl+1)*10)+'% '+cur+' bonus and a new pet.</div>'
+        +'<button onclick="prestigeFromStats(\''+wid+'\')" style="padding:8px 18px;border:none;border-radius:9px;background:#ffb347;color:#3a2a08;font-family:\'Fredoka\';font-weight:800;font-size:13px;cursor:pointer;box-shadow:0 3px 0 #c47f1f;">Prestige '+lvl+' → '+(lvl+1)+'</button>'
+        +'</div>';
+    }else if(lvl<PRESTIGE_MAX){
+      const remain=pool.filter(function(f){return !(S.caught[f.id]>0);}).length;
+      html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:8px;">'+label+' prestige: <b>'+remain+'</b> species to go.</div>';
+    }
+  });
   html+='<div style="font-size:11px;color:var(--text-soft);text-align:center;margin-top:6px;">Sound &amp; graphics are in the &#9881; Settings tab.</div>';
   // Achievements section
   html+='<div class="ach-section">'+renderAchievementSections(S.achievements||{},true)+'</div>';
@@ -15618,24 +15748,76 @@ function clancyFishAtLastCast(){
   // Match the structures logbook exactly: fish whose structure list includes this
   // spot, in this region (no open-water-everywhere additions).
   return FISH.filter(function(f){
-    if(f.surf||f.zone!==zone)return false;
+    // Surf sharks and the Alaskan ice roster are caught through their own modes,
+    // never off a normal spot, so listing them here would be a lie.
+    if(f.surf||f.ice||f.alaska)return false;
+    if(f.zone!==zone)return false;
     return (f.structure||[]).includes(alias);
   });
 }
+// ---- Clancy's advice must mirror poolNow() exactly ------------------------
+// Everything below is derived from the SAME rules the bite actually uses. If
+// poolNow() changes, these have to change with it, or Clancy starts lying.
+
+// A lure draws a fish if it TARGETS it by id, or (when it has no target list)
+// if its bait profile overlaps the fish's. poolNow() accepts both; Clancy used
+// to check only the first, so it wrongly reported "won't take a lure" for
+// everything catchable on a general-purpose lure.
+function clancyLureWorks(l, f){
+  if(typeof l.zone==='number'&&l.zone!==f.zone)return false;
+  if(l.targets&&l.targets.length)return l.targets.indexOf(f.id)>=0;
+  return !!(l.baits&&l.baits.some(function(lb){return (f.baits||[]).includes(lb);}));
+}
 // Methods that actually work for this fish in its region: the method must be
-// available in the zone, and artificial methods need a lure that targets the fish.
+// legal in the zone, and artificial methods need a lure that will draw it.
 function clancyUsableMethods(f){
   return (f.methods||[]).filter(function(mid){
     const m=METHODS.find(function(x){return x.id===mid;});
     if(!m||!m.zones.includes(f.zone))return false;
-    if(m.snag)return true;                 // needs no lure, so nothing to look up
-    if(!m.bait)return LURES.some(function(l){return l.methods.includes(mid)&&(typeof l.zone!=='number'||l.zone===f.zone)&&l.targets&&l.targets.includes(f.id);});
+    if(m.snag||m.ice)return true;          // needs no lure, so nothing to look up
+    if(!m.bait)return LURES.some(function(l){return l.methods.includes(mid)&&clancyLureWorks(l, f);});
     return true;
   });
 }
-// Lures that target this fish in its region (empty = can't be caught on a lure).
+// Lures that will draw this fish in its region (empty = bait only).
 function clancyLures(f){
-  return LURES.filter(function(l){return l.targets&&l.targets.includes(f.id)&&(typeof l.zone!=='number'||l.zone===f.zone);});
+  return LURES.filter(function(l){return (l.methods||[]).some(function(mid){
+    const m=METHODS.find(function(x){return x.id===mid;});
+    return m&&m.zones.includes(f.zone);
+  })&&clancyLureWorks(l, f);});
+}
+// The tackle category a method uses IN THIS FISH'S WORLD. `jig`, `bottom`,
+// `troll` and `livebait` are shared method ids with different tackle in each
+// world, so reading m.cat directly handed freshwater fish saltwater rigs.
+function clancyTackleFor(f, methodIds){
+  const fresh=worldOf(f.zone)==='fresh';
+  const rid=fresh?regionIdOf(f.zone):null;
+  const cats=[...new Set(methodIds.map(function(mid){
+    const m=METHODS.find(function(x){return x.id===mid;});
+    if(!m)return null;
+    return (fresh&&m.fwcat)?m.fwcat:m.cat;
+  }).filter(Boolean))];
+  return [...new Set(cats.map(function(cat){
+    if(cat==='jig'||cat==='trolllure')return 'a lure';
+    const pick=TACKLE.filter(function(tt){
+      if(tt.cat!==cat||tt.reward||tt.surfGear)return false;
+      if((tt.world||'salt')!==(fresh?'fresh':'salt'))return false;
+      return !fresh||itemInRegion(tt, rid);
+    })[0]||TACKLE.find(function(tt){return tt.cat===cat;});
+    return pick?pick.name:cat;
+  }))];
+}
+// Only the baits actually SOLD where this fish lives. Region-locked bait meant
+// Clancy was naming baits you cannot buy in that region.
+function clancyBaits(f){
+  const fresh=worldOf(f.zone)==='fresh';
+  const rid=fresh?regionIdOf(f.zone):null;
+  return (f.baits||[]).filter(function(bid){
+    const b=BAIT.find(function(x){return x.id===bid;});
+    if(!b)return false;
+    if((b.world||'salt')!==(fresh?'fresh':'salt'))return false;
+    return !fresh||itemInRegion(b, rid);
+  }).map(function(bid){const b=BAIT.find(function(x){return x.id===bid;});return b?b.name:bid;});
 }
 function _clancyHead(){return '<div class="clancy-head"><span class="clancy-head-face">'+CLANCY_SVG+'</span><span class="clancy-head-name">Captain Clancy</span></div>';}
 function openClancyInfo(){
@@ -15661,20 +15843,42 @@ function clancyFishDetail(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
   const usable=clancyUsableMethods(f);
   const methods=usable.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.name:mid;}).join(', ')||'none';
-  const baits=f.baits.map(function(bid){const b=BAIT.find(x=>x.id===bid);return b?b.name:bid;}).join(', ');
-  const cats=[...new Set(usable.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
-  const tackle=[...new Set(cats.map(function(cat){if(cat==='jig'||cat==='trolllure')return 'a lure';const tk=TACKLE.find(function(tt){return tt.cat===cat&&!tt.reward&&!tt.surfGear;})||TACKLE.find(function(tt){return tt.cat===cat;});return tk?tk.name:cat;}))].join(', ')||'none';
+  const tackle=clancyTackleFor(f, usable).join(', ')||'none';
+  const baitList=clancyBaits(f);
   const lures=clancyLures(f).map(function(l){return l.name;});
+  // Bait row has to admit when a fish takes NO bait sold here — an artificial-only
+  // species (or one whose baits are stocked in another region) is a dead end
+  // otherwise, and Clancy used to list baits you could not buy.
+  const baitRow=baitList.length
+    ? '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitList.join(', ')+'</span></div>'
+    : '<div class="mrow"><span class="ml">Best baits</span><span class="mv">None sold here — this one comes on artificials.</span></div>';
   const lureRow=lures.length
     ? '<div class="mrow"><span class="ml">Lures</span><span class="mv">'+lures.join(', ')+'</span></div>'
     : '<div class="mrow"><span class="ml">Lures</span><span class="mv">None, this one won’t take a lure. Use bait.</span></div>';
+  // Season, time, leader and line all gate the bite or the landing, and none of
+  // them were mentioned. A player throwing the right bait at the wrong season
+  // was being told they had it right.
+  const inSeason=f.season.includes('all')||f.season.includes(seasonNow());
+  const seasonTxt=f.season.includes('all')?'Year-round'
+    :f.season.map(function(s){return SEASON_LABEL[s]||s;}).join(', ')+(inSeason?' — in season now':' — out of season, bites are rare');
+  const ph=phaseOf(hourNow());
+  const timeOK=f.time.includes('all')||f.time.includes(ph);
+  const timeTxt=f.time.includes('all')?'Any time'
+    :f.time.map(function(x){return x.charAt(0).toUpperCase()+x.slice(1);}).join(', ')+(timeOK?' — good right now':' — wrong window, they’re slow');
+  const leaderTxt=f.leader==='wire'?'Wire — it’ll bite clean through anything else'
+    :f.leader==='fluoro'?'Fluorocarbon — line-shy, it spooks off heavy leader'
+    :'Any leader will do';
   const modal=document.getElementById('modal');
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()
     +'<div class="clancy-tip"><b>'+f.name+'</b>, here\'s what they fancy:</div>'
     +'<div class="mrow"><span class="ml">Methods</span><span class="mv">'+methods+'</span></div>'
     +'<div class="mrow"><span class="ml">Tackle</span><span class="mv">'+tackle+'</span></div>'
-    +'<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baits+'</span></div>'
+    +baitRow
     +lureRow
+    +'<div class="mrow"><span class="ml">Leader</span><span class="mv">'+leaderTxt+'</span></div>'
+    +'<div class="mrow"><span class="ml">Season</span><span class="mv"'+(inSeason?'':' style="color:#b3402a;"')+'>'+seasonTxt+'</span></div>'
+    +'<div class="mrow"><span class="ml">Best time</span><span class="mv"'+(timeOK?'':' style="color:#b3402a;"')+'>'+timeTxt+'</span></div>'
+    +'<div class="mrow"><span class="ml">Line</span><span class="mv">'+f.line+' lb+ to land one</span></div>'
     +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>';
 }
 // Clancy's offshore sailboat: a fixed spot in the bluewater you can sail up to.
