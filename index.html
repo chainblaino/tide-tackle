@@ -6654,6 +6654,10 @@ function normalizeState(){
   if(typeof S.everSwapped!=='boolean')S.everSwapped=false;
   if(typeof S.iceUnlocked!=='boolean')S.iceUnlocked=false;
   if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
+  // Anyone who bought the auger before it was wired up spent 700 cash on a dead
+  // inventory row. They paid for it, so honour it rather than making them buy it
+  // twice — the tackle entry is the receipt.
+  if(!S.iceAuger&&S.tackleInv&&S.tackleInv.iceauger)S.iceAuger=true;
   // V0.9.8.1 freshwater ultra rewards. All three are permanent once earned.
   if(typeof S.greenIce!=='boolean')S.greenIce=false;         // Greenland Shark: season dial
   if(typeof S.sturgeonEggs!=='boolean')S.sturgeonEggs=false; // Alabama Sturgeon: endless bait
@@ -16386,6 +16390,9 @@ function renderShop(){
     }).map(t=>{
     if(t.id==='hook1440'){const own=S.surfHook;const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(coinCanAfford(t.cost)?'':'cant')+'">'+coinIcon()+t.cost+'</span>';
       return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="hook1440"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
+    if(t.iceGear){const own=!!S.iceAuger;
+      const action=own?'<span class="shop-action equipped-tag">Owned</span>':'<span class="shop-action buy '+(coinCanAfford(t.cost)?'':'cant')+'">'+coinIcon()+t.cost+'</span>';
+      return '<div class="shop-item '+(own?'equipped':'')+'" data-kind="tackle" data-id="'+t.id+'"><div class="shop-icon">'+svgIcon(t.icon)+'</div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div>'+action+'</div>';}
     if(t.id==='tooth_hook'&&S.toothHook){return '<div class="shop-item equipped" data-kind="tackle" data-id="tooth_hook"><div class="shop-icon"><span class="ultra-glint">'+svgIcon(t.icon)+'</span></div><div class="shop-info"><div class="shop-name">'+t.name+'</div><div class="shop-desc">'+t.desc+'</div></div><span class="shop-action equipped-tag">Owned</span></div>';}
     const inv=S.tackleInv[t.id];const own=t.id==='tooth_hook'?S.toothHook:(inv&&inv.qty>0);const meth=METHODS.find(m=>methodCat(m)===t.cat);
     return shopRow(t,'tackle',own, false,' \u00b7 '+(meth?meth.name:'Jighead / Circle')+' \u00b7 '+(t.id==='tooth_hook'?'unbreakable':'durability '+t.dur)+(own&&inv?' \u00b7 own x'+inv.qty:''),false);}).join('');
@@ -16511,6 +16518,16 @@ document.getElementById('shop-list').addEventListener('click',e=>{
   const kind=item.dataset.kind, id=item.dataset.id;
   if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
     if(t.surfGear){if(S.surfHook){toast('You already own the 14/0 Circle Hook.','#b58b53');return;}if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(t.cost);S.surfHook=true;toast('Bought the 14/0 Circle Hook! Surf rig ready.','#2aa890');updateRigBar();renderShop();queueSave();return;}
+    // The auger is a ONE-TIME UNLOCK, not a consumable — same shape as the surf
+    // hook above. Without this branch it fell through to the generic tackle path,
+    // which stocked an inert inventory row and never set the flag iceGearOK()
+    // actually reads, so the Drill button stayed hidden however many you bought.
+    if(t.iceGear){if(S.iceAuger){toast('You already own the '+t.name+'.','#b58b53');return;}
+      if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}
+      if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}
+      coinSpend(t.cost);S.iceAuger=true;
+      toast('Bought the '+t.name+'! Find hard water and drill in.','#2aa890');
+      updateRigBar();if(typeof updateIceButton==='function')updateIceButton();renderShop();queueSave();return;}
     if(S.level<t.lvl){toast('Reach Level '+t.lvl+' first.','#b58b53');return;}if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(t.cost);const inv=S.tackleInv[id];if(inv){inv.qty+=t.pack;}else{S.tackleInv[id]={qty:t.pack, dur:t.dur};}toast('Bought '+t.name+' (x'+t.pack+')','#2aa890');ensureRig();}
   else if(kind==='bait'){const bt=BAIT.find(x=>x.id===id);if(S.level<bt.lvl){toast('Reach Level '+bt.lvl+' first.','#b58b53');return;}if(!coinCanAfford(bt.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(bt.cost);S.baitInv[id]=(S.baitInv[id]||0)+bt.pack;toast('Bought '+bt.name+' (x'+bt.pack+')','#2aa890');ensureRig();if(tut&&tut.active)tutNotify('buybait');}
   else if(kind==='cosmetic'){
