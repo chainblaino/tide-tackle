@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Tide & Tackle">
 <meta name="theme-color" content="#10212e">
 <meta name="format-detection" content="telephone=no">
-<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.8.9</title>
+<title>Tide &amp; Tackle: Salt &amp; Freshwater Fishing Simulator V 0.9.9</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -61,6 +61,20 @@
   /* The line is drawn, not stacked: one SVG spanning the whole scene, so it can
      start at the rod tip wherever the bend has put it and finish in the hole. */
   .ice-lineart{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+  /* The Heater, once built: stood on the ice to the left of the hole, opposite
+     the rod. The glow is a separate layer under the body so it spills onto the
+     ice rather than lighting up the metal. */
+  /* Set back on the ice to the upper-left: bottom:20% put it underneath the
+     flasher bucket, which paints later and hid the body entirely. */
+  .ice-heater{position:absolute;left:7%;bottom:44%;width:74px;height:90px;pointer-events:none;display:none;}
+  .ice-heater.show{display:block;}
+  .ice-heater svg{width:100%;height:100%;overflow:visible;}
+  .ice-heat-glow{position:absolute;left:-36px;bottom:-22px;width:146px;height:124px;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 62%,rgba(255,158,58,.40),rgba(255,120,30,.14) 45%,rgba(255,110,20,0) 72%);
+    animation:heatFlicker 2.7s ease-in-out infinite;}
+  @keyframes heatFlicker{0%,100%{opacity:.82;transform:scale(1);}42%{opacity:1;transform:scale(1.05);}68%{opacity:.9;transform:scale(.985);}}
+  .ice-heat-flame{animation:heatFlame 1.5s ease-in-out infinite;transform-origin:50% 100%;}
+  @keyframes heatFlame{0%,100%{transform:scaleY(1) scaleX(1);}35%{transform:scaleY(1.16) scaleX(.94);}70%{transform:scaleY(.93) scaleX(1.05);}}
   .ice-rod{position:absolute;right:9%;bottom:0;width:150px;height:52%;transform-origin:100% 100%;
     transform:rotate(-13deg);transition:transform .1s;}
   .ice-rod.bent{transform:rotate(-30deg);}
@@ -957,7 +971,7 @@
 <div class="auth-overlay" id="auth-overlay">
   <div class="auth-box">
     <div class="auth-logo">Tide & Tackle</div>
-    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.8.9</div>
+    <div class="auth-sub">Salt &amp; Freshwater Fishing Simulator &nbsp;·&nbsp; V 0.9.9</div>
     <div class="auth-tabs">
       <button class="auth-tab active" id="tab-login" onclick="showAuthTab('login')">Log In</button>
       <button class="auth-tab" id="tab-signup" onclick="showAuthTab('signup')">Create Account</button>
@@ -1033,6 +1047,7 @@
   <div class="ice-field"></div>
   <div class="ice-shavings"></div>
   <div class="ice-hole"></div>
+  <div class="ice-heater" id="ice-heater"></div>
   <div class="ice-rod" id="ice-rod"></div>
   <svg class="ice-lineart" id="ice-lineart" width="100%" height="100%">
     <path id="ice-linetip" fill="none" stroke="#f2fbff" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
@@ -2512,7 +2527,7 @@ function startLobbyBrowse(){
   el.innerHTML='<div class="lb-empty">Loading…</div>';
   _lobbyCache=[];
   _lobbyListUnsub=fbDb.collection(LOBBY_COLL).where('status','==','open').onSnapshot(function(snap){
-    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};if(dd.kind!=='lobby')return;dd._id=doc.id;_lobbyCache.push(dd);});
+    _lobbyIngest(snap);
     renderMpLobbyList();
   },function(){const e2=document.getElementById('mp-lobby-list');if(e2)e2.innerHTML='<div class="lb-empty">Could not load lobbies.</div>';});
 }
@@ -3413,6 +3428,58 @@ const LOBBY_MAX=25;
 // silently fail and nothing shows up in Join). Lobby docs are tagged kind:'lobby'
 // and use status 'open'/'starting', which never collide with old session docs.
 const LOBBY_COLL='challenges';
+// ---- Lobby expiry (V0.9.9) --------------------------------------------------
+// A hosted lobby only counts as open while its host is still there. The host
+// stamps the doc on a heartbeat; a lobby whose stamp has stopped advancing drops
+// out of the browser and refuses joins.
+//
+// The beat matches PRESENCE_MS rather than being second-accurate — every open
+// lobby writing to Firestore is a billed write, and the same reasoning already
+// governs presence. The staleness window is far wider than the beat so a live
+// room can never flicker out between two heartbeats.
+const LOBBY_BEAT_MS=PRESENCE_MS;          // 90s
+const LOBBY_STALE_MS=4*60*1000;           // ~2.6 missed beats before a room is written off
+let _lobbyBeat=null, _lobbySeen={};
+function hostingLobby(){return !!(gameLobby&&gameLobby.isHost&&fbDb);}
+function startLobbyBeat(){
+  stopLobbyBeat();
+  if(!hostingLobby())return;
+  const beat=function(){
+    if(!hostingLobby()){stopLobbyBeat();return;}
+    fbDb.collection(LOBBY_COLL).doc(gameLobby.id).update({hostSeen:Date.now()}).catch(function(){});
+  };
+  beat();
+  _lobbyBeat=setInterval(beat, LOBBY_BEAT_MS);
+}
+function stopLobbyBeat(){if(_lobbyBeat){clearInterval(_lobbyBeat);_lobbyBeat=null;}}
+// The host ending the session takes the room down with them, immediately.
+function closeHostedLobby(){
+  if(!hostingLobby())return;
+  const id=gameLobby.id;
+  stopLobbyBeat();
+  fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});
+}
+// Is this lobby doc still being tended?
+//
+// NEVER compares the host's clock to ours — two phones can be minutes apart, and
+// that skew would either hide live rooms or keep dead ones. Instead we record, on
+// OUR clock, when each doc's stamp last CHANGED. Same technique the position sync
+// uses for exactly the same reason.
+function _lobbyIngest(snap){
+  const now=Date.now(), out=[], live={};
+  snap.forEach(function(doc){
+    const dd=doc.data()||{};
+    if(dd.kind!=='lobby')return;            // the collection is shared with friends sessions
+    dd._id=doc.id;
+    const stamp=(typeof dd.hostSeen==='number')?dd.hostSeen:(dd.createdAt||0);
+    const seen=_lobbySeen[dd._id];
+    if(!seen||seen.stamp!==stamp)_lobbySeen[dd._id]={stamp:stamp, at:now};
+    live[dd._id]=1;
+    if(now-_lobbySeen[dd._id].at<LOBBY_STALE_MS)out.push(dd);
+  });
+  Object.keys(_lobbySeen).forEach(function(id){if(!live[id])delete _lobbySeen[id];});
+  _lobbyCache=out;
+}
 let gameLobby=null, _lobbyListUnsub=null, _lobbyDocUnsub=null, _lobbyCountdownInt=null, _lobbyCache=[];
 let _lobbyDraft=null;
 function requireOnlineForLobby(){
@@ -3524,7 +3591,7 @@ function publishLobby(){
   gameLobby={id:id, name:d.name.trim(), host:fbUser.uid, hostName:fbUsername, seed:seed, isHost:true, started:false, settings:settings, players:{}};
   gameLobby.players[fbUser.uid]={username:fbUsername, level:(S.level||1), sp:0, best:0};
   fbDb.collection(LOBBY_COLL).doc(id).set({ kind:'lobby', host:fbUser.uid, hostName:fbUsername, name:gameLobby.name, seed:seed,
-    settings:settings, status:'open', createdAt:Date.now(), players:gameLobby.players }).catch(function(){toast('Could not open the lobby.','#b3402a');});
+    settings:settings, status:'open', createdAt:Date.now(), hostSeen:Date.now(), players:gameLobby.players }).catch(function(){toast('Could not open the lobby.','#b3402a');});
   closeModal();
   openLobbyRoom();
 }
@@ -3540,6 +3607,7 @@ function _renderLobbyPlayers(){
 }
 function openLobbyRoom(){
   if(!gameLobby)return;
+  startLobbyBeat();   // no-op unless we are the host; keeps running through the match
   document.getElementById('menu-panel').classList.remove('show');
   document.getElementById('menu-bg').classList.remove('show');
   document.getElementById('session-title').textContent=gameLobby.name;
@@ -3641,7 +3709,7 @@ function openJoinLobby(){
   _lobbyCache=[];
   if(_lobbyListUnsub){_lobbyListUnsub();_lobbyListUnsub=null;}
   _lobbyListUnsub=fbDb.collection(LOBBY_COLL).where('status','==','open').onSnapshot(function(snap){
-    _lobbyCache=[];snap.forEach(function(doc){const dd=doc.data()||{};if(dd.kind!=='lobby')return;dd._id=doc.id;_lobbyCache.push(dd);});
+    _lobbyIngest(snap);
     _renderLobbyList();
   },function(){const el=document.getElementById('lobby-list');if(el)el.innerHTML='<div class="lb-empty">Could not load lobbies.</div>';});
 }
@@ -3665,6 +3733,13 @@ function joinLobby(id){
     if(!d.exists){toast('That lobby is gone.','#b58b53');return;}
     const data=d.data()||{};
     if(data.status!=='open'){toast('That lobby already started.','#b58b53');return;}
+    // The host may have vanished since the list was drawn.
+    const _stamp=(typeof data.hostSeen==='number')?data.hostSeen:(data.createdAt||0);
+    if(_stamp&&(Date.now()-_stamp)>LOBBY_STALE_MS*2){
+      toast('That lobby has closed \u2014 the host left.','#b58b53');
+      fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});
+      return;
+    }
     const cap=(data.settings&&data.settings.size)||25;
     if(Object.keys(data.players||{}).length>=cap){toast('That lobby is full.','#b58b53');return;}
     const gb=(data.settings&&data.settings.goldBuyIn)||0;
@@ -3680,13 +3755,20 @@ function joinLobby(id){
   }).catch(function(){toast('Could not join.','#b3402a');});
 }
 function _teardownLobbyRoom(){
+  stopLobbyBeat();
   if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
   if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
   gameLobby=null;
 }
+// Best effort: a delete queued during unload often lands, and when it does not
+// the heartbeat going quiet expires the room anyway. Both, so the common case is
+// instant and the crash case still resolves.
+window.addEventListener('pagehide',function(){try{closeHostedLobby();}catch(e){}});
+window.addEventListener('beforeunload',function(){try{closeHostedLobby();}catch(e){}});
 function leaveLobby(){
   if(!gameLobby)return;
+  stopLobbyBeat();
   const id=gameLobby.id, isHost=gameLobby.isHost;
   if(fbDb){
     if(isHost){fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});}
@@ -5288,11 +5370,13 @@ function initStructures(){
     // the water, so they sit low on the inshore map "connected to the surf". The
     // pier is the longer of the two. Their placement is fixed (not shuffled).
     if(i===0){
-      const beachY=H-200;
+      // Named apart from the global beachY() helper it must agree with; both piers
+      // are laid so their far end lands exactly on the sand.
+      const sandY=H-BEACH_DEPTH;
       const dk=z.structures.find(function(s){return s.kind==='dock';});
       const br=z.structures.find(function(s){return s.kind==='bridge';});
-      if(dk){dk.pierLen=150;dk.x=Math.round(W*0.30);dk.y=beachY-dk.pierLen;}
-      if(br){br.pierLen=250;br.x=Math.round(W*0.70);br.y=beachY-br.pierLen;}
+      if(dk){dk.pierLen=150;dk.x=Math.round(W*0.30);dk.y=sandY-dk.pierLen;}
+      if(br){br.pierLen=250;br.x=Math.round(W*0.70);br.y=sandY-br.pierLen;}
       // Keep the shuffled spots clear of the two piers. Any spot that lands in a
       // pier's vertical lane gets nudged sideways so nothing overlaps the dock/pier.
       const piers=[dk,br].filter(Boolean), clearX=130;
@@ -7654,7 +7738,7 @@ const SIGHT_MAX_PROBE=48;    // ring-probe cap; 36 already fits a full-size fish
 function sightWaterOK(wx, wy){
   if(tourn.active)return true;                    // tournament worlds have no shape
   if(wx<40||wy<40||wx>worldW()-40||wy>worldH()-40)return false;
-  if(S.zone===0&&wy>worldH()-215)return false;    // the inshore surf beach is dry sand
+  if(S.zone===0&&wy>beachY()-15)return false;    // the inshore surf beach is dry sand
   if(!WATER_SHAPE[S.zone])return true;
   return isWaterAt(wx, wy);
 }
@@ -8240,6 +8324,26 @@ function isWaterAt(wx, wy, zi){
 // reads this one predicate, so the drawn shore and the solid shore are always
 // the same shore. Getting this wrong once meant invisible walls.
 function shoreScene(){return !!WATER_SHAPE[S.zone]&&(!tourn.active||isFresh());}
+// ---- THE BEACH (zone 0, south edge) -----------------------------------------
+// One source of truth. Four literals used to encode this — 200 for the draw, 200
+// for the piers, 215 for the water test and 185 for the surf button — so the
+// sand started in a different place depending on which system was asking.
+const BEACH_DEPTH=200;                 // sand occupies the bottom 200px of the inshore
+const BEACH_KEEP=30;                   // hull clearance: a boat floats, it does not beach
+const BEACH_HAIL=64;                   // how close you must be for the surf prompt
+function beachY(){return worldH()-BEACH_DEPTH;}
+function hasBeach(){return S.zone===0&&!tourn.active;}
+// The boat stops in water. Applied wherever the boat is placed OR moved, not just
+// inside the driving branch — initWorld('bottom') drops it at wy=1470, which is
+// already 20px up the sand.
+function keepOffBeach(o){
+  if(!hasBeach())return;
+  const limit=beachY()-BEACH_KEEP;
+  if(o.wy>limit){
+    o.wy=limit;
+    if(o===boat&&o.vy>0)o.vy*=0.25;    // bleed the throttle rather than a hard stop
+  }
+}
 function keepOffWater(o){
   if(tourn.active&&!isFresh())return;
   if(!WATER_SHAPE[S.zone])return;
@@ -10228,6 +10332,168 @@ function drawSwimFish(g, size, color, t){
   const tw=Math.sin(t)*.4;g.beginPath();g.moveTo(-size*.85,0);g.lineTo(-size*1.5,-size*.5+tw*size);g.lineTo(-size*1.5,size*.5+tw*size);g.closePath();g.fill();
 }
 
+// ---- BEACH DRESSING (V0.9.9) ------------------------------------------------
+// The inshore beach was a gradient and one foam line. These are its props: laid
+// out once from a FIXED seed so the same beach greets you every visit, anchored
+// in world X, and culled to the viewport.
+//
+// Not reusing drawLandProps: landPal() resolves to LAND_PAL.midwest on zone 0
+// (curRegionId() falls back to 'midwest' for zones with no .region), so it would
+// paint farm greens and pine trees on the sand.
+const BEACH_PAL={
+  wet:'rgba(176,150,96,0.45)', pool:'rgba(120,164,178,0.5)',
+  grass:'#93b063', grassDk:'#6f8b45',
+  wood:'#ab7a45', woodDk:'#7d5529',
+  shell:'#f7efe2', shellDk:'#dcc9ad',
+  towelA:'#4aa3c7', towelB:'#e0574f', towelC:'#5fb07a',
+  poleA:'#f7f2e6', poleB:'#e0574f',
+  tower:'#c98f4e', towerDk:'#8e6231', roof:'#d8534b',
+  gull:'#f6f6f4', gullDk:'#57646d',
+  castle:'#dcc38a', castleDk:'#c0a469'
+};
+let _beachProps=null,_beachPropsKey='';
+function beachProps(){
+  const W=worldW(), H=worldH(), key=W+'x'+H;
+  if(_beachProps&&_beachPropsKey===key)return _beachProps;
+  const r=mulberry32(0x8EAC4);          // fixed: the same beach every time
+  const y0=beachY(), out=[];
+  // The two piers run down to the sand; keep the dressing out from under them.
+  const piers=[Math.round(W*0.30),Math.round(W*0.70)];
+  function clearOfPier(x, pad){for(let i=0;i<piers.length;i++){if(Math.abs(x-piers[i])<pad)return false;}return true;}
+  function place(pad){for(let i=0;i<24;i++){const x=60+r()*(W-120);if(clearOfPier(x,pad))return x;}return -1;}
+  function push(kind, pad, y, extra){
+    const x=place(pad);if(x<0)return;
+    out.push(Object.assign({kind:kind,x:x,y:y,f:r()},extra||{}));
+  }
+  // back of the beach: dune grass all along, plus the lifeguard tower
+  for(let i=0;i<38;i++){const x=30+r()*(W-60);out.push({kind:'grass',x:x,y:y0+128+r()*58,f:r()});}
+  push('tower',110, y0+120);
+  // the busy middle band
+  for(let i=0;i<7;i++) push('umbrella',80, y0+62+r()*46);
+  for(let i=0;i<6;i++) push('towel',   70, y0+74+r()*44);
+  for(let i=0;i<4;i++) push('castle',  60, y0+56+r()*30);
+  for(let i=0;i<5;i++) push('drift',   60, y0+96+r()*54);
+  push('rowboat',120, y0+104);
+  // the wet strip at the waterline
+  for(let i=0;i<9;i++) push('pool', 50, y0+16+r()*26);
+  for(let i=0;i<22;i++){const x=20+r()*(W-40);out.push({kind:'shell',x:x,y:y0+14+r()*40,f:r()});}
+  // gulls loiter near the water
+  for(let i=0;i<5;i++) push('gull', 40, y0+30+r()*70);
+  out.sort(function(a,b){return a.y-b.y;});   // painter's order: far sand first
+  _beachProps=out;_beachPropsKey=key;
+  return out;
+}
+function drawBeachProps(t, sky){
+  const props=beachProps(), P=BEACH_PAL;
+  const g=ctx;
+  for(let i=0;i<props.length;i++){
+    const p=props[i];
+    const x=Math.round(p.x-camera.x), y=Math.round(p.y-camera.y);
+    if(x<-90||x>CW+90||y<-90||y>CH+90)continue;
+    const f=p.f;
+    switch(p.kind){
+      case 'wet': break;
+      case 'pool':{                              // a shallow tide pool
+        const rx=16+f*22, ry=5+f*5;
+        g.fillStyle=P.pool;g.beginPath();g.ellipse(x,y,rx,ry,0,0,6.283);g.fill();
+        g.strokeStyle='rgba(255,255,255,0.35)';g.lineWidth=1;g.stroke();
+        break;}
+      case 'shell':{
+        g.fillStyle=f<0.5?P.shell:P.shellDk;
+        g.beginPath();g.ellipse(x,y,2.6+f*1.8,1.8+f*1.2,f*3,0,6.283);g.fill();
+        break;}
+      case 'grass':{                             // a tuft of sea oats
+        g.strokeStyle=f<0.5?P.grass:P.grassDk;g.lineWidth=1.6;g.lineCap='round';
+        const sway=Math.sin(t*0.9+f*6.28)*2.4, n=3+Math.round(f*3);
+        for(let k=0;k<n;k++){
+          const dx=(k-(n-1)/2)*3.2, h=9+f*10+k%2*4;
+          g.beginPath();g.moveTo(x+dx,y);g.quadraticCurveTo(x+dx+sway*0.5,y-h*0.6,x+dx+sway,y-h);g.stroke();
+        }
+        break;}
+      case 'drift':{                             // bleached driftwood
+        const len=26+f*30;
+        g.save();g.translate(x,y);g.rotate(-0.35+f*0.7);
+        g.strokeStyle=P.woodDk;g.lineWidth=7;g.lineCap='round';
+        g.beginPath();g.moveTo(-len/2,0);g.lineTo(len/2,0);g.stroke();
+        g.strokeStyle=P.wood;g.lineWidth=4;
+        g.beginPath();g.moveTo(-len/2,-1);g.lineTo(len/2,-1);g.stroke();
+        if(f>0.5){g.lineWidth=3;g.beginPath();g.moveTo(2,0);g.lineTo(10,-7);g.stroke();}
+        g.restore();
+        break;}
+      case 'castle':{                            // a sandcastle, towers and all
+        const s=0.8+f*0.5;
+        g.save();g.translate(x,y);g.scale(s,s);
+        g.fillStyle=P.castleDk;g.fillRect(-14,-10,28,10);
+        g.fillStyle=P.castle;g.fillRect(-14,-12,28,3);
+        for(let k=-1;k<=1;k++){
+          g.fillStyle=P.castle;g.fillRect(k*10-3.5,-24,7,14);
+          g.fillStyle=P.castleDk;g.beginPath();g.moveTo(k*10-5,-24);g.lineTo(k*10,-31);g.lineTo(k*10+5,-24);g.closePath();g.fill();
+        }
+        g.restore();
+        break;}
+      case 'umbrella':{                          // striped parasol, planted
+        const s=0.85+f*0.4, lean=(f-0.5)*0.22;
+        g.save();g.translate(x,y);g.scale(s,s);g.rotate(lean);
+        g.strokeStyle='#9c8560';g.lineWidth=2.6;g.lineCap='round';
+        g.beginPath();g.moveTo(0,0);g.lineTo(0,-34);g.stroke();
+        for(let k=0;k<6;k++){
+          g.fillStyle=(k%2)?P.poleA:P.poleB;
+          g.beginPath();g.moveTo(0,-36);
+          g.arc(0,-36,20,Math.PI+k*(Math.PI/6),Math.PI+(k+1)*(Math.PI/6));
+          g.closePath();g.fill();
+        }
+        g.fillStyle='#7d6a4c';g.beginPath();g.arc(0,-36,2.4,0,6.283);g.fill();
+        g.restore();
+        break;}
+      case 'towel':{                             // a towel laid out flat
+        const cols=[P.towelA,P.towelB,P.towelC], c=cols[Math.floor(f*3)%3];
+        g.save();g.translate(x,y);g.rotate(-0.5+f*1.0);
+        g.fillStyle='rgba(120,96,52,0.18)';g.fillRect(-15,-9,32,20);
+        g.fillStyle=c;g.fillRect(-16,-10,32,20);
+        g.fillStyle='rgba(255,255,255,0.55)';
+        for(let k=0;k<3;k++)g.fillRect(-16,-10+k*7,32,2.2);
+        g.restore();
+        break;}
+      case 'rowboat':{                           // pulled up above the tideline
+        g.save();g.translate(x,y);g.rotate(-0.18);
+        g.fillStyle=P.woodDk;
+        g.beginPath();g.moveTo(-30,0);g.quadraticCurveTo(0,16,30,0);g.quadraticCurveTo(0,7,-30,0);g.fill();
+        g.fillStyle=P.wood;
+        g.beginPath();g.moveTo(-27,-1);g.quadraticCurveTo(0,12,27,-1);g.quadraticCurveTo(0,4,-27,-1);g.fill();
+        g.strokeStyle=P.woodDk;g.lineWidth=2.4;g.lineCap='round';
+        g.beginPath();g.moveTo(-16,2);g.lineTo(-4,-9);g.stroke();   // an oar
+        g.restore();
+        break;}
+      case 'tower':{                             // lifeguard stand
+        g.save();g.translate(x,y);
+        g.strokeStyle=P.towerDk;g.lineWidth=3.4;g.lineCap='round';
+        g.beginPath();g.moveTo(-13,0);g.lineTo(-9,-20);g.moveTo(13,0);g.lineTo(9,-20);g.stroke();
+        g.fillStyle=P.tower;g.fillRect(-14,-34,28,15);
+        g.fillStyle=P.towerDk;g.fillRect(-14,-22,28,3);
+        g.fillStyle=P.roof;
+        g.beginPath();g.moveTo(-18,-34);g.lineTo(0,-45);g.lineTo(18,-34);g.closePath();g.fill();
+        g.strokeStyle=P.towerDk;g.lineWidth=2;
+        g.beginPath();g.moveTo(-11,-19);g.lineTo(-11,-6);g.stroke();  // ladder rail
+        g.restore();
+        break;}
+      case 'gull':{                              // pottering about, occasionally hopping
+        const hop=Math.max(0,Math.sin(t*1.1+f*6.28))*3;
+        const dir=f<0.5?1:-1;
+        g.save();g.translate(x,y-hop);g.scale(dir,1);
+        g.fillStyle=P.gull;
+        g.beginPath();g.ellipse(0,0,7,4.4,0,0,6.283);g.fill();
+        g.beginPath();g.arc(5.4,-3.4,3,0,6.283);g.fill();
+        g.fillStyle=P.gullDk;
+        g.beginPath();g.moveTo(-7,-1);g.lineTo(-12,-3.5);g.lineTo(-6.5,1.5);g.closePath();g.fill();
+        g.fillStyle='#e8a33d';
+        g.beginPath();g.moveTo(7.8,-3.2);g.lineTo(11.4,-2.4);g.lineTo(7.8,-1.6);g.closePath();g.fill();
+        g.strokeStyle='#d8973a';g.lineWidth=1.2;
+        g.beginPath();g.moveTo(-1,4);g.lineTo(-1,7);g.moveTo(2,4);g.lineTo(2,7);g.stroke();
+        g.restore();
+        break;}
+    }
+  }
+}
 // A dock / pier: a plank walkway that runs vertically from the beach (bottom)
 // out to a fishing head in the water (top, at x, y). The pier is the longer one.
 function drawPier(g, x, y, len, t, dark, isPier){
@@ -13006,6 +13272,7 @@ function render(ts){
     boat.wx+=boat.vx*frameScale;boat.wy+=boat.vy*frameScale;
     boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
+    keepOffBeach(boat);        // the inshore sand is not navigable
     keepOffStructures(boat);   // can't park on a spot in multiplayer
     const sp=Math.hypot(boat.vx, boat.vy);
     if(sp>0.25)boat.heading=Math.atan2(boat.vy, boat.vx)+Math.PI/2;
@@ -13015,9 +13282,10 @@ function render(ts){
     // gate proximity
     for(const gt of gatesFor()){if(dist(boat.wx, boat.wy, gt.wx, gt.wy)<85){tryGate(gt);break;}}
   }
-  // Freshwater banks are solid whether you're under way or sitting still, so this
-  // runs every frame rather than only inside the driving branch.
-  keepOffWater(boat);
+  // Freshwater banks and the inshore sand are solid whether you're under way or
+  // sitting still, so these run every frame rather than only inside the driving
+  // branch — initWorld('bottom') spawns the boat past the waterline.
+  keepOffWater(boat);keepOffBeach(boat);
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
   updateSurfButton();updateIceButton();
   if(surfActive)updateSurfSky();
@@ -13095,15 +13363,23 @@ function render(ts){
 
   // Beach at the south edge of the inshore, drive here to surf fish.
   if(S.zone===0&&!tourn.active){
-    const beachTop=(worldH()-200)-camera.y;
+    const beachTop=beachY()-camera.y;
     if(beachTop<CH){
       const top=Math.max(0,beachTop);
       const sg=ctx.createLinearGradient(0,beachTop,0,beachTop+200);
       sg.addColorStop(0,'rgba(228,208,150,0)');sg.addColorStop(0.22,'rgba(228,208,150,0.55)');
       sg.addColorStop(0.5,'#e7d29a');sg.addColorStop(1,'#d6bd80');
       ctx.fillStyle=sg;ctx.fillRect(0,top, CW, CH-top);
+      // a darker band of wet sand the swash keeps re-wetting
+      const wet=ctx.createLinearGradient(0,beachTop+10,0,beachTop+52);
+      wet.addColorStop(0,'rgba(168,142,90,0.34)');wet.addColorStop(1,'rgba(168,142,90,0)');
+      ctx.fillStyle=wet;ctx.fillRect(0,Math.max(0,beachTop+10),CW,52);
       ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=4;
       ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=beachTop+24+Math.sin(x*.03+t*1.2)*4;if(x<=-10)ctx.moveTo(x, y);else ctx.lineTo(x, y);}ctx.stroke();
+      try{drawBeachProps(t, sky);}catch(e){}
+      // The beach paints AFTER the day/night tint, which is why the sand has
+      // always stayed noon-bright at midnight. Tint the sand band on its own.
+      if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.5).toFixed(3)+')';ctx.fillRect(0,top,CW,CH-top);}
       if(S.surfUnlocked){ctx.fillStyle='rgba(70,46,20,0.85)';ctx.font='700 13px Fredoka, system-ui, sans-serif';ctx.textAlign='center';ctx.fillText('▼  SURF FISHING  ▼',CW/2,Math.max(16,beachTop+74));ctx.textAlign='left';}
     }
   }
@@ -13590,7 +13866,17 @@ const PROJECTS=[
   {id:'submarine', name:'Ruby Submarine', icon:'submarine',
    blurb:'Surfaces in the offshore once a day, tap it for 10 free rubies.',
    parts:[{id:'sub_prop',zone:0,name:'Sub Propeller'},{id:'sub_rudder',zone:1,name:'Sub Rudder'},{id:'sub_periscope',zone:2,name:'Sub Periscope'}]},
+  // The first FRESHWATER project, so it has four parts rather than three — one
+  // per region. Parts drop on ordinary casts in each region; the finished heater
+  // is only ever used through the ice.
+  {id:'heater', name:'Ice Shanty Heater', icon:'heater', world:'fresh',
+   blurb:'Burns beside your hole. Alaskan ice pays +1 ruby a fish; Northern ice pays +20% cash.',
+   parts:[{id:'heat_burner',zone:3,name:'Brass Burner Head'},{id:'heat_tank',zone:4,name:'Fuel Canister'},
+          {id:'heat_coil',zone:5,name:'Copper Heat Coil'},{id:'heat_housing',zone:6,name:'Steel Housing'}]},
 ];
+// Built AND usable right now: projects are an open-world reward, never a
+// multiplayer one, matching maybeCatchProjectPart's own mpActive() guard.
+function heaterOn(){return projectBuilt('heater')&&!mpActive();}
 function projectById(id){return PROJECTS.find(function(p){return p.id===id;});}
 function projectPartCount(proj){if(!S.projectParts)return 0;return proj.parts.reduce(function(n, pt){return n+(S.projectParts[pt.id]?1:0);},0);}
 function projectBuilt(id){const p=projectById(id);return !!p&&projectPartCount(p)>=p.parts.length;}
@@ -13819,6 +14105,7 @@ function enterIce(mode){
   iceFish=null;iceFishState='none';iceTrailJig=[];iceTrailFish=[];iceRevs=[];iceAttract=0;
   iceSpawnAt=performance.now()+1400;
   document.getElementById('ice-rod').innerHTML=buildIceRod();
+  updateIceHeater();
   document.getElementById('ice-hole-depth').textContent=iceHoleFt+' ft of water';
   document.getElementById('ice-overlay').classList.add('show');
   iceDrawLine();                       // before the first frame, or it snaps into place
@@ -13835,6 +14122,40 @@ function leaveIce(){
   queueSave();
 }
 function setIceStatus(m){const e=document.getElementById('ice-status');if(e)e.textContent=m;}
+// A squat kerosene heater: tank, grille and a live flame behind it.
+function buildHeaterSVG(){
+  return '<div class="ice-heat-glow"></div>'
+    +'<svg viewBox="0 0 92 112" preserveAspectRatio="xMidYMax meet">'
+    // handle
+    +'<path d="M30,26 Q46,8 62,26" fill="none" stroke="#5d6870" stroke-width="5" stroke-linecap="round"/>'
+    // body
+    +'<rect x="20" y="26" width="52" height="20" rx="6" fill="#57646d"/>'
+    +'<rect x="16" y="42" width="60" height="46" rx="8" fill="#6b7a85"/>'
+    +'<rect x="16" y="42" width="60" height="46" rx="8" fill="none" stroke="#46535c" stroke-width="2.5"/>'
+    // the burner opening, with the flame behind the grille
+    +'<rect x="24" y="50" width="44" height="30" rx="5" fill="#2a1a10"/>'
+    +'<g class="ice-heat-flame">'
+    +'<path d="M46,78 Q34,68 38,58 Q42,64 46,52 Q50,64 54,58 Q58,68 46,78Z" fill="#ff9a2e"/>'
+    +'<path d="M46,78 Q39,70 42,62 Q45,67 46,58 Q49,67 50,62 Q53,70 46,78Z" fill="#ffd66a"/>'
+    +'</g>'
+    // grille bars over the flame
+    +'<g stroke="#3c474e" stroke-width="2.2">'
+    +'<line x1="24" y1="57" x2="68" y2="57"/><line x1="24" y1="65" x2="68" y2="65"/><line x1="24" y1="73" x2="68" y2="73"/>'
+    +'</g>'
+    +'<rect x="24" y="50" width="44" height="30" rx="5" fill="none" stroke="#46535c" stroke-width="2.5"/>'
+    // fuel tank and feet
+    +'<rect x="26" y="88" width="40" height="12" rx="4" fill="#8b5a2b"/>'
+    +'<circle cx="70" cy="94" r="6" fill="#c9a24a" stroke="#8a6c2e" stroke-width="2"/>'
+    +'<rect x="22" y="99" width="9" height="8" rx="2" fill="#46535c"/>'
+    +'<rect x="61" y="99" width="9" height="8" rx="2" fill="#46535c"/>'
+    +'</svg>';
+}
+function updateIceHeater(){
+  const el=document.getElementById('ice-heater');if(!el)return;
+  const on=heaterOn();
+  el.classList.toggle('show', on);
+  if(on&&!el.dataset.built){el.innerHTML=buildHeaterSVG();el.dataset.built='1';}
+}
 function buildIceRod(){
   return '<svg viewBox="0 0 150 200" preserveAspectRatio="none">'
     +'<path d="M148,196 L34,26" stroke="#2f3a42" stroke-width="7" stroke-linecap="round" fill="none"/>'
@@ -15141,8 +15462,16 @@ function sdewMeterScale(){
 //                        epic 1.12 · legendary 1.14 · ultra 1.16
 //
 // Combined with sdewDifficultyFor()'s own rarity curve (0.55 common .. 1.2
-// ultra), the product is monotonic in rarity at round 1, 2 and 3 alike — a
-// common's hardest round stays easier than a legendary's easiest.
+// ultra), the product is monotonic in rarity at round 1, 2 and 3 alike AT EQUAL
+// SIZE — a common's hardest round stays easier than a legendary's easiest.
+//
+// V0.9.9 relaxed that from "always" to "at equal size": difficulty now also
+// scales with how big the fish is within its own species, and the 0.88-1.18 size
+// band is wider than the 1.11 gap between adjacent rarity steps. So a
+// maximum-size common can out-fight a runt uncommon. That overlap is deliberate
+// and is the point of the feature — a 4 lb bluegill SHOULD be more of a handful
+// than a barely-legal walleye — but it does mean rarity alone no longer orders
+// every possible fight.
 const SDEW_ROUND_RAMP={common:0.03,uncommon:0.04,rare:0.05,epic:0.06,legendary:0.07,ultra:0.08};
 const SDEW_ROUND_RAMP_DEF=0.05;
 function sdewRoundRamp(){
@@ -15164,10 +15493,36 @@ function sdewSetRoundLabel(){
 }
 // Tournament-target Stardew difficulty scales with the target's rarity. Legendary
 // species keep their tuned behaviors (diff 1); lower rarities are progressively easier.
+// How much the fish's SIZE within its own species stiffens the fight (V0.9.9).
+//
+// Deliberately reads the global hookW instead of taking the weight as an
+// argument. showLegendaryAlert hands the fish to startSdewGame through a 2.5s
+// setTimeout that closes over the FISH ALONE, so a second parameter would arrive
+// undefined for every legendary and ultra — the heaviest fights in the game —
+// and an undefined here becomes NaN maxVel, a fish at NaN, and a fight that
+// cannot be won or lost with nothing logged. Reading the global also guarantees
+// the paid retry re-fights the exact weight it will later be landed at, which is
+// what endSdewGame's line-class and drag checks read.
+const SDEW_SIZE_LO=0.88, SDEW_SIZE_HI=1.18;
+function sdewSizeFactor(fish){
+  // The tutorial trial is mandatory and has no give-up path, so it must never
+  // depend on a 4x weight roll.
+  if(typeof tut!=='undefined'&&tut&&tut.trialActive)return 1;
+  if(!fish||!fish.size)return 1;
+  const a=fish.size[0], b=fish.size[1];
+  if(!(b>a))return 1;
+  const w=(typeof hookW==='number'&&hookW>0)?hookW:(a+b)/2;
+  const sf=Math.max(0, Math.min(1,(w-a)/(b-a)));   // clamp: rollWeight can exceed b
+  return SDEW_SIZE_LO+sf*(SDEW_SIZE_HI-SDEW_SIZE_LO);
+}
 function sdewDifficultyFor(fish){
-  if(fish.rarity==='ultra')return 1.2;   // hardest fight in the game
-  if(SDEW_BEHAVIORS[fish.id])return 1;
-  return 0.55+RARITY_ORDER.indexOf(fish.rarity)*0.11; // common .55 .. epic .88
+  // The size factor multiplies ALL THREE paths. Applied only to the rarity curve
+  // below it would miss every ultra and all six hand-tuned species — precisely
+  // the fights where a 4x weight range matters most.
+  const k=sdewSizeFactor(fish);
+  if(fish.rarity==='ultra')return 1.2*k;   // hardest fight in the game
+  if(SDEW_BEHAVIORS[fish.id])return 1*k;
+  return (0.55+RARITY_ORDER.indexOf(fish.rarity)*0.11)*k; // common .55 .. epic .88
 }
 const SDEW_GRACE_MS=1000; // first 1s: fish moves very slowly, meter fills at half speed
 
@@ -15380,7 +15735,11 @@ let surfActive=false, surfPhase='idle',surfBiteTimer=null, surfShark=null, surfT
 const SURF_SHARKS=['nurseshark','sandbarshark','lemonshark','bullshark','hammerhead','tigershark','greatwhite'];
 function updateSurfButton(){
   const b=document.getElementById('surf-btn');if(!b)return;
-  const near=S.zone===0&&!tourn.active&&!activeTournament&&!surfActive&&boat.wy>worldH()-185;
+  // Was `boat.wy > worldH()-185`, i.e. 15px ONTO the sand — unreachable now the
+  // boat stops at the waterline, which would have made every surf shark
+  // uncatchable with no error shown. It is a proximity test to the beach instead.
+  const near=S.zone===0&&!tourn.active&&!activeTournament&&!surfActive
+    &&boat.wy>beachY()-BEACH_KEEP-BEACH_HAIL;
   b.classList.toggle('show',!!near);
 }
 function tryEnterSurf(){
@@ -15664,7 +16023,7 @@ function land(f, w, perfect, bullseye){
   if(w>S.biggest){S.biggest=w;S.biggestName=f.name;}
   const[a, b]=f.size;const sizeFrac=(w-a)/Math.max(0.01,(b-a));
   let xp=Math.round(f.xp*(0.8+sizeFrac*0.5)*0.7); // global 30% xp reduction
-  let gold=Math.round(f.gold*(0.8+sizeFrac*0.6)*0.85); // global 15% coin reduction
+  let gold=catchCoinValue(f, w);
   // Fly fishing is the hardest way in the game to put a fish in the net —
   // earn the line, land it on the mark, mend it clean, then time the set — so
   // it pays DOUBLE on both xp and cash. Applied first, before every other
@@ -15684,6 +16043,10 @@ function land(f, w, perfect, bullseye){
   if(perfect){xp=Math.round(xp*1.4);gold=Math.round(gold*1.4);}
   if(bullseye){gold*=2;}
   if(pb&&!isNew)gold=Math.round(gold*1.1);
+  // Ice Shanty Heater, Northern ice: warm water keeps them feeding by the hole.
+  // Keyed off iceActive/iceMode rather than the sdewIce fight flag, which is only
+  // cleared on two specific paths and can survive into an unrelated fight.
+  if(heaterOn()&&iceActive&&iceMode==='northern')gold=Math.round(gold*1.2);
   // V0.9: prestige (+10%/level) and the Pig pet (+20%) boost coins earned.
   gold=Math.round(gold*coinMult());
   // No gold from fish in a tournament/challenge (you fish for ranking & rubies),
@@ -15699,6 +16062,11 @@ function land(f, w, perfect, bullseye){
   // rarity with a size kicker. Both carry gold:0 so they never double-dip.
   let rubyReward=0;
   if(f.surf||f.alaska){rubyReward=sharkRubyReward(f, w);if(rubyReward>0){S.rubies=(S.rubies||0)+rubyReward;setTimeout(function(){toast(f.name+' reward: +'+rubyReward+' ruby'+(rubyReward===1?'':'s')+'!','#d61f3a');},1200);}}
+  // Ice Shanty Heater, Alaskan ice: a ruby on top of the species' own price.
+  if(heaterOn()&&iceActive&&iceMode==='alaska'){
+    S.rubies=(S.rubies||0)+1;rubyReward+=1;
+    setTimeout(function(){toast('The heater keeps them close: +1 ruby.','#ff8a3a');},1500);
+  }
   // GOLDEN TROUT companion: while its 10-minute window is glowing, every catch
   // pays a ruby, three for a legendary. Stacks on top of a surf/Alaskan payout.
   if(goldenActive()){
@@ -15751,6 +16119,39 @@ function grantUltraReward(f){
   }
 }
 
+// ---- What a fish is worth (V0.9.9) ------------------------------------------
+// Rarity sets the band, size within the species moves it. This replaces a
+// hand-authored `gold:` per species, which had drifted out of any consistent
+// order over 60-odd rows: a freshwater epic paid 740 while a saltwater legendary
+// paid 112, and two commons in the same region differed by 10x. A player cannot
+// learn a price list like that, and "rarer is worth more" was simply not true.
+//
+// The authored number survives as a FLAG only: gold:0 still means "this species
+// pays no coin" (the surf sharks and the Alaskan ice roster, which pay rubies).
+const COIN_BY_RARITY={common:9,uncommon:23,rare:62,epic:142,legendary:284,ultra:1330};
+// Per-zone multiplier, calibrated so each region's MEDIAN payout lands close to
+// what it paid before this change — the curve is being fixed, not the economy.
+// Mountains carries the deliberate 4x from V0.9.8.8 on top of its natural ~1.4.
+const COIN_ZONE_MULT=[0.85,0.95,1.20, 0.50,0.70,0.90, 5.60];
+// The surf roster needs its own band. Its species are LOW RARITY but enormous —
+// a Nurse Shark is 'common' among sharks and still a 200 lb animal — so on the
+// inshore multiplier a shark would have paid 9 coins, the same as a pinfish.
+// Calibrated to the surf roster's own median so the mode earns what it always
+// did overall, while rarity and size now order it internally.
+const COIN_SURF_MULT=3.4;
+// Size band: a runt is worth 0.55x, a maximum fish 1.70x — a 3.1x spread, up from
+// 1.75x, so hunting a big one of a species you already have is worth doing.
+const COIN_SIZE_LO=0.55, COIN_SIZE_HI=1.70;
+function catchCoinValue(f, w){
+  if(!f.gold)return 0;                       // ruby species: never pays coin
+  const base=COIN_BY_RARITY[f.rarity]||COIN_BY_RARITY.common;
+  const zm=f.surf?COIN_SURF_MULT:(COIN_ZONE_MULT[f.zone]||1);
+  const a=(f.size&&f.size[0])||0, b=(f.size&&f.size[1])||0;
+  // rollWeight can return above size[1] on its 1% record roll, so clamp exactly
+  // the way lineNeededFor and fightStrength do.
+  const sf=(b>a)?Math.max(0,Math.min(1,(w-a)/(b-a))):0.5;
+  return Math.max(1, Math.round(base*zm*(COIN_SIZE_LO+sf*(COIN_SIZE_HI-COIN_SIZE_LO))));
+}
 // Soft currency is gold in saltwater and cash in freshwater; the two never
 // convert, so the reward line must name the one that actually went up.
 function _coinWord(){return isFresh()?'cash':'gold';}
