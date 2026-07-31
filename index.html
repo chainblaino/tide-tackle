@@ -3113,6 +3113,7 @@ function endTournament(){
     gameLobby=null;
   }
   activeTournament=null;activeLobby=null;activeSession=null;
+  if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();  // bring Clancy back
   if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   setTimeout(checkPendingInvites,2500); // surface any invites that arrived mid-match
 }
@@ -3365,7 +3366,8 @@ function leaveSession(fromLobby){
     else if(fbUser){const upd={};upd['players.'+fbUser.uid]=firebase.firestore.FieldValue.delete();
       fbDb.collection(coll).doc(id).update(upd).catch(function(){});}
   }
-  if(started){_restoreWorldAfterSession();activeTournament=null;activeLobby=null;}
+  if(started){_restoreWorldAfterSession();activeTournament=null;activeLobby=null;
+    if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();}
   _teardownSessionLobby();
   gameLobby=null;
   toast('Left the '+(isLobby?'lobby':'session')+'.','#b58b53');
@@ -3375,6 +3377,7 @@ function endSession(){
   const sess=activeSession, def=activeTournament?activeTournament.def:null;
   _restoreWorldAfterSession();
   activeTournament=null;activeLobby=null;
+  if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();
   if(!sess){return;}
   if(sess.mode==='coop'){
     _teardownSessionLobby();
@@ -14937,11 +14940,23 @@ const FLY_DRIFT_MS=9000;              // a drift runs about nine seconds
 const FLY_DRAG_PER_SEC=19;            // drag climbs this fast with no mending
 const FLY_MEND_RELIEF=42;             // one mend buys this much back
 // Per-fly-type set windows, ms after the take. This is the heart of the mechanic.
+// The take window, per fly type. `lo`/`hi` are milliseconds after the take.
+//
+// V0.9.9.1 widened every `hi`. Simple reaction time to a cue you cannot
+// anticipate is roughly 250-400ms before a touchscreen adds its own latency, and
+// the tell has to be READ on top of that — so a nymph asking for a press AND a
+// release inside 430ms was not a test of timing, it was a coin toss, and a
+// measured press at 300ms already failed. Every window now clears reaction time
+// with room to spare while still rewarding a quick hand.
+//
+// The `lo` values are untouched: being too EARLY is the actual skill in fly
+// fishing (a dry fly is missed by lifting before the fish has turned down on it),
+// and those bounds were always reachable.
 const FLY_SET={
-  dry:    {lo:320, hi:850, hold:false, tell:'A nose breaks the surface. Wait for it to turn down, then lift.'},
-  nymph:  {lo:0,   hi:430, hold:false, tell:'The indicator dips. Set NOW.'},
-  streamer:{lo:0,  hi:700, hold:true,  tell:'Something hammered it. STRIP-SET and hold.'},
-  wet:    {lo:120, hi:620, hold:false, tell:'The line comes tight on the swing. Lift.'},
+  dry:    {lo:320, hi:1300, hold:false, tell:'A nose breaks the surface. Wait for it to turn down, then lift.'},
+  nymph:  {lo:0,   hi:950,  hold:false, tell:'The indicator dips. Set NOW.'},
+  streamer:{lo:0,  hi:1150, hold:true,  tell:'Something hammered it. STRIP-SET and hold.'},
+  wet:    {lo:120, hi:1050, hold:false, tell:'The line comes tight on the swing. Lift.'},
 };
 let flyPhase='idle';                  // idle | casting | drift | take
 let flyLineOut=0, flyStrokes=0, flyAcc=0, flyTangle=0;
@@ -14970,6 +14985,14 @@ function tbarPaint(zoneId, indId){
 }
 function tbarShow(barId, on){const b=document.getElementById(barId);if(b)b.classList.toggle('show',!!on);}
 let flyDriftEnd=0, flyTakeAt=0, flySetSpec=null, flyHoldSet=0, flyTargetFish=null;
+// The PHYSICAL state of the main button, tracked independently of flyPhase.
+// flyPressMain() only ever armed the set on a fresh pointerdown that happened to
+// land while flyPhase was already 'take' — but the commonest way to fish a drift
+// is to be tapping Mend, so the fish very often eats while a finger is already
+// on that button. No new pointerdown ever arrived, the hold clock never started,
+// and the player sat there holding a button that said "hold" while the window
+// quietly expired. These two let flyTheTake() see a finger that is already there.
+let _flyBtnDown=false, _flyPressAt=0;
 // ---- Beat 1 state: the tracked loop ----
 // The loop wanders on two out-of-phase sine pairs so its path is a slow
 // irregular orbit rather than a readable circle. The phases are randomised per
@@ -15197,7 +15220,14 @@ function flyReleaseMain(){
     flySay('Press and follow the green loop first.');return;
   }
   if(flyPhase==='drift')return flyMend();
-  if(flyPhase==='take')return flyResolveSet();
+  if(flyPhase==='take'){
+    // The release of a press that began BEFORE the fish ate belongs to the mend
+    // that was in progress, not to a hookset. Judging it as one failed the
+    // player for an input they made when there was nothing yet to set into.
+    // The window keeps running; press again and it counts.
+    if(_flyPressAt&&_flyPressAt<flyTakeAt)return;
+    return flyResolveSet();
+  }
 }
 // A fly can be fished tighter to the bank than a boat can be driven, so this is
 // well under the bots' CHAN_EDGE_KEEP of 26.
@@ -15316,7 +15346,9 @@ function flyTheTake(){
   tbarShow('fly-mendbar', false);     // nothing to mend once it has the fly
   flySetSpec=FLY_SET[flyKind()]||FLY_SET.nymph;
   flyTakeAt=performance.now();
-  flyHoldSet=0;
+  // Already holding the button when it ate? Then you were ready, and the hold
+  // clock starts at the take rather than never starting at all.
+  flyHoldSet=_flyBtnDown?flyTakeAt:0;
   const btn=document.getElementById('fly-main');
   btn.textContent=flySetSpec.hold?'Strip-Set (hold)':'Set the Hook';
   btn.classList.add('hot');
@@ -15382,9 +15414,14 @@ function flyFinish(){
   if(!main||!alt)return;
   // pointerdown/up rather than click: click double-fires on touch, and the SET
   // (beat 3) is still a hold-duration input, so the pair IS the input there.
-  main.addEventListener('pointerdown',function(e){e.preventDefault();flyPressMain();});
-  main.addEventListener('pointerup',function(e){e.preventDefault();flyReleaseMain();});
-  main.addEventListener('pointercancel',function(){flyHoldStart=0;});
+  main.addEventListener('pointerdown',function(e){e.preventDefault();_flyBtnDown=true;_flyPressAt=performance.now();flyPressMain();});
+  main.addEventListener('pointerup',function(e){e.preventDefault();_flyBtnDown=false;flyReleaseMain();});
+  main.addEventListener('pointercancel',function(){_flyBtnDown=false;flyHoldStart=0;});
+  // A finger that leaves the button without a pointerup (dragged off, or the
+  // browser retargets mid-gesture) would otherwise leave _flyBtnDown stuck true
+  // and arm every later take for free.
+  window.addEventListener('pointerup',function(){_flyBtnDown=false;});
+  window.addEventListener('pointercancel',function(){_flyBtnDown=false;});
   alt.addEventListener('click',function(){
     // During beat 1 the alt button backs out of the cast entirely; the MAIN
     // button is what presents, matching its "Present" label.
