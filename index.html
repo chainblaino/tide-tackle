@@ -5566,7 +5566,7 @@ const FISH=[
   {id:'stripedmarlin',name:'Striped Marlin',zone:2,rarity:'legendary',size:[80,300],line:80,methods:['troll','livebait'],baits:['cutbait','pilchard'],leader:'wire',structure:['open','weedline','rip'],season:['summer','fall'],time:['day','dawn','dusk'],xp:260,gold:300,weight:1.2,fact:'One of the most acrobatic billfish, famous for greyhounding across the surface when hooked. Found in warm blue water offshore.'},
   {id:'bonefish',name:'Bonefish',zone:0,rarity:'epic',size:[2,14],line:12,methods:['cork','jig','livebait'],baits:['shrimp','crab'],leader:'fluoro',structure:['grass','sand','pass'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:140,gold:160,weight:4,fact:'Called the "Gray Ghost" of the flats. One of the fastest fish in the ocean for its size. A trophy catch for sight fishermen. World record 16 lbs.'},
   {id:'roosterfish',name:'Roosterfish',zone:2,rarity:'epic',size:[10,80],line:40,methods:['troll','livebait','jig'],baits:['pilchard','cutbait'],leader:'any',structure:['open','rip','weedline'],season:['summer','fall'],time:['dawn','day','dusk'],xp:150,gold:175,weight:4,fact:'Named for its distinctive seven spined dorsal fin that fans out like a rooster’s comb when excited. An aggressive surface feeder.'},
-  {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['bottom','livebait','chunk'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,spawnChance:0.0004,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
+  {id:'sawfish',name:'Sawfish',zone:0,rarity:'ultra',size:[100,700],line:130,methods:['livebait'],baits:['cutbait','pilchard','crab'],leader:'wire',structure:['pass','channel','mangrove','dock'],season:['all'],time:['night','dawn','dusk'],xp:1000,gold:1500,weight:1,spawnChance:0.0004,fact:'A critically endangered elasmobranch with a toothed rostrum used to slash prey. Once common in Florida waters, now one of the rarest encounters in the world. Catch and release only.'},
   {id:'blackmarlin',name:'Black Marlin',zone:2,rarity:'ultra',size:[200,1500],line:130,methods:['troll','livebait','chunk'],baits:['cutbait','pilchard'],leader:'wire',structure:['deep','open','bluhole','oil_rig'],season:['summer','fall'],time:['day','dawn','dusk'],xp:1000,gold:1500,weight:1,spawnChance:0.0004,fact:'The largest and most powerful billfish on earth. World record 1,560 lbs. Known for violent, unstoppable runs. Only the Big Game reel and Sportfisher can realistically handle one.'},
   // ── SURF SHARKS (caught only from the inshore surf; never appear in normal fishing) ──
   {id:'nurseshark',name:'Nurse Shark',zone:0,surf:true, rarity:'common',size:[20,200],line:80,methods:['surf'],baits:['jack','amberjack'],leader:'wire',structure:['surf'],season:['all'],time:['all'],xp:160,gold:110,weight:1,fact:'A slow, docile bottom dweller that suctions prey off the sand. Sluggish but heavy, a dead weight tug of war.'},
@@ -17807,7 +17807,11 @@ function _fishStructText(f){
   return [...new Set(list)].join(', ')||'open water';
 }
 function _fishTackleText(f){
-  const cats=[...new Set((f.methods||[]).map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
+  // Zone-legal methods only. Reading f.methods raw would name tackle for a
+  // method the player cannot use in this fish's water — the exact fault that
+  // had the Sawfish advertising a Knocker Rig and a Chunk Rig inshore.
+  const _ms=(typeof clancyUsableMethods==='function')?clancyUsableMethods(f):(f.methods||[]);
+  const cats=[...new Set(_ms.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
   const names=cats.map(function(cat){
     if(cat==='jig'||cat==='trolllure')return 'a lure'; // artificial: the lure is the business end
     const t=TACKLE.find(function(tt){return tt.cat===cat&&!tt.reward&&!tt.surfGear;})||TACKLE.find(function(tt){return tt.cat===cat;});
