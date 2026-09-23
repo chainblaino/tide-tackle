@@ -38,7 +38,7 @@
   .ice-overlay{position:fixed;inset:0;z-index:300;display:none;overflow:hidden;background:#0a1a24;}
   .ice-overlay.show{display:block;}
   .ice-sky{position:absolute;left:0;right:0;top:0;height:46%;background:linear-gradient(180deg,#1d3f5c 0%,#3f6f8e 55%,#8fb6c8 100%);}
-  /* THE NORTHERN LIGHTS (V0.9.9.1) — Alaskan ice only, and shown by day too.
+  /* THE NORTHERN LIGHTS (V0.9.9.1): Alaskan ice only, and shown by day too.
      A real aurora is vertical CURTAINS, so this is three banded layers drifting
      at different speeds over each other, not one blurred blob. Each band is a
      repeating gradient masked to fade at the bottom, which is what gives the
@@ -362,8 +362,8 @@
   .catch-bullseye{position:absolute;top:0;height:100%;background:#ffd400;box-shadow:inset 0 0 0 1px #d6ad00;pointer-events:none;}
   .catch-ind{position:absolute;top:-2px;width:5px;height:calc(100% + 4px);background:var(--accent-dark);border-radius:3px;box-shadow:0 0 6px rgba(196,111,40,.7);z-index:2;}
   /* Shared timing bar (V0.9.8.5): a stationary target band and a sweeping
-     indicator. Used by the fly MEND and by Midwest SNAGGING — same input,
-     two names — so both read identically to the catch track above. */
+     indicator. Used by the fly MEND and by Midwest SNAGGING (same input,
+     two names) so both read identically to the catch track above. */
   .tbar{position:relative;height:20px;margin-top:7px;border-radius:8px;background:linear-gradient(180deg,#bfe0ec,#93c9da);border:2px solid var(--sea);overflow:hidden;display:none;}
   .tbar.show{display:block;}
   .tbar-zone{position:absolute;top:0;height:100%;background:repeating-linear-gradient(45deg,#ffd400,#ffd400 6px,#e8bf00 6px,#e8bf00 12px);border-left:2px solid #b89400;border-right:2px solid #b89400;pointer-events:none;}
@@ -1131,7 +1131,7 @@
     <div class="retry-title" id="retry-title">It's getting away!</div>
     <div class="retry-sub" id="retry-sub"></div>
     <div class="retry-btns">
-      <button class="retry-pay" id="retry-pay" onclick="sdewRetryPay()"><span class="gem-s"></span> Pay 5 &mdash; Try again</button>
+      <button class="retry-pay" id="retry-pay" onclick="sdewRetryPay()"><span class="gem-s"></span> Pay 5. Try again</button>
       <button class="retry-let" onclick="sdewRetryDecline()">Let it go</button>
     </div>
   </div>
@@ -1302,7 +1302,7 @@ let _pendingNewUser=false;
 async function afterAuth(user, isNew){
   fbUser=user;
   // Start the presence heartbeat as soon as we know who this is, not on the
-  // first catch — a friend browsing the shop is still online.
+  // first catch: a friend browsing the shop is still online.
   if(typeof startPresence==='function')startPresence();
   try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
     const tutDone=(doc.data()||{}).tutorialDone;
@@ -1775,7 +1775,7 @@ function renderEquipSections(){
   // ---- Pets ----
   // Every companion is listed (V0.9.8.5), so you can see what there is to work
   // toward; the ones you have not earned are greyed, unclickable and labelled
-  // with what earns them. ownedPets() is untouched — the buff logic still needs it.
+  // with what earns them. ownedPets() is untouched: the buff logic still needs it.
   const pets=PETS;
   const eqIds=equippedPets(), petCap=petEquipCap(), multiPet=petCap>1;
   let petHtml=head('Companions','Earned by Prestige \u2014 saltwater and freshwater \u2014 and by landing certain Ultra Legendaries. '
@@ -1797,9 +1797,9 @@ function renderEquipSections(){
       let state='', glow='';
       if(own&&p.id==='goldentrout'){
         const st=goldenState();
-        if(st==='running'){state='<div style="font-size:10.5px;font-weight:800;color:#e0a93c;">Glowing — '+fmtDur(goldenMsLeft())+' left</div>';glow='box-shadow:0 0 0 2px #e0a93c, 0 0 12px rgba(224,169,60,.55);';}
-        else if(st==='cooling')state='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);">Resting — ready in '+fmtDur(goldenMsLeft())+'</div>';
-        else state='<div style="font-size:10.5px;font-weight:800;color:#1f9d57;">Ready — equip to start the 10 min run</div>';
+        if(st==='running'){state='<div style="font-size:10.5px;font-weight:800;color:#e0a93c;">Glowing, '+fmtDur(goldenMsLeft())+' left</div>';glow='box-shadow:0 0 0 2px #e0a93c, 0 0 12px rgba(224,169,60,.55);';}
+        else if(st==='cooling')state='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);">Resting, ready in '+fmtDur(goldenMsLeft())+'</div>';
+        else state='<div style="font-size:10.5px;font-weight:800;color:#1f9d57;">Ready, equip to start the 10 min run</div>';
       }
       if(!own){
         return '<div class="proj-equip" style="'+_equipCardCss(false)+'opacity:.55;cursor:default;">'
@@ -1853,7 +1853,7 @@ function equipPet(id){
       toast('The Dragon left \u2014 only '+petNameOf(kept)+' stays with ye.','#b58b53');
     }
   }else{
-    // Equipping the Golden Trout is what starts its 10-minute run — but only
+    // Equipping the Golden Trout is what starts its 10-minute run, but only
     // from a ready state, so re-equipping mid-cooldown never sneaks a second one.
     if(id==='goldentrout'){
       const st=goldenState();
@@ -2191,7 +2191,7 @@ const TOURN_FEES=[
 function tournFee(zone, rarity){return (TOURN_FEES[zone]||TOURN_FEES[0])[rarity]||300;}
 // Every match plays for the wallet of the world it is held in: gold in salt
 // water, cash in fresh. Both are earned-only, so either can be staked without
-// turning a lobby into real-money gaming — see the CURRENCIES note. Rubies are
+// turning a lobby into real-money gaming: see the CURRENCIES note. Rubies are
 // still never pooled from players.
 function matchWorld(def){return worldOf((def&&def.zone)||0);}
 function matchCoinLabel(def){return matchWorld(def)==='fresh'?'cash':'gold';}
@@ -2203,7 +2203,7 @@ function matchCoinIcon(def){
 function matchCoinShort(def){return matchWorld(def)==='fresh'?' cash':'g';}
 function matchCoinGet(def){return coinGet(matchWorld(def));}
 const ALWAYS_TOURN_NAMES=["Open Saltwater Challenge","Coastal Showdown","All-Waters Derby","The Big Cast","Open Tide Cup"];
-// Short travel/gate labels, indexed by zone. Must stay the same length as ZONES —
+// Short travel/gate labels, indexed by zone. Must stay the same length as ZONES: 
 // a missing entry shows up as `undefined` in every gate hint and licence toast.
 const ZONE_LBL=["Inshore","Nearshore","Offshore","Midwest","Southern","Northern","Mountains"];
 
@@ -2232,7 +2232,7 @@ function saltStructKinds(){return Object.keys(STRUCT_META).filter(function(k){re
 function freshStructKinds(){return Object.keys(STRUCT_META).filter(function(k){return STRUCT_META[k].world==='fresh';});}
 // DERIVED from S.zone, never stored independently. S.zone is already persisted
 // and is what tournaments/lobbies overwrite, so deriving keeps the two from ever
-// disagreeing — a stale S.world would silently point the whole gear layer at the
+// disagreeing: a stale S.world would silently point the whole gear layer at the
 // wrong catalog.
 function curWorldId(){return (typeof S!=='undefined'&&S)?worldOf(S.zone|0):'salt';}
 function curWorld(){return WORLDS[curWorldId()];}
@@ -2250,7 +2250,7 @@ function zoneOfRegion(rid){for(let i=0;i<ZONES.length;i++){if(ZONES[i].region&&Z
 function regionName(rid){const z=ZONES[zoneOfRegion(rid)];return z?z.name:rid;}
 // Which regions an item belongs to. `regions:[...]` wins; a bare `region:'x'` is
 // shorthand for a single-region item; anything untagged is available everywhere
-// in its world (braids and leaders, shared on purpose — every region needs the
+// in its world (braids and leaders, shared on purpose: every region needs the
 // whole 4-to-40 lb line range).
 function itemRegions(it){
   if(it.regions&&it.regions.length)return it.regions;
@@ -2258,7 +2258,7 @@ function itemRegions(it){
   return REGION_IDS;
 }
 function itemInRegion(it, rid){return itemRegions(it).indexOf(rid||curRegionId())>=0;}
-// "Is this catalog entry usable right where I'm standing?" — world first, then
+// "Is this catalog entry usable right where I'm standing?": world first, then
 // region if that world is split into any.
 function itemHere(it){
   const w=curWorldId();
@@ -2322,7 +2322,7 @@ function getAlwaysTournament(){
 }
 // ---- FLY HIGH (V0.9.8.9) ----------------------------------------------------
 // Mountains only, fly only, 10 anglers. The target is drawn from the Mountains
-// species that can ACTUALLY be taken on a fly and are worth a tournament fee —
+// species that can ACTUALLY be taken on a fly and are worth a tournament fee: 
 // picking one that only eats a bottom rig would make the room unwinnable, which
 // is the whole risk of a method-locked mode.
 function flyHighPool(){
@@ -2543,7 +2543,7 @@ let _mpLobbyPage=0;
 function startLobbyBrowse(){
   const el=document.getElementById('mp-lobby-list');if(!el)return;
   if(!fbDb||!fbUser){el.innerHTML='<div class="lb-empty">Sign in to see open lobbies.</div>';return;}
-  if(_lobbyListUnsub){renderMpLobbyList();return;}   // already live — just repaint from cache
+  if(_lobbyListUnsub){renderMpLobbyList();return;}   // already live: just repaint from cache
   el.innerHTML='<div class="lb-empty">Loading…</div>';
   _lobbyCache=[];
   _lobbyListUnsub=fbDb.collection(LOBBY_COLL).where('status','==','open').onSnapshot(function(snap){
@@ -2581,7 +2581,7 @@ function enterTournament(defId){
   const def=findAlwaysDef(defId)||getDailyTournaments().find(function(d){return d.id===defId;});
   if(!def)return;
   const mw=matchWorld(def);
-  // A freshwater room still respects the region licence — the match teleports
+  // A freshwater room still respects the region licence: the match teleports
   // you there, so without this a level 5 angler could fish the Mountains
   // without ever buying their way up to them.
   if(mw==='fresh'&&typeof hasLicense==='function'&&!hasLicense(def.zone)){
@@ -2590,7 +2590,7 @@ function enterTournament(defId){
   // Fly High is fly tackle only, so a rod and reel you cannot cast a fly with
   // means a room you cannot fish at all. Better to say so than take the fee.
   if(def.flyOnly&&typeof hasFlyCombo==='function'&&!hasFlyCombo()){
-    toast("Fly High is fly tackle only — you need a fly rod and reel first.","#b58b53");return;
+    toast("Fly High is fly tackle only. You need a fly rod and reel first.","#b58b53");return;
   }
   if(!coinCanAfford(def.fee, mw)){toast("Not enough "+coinLabel(mw)+"!","#b3402a");return;}
   if(!def.alwaysOn&&tStatus(def)!=="open"){toast("Sign-up window is closed.","#b3402a");return;}
@@ -2826,7 +2826,7 @@ function startTournamentMode(def){
   }else if(def.session){
     toast(def.coop?'Fishing with friends! Catch anything you like.':('Challenge on! Biggest '+(def.targetFish?def.targetFish.name:'fish')+' in 6 minutes wins.'),'#e0a93c');
   }else if(def.flyOnly){
-    toast("Fly High! Fly tackle only — biggest "+(def.targetFish?def.targetFish.name:'fish')+" in "+_tmin+" min.","#2aa890");
+    toast("Fly High! Fly tackle only. Biggest "+(def.targetFish?def.targetFish.name:'fish')+" in "+_tmin+" min.","#2aa890");
   }else if(isBounty()){
     const first=activeTournament.bountyList&&activeTournament.bountyList[0];
     toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". "+_tmin+" min.","#e0a93c");
@@ -2889,8 +2889,8 @@ function initCoopGhosts(){
 // ── OTTER (Freshwater Prestige 4) ────────────────────────────────────────────
 // Once per multiplayer match the otter surfaces with a fish of its own: one of
 // whatever species the match is SCORING, at a normally rolled size. It goes
-// through recordTournamentCatch() and nothing else — the same door the Jester's
-// steal uses — so it moves the standing but never writes S.caught / S.best /
+// through recordTournamentCatch() and nothing else (the same door the Jester's
+// steal uses) so it moves the standing but never writes S.caught / S.best /
 // S.biggest / S.totalCatches. That is what keeps the logbook and the pushed
 // leaderboard honest: neither reads tournament state.
 const OTTER_MIN_MS=20000, OTTER_MAX_MS=40000;
@@ -3043,7 +3043,7 @@ function endTournament(){
   const entries=_finalStand.length?_finalStand:[{username:fbUsername||'You',weight:activeTournament.biggestWeight||0,count:(activeTournament.speciesCount||0),isPlayer:true}];
   // Tournaments pay placement prizes (gold + rubies); lobbies pay their own
   // house rewards plus the host-set GOLD buy-in pot, settled below. Gold is the
-  // only stakeable currency: see the CURRENCIES note — it cannot be bought, so
+  // only stakeable currency (see the CURRENCIES note), it cannot be bought, so
   // staking it stays a game mechanic and not real-money gaming.
   const boost=def.alwaysOn?1.5:1;
   // Competitive lobbies pay their own fixed HOUSE placement rewards (rubies +
@@ -3073,7 +3073,7 @@ function endTournament(){
     S.rubies=(S.rubies||0)+winnings;
     // Freshwater matches settle in CASH. Paying a Mountains lobby out in gold
     // would quietly convert between two economies the game keeps apart on
-    // purpose — grinding trout would buy you an offshore boat.
+    // purpose: grinding trout would buy you an offshore boat.
     coinAdd(goldTotal, matchWorld(def));
     updatePills();queueSave();
   }
@@ -3456,7 +3456,7 @@ const LOBBY_COLL='challenges';
 // stamps the doc on a heartbeat; a lobby whose stamp has stopped advancing drops
 // out of the browser and refuses joins.
 //
-// The beat matches PRESENCE_MS rather than being second-accurate — every open
+// The beat matches PRESENCE_MS rather than being second-accurate: every open
 // lobby writing to Firestore is a billed write, and the same reasoning already
 // governs presence. The staleness window is far wider than the beat so a live
 // room can never flicker out between two heartbeats.
@@ -3484,7 +3484,7 @@ function closeHostedLobby(){
 }
 // Is this lobby doc still being tended?
 //
-// NEVER compares the host's clock to ours — two phones can be minutes apart, and
+// NEVER compares the host's clock to ours: two phones can be minutes apart, and
 // that skew would either hide live rooms or keep dead ones. Instead we record, on
 // OUR clock, when each doc's stamp last CHANGED. Same technique the position sync
 // uses for exactly the same reason.
@@ -3577,7 +3577,7 @@ function _renderLobbyForm(){
     h+='<div class="lob-lbl">Casts per angler</div><div class="lob-row">'+[5,10,15,20].map(function(n){return _lchip(n+'',d.castLimit===n,"lobbySet('castLimit','"+n+"')");}).join('')+'</div>';
   }
   if(d.world==='fresh'){
-    h+='<div class="lob-lbl">Season</div><div class="lob-row" style="font-size:12px;color:var(--text-soft);font-weight:700;padding:2px 0 8px;">Every species bites — freshwater matches ignore the calendar.</div>';
+    h+='<div class="lob-lbl">Season</div><div class="lob-row" style="font-size:12px;color:var(--text-soft);font-weight:700;padding:2px 0 8px;">Every species bites. Freshwater matches ignore the calendar.</div>';
   }else{
     h+='<div class="lob-lbl">Season</div><div class="lob-row">'+SEASONS.map(function(se){return _lchip(SEASON_LABEL[se]||se,d.season===se,"lobbySet('season','"+se+"')");}).join('')+'</div>';
   }
@@ -4050,7 +4050,7 @@ function renderStructuresGuide(){
   FISH.forEach(function(f){(f.structure||[]).forEach(function(sk){if(!sMap[sk])sMap[sk]=[];if(!sMap[sk].find(function(x){return x.id===f.id;}))sMap[sk].push(f);});});
   const rarOrder=["common","uncommon","rare","epic","legendary","ultra"];
   const zoneMap=structKindZones();
-  // Clancy only talks about the water you're standing in — the guide lists the
+  // Clancy only talks about the water you're standing in: the guide lists the
   // current world's spots. Shared "Any"-zone spots appear in both.
   const _w=curWorldId();
   el.innerHTML=Object.keys(STRUCT_META).filter(function(k){
@@ -4108,7 +4108,7 @@ const RARITY_ORDER=['common','uncommon','rare','epic','legendary','ultra'];
 // Prismatic shimmer used for Ultra Legendary treatments (catch card, badges, etc.)
 const ULTRA_GRAD='linear-gradient(100deg,#ffd24a 0%,#ff5ed4 28%,#7b5cff 52%,#34e7e4 76%,#ffd24a 100%)';
 // Index L is the XP needed to go from level L to L+1; the cap is length-1.
-// V0.9.8.4: extended from 12 entries (cap 11) to 31 (cap 30) — the catalogs
+// V0.9.8.4: extended from 12 entries (cap 11) to 31 (cap 30), because the catalogs
 // sell lvl 12-13 gear (each region's heaviest line), which nobody could ever
 // buy at the old cap, and that unreachable line was why big paddlefish, gar
 // and sturgeon "always broke off". Growth tapers from ~1.3x to ~1.09x so the
@@ -4146,7 +4146,7 @@ const METHODS=[
   {id:'still',    name:'Still',      cat:'fwbottom', bait:true,  zones:[6],     world:'fresh', blurb:'A single split shot and a bait held still in the current. Quiet, patient, and deadly in a plunge pool.'},
   {id:'fly',      name:'Fly',        cat:'fwfly',    bait:false, zones:[6],     world:'fresh', fly:true,
    blurb:'Match the hatch and drift a fly drag-free. Needs a fly rod and fly reel; its own casting rhythm, not a normal cast.'},
-  // `ice` matches no tackle row on purpose — it swaps the whole screen for the
+  // `ice` matches no tackle row on purpose: it swaps the whole screen for the
   // first-person flasher instead of casting, exactly like the surf mode.
   {id:'ice',      name:'Ice fishing',cat:'fwjig',    bait:true,  zones:[5],     world:'fresh', ice:true,
    blurb:'Drill through and drop a jig down the hole. Northern region only, and only once the lakes lock up in winter.'},
@@ -4163,8 +4163,8 @@ function methodCat(m){m=m||curMethod();return (isFresh()&&m&&m.fwcat)?m.fwcat:(m
 // Methods legal in a zone. A method tagged `fly` also needs the fly combo in hand,
 // which is what keeps fly water off the rig bar until you have actually bought one.
 // Fly High locks the rig to fly tackle. Filtering the list here covers both the
-// chooser and ensureRig()'s auto-correct, so there is no route — picker, save
-// file or region default — that leaves you holding a spinning rod in it.
+// chooser and ensureRig()'s auto-correct, so there is no route (picker, save
+// file or region default) that leaves you holding a spinning rod in it.
 function flyOnlyMatch(){return !!(activeTournament&&activeTournament.def&&activeTournament.def.flyOnly);}
 function methodsForZone(z){
   // Once the Northern lakes lock up, the surface IS ice: there is no open water
@@ -4181,7 +4181,7 @@ function methodsForZone(z){
   });
 }
 // True when this zone's surface has frozen over. Only the Northern region does
-// this — the Mountains run their own Alaska ice mode off a separate season.
+// this: the Mountains run their own Alaska ice mode off a separate season.
 function lakeFrozenAt(z){
   if(z!==5)return false;
   return (typeof seasonNow==='function')&&seasonNow()==='winter';
@@ -4337,7 +4337,7 @@ const LURES=[
   // ---- NORTHERN (zone 5) & MOUNTAINS (zone 6) ----
   {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','goldentrout','apachetrout','gilatrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['laketrout','browntrout','cohosalmon','northernpike'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
-  {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','lakewhitefish','smallmouth','rockbass'],            desc:'A 4 in white tube dragged along a cold, rocky bottom — a crayfish to anything sitting on it. White: +5% bite during the day.',world:'fresh',fixedCost:true},
+  {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','lakewhitefish','smallmouth','rockbass'],            desc:'A 4 in white tube dragged along a cold, rocky bottom, a crayfish to anything sitting on it. White: +5% bite during the day.',world:'fresh',fixedCost:true},
   {id:'fw_jiggingrap',  cat:'softplastic',zone:5,color:'chartreuse', name:'Jigging Rap',               icon:'fish',       cost:340,lvl:7, methods:['jig'],         baits:['minnow'],  targets:['walleye','walleye','yellowperch','browntrout','cohosalmon'],    desc:'A balanced minnow that swims a circle on every lift, then hangs. The Great Lakes jig, through the ice or over open water. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
   {id:'fw_dodger',      cat:'trolling',  zone:5,                    name:'Dodger & Squid Rig',        icon:'tackle-lure',cost:420,lvl:7, methods:['troll'],       baits:['corn'],    targets:['cohosalmon','cohosalmon','kingsalmon','laketrout'],             desc:'A flashing dodger ahead of a tipped squid. The Great Lakes salmon troll, corn and all.',world:'fresh',fixedCost:true},
   {id:'fw_trollspoon',  cat:'spoon',     zone:5,color:'chartreuse', name:'Chartreuse Trolling Spoon', icon:'reel',       cost:480,lvl:8, methods:['troll'],       baits:['minnow'],  targets:['cohosalmon','kingsalmon','laketrout','browntrout'],               desc:'A thin flutter spoon on lead core. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
@@ -4382,7 +4382,7 @@ const LURE_CATS=[
 
 // ── DISPOSABLE ITEMS (bought with rubies; used from the Items button while fishing) ──
 // V0.9.9.1: items are WORLD-SCOPED, like every other catalog. The seven original
-// rows are saltwater — a Cast Net of pilchards and a Sabiki Rig were never
+// rows are saltwater: a Cast Net of pilchards and a Sabiki Rig were never
 // freshwater gear, and they were on sale in a mountain canyon. Freshwater gets
 // its own four. `world` is read by itemHere(); `regions` narrows further inside
 // freshwater (the Auger only sells where there is ice).
@@ -4397,7 +4397,7 @@ const ITEMS=[
   {id:'buoy',    name:'Slow Buoy',     icon:'zone-pin',       cost:250, world:'salt', fixedCost:true, place:true, desc:'Tap the water to anchor a buoy with a very wide field. Anglers inside it crawl at -90% speed for 6 minutes.'},
   // ── V0.9.9.1 FRESHWATER ITEMS ──
   {id:'auger',   name:'Ice Auger',     icon:'item-auger',     cost:10,  world:'fresh', regions:['northern','mountains'], fixedCost:true,
-   desc:'Cuts one hole through the hard water. One auger per ice session — walk off the ice and the next hole costs another.'},
+   desc:'Cuts one hole through the hard water. One auger per ice session. Walk off the ice and the next hole costs another.'},
   {id:'scent',   name:'Scent',         icon:'item-scent',     cost:40,  world:'fresh', fixedCost:true,
    desc:'A smear of attractant on the bait. Something eats on each of your next three casts, guaranteed.'},
   {id:'airhorn', name:'Air Horn',      icon:'item-airhorn',   cost:60,  world:'fresh', fixedCost:true,
@@ -4610,7 +4610,7 @@ function pickSkin(base, skinId){
   const owned=(S.ownedSkins||[]).includes(skinId);
   if(!owned){
     if((sk.cost||0)>0){
-      if((S.rubies||0)<sk.cost){toast('Not enough rubies — '+sk.name+' costs '+sk.cost+', you have '+(S.rubies||0)+'.','#b3402a');return;}
+      if((S.rubies||0)<sk.cost){toast('Not enough rubies. '+sk.name+' costs '+sk.cost+', you have '+(S.rubies||0)+'.','#b3402a');return;}
       S.rubies-=sk.cost;if(typeof updatePills==='function')updatePills();
     }
     S.ownedSkins=S.ownedSkins||[];S.ownedSkins.push(skinId);
@@ -4716,7 +4716,7 @@ function goldenTryStart(){
   S.goldenUntil=Date.now()+GOLDEN_RUN_MS;
   S.goldenReadyAt=S.goldenUntil+GOLDEN_COOL_MS;
   queueSave();
-  toast('The Golden Trout is glowing — 10 minutes of rubies!','#e0a93c');
+  toast('The Golden Trout is glowing, 10 minutes of rubies!','#e0a93c');
   return 'running';
 }
 function fmtDur(ms){
@@ -4749,7 +4749,7 @@ function _keyOutPetBg(im, thr){
 }
 // Derived from PETS rather than a hardcoded list, so a pet added to the roster
 // is preloaded automatically. Art that does not exist yet simply never fires
-// onload — PET_SPRITE stays empty for it and drawPets() skips it — so a new pet
+// onload (PET_SPRITE stays empty for it and drawPets() skips it) so a new pet
 // is fully playable before its PNG lands.
 PETS.forEach(function(p){
   const id=p.id;
@@ -4811,7 +4811,7 @@ function petRewardHeld(def){return def&&def.reward==='cagoldentrout'&&!!S.golden
 // What a locked companion is waiting on, in the player's terms.
 function petCriteria(p){
   if(p.reward){const f=FISH.find(function(x){return x.id===p.reward;});return 'Catch the '+((f&&f.name)||'reward fish');}
-  // Two ladders now, so name which one — "Prestige 2" alone is ambiguous.
+  // Two ladders now, so name which one: "Prestige 2" alone is ambiguous.
   return (p.world==='fresh'?'Freshwater':'Saltwater')+' Prestige '+p.prestige;
 }
 // Which prestige counter governs a pet: freshwater pets read S.fprestige, the
@@ -4823,7 +4823,7 @@ function petOwned(id){const def=PETS.find(function(x){return x.id===id;});if(!de
   return def.prestige<=petPrestigeOf(def);}
 function hasPet(id){return petOwned(id);}
 // V0.9.8.7: pets are an equipped SET. Normally exactly ONE may be equipped; the
-// Dragon (Freshwater Prestige 5) is the exception — while it is on, four OTHER
+// Dragon (Freshwater Prestige 5) is the exception: while it is on, four OTHER
 // companions ride with it (5 slots total, the Dragon holding one) and every buff
 // stacks, because each buff reads petActive() independently.
 const PET_SOLO_CAP=1, PET_DRAGON_CAP=5;
@@ -4834,7 +4834,7 @@ function petEquipCap(){return (petEquipped('dragon')&&petOwned('dragon'))?PET_DR
 function petActive(id){return petOwned(id)&&petEquipped(id);}
 // S.equippedPet survives as a DERIVED alias of the first equipped pet so old
 // saves round-trip and any straggler reader keeps working. Never assign it
-// directly — the save is JSON.stringify(S), so a getter would not deserialise.
+// directly: the save is JSON.stringify(S), so a getter would not deserialise.
 function syncEquippedPetAlias(){S.equippedPet=equippedPets()[0]||null;}
 function petNameOf(id){const p=PETS.find(function(x){return x.id===id;});return p?p.name:'that companion';}
 // ---- Prestige multipliers -----------------------------------------------
@@ -4869,7 +4869,7 @@ function petSightMult(){return petActive('alligator')?2:1;}       // +100% sight
 // un-qualify every player who had already completed the saltwater dex and yank
 // their "ready to prestige" state away. Freshwater completion is recognised by
 // its own achievements instead.
-// V0.9.8.6: freshwater has its OWN prestige with the same rule — every species
+// V0.9.8.6: freshwater has its OWN prestige with the same rule: every species
 // in that world except the ultra legendaries and the Alaskan ice roster. Pass a
 // world id; defaults to the one you are standing in.
 function nonUltraSpecies(w){
@@ -4920,8 +4920,8 @@ function showPrestigeOffer(w){
   document.getElementById('tut-npc-portrait').innerHTML=CLANCY_SVG;
   document.getElementById('tut-npc-say').innerHTML=
     (w==='fresh'
-      ? "Well I'll be — ye've caught <b>every fish in fresh water!</b> That earns ye a <b>Freshwater Prestige</b>. "
-        +"It wipes yer freshwater gear and logbook back to the start — but ye <b>keep every penny of yer cash</b>, "
+      ? "Well I'll be, ye've caught <b>every fish in fresh water!</b> That earns ye a <b>Freshwater Prestige</b>. "
+        +"It wipes yer freshwater gear and logbook back to the start, but ye <b>keep every penny of yer cash</b>, "
         +"and yer <b>licences are bought for good</b>, so every region stays open. Saltwater is untouched:<br>"
       : "Blow me down, ye’ve caught <b>every fish in the sea!</b> That earns ye a <b>Saltwater Prestige</b>. "
         +"It wipes yer coins, saltwater gear and level back to the start, but in return:<br>")
@@ -4940,7 +4940,7 @@ function showPrestigeOffer(w){
 // Reset progression, keep rubies/stats/ultra; bump prestige & grant the next pet.
 //
 // V0.9.8.6: scoped to ONE world. The two worlds prestige independently, so a
-// freshwater prestige must not wipe the saltwater rig and vice versa — otherwise
+// freshwater prestige must not wipe the saltwater rig and vice versa: otherwise
 // finishing one dex would cost you the other. Level and XP are shared between the
 // worlds and are reset only by the SALTWATER prestige, which is how it has always
 // behaved; wiping the shared level on a freshwater prestige would lock the player
@@ -4958,8 +4958,8 @@ function doPrestige(w){
   });
   if(fresh){
     // V0.9.8.9: cash and LICENCES both survive a freshwater prestige. A licence
-    // is a one-time purchase — having bought your way up to the Mountains once,
-    // you keep that access through every prestige after it — and the wallet
+    // is a one-time purchase (having bought your way up to the Mountains once,
+    // you keep that access through every prestige after it) and the wallet
     // carries over with it. Saltwater still does the full economic reset; the
     // two ladders are deliberately different. What a freshwater prestige costs
     // you is the logbook, the gear and every region loadout.
@@ -5034,7 +5034,7 @@ function prestigeFromStats(w){
 // ---- Fail-safe: if a player is out of gear AND broke, Clancy spots them a starter kit ----
 let _failsafeAt=0;
 function clancyFailsafe(){
-  // Check the wallet of the world you're actually standing in — a freshwater
+  // Check the wallet of the world you're actually standing in: a freshwater
   // angler with no cash is stranded no matter how much saltwater gold they hold,
   // and the two never convert.
   if(coinGet()>=50)return false;          // can still afford a cheap restock
@@ -5102,7 +5102,7 @@ const BOATS=[
   {id:'marlinboat',name:'Black Marlin Speedboat',icon:'boat-sport',cost:0,lvl:1,maxZone:2,range:90,speed:9.8,perk:'finder',perkName:'Fish Finder: +range & better odds',reward:'blackmarlin',rewardName:'a Black Marlin'},
   // ---- Freshwater (V0.9.8) ----
   // Freshwater craft. `bank` is the free starter (you wade the lake from
-  // shore) and `waders` is the Mountains gate — a walking 'boat' with walker:true
+  // shore) and `waders` is the Mountains gate: a walking 'boat' with walker:true
   // so the render layer knows to draw a hiker instead of a hull.
   // Craft are REGION-scoped: each region has its own free starter (granted with
   // the licence) plus one or two upgrades. maxZone is now just "my own region",
@@ -5119,7 +5119,7 @@ const BOATS=[
   {id:'no_boat1',  name:'Deep-V Lund',        icon:'boat-console',cost:3600,  lvl:7,  maxZone:5, range:55, speed:5.2, perk:'nightowl',    perkName:'Night Owl: no night bite penalty',world:'fresh',region:'northern',fixedCost:true},
   {id:'jetsled',   name:'Jet Sled',           icon:'boat-console',cost:5400,  lvl:9,  maxZone:5, range:70, speed:5.8, perk:'finder',      perkName:'Fish Finder: +range & better odds',world:'fresh',region:'northern',fixedCost:true},
   // -- Mountains -- (waders are the free starter: you hiked in)
-  // The Mountains is a WADING fishery (V0.9.9.1) — there are no boats in it at
+  // The Mountains is a WADING fishery (V0.9.9.1): there are no boats in it at
   // all. The Drift Boat is retired; migrateSave puts anyone who owned one back
   // in waders and refunds it. Waders being the only craft is also why the
   // canyon can be a 60px slot: nothing has to fit down it but a person.
@@ -5220,7 +5220,7 @@ const BRAIDS=[
   // Midwest tops out at paddlefish, the Southern at alligator gar, the Northern
   // at sturgeon, and the Mountains stay light because you are wading. Every
   // region starts with a free spool so it is fishable the moment you arrive.
-  // MIDWEST — panfish and bass up through paddlefish
+  // MIDWEST: panfish and bass up through paddlefish
   {id:'fw_m4',  name:'4 lb Mono',       line:4,  color:'#f2efe6', cost:0,    lvl:1,  desc:'Limp clear mono. Bluegill, crappie and little bullheads.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'fw_m6',  name:'6 lb Copolymer',  line:6,  color:'#e2e8d4', cost:150,  lvl:2,  desc:'A little stretch and better abrasion resistance around wood.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'fw_m10', name:'10 lb Mono',      line:10, color:'#cfe0c8', cost:420,  lvl:4,  desc:'The all-round reservoir line. Bass, channel cats and walleye.',world:'fresh',region:'midwest',fixedCost:true},
@@ -5228,14 +5228,14 @@ const BRAIDS=[
   {id:'fw_m20', name:'20 lb Braid',     line:20, color:'#2f6fb0', cost:1700, lvl:8,  desc:'Gar, blue cats and anything that runs for the creek channel.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'fw_m30', name:'30 lb Braid',     line:30, color:'#c8952f', cost:3000, lvl:10, desc:'Heavy reservoir line for grass carp and big flatheads.',world:'fresh',region:'midwest',fixedCost:true},
   {id:'fw_m40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:5200, lvl:12, desc:'Snagging line for paddlefish. Nothing here needs more.',world:'fresh',region:'midwest',fixedCost:true},
-  // SOUTHERN — heavy cover from the first cast, and alligator gar at the top
+  // SOUTHERN: heavy cover from the first cast, and alligator gar at the top
   {id:'fw_s10', name:'10 lb Mono',      line:10, color:'#d8dcc0', cost:0,    lvl:1,  desc:'Tough mono for the canals. Nothing lighter survives the cover.',world:'fresh',region:'southern',fixedCost:true},
   {id:'fw_s17', name:'17 lb Copolymer', line:17, color:'#b6c48c', cost:500,  lvl:4,  desc:'Abrasion resistance for cypress knees and barnacled pilings.',world:'fresh',region:'southern',fixedCost:true},
   {id:'fw_s25', name:'25 lb Braid',     line:25, color:'#6a9e4a', cost:1200, lvl:6,  desc:'Winches peacock bass and snakeheads out of the pads.',world:'fresh',region:'southern',fixedCost:true},
   {id:'fw_s40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:2600, lvl:9,  desc:'Bowfin, big flatheads and stripers in the current.',world:'fresh',region:'southern',fixedCost:true},
   {id:'fw_s60', name:'60 lb Braid',     line:60, color:'#d4772f', cost:4800, lvl:11, desc:'Heavy swamp line. Gar teeth go through anything lighter.',world:'fresh',region:'southern',fixedCost:true},
   {id:'fw_s80', name:'80 lb Braid',     line:80, color:'#b3402a', cost:8000, lvl:13, desc:'Alligator gar line. A rope with a hook on the end.',world:'fresh',region:'southern',fixedCost:true},
-  // NORTHERN — finesse walleye at one end, sturgeon at the other
+  // NORTHERN: finesse walleye at one end, sturgeon at the other
   {id:'fw_n4',  name:'4 lb Fluorocarbon',line:4, color:'#eef2f4', cost:0,    lvl:1,  desc:'Near-invisible in gin-clear shield water. Perch and rock bass.',world:'fresh',region:'northern',fixedCost:true},
   {id:'fw_n6',  name:'6 lb Fluorocarbon',line:6, color:'#dbe6ea', cost:200,  lvl:3,  desc:'The walleye finesse line, light enough for a slow presentation.',world:'fresh',region:'northern',fixedCost:true},
   {id:'fw_n8',  name:'8 lb Copolymer',  line:8,  color:'#c2d4da', cost:480,  lvl:5,  desc:'A step up for smallmouth and whitefish on the reefs.',world:'fresh',region:'northern',fixedCost:true},
@@ -5243,7 +5243,7 @@ const BRAIDS=[
   {id:'fw_n20', name:'20 lb Braid',     line:20, color:'#2f6fb0', cost:2200, lvl:9,  desc:'Pike, lakers and salmon. Add a wire bite guard for pike.',world:'fresh',region:'northern',fixedCost:true},
   {id:'fw_n30', name:'30 lb Braid',     line:30, color:'#c8952f', cost:4000, lvl:11, desc:'Big-water line for muskie and deep lake trout.',world:'fresh',region:'northern',fixedCost:true},
   {id:'fw_n40', name:'40 lb Braid',     line:40, color:'#e0c020', cost:6800, lvl:13, desc:'Lake sturgeon line. They do not stop for anything less.',world:'fresh',region:'northern',fixedCost:true},
-  // MOUNTAINS — waded and light, plus the two fly lines
+  // MOUNTAINS: waded and light, plus the two fly lines
   {id:'fw_x2',  name:'2 lb Tippet',     line:2,  color:'#f6f6f0', cost:0,    lvl:1,  desc:'6x tippet. Brook trout, grayling and blackfish on a dead drift.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x4',  name:'4 lb Tippet',     line:4,  color:'#eef0e6', cost:180,  lvl:3,  desc:'4x tippet. The all-round trout size in a freestone stream.',world:'fresh',region:'mountains',fixedCost:true},
   {id:'fw_x6',  name:'6 lb Fluorocarbon',line:6, color:'#dfe8dc', cost:450,  lvl:5,  desc:'Sinks faster than mono and disappears in clear pocket water.',world:'fresh',region:'mountains',fixedCost:true},
@@ -5291,7 +5291,7 @@ const ZONE_STRUCTS=[
    {kind:'deep',xF:.68,yF:.53,tier:3},{kind:'baitball',xF:.26,yF:.61,tier:3},
    {kind:'oil_rig',xF:.62,yF:.69,tier:3},{kind:'bluhole',xF:.22,yF:.76,tier:3},
    {kind:'weedline',xF:.74,yF:.82,tier:3},{kind:'deep',xF:.40,yF:.88,tier:3}],
-  // ---- zone 3: MIDWEST — reservoirs, farm ponds and the big river channel ----
+  // ---- zone 3: MIDWEST (reservoirs, farm ponds and the big river channel) ----
   [{kind:'lilypad',xF:0.098,yF:0.194,tier:1},
    {kind:'weedbed',xF:0.474,yF:0.126,tier:1},
    {kind:'boatdock',xF:0.314,yF:0.244,tier:1},
@@ -5303,14 +5303,14 @@ const ZONE_STRUCTS=[
    {kind:'creekchan',xF:0.308,yF:0.936,tier:3},
    {kind:'dam',xF:0.802,yF:0.846,tier:3}],
 
-  // ---- zone 4: SOUTHERN — blackwater swamp, canal and oxbow ----
+  // ---- zone 4: SOUTHERN (blackwater swamp, canal and oxbow) ----
   [{kind:'lilypad',xF:0.604,yF:0.142,tier:1},
    {kind:'laydown',xF:0.396,yF:0.733,tier:1},
    {kind:'boatdock',xF:0.3125,yF:0.085,tier:1},
    {kind:'weedbed',xF:0.196,yF:0.414,tier:2},
    {kind:'logjam',xF:0.8380,yF:0.7620,tier:2, fix:true},
    // V0.9.9.1: the whole east third of the Southern map had no spot on it at
-   // all — the levee canal and the cypress slough ran the full height of it
+   // all: the levee canal and the cypress slough ran the full height of it
    // empty. The pilings move onto the levee canal and the log jam into the
    // cypress slough, each in a pocket cut for it (see WATER_SHAPE zone 4).
    {kind:'pilings',xF:0.8830,yF:0.3300,tier:2, fix:true},
@@ -5319,10 +5319,10 @@ const ZONE_STRUCTS=[
    {kind:'creekchan',xF:0.5125,yF:0.681,tier:3},
    {kind:'deephole',xF:0.519,yF:0.852,tier:3}],
 
-  // ---- zone 5: NORTHERN — shield lakes, big water and the tailrace ----
+  // ---- zone 5: NORTHERN (shield lakes, big water and the tailrace) ----
   // V0.9.9.1 re-placement. The gravel bar was jammed into the top-centre corner
   // of the map on the river mouth, a long run from anywhere and sharing that
-  // water with the upstream travel gate — a poor home for the region's FIRST
+  // water with the upstream travel gate: a poor home for the region's FIRST
   // spot. It moves onto the open shoal in the west of the North Basin.
   [{kind:'gravelbar',xF:0.280,yF:0.205,tier:1, fix:true},
    {kind:'weedbed',xF:0.8,yF:0.285,tier:1},
@@ -5334,19 +5334,19 @@ const ZONE_STRUCTS=[
    {kind:'deephole',xF:0.56,yF:0.7,tier:3},
    {kind:'confluence',xF:0.345,yF:0.815,tier:3},
    // The tailrace is the boil BELOW the dam. Authored at 0.938 it was correct,
-   // but the clearance push dragged it 97px back up into the basin — i.e. above
-   // the dam — because the basin is roomier than the outflow. It is now fixed in
+   // but the clearance push dragged it 97px back up into the basin: i.e. above
+   // the dam: because the basin is roomier than the outflow. It is now fixed in
    // place, and the outflow has been widened into a boil pocket to hold it.
    {kind:'tailrace',xF:0.502,yF:0.936,tier:3, fix:true}],
 
-  // ---- zone 6: MOUNTAINS — freestone stream and alpine lake ----
+  // ---- zone 6: MOUNTAINS (freestone stream and alpine lake) ----
   // V0.9.8.4 canyon layout: tailout below the plunge bowl, boulders on the
   // Flume elbow, the run through the Narrows, undercut on the west wall bend,
   // the beaver pond on its hanging meadow, spring creek up the side canyon.
   // V0.9.8.7: respaced down the canyon so no two spots sit closer than ~233px
   // (they were bunched at the head). Every point below is a LOCAL CLEARANCE
   // MAXIMUM, which is what makes initStructures' snap and its 140px push both
-  // no-ops — move one without re-checking the others and it will silently slide
+  // no-ops: move one without re-checking the others and it will silently slide
   // into whichever neighbouring water is wider.
   [{kind:'riffle',xF:0.4144,yF:0.4817,tier:1},
    {kind:'tailout',xF:0.4888,yF:0.3079,tier:1},
@@ -5441,7 +5441,7 @@ function initStructures(){
         // whose whole point is WHERE it is: a tailrace pushed off the outflow
         // and up into the basin is no longer below the dam, and a waterfall
         // pushed down the canyon is no longer at the head of it. Anything
-        // marked fix must therefore be authored onto real water by hand —
+        // marked fix must therefore be authored onto real water by hand: 
         // there is no safety net behind it.
         if(st.fix)return;
         let bx=st.x, by=st.y, best=clearance(st.x, st.y);
@@ -5582,14 +5582,14 @@ const FISH=[
   // zone 3 Midwest / 4 Southern / 5 Northern / 6 Mountains. A species that lives
   // in more than one region carries a DISTINCT id per region (kingsalmon vs
   // mtnking, whitebass vs sowhitebass, ...) because f.id is the logbook / sprite
-  // / S.caught key — same convention the two mangrove snappers use in saltwater.
+  // / S.caught key: same convention the two mangrove snappers use in saltwater.
   // Art is keyed off id, so each id wants its own PNG in the fish/ folder;
   // anything without one falls back to procedural art and still renders.
   // ---------- MIDWEST (zone 3) ----------
   {id:'bluegill',name:'Bluegill',zone:3,rarity:'common',size:[0.1,2],line:4,methods:['livebait','topwater'],baits:['worm','cricket'],leader:'any',structure:['lilypad','boatdock','laydown','brushpile'],season:['all'],time:['day','dawn','dusk'],xp:6,gold:2,weight:52,fact:'Male bluegill fan saucer-shaped nests into the shallows in dense colonies and guard the eggs alone until they hatch.'},
   {id:'redear',name:'Redear Sunfish',zone:3,rarity:'common',size:[0.3,4],line:6,methods:['livebait','bottom'],baits:['worm','leech','crawfish'],leader:'fluoro',structure:['weedbed','lilypad','point'],season:['spring','summer'],time:['day'],xp:10,gold:4,weight:46,fact:'Nicknamed the shellcracker for the grinding throat teeth it uses to crush snails and small clams other sunfish cannot touch.'},
   {id:'blackbullhead',name:'Black Bullhead',zone:3,rarity:'rare',size:[0.2,3],line:6,methods:['bottom','livebait'],baits:['worm','chickenliver','stinkbait'],leader:'any',structure:['laydown','brushpile','creekchan','boatdock'],season:['all'],time:['dusk','night'],xp:11,gold:5,weight:9,fact:'It will live in water too warm, too muddy and too starved of oxygen for anything else, which is why a farm pond that holds nothing else still holds bullhead.'},
-  {id:'yellowbass',name:'Yellow Bass',zone:3,rarity:'common',size:[0.2,2],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad'],leader:'any',structure:['point','open','riprap','dam'],season:['spring','fall'],time:['dawn','dusk','day'],xp:13,gold:6,weight:42,fact:'The broken, offset lower stripes are the tell — no other temperate bass has them — and they school so thick that finding one usually means finding fifty.'},
+  {id:'yellowbass',name:'Yellow Bass',zone:3,rarity:'common',size:[0.2,2],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad'],leader:'any',structure:['point','open','riprap','dam'],season:['spring','fall'],time:['dawn','dusk','day'],xp:13,gold:6,weight:42,fact:'The broken, offset lower stripes are the tell (no other temperate bass has them) and they school so thick that finding one usually means finding fifty.'},
   {id:'whitecrappie',name:'White Crappie',zone:3,rarity:'common',size:[0.3,4],line:6,methods:['jig','livebait'],baits:['minnow','shiner'],leader:'fluoro',structure:['brushpile','timber','boatdock','laydown'],season:['spring','summer'],time:['dawn','dusk'],xp:16,gold:8,weight:40,fact:'Count the dorsal spines to tell it from a black crappie: white crappie carry six, black crappie seven or eight, and white crappie handle muddy water far better.'},
   {id:'blackcrappie',name:'Black Crappie',zone:3,rarity:'uncommon',size:[0.3,4.5],line:6,methods:['jig','livebait'],baits:['minnow','shiner'],leader:'fluoro',structure:['brushpile','timber','boatdock','laydown'],season:['winter','spring'],time:['dawn','dusk','night'],xp:22,gold:12,weight:28,fact:'They are called papermouths for good reason: the mouth membrane tears easily, so steady pressure lands more of them than a hard hookset.'},
   {id:'channelcat',name:'Channel Catfish',zone:3,rarity:'uncommon',size:[1,20],line:10,methods:['bottom','livebait'],baits:['chickenliver','stinkbait','worm','shad'],leader:'any',structure:['creekchan','riprap','dam','open'],season:['summer','fall'],time:['dusk','night'],xp:26,gold:14,weight:26,fact:'Channel cats hunt almost entirely by smell and taste, carrying well over a hundred thousand taste buds across their barbels and skin.'},
@@ -5597,7 +5597,7 @@ const FISH=[
   {id:'grasscarp',name:'Grass Carp',zone:3,rarity:'rare',size:[5,70],line:20,methods:['bottom'],baits:['corn','worm','powerbait'],leader:'fluoro',structure:['weedbed','lilypad','riprap','point'],season:['spring','summer'],time:['day','dawn'],xp:72,gold:40,weight:9,fact:'Stocked by the ton to eat problem weed, and most states will only sell you the sterile triploid version so it can never breed its way loose.'},
   {id:'longnosegar',name:'Longnose Gar',zone:3,rarity:'epic',size:[3,40],line:20,methods:['topwater','livebait'],baits:['shiner','minnow','shad'],leader:'wire',structure:['weedbed','open','creekchan','lilypad'],season:['summer'],time:['day','dusk','night'],xp:120,gold:74,weight:7,fact:'Its interlocking ganoid scales are so hard that Native peoples used gar hide as armor plating and the scales as arrow points.'},
   {id:'bluecat',name:'Blue Catfish',zone:3,rarity:'legendary',size:[5,90],line:30,methods:['bottom','troll'],baits:['shad','chickenliver','crawfish'],leader:'any',structure:['creekchan','dam','open','point'],season:['fall','winter'],time:['night','dawn'],xp:140,gold:105,weight:2.4,fact:'The all-tackle record is a 143 lb blue pulled out of Kerr Lake, Virginia, the largest catfish ever landed in North America.'},
-  {id:'paddlefish',name:'American Paddlefish',zone:3,rarity:'legendary',size:[20,100],line:40,methods:['snagging'],baits:['shad','minnow'],leader:'any',structure:['creekchan','dam','open','point'],season:['winter','spring'],time:['dawn','day'],xp:280,gold:190,weight:2.4,fact:'A paddlefish filters plankton and never bites a bait — its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
+  {id:'paddlefish',name:'American Paddlefish',zone:3,rarity:'legendary',size:[20,100],line:40,methods:['snagging'],baits:['shad','minnow'],leader:'any',structure:['creekchan','dam','open','point'],season:['winter','spring'],time:['dawn','day'],xp:280,gold:190,weight:2.4,fact:'A paddlefish filters plankton and never bites a bait. Its bladed rostrum is packed with electroreceptors, and anglers take them by snagging.'},
   // ---------- SOUTHERN (zone 4) ----------
   {id:'bluetilapia',name:'Blue Tilapia',zone:4,rarity:'common',size:[0.5,6],line:6,methods:['bottom','livebait'],baits:['corn','worm','powerbait'],leader:'any',structure:['boatdock','weedbed','creekchan','lilypad'],season:['all'],time:['day','dawn'],xp:12,gold:5,weight:52,fact:'An African import that escaped fish farms decades ago and now packs the warm canals so densely it out-competes almost everything native.'},
   {id:'sowhitebass',name:'White Bass',zone:4,rarity:'common',size:[0.4,4],line:6,methods:['jig','livebait','topwater'],baits:['minnow','shad','shiner'],leader:'any',structure:['creekchan','eddy','deephole','pilings'],season:['spring','fall'],time:['dawn','dusk','day'],xp:16,gold:8,weight:48,fact:'Spring sends white bass surging up the feeder creeks by the thousands to broadcast their eggs; they build no nest at all.'},
@@ -5605,14 +5605,14 @@ const FISH=[
   {id:'chainpickerel',name:'Chain Pickerel',zone:4,rarity:'uncommon',size:[1,8],line:10,methods:['topwater','livebait'],baits:['shiner','minnow'],leader:'any',structure:['lilypad','weedbed','laydown'],season:['fall','winter'],time:['day','dawn'],xp:30,gold:17,weight:28,fact:'Named for the chain-link pattern down its flanks, it is one of the few gamefish that keeps feeding hard through the coldest weeks of the year.'},
   {id:'bowfin',name:'Bowfin',zone:4,rarity:'rare',size:[2,16],line:20,methods:['topwater','livebait','bottom'],baits:['shiner','crawfish','minnow'],leader:'any',structure:['lilypad','weedbed','laydown','logjam'],season:['summer'],time:['dawn','dusk','night'],xp:78,gold:42,weight:12,fact:'A living fossil with a lung-like gas bladder, the bowfin gulps air at the surface and survives water too stagnant for anything else to breathe.'},
   {id:'knifefish',name:'Clown Knifefish',zone:4,rarity:'legendary',size:[2,12],line:20,methods:['livebait','jig'],baits:['shiner','minnow'],leader:'fluoro',structure:['boatdock','pilings','deephole','timber'],season:['all'],time:['dusk','night'],xp:64,gold:36,weight:2.2,fact:'A blade-shaped aquarium release now loose in South Florida, it swims backwards as easily as forwards on one long rippling fin and wears a row of inky spots.'},
-  {id:'snakehead',name:'Snakehead',zone:4,rarity:'epic',size:[1,18],line:20,methods:['topwater','jig','livebait'],baits:['shiner','minnow','crawfish'],leader:'wire',structure:['lilypad','weedbed','laydown','creekchan'],season:['all'],time:['day','dawn','dusk'],xp:86,gold:50,weight:7,fact:'It breathes air, crosses wet ground to reach new water, and both parents guard the young — which is exactly why moving one live is a crime in most states.'},
+  {id:'snakehead',name:'Snakehead',zone:4,rarity:'epic',size:[1,18],line:20,methods:['topwater','jig','livebait'],baits:['shiner','minnow','crawfish'],leader:'wire',structure:['lilypad','weedbed','laydown','creekchan'],season:['all'],time:['day','dawn','dusk'],xp:86,gold:50,weight:7,fact:'It breathes air, crosses wet ground to reach new water, and both parents guard the young, which is exactly why moving one live is a crime in most states.'},
   {id:'peacockbass',name:'Peacock Bass',zone:4,rarity:'rare',size:[1,12],line:10,methods:['topwater','jig','livebait'],baits:['shiner','minnow'],leader:'fluoro',structure:['boatdock','pilings','creekchan','eddy'],season:['summer','spring'],time:['day','dawn'],xp:92,gold:56,weight:12,fact:'Stocked into Miami canals in 1984 to eat the loose tilapia, this Amazon cichlid hits a topwater harder than anything else swimming in fresh water.'},
   {id:'sostripedbass',name:'Striped Bass',zone:4,rarity:'rare',size:[5,40],line:20,methods:['livebait','jig','bottom'],baits:['shad','shiner','minnow'],leader:'any',structure:['deephole','creekchan','pilings','eddy'],season:['spring','fall','winter'],time:['dawn','dusk','night'],xp:130,gold:82,weight:10,fact:'Stripers are born to run upriver to spawn, and landlocked populations still stack against the dam every spring trying to keep going.'},
   {id:'soflathead',name:'Flathead Catfish',zone:4,rarity:'epic',size:[5,70],line:20,methods:['bottom','livebait'],baits:['shiner','minnow','crawfish'],leader:'any',structure:['logjam','timber','deephole','pilings'],season:['summer','fall'],time:['night','dusk'],xp:150,gold:100,weight:7,fact:'Flatheads want live fish and almost nothing else, which is why the stinkbaits that pile up channel cats will sit untouched all night.'},
   {id:'alligatorgar',name:'Alligator Gar',zone:4,rarity:'legendary',size:[20,250],line:80,methods:['bottom','livebait'],baits:['shad','shiner','minnow'],leader:'wire',structure:['deephole','creekchan','logjam','eddy'],season:['summer','fall'],time:['dusk','night','dawn'],xp:340,gold:230,weight:2,fact:'The largest fish in North American fresh water and a survivor of a hundred million years, with a double row of teeth and a snout like a real alligator.'},
-  {id:'alabamasturgeon',name:'Alabama Sturgeon',zone:4,rarity:'ultra',size:[1,4],line:20,methods:['bottom'],baits:['worm','crawfish'],leader:'fluoro',structure:['deephole','creekchan','eddy'],season:['all'],time:['dawn','dusk','night'],xp:1200,gold:1800,weight:1,spawnChance:0.0004,fact:'A small orange sturgeon found only in the Mobile River basin. Fewer than a handful have been seen alive in decades — it may be the rarest fish in America. Catch and release only.'},
+  {id:'alabamasturgeon',name:'Alabama Sturgeon',zone:4,rarity:'ultra',size:[1,4],line:20,methods:['bottom'],baits:['worm','crawfish'],leader:'fluoro',structure:['deephole','creekchan','eddy'],season:['all'],time:['dawn','dusk','night'],xp:1200,gold:1800,weight:1,spawnChance:0.0004,fact:'A small orange sturgeon found only in the Mobile River basin. Fewer than a handful have been seen alive in decades. It may be the rarest fish in America. Catch and release only.'},
   // ---------- NORTHERN (zone 5) ----------
-  {id:'yellowperch',name:'Yellow Perch',zone:5,rarity:'common',size:[0.2,2.5],line:6,methods:['jig','livebait','ice'],baits:['minnow','worm','waxworm'],leader:'any',structure:['weedbed','point','gravelbar','timber'],season:['all'],time:['day','dawn','dusk'],xp:14,gold:7,weight:52,fact:'Perch travel in tight same-size schools, so the first one tells you the size of the next twenty — and they keep biting under a foot of ice.'},
+  {id:'yellowperch',name:'Yellow Perch',zone:5,rarity:'common',size:[0.2,2.5],line:6,methods:['jig','livebait','ice'],baits:['minnow','worm','waxworm'],leader:'any',structure:['weedbed','point','gravelbar','timber'],season:['all'],time:['day','dawn','dusk'],xp:14,gold:7,weight:52,fact:'Perch travel in tight same-size schools, so the first one tells you the size of the next twenty, and they keep biting under a foot of ice.'},
   {id:'rockbass',name:'Rock Bass',zone:5,rarity:'common',size:[0.2,2],line:6,methods:['livebait','jig'],baits:['worm','crawfish','minnow'],leader:'any',structure:['rockledge','riprap','gravelbar','timber'],season:['all'],time:['day','dawn','dusk'],xp:16,gold:8,weight:48,fact:'The blazing red eye is the giveaway, and it can shift from pale to nearly black in seconds to match the rock it is sitting on.'},
   {id:'lakewhitefish',name:'Lake Whitefish',zone:5,rarity:'common',size:[1,12],line:6,methods:['jig','bottom','ice'],baits:['waxworm','minnow','salmonegg'],leader:'fluoro',structure:['deephole','gravelbar','point','rockledge'],season:['all'],time:['day','dawn','dusk'],xp:44,gold:28,weight:44,fact:'A small downturned mouth built for sucking invertebrates off the mud, which is why they hug the bottom and inhale a jig on the drop rather than the lift.'},
   {id:'smallmouth',name:'Smallmouth Bass',zone:5,rarity:'uncommon',size:[1,8],line:10,methods:['jig','topwater','livebait'],baits:['crawfish','minnow','shiner'],leader:'fluoro',structure:['gravelbar','rockledge','seam','point'],season:['spring','summer','fall'],time:['dawn','day','dusk'],xp:42,gold:24,weight:28,fact:'Smallmouth feed heavily on crayfish, and their color shifts from bright bronze to near-black depending on the bottom they are sitting over.'},
@@ -5652,7 +5652,7 @@ const FISH=[
   {id:'burbot',ruby:3,name:'Burbot',zone:6,ice:true,alaska:true,rarity:'uncommon',size:[1,18],line:10,methods:['ice'],baits:['minnow','shiner'],leader:'any',structure:['icehole'],season:['winter'],time:['dusk','night'],xp:90,gold:0,weight:30,iceDepth:[46,60],icePatience:14000,iceTS:0.50,iceRise:0.30,fact:'The only cod that lives its whole life in fresh water, and it spawns under the ice in January in a writhing ball of fish. Anglers call it the lawyer.'},
   {id:'arcticchar',ruby:5,name:'Arctic Char',zone:6,ice:true,alaska:true,rarity:'rare',size:[2,25],line:10,methods:['ice'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk'],xp:230,gold:0,weight:16,iceDepth:[20,44],icePatience:8000,iceTS:0.60,iceRise:1.10,iceChase:true,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
   {id:'lingcod',ruby:10,name:'Lingcod',zone:6,ice:true,alaska:true,rarity:'epic',size:[5,60],line:20,methods:['ice'],baits:['minnow','shiner','shad'],leader:'wire',structure:['icehole'],season:['winter'],time:['day','dawn','dusk'],xp:340,gold:0,weight:8,iceDepth:[38,60],icePatience:6000,iceTS:0.80,iceRise:1.40,iceChase:true,fact:'Not a cod at all but a greenling, with a mouth of needle teeth and flesh that can run bright blue-green until the moment it is cooked.'},
-  {id:'sheefish',ruby:30,name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one" — the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
+  {id:'sheefish',ruby:30,name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one": the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
   {id:'greenlandshark',ruby:100,name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0024,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
 ];
 
@@ -5737,7 +5737,7 @@ function fishLenStr(f, w){
 // Four currencies, deliberately kept apart:
 //   GOLD   soft, SALTWATER. Earned only. Buys saltwater gear.
 //   CASH   soft, FRESHWATER. Earned only. Buys freshwater gear and the region
-//          licences. Gold and cash never convert into each other — the two
+//          licences. Gold and cash never convert into each other: the two
 //          worlds have separate economies, so grinding tarpon can't buy you a
 //          bass boat and neither wallet is worth anything in the other world.
 //   RUBIES premium. Earned AND (later) purchasable with real money. Buys sets,
@@ -5753,7 +5753,7 @@ function fishLenStr(f, w){
 // Everything that spends or earns the SOFT currency goes through these helpers
 // instead of touching S.gold, so a freshwater price is paid in cash and a
 // freshwater catch pays out in cash without every call site knowing which world
-// it is in. Rubies stay global — they are account-wide, and the
+// it is in. Rubies stay global: they are account-wide, and the
 // competitive systems (tournaments, lobby buy-ins, achievements, prestige) stay
 // on GOLD on purpose so a cross-world match has one shared stake.
 // ---- Endless bait (ultra reward) --------------------------------------------
@@ -5786,13 +5786,13 @@ function coinAdd(n, w){
 // ---- FRESHWATER REGION LICENCES ---------------------------------------------
 // The freshwater progression gate. You start in the Midwest for free and buy
 // your way north/south, in order, with cash. Because maxZoneIn() only walks
-// CONTIGUOUS reachable zones, an unbought licence blocks everything past it —
+// CONTIGUOUS reachable zones, an unbought licence blocks everything past it: 
 // no skipping straight to the Mountains with a big enough wallet.
 const FRESH_LICENSES=[
   {zone:4, id:'southern',  name:'Southern Licence',  cost:1000,
    blurb:'Swamps, canals and oxbows. Peacock bass, snakehead and gar in warm, tannin-black water.'},
   {zone:5, id:'northern',  name:'Northern Licence',  cost:2500,
-   blurb:'Shield lakes and big cold water. Walleye, lake trout and muskie — and the ice, once winter locks it up.'},
+   blurb:'Shield lakes and big cold water. Walleye, lake trout and muskie. And the ice, once winter locks it up.'},
   {zone:6, id:'mountains', name:'Mountains Licence', cost:10000,
    blurb:'Freestone streams and alpine lakes. Fly, spin cast and still fishing only, and the gateway to Alaskan ice.'},
 ];
@@ -5810,7 +5810,7 @@ function buyLicense(zone){
   const prev=licenseFor(zone-1);
   if(prev&&!hasLicense(zone-1)){toast('Buy the '+prev.name+' first.','#b58b53');return false;}
   if(!coinCanAfford(l.cost,'fresh')){
-    toast('The '+l.name+' costs '+l.cost.toLocaleString()+' cash — you have '+coinGet('fresh').toLocaleString()+'.','#b3402a');
+    toast('The '+l.name+' costs '+l.cost.toLocaleString()+' cash. You have '+coinGet('fresh').toLocaleString()+'.','#b3402a');
     return false;
   }
   coinSpend(l.cost,'fresh');
@@ -6164,7 +6164,7 @@ function buildFishArt(id, px, mono){
     eye=[98,27,2.6];gillX=90;
     tailRays=[[25,30,6,16],[25,30,13,30],[25,30,8,39]];
   }else if(s.shape==='paddle'){
-    // Paddlefish: the rostrum IS the silhouette — nearly a third of the animal.
+    // Paddlefish: the rostrum IS the silhouette, nearly a third of the animal.
     bodyD='M24,30 C24,19 44,16 66,18 C82,19 90,23 96,30 C90,37 82,41 66,42 C44,44 24,41 24,30 Z';
     tailD='M28,30 L5,16 L15,30 L7,44 Z';
     finsB=[['M46,18 L56,7 L68,19 Z',1],['M52,42 L66,50 L74,41 Z',0.95]];
@@ -6234,7 +6234,7 @@ function buildFishArt(id, px, mono){
       for(let i=0;i<10;i++){mk+='<circle cx="'+(32+i*9)+'" cy="'+(40+((i*5)%5))+'" r="1.1" fill="'+s.mark+'" opacity="0.45"/>';}}
     // Pickerel / muskie chain-link reticulation.
     else if(m==='chain'){for(let i=0;i<7;i++){const x=32+i*11;mk+='<path d="M'+x+',18 q6,6 0,12 q-6,6 0,12" stroke="'+s.mark+'" stroke-width="1.5" fill="none" opacity="0.55"/>';}}
-    // Sunfish gill flap (the "ear") — sits behind the operculum.
+    // Sunfish gill flap (the "ear"): sits behind the operculum.
     else if(m==='gillflap')extras+='<ellipse cx="'+(gillX-2)+'" cy="30" rx="4.6" ry="6.4" fill="'+s.mark+'" opacity="0.95"/>';
     // Sturgeon scutes: the bony ridge plates along the back and flank.
     else if(m==='scutes'){for(let i=0;i<9;i++){const x=30+i*9;mk+='<path d="M'+x+',23 l4,-2.6 l1.4,3 Z" fill="'+s.mark+'" opacity="0.75"/>';}
@@ -6718,7 +6718,7 @@ async function loadGame(){
 function normalizeState(){
   if(typeof S.rubies!=='number')S.rubies=0;
   // V0.9.8.1: freshwater runs on its own soft currency. A save from before the
-  // split has no cash wallet — seed it empty rather than porting gold across,
+  // split has no cash wallet: seed it empty rather than porting gold across,
   // because the whole point is that the two economies never convert.
   if(typeof S.cash!=='number')S.cash=0;
   // V0.9.8.2 replaced the shared freshwater line list with region-specific
@@ -6833,7 +6833,7 @@ function normalizeState(){
   if(typeof S.iceAuger!=='boolean')S.iceAuger=false;
   // Anyone who bought the auger before it was wired up spent 700 cash on a dead
   // inventory row. They paid for it, so honour it rather than making them buy it
-  // twice — the tackle entry is the receipt.
+  // twice: the tackle entry is the receipt.
   if(!S.iceAuger&&S.tackleInv&&S.tackleInv.iceauger)S.iceAuger=true;
   // V0.9.9.1: the Hand Ice Auger stops being a 700-cash unlock and becomes a
   // 10-ruby consumable. Anyone who bought the old one keeps the value of it as a
@@ -6931,8 +6931,8 @@ function normalizeState(){
   if(typeof S.audio.muted!=='boolean')S.audio.muted=false;
   // Repair gear the save says is equipped but that the player does not own. A
   // ghost-render leak could strand another angler's rod (commonly a bot's
-  // Chainsaw Rod) in the real player's slot, where it then persisted and — via
-  // surfRigOK() — wrongly counted toward the surf-fishing unlock. The leak is
+  // Chainsaw Rod) in the real player's slot, where it then persisted and (via
+  // surfRigOK()) wrongly counted toward the surf-fishing unlock. The leak is
   // closed at the source now; this cleans up saves that already caught it.
   if(typeof validateEquipped==='function'){
     const _fixedSlots=validateEquipped();
@@ -6988,7 +6988,7 @@ const AUDIO=(function(){
     for(let i=0;i<len;i++){const w=Math.random()*2-1;last=(last+0.02*w)/1.02;d[i]=last*3.0;}
   }
   // ---- ambience: freshwater only (V0.9.9.1) ----
-  // The saltwater bed — filtered noise under a wave-swell LFO — is REMOVED. It
+  // The saltwater bed (filtered noise under a wave-swell LFO) is REMOVED. It
   // ran continuously behind every saltwater scene and was the one sound in the
   // game a player could not escape without turning the whole ambience bus off.
   //
@@ -7160,7 +7160,7 @@ const AUDIO=(function(){
   }
   // ---- generative music bed: gentle pads + sparse pentatonic melody ----
   // Saltwater is close triads. Freshwater is open fifths and suspended 2nds with
-  // barely a third in it — that interval set reads as outdoors rather than as a key.
+  // barely a third in it: that interval set reads as outdoors rather than as a key.
   const CHORDS={
     calm:[[261.63,329.63,392.00],[220.00,261.63,329.63],[174.61,261.63,349.23],[196.00,246.94,392.00]],
     tourn:[[261.63,311.13,392.00],[233.08,293.66,349.23],[196.00,261.63,329.63],[207.65,261.63,311.13]],
@@ -7373,7 +7373,7 @@ function applyRecovery(key){
 // is split, under parallel f* fields. Saltwater keeps the original field names.
 // V0.9.8.1: freshwater gear is per REGION, not per world. Each region keeps its
 // own equipped set under S.fgear[regionId], so walking from the Midwest into the
-// Southern swaps your whole rig with no explicit "switch loadout" step — the
+// Southern swaps your whole rig with no explicit "switch loadout" step: the
 // region IS the loadout. Saltwater keeps the original flat S.boat/S.rod/... .
 const GEAR_SLOTS=['boat','rod','reel','braid','leader','method','baitSel','lureSel'];
 // The free kit every region hands you the moment its licence is bought, so you
@@ -7402,7 +7402,7 @@ function gearSet(k, v){if(isFresh())regionGearBag()[k]=v;else S[k]=v;}
 // nothing they are allowed to tie on.
 // V0.9.8.3: a new region hands you NOTHING. You buy the rig for the water you
 // just bought a licence for, which is the whole point of a region being its own
-// fishery. The Midwest is the exception — it is the freshwater on-ramp, so it
+// fishery. The Midwest is the exception: it is the freshwater on-ramp, so it
 // still comes with its free kit or a new player lands with no way to fish at all.
 //
 // The gear BAG is still created (so equip slots exist and the shop knows what is
@@ -7786,7 +7786,7 @@ function scentRefund(){
   if(!_scentArmed)return;
   _scentArmed=false;
   S.scentCasts=(S.scentCasts||0)+1;
-  toast('Nothing down there to call in — the scent keeps.','#b58b53');
+  toast('Nothing down there to call in. The scent keeps.','#b58b53');
   queueSave();
 }
 let _snaggedUntil=0;                 // Snag Rock: can't cast/catch until this time
@@ -7825,7 +7825,7 @@ let sightFish=[],ripples=[];
 // Species that surface where you can SEE them and cast at the fish rather than
 // the spot. V0.9.8.6 adds freshwater: without these the Alligator companion
 // (+100% sight-fishing spawns) would have been inert in the very world you earn
-// it in. Each pick is one that genuinely shows itself — bass cruising a flat,
+// it in. Each pick is one that genuinely shows itself: bass cruising a flat,
 // gar and bowfin rolling for air, carp tailing, a muskie following the boat.
 const SIGHT_FISH_WEIGHTS={
   // saltwater
@@ -8086,12 +8086,12 @@ function sightFishHitAt(sx, sy){
 // The Mountains map is the smallest: you cover it on foot, not under power.
 // Per-zone world size. The freshwater regions (3-6) are BIGGER than the numbers
 // they replaced because a large part of each one is now land: the fishable water
-// is about what it was. The Mountains map is tall and narrow — one river canyon.
+// is about what it was. The Mountains map is tall and narrow: one river canyon.
 const WORLD_DIMS=[[1900,1650],[2250,1900],[2700,2200],[2400,2100],[2400,2100],[2600,2250],[1250,2900]];
 
 // ===================== SHORELINES (V0.9.9) =====================
 // Saltwater is open sea: water to every edge, land only as the inshore beach.
-// Freshwater is the opposite — a defined body of water with LAND all around it,
+// Freshwater is the opposite: a defined body of water with LAND all around it,
 // so a region reads like a lake map instead of an ocean with props floating in
 // it. Every shape is hand-authored and IDENTICAL FOR EVERY PLAYER (freshwater
 // skips the worldSeed shuffle), because the spots are placed against a drawn
@@ -8116,11 +8116,11 @@ const WATER_SHAPE={
      {kind:'poly',pts:[[0.358,0.124],[0.388,0.178],[0.444,0.216],[0.512,0.222],[0.572,0.19],[0.592,0.134],[0.568,0.082],[0.51,0.048],[0.442,0.044],[0.386,0.072]]},
        // flat at the head of the north-east arm. Laydown sits on its east bank.
      {kind:'poly',pts:[[0.738,0.156],[0.748,0.192],[0.784,0.224],[0.838,0.24],[0.892,0.22],[0.92,0.172],[0.914,0.116],[0.874,0.078],[0.814,0.072],[0.762,0.102]]},
-       // the drowned river itself: starts deep inside the basin at (0.318,0.580), climbs north-west and runs to the top edge at x~0.23 — the upstream travel gate. Endpoint pulled in to y=0.022 so every coordinate stays on-map; the channel still carries water to within 46px of the top edge and the gate scan lands in it.
+       // the drowned river itself: starts deep inside the basin at (0.318,0.580), climbs north-west and runs to the top edge at x~0.23: the upstream travel gate. Endpoint pulled in to y=0.022 so every coordinate stays on-map; the channel still carries water to within 46px of the top edge and the gate scan lands in it.
      {kind:'ribbon',cs:[[0.318,0.58],[0.308,0.492],[0.288,0.408],[0.256,0.33],[0.258,0.248],[0.228,0.164],[0.236,0.078],[0.231,0.022]],hw:[0.104,0.096,0.088,0.079,0.072,0.064,0.057,0.057]},
        // Big Creek arm, north-centre. Starts inside the basin and opens well inside the head flat poly.
      {kind:'ribbon',cs:[[0.5,0.585],[0.508,0.495],[0.53,0.408],[0.498,0.322],[0.518,0.24],[0.492,0.16],[0.48,0.108]],hw:[0.104,0.096,0.088,0.079,0.072,0.066,0.062]},
-       // fork off Big Creek reaching north-east into the farm draw — the dendritic detail that stops the north half reading as parallel fingers. Origin sits on Big Creek's centreline.
+       // fork off Big Creek reaching north-east into the farm draw: the dendritic detail that stops the north half reading as parallel fingers. Origin sits on Big Creek's centreline.
      {kind:'ribbon',cs:[[0.516,0.288],[0.59,0.256],[0.648,0.212],[0.68,0.156]],hw:[0.066,0.058,0.049,0.043]},
        // north-east arm, starts inside the basin and opens well inside the NE flat poly.
      {kind:'ribbon',cs:[[0.778,0.582],[0.812,0.498],[0.852,0.412],[0.838,0.322],[0.856,0.24],[0.84,0.176]],hw:[0.104,0.094,0.083,0.074,0.066,0.06]},
@@ -8128,7 +8128,7 @@ const WATER_SHAPE={
      {kind:'ribbon',cs:[[0.262,0.59],[0.212,0.58],[0.164,0.57],[0.118,0.56]],hw:[0.078,0.04,0.049,0.066]},
        // short farm creek west out of the river arm into the NW pond, pinched to a 173px throat at x~0.156.
      {kind:'ribbon',cs:[[0.244,0.214],[0.198,0.198],[0.156,0.192],[0.116,0.194]],hw:[0.062,0.049,0.036,0.053]},
-       // south slough off the basin's SW corner, running to the bottom edge at x~0.33 — the downstream travel gate. Tail re-laid so no coordinate leaves the map; the oblique end cap still puts water on the bottom edge and the gate scan lands in the channel.
+       // south slough off the basin's SW corner, running to the bottom edge at x~0.33: the downstream travel gate. Tail re-laid so no coordinate leaves the map; the oblique end cap still puts water on the bottom edge and the gate scan lands in the channel.
      {kind:'ribbon',cs:[[0.368,0.868],[0.35,0.918],[0.334,0.956],[0.326,0.976]],hw:[0.076,0.064,0.055,0.053]},
   ],islands:[{cx:0.64,cy:0.612,rx:0.05,ry:0.055,rot:0.5},{cx:0.412,cy:0.74,rx:0.04,ry:0.048,rot:-0.4},{cx:0.556,cy:0.8,rx:0.028,ry:0.032,rot:0.2}]},
   // ---- zone 4: SOUTHERN ----
@@ -8194,15 +8194,15 @@ const WATER_SHAPE={
   // ---- zone 5: NORTHERN ----
   // This is two basins joined by one squeeze. The North Basin is the smaller, weedier end where the river out of the Mountains drops in at the top gate ov
   5:{parts:[
-       // North Basin — the upper, shallower basin. River mouth at top centre, weedy NE bay, jagged south shore against the granite ridge.
+       // North Basin: the upper, shallower basin. River mouth at top centre, weedy NE bay, jagged south shore against the granite ridge.
      {kind:'poly',pts:[[0.108,0.178],[0.128,0.132],[0.178,0.108],[0.222,0.152],[0.272,0.1],[0.33,0.088],[0.382,0.148],[0.436,0.096],[0.5,0.086],[0.558,0.1],[0.606,0.152],[0.662,0.098],[0.722,0.092],[0.778,0.128],[0.822,0.18],[0.782,0.226],[0.856,0.252],[0.884,0.312],[0.826,0.348],[0.762,0.322],[0.708,0.376],[0.646,0.36],[0.588,0.388],[0.526,0.358],[0.468,0.38],[0.408,0.348],[0.348,0.376],[0.288,0.338],[0.226,0.36],[0.16,0.322],[0.098,0.286],[0.142,0.238],[0.07,0.212],[0.088,0.188]]},
-       // Main Basin — the big water. Granite Point at (0.345,0.500), narrows mouth at (0.545,0.428), deep west bays, SE headlands, south shore opening to the dam at x=0.5.
+       // Main Basin: the big water. Granite Point at (0.345,0.500), narrows mouth at (0.545,0.428), deep west bays, SE headlands, south shore opening to the dam at x=0.5.
      {kind:'poly',pts:[[0.058,0.522],[0.078,0.468],[0.136,0.45],[0.182,0.508],[0.232,0.446],[0.288,0.436],[0.345,0.5],[0.4,0.45],[0.452,0.442],[0.5,0.472],[0.545,0.428],[0.598,0.448],[0.65,0.502],[0.702,0.448],[0.76,0.438],[0.815,0.496],[0.872,0.45],[0.922,0.498],[0.952,0.558],[0.902,0.612],[0.956,0.668],[0.938,0.736],[0.878,0.762],[0.934,0.818],[0.888,0.87],[0.822,0.888],[0.772,0.846],[0.716,0.896],[0.652,0.906],[0.598,0.866],[0.548,0.906],[0.482,0.912],[0.428,0.868],[0.372,0.902],[0.32,0.862],[0.268,0.838],[0.212,0.806],[0.15,0.83],[0.086,0.798],[0.118,0.766],[0.048,0.706],[0.07,0.64],[0.128,0.598],[0.044,0.562]]},
-       // Little Narrows — the only link between the two basins, 161px wide at the pinch. Starts 96px inside the North Basin (south shore there is y=0.388) and ends 41px inside the Main Basin (north shore y=0.428), so both mouths are genuinely open water.
+       // Little Narrows: the only link between the two basins, 161px wide at the pinch. Starts 96px inside the North Basin (south shore there is y=0.388) and ends 41px inside the Main Basin (north shore y=0.428), so both mouths are genuinely open water.
      {kind:'ribbon',cs:[[0.588,0.342],[0.586,0.372],[0.572,0.398],[0.558,0.42],[0.545,0.452]],hw:[0.058,0.038,0.031,0.036,0.062]},
-       // Inflow river from the Mountains — starts at the top edge limit y=0.020 (top travel gate at y=0.024, entry spawn at y=0.080) and opens 57px inside the North Basin at y=0.112.
+       // Inflow river from the Mountains: starts at the top edge limit y=0.020 (top travel gate at y=0.024, entry spawn at y=0.080) and opens 57px inside the North Basin at y=0.112.
      {kind:'ribbon',cs:[[0.5,0.02],[0.5,0.038],[0.492,0.058],[0.503,0.085],[0.5,0.112]],hw:[0.036,0.035,0.031,0.04,0.058]},
-       // Outflow below the dam — starts 107px inside the Main Basin at y=0.862 and runs to the bottom edge limit y=0.980 (entry spawn at y=0.920, bottom travel gate at y=0.976).
+       // Outflow below the dam: starts 107px inside the Main Basin at y=0.862 and runs to the bottom edge limit y=0.980 (entry spawn at y=0.920, bottom travel gate at y=0.976).
      {kind:'ribbon',cs:[[0.508,0.862],[0.51,0.9],[0.498,0.932],[0.5,0.958],[0.5,0.98]],hw:[0.062,0.043,0.034,0.036,0.036]},
        // POCKET (V0.9.9.1) - the boil basin the turbines have scoured out below
        // the dam. The outflow narrows to 88px there and the tailrace art is far
@@ -8212,7 +8212,7 @@ const WATER_SHAPE={
      {kind:'poly',pts:[[0.4300,0.9260],[0.4400,0.9130],[0.4640,0.9050],[0.5020,0.9020],[0.5400,0.9050],[0.5640,0.9130],[0.5740,0.9260],[0.5740,0.9460],[0.5640,0.9590],[0.5400,0.9670],[0.5020,0.9700],[0.4640,0.9670],[0.4400,0.9590],[0.4300,0.9460]]},
        // Creek crossing the southwest pine peninsula, from the bog pond up into the SW bay. End point (0.330,0.842) sits 52px inside the basin (shore there is y=0.866) and its 130px half-width blows the mouth wide open.
      {kind:'ribbon',cs:[[0.138,0.924],[0.192,0.916],[0.244,0.902],[0.288,0.88],[0.33,0.842]],hw:[0.026,0.024,0.023,0.028,0.05]},
-       // Bog pond at the head of the creek — where it comes out of the black spruce. The creek mouth reaches 49px inside it. Sits 117px clear of the bottom edge.
+       // Bog pond at the head of the creek: where it comes out of the black spruce. The creek mouth reaches 49px inside it. Sits 117px clear of the bottom edge.
      {kind:'poly',pts:[[0.096,0.916],[0.11,0.896],[0.138,0.89],[0.164,0.9],[0.172,0.922],[0.158,0.942],[0.13,0.948],[0.102,0.938]]},
   ],islands:[{cx:0.3,cy:0.66,rx:0.072,ry:0.06,rot:0.35},{cx:0.435,cy:0.575,rx:0.038,ry:0.026,rot:-0.3},{cx:0.64,cy:0.59,rx:0.032,ry:0.024,rot:0.5},{cx:0.815,cy:0.69,rx:0.034,ry:0.026,rot:0.9},{cx:0.36,cy:0.24,rx:0.036,ry:0.03,rot:0.2},{cx:0.7,cy:0.25,rx:0.028,ry:0.023,rot:1},{cx:0.7,cy:0.78,rx:0.036,ry:0.028,rot:-0.6}]},
   // ---- zone 6: MOUNTAINS ----
@@ -8319,7 +8319,7 @@ function _ensureConnected(p, isl, zi, W, H){
   for(let i=0;i<comps.length;i++){
     if(i===main||comps[i].length<_CONN_MIN)continue;
     // Closest pair of cells between this component and the main body whose
-    // straight run does not cross an island — a bridge carved through an island
+    // straight run does not cross an island: a bridge carved through an island
     // is subtracted again by isWaterAt and connects nothing.
     // The main body can be thousands of cells, so it is subsampled: we want a
     // near-optimal cut, not a provably minimal one.
@@ -8358,7 +8358,7 @@ function _ensureConnected(p, isl, zi, W, H){
 // Every subpath must be wound the SAME way. Path2D fills with the nonzero rule,
 // so a loop wound against its neighbour cancels where the two overlap and
 // punches a hole in the water instead of merging with it. Normalising here is
-// what lets parts be unioned freely — and it is why a bridge carved between two
+// what lets parts be unioned freely, and it is why a bridge carved between two
 // basins was previously subtracting water rather than joining them.
 function _signedArea(pts){
   let a=0;
@@ -8436,7 +8436,7 @@ function isWaterAt(wx, wy, zi){
   // current CTM. The canvas carries a permanent devicePixelRatio scale (and, mid
   // render, the camera translate), so a raw world coordinate lands at the wrong
   // place. Map the point through the CTM ourselves so the two agree in any
-  // transform state — during init, mid-frame, and at any DPR.
+  // transform state: during init, mid-frame, and at any DPR.
   if(!_inPathWorld(p, wx, wy))return false;
   const is=islandPathFor(zi);
   if(is&&_inPathWorld(is, wx, wy))return false;
@@ -8447,13 +8447,13 @@ function isWaterAt(wx, wy, zi){
 // Does the scene on screen right now have a real shoreline? True in the ordinary
 // world, and true in a FRESHWATER match (those run 1:1 in the region's own
 // geometry). False in a saltwater match, which is open bay blown up 1.85x.
-// Everything that cares about banks — the renderer, the spawn, the boat clamp —
+// Everything that cares about banks (the renderer, the spawn, the boat clamp) 
 // reads this one predicate, so the drawn shore and the solid shore are always
 // the same shore. Getting this wrong once meant invisible walls.
 function shoreScene(){return !!WATER_SHAPE[S.zone]&&(!tourn.active||isFresh());}
 // ---- THE BEACH (zone 0, south edge) -----------------------------------------
-// One source of truth. Four literals used to encode this — 200 for the draw, 200
-// for the piers, 215 for the water test and 185 for the surf button — so the
+// One source of truth. Four literals used to encode this (200 for the draw, 200
+// for the piers, 215 for the water test and 185 for the surf button) so the
 // sand started in a different place depending on which system was asking.
 const BEACH_DEPTH=200;                 // sand occupies the bottom 200px of the inshore
 const BEACH_KEEP=30;                   // hull clearance: a boat floats, it does not beach
@@ -8461,7 +8461,7 @@ const BEACH_HAIL=64;                   // how close you must be for the surf pro
 function beachY(){return worldH()-BEACH_DEPTH;}
 function hasBeach(){return S.zone===0&&!tourn.active;}
 // The boat stops in water. Applied wherever the boat is placed OR moved, not just
-// inside the driving branch — initWorld('bottom') drops it at wy=1470, which is
+// inside the driving branch: initWorld('bottom') drops it at wy=1470, which is
 // already 20px up the sand.
 function keepOffBeach(o){
   if(!hasBeach())return;
@@ -8477,7 +8477,7 @@ function keepOffWater(o){
   if(isWaterAt(o.wx, o.wy))return;
   // Two passes. The near pass is the common case and stays tight so a boat that
   // clips a bank is nudged, not teleported. The far pass only ever runs when the
-  // object is genuinely stranded — the Southern's top spawn sits ~164px from the
+  // object is genuinely stranded: the Southern's top spawn sits ~164px from the
   // nearest channel, so at 140px the player used to arrive standing in the swamp.
   for(let r=8;r<=140;r+=8){
     for(let a=0;a<12;a++){
@@ -8526,7 +8526,7 @@ function activeStructures(){
 // The centreline is resampled as straight chords while the shoreline is drawn as
 // a spline through the same points, so a chord can cut a sharp bend and land just
 // outside the water. Every sample is therefore water-tested and dropped if it
-// misses — the line is for steering, and a steering point on the bank is worse
+// misses: the line is for steering, and a steering point on the bank is worse
 // than no point at all.
 const _chanCache={};
 function channelsFor(zi){
@@ -8603,7 +8603,7 @@ function nearestSOn(ch, x, y){
   }
   return bs;
 }
-// Which channel a point belongs to, and how far along it — cached per structure.
+// Which channel a point belongs to, and how far along it: cached per structure.
 function channelAnchor(zi, x, y){
   const chans=channelsFor(zi);
   let best=null, bd=1e9;
@@ -8656,7 +8656,7 @@ const NOPARK_MIN=14;    // below this the push is not worth having
 // A 46px radius is a 92px-wide blocked circle. The Mountains canyon runs 65-85px
 // across, so in a freshwater match a mid-channel spot sealed the waterway and
 // there was simply no way past it. Size the circle to what the channel can spare
-// and drop it where there is nothing to spare — a spot can never be truly hidden
+// and drop it where there is nothing to spare: a spot can never be truly hidden
 // anyway, because drawStructBeacons() floats a marker above every boat that
 // covers one.
 function noParkRadiusAt(x, y){
@@ -8733,7 +8733,7 @@ function gatesFor(){
 // have to search the water to find good spots.
 function initTournamentWorld(def){
   const base=WORLD_DIMS[def.zone];
-  // Saltwater matches blow the world up to 1.85x — it is open bay, so a bigger
+  // Saltwater matches blow the world up to 1.85x: it is open bay, so a bigger
   // arena is just a bigger arena. Fresh water CANNOT be scaled: WATER_SHAPE and
   // waterPathFor() are both keyed to WORLD_DIMS, so a 1.85x match world would
   // put the river channel in one place and the water test in another, and the
@@ -8746,7 +8746,7 @@ function initTournamentWorld(def){
   const defs=ZONE_STRUCTS[def.zone];
   // FRESHWATER MATCHES ARE NOT SCATTERED (V0.9.9.1). A freshwater match already
   // runs 1:1 in the region's own geometry (k===1 above), so the open world's
-  // spot layout is valid here verbatim — and that layout was hand-placed against
+  // spot layout is valid here verbatim, and that layout was hand-placed against
   // the drawn shoreline, which a random scatter can only ever degrade. Reusing
   // it means the water you learned is the water you compete on: the dam is the
   // dam, the tailrace is the tailrace, in every match, for every player.
@@ -8911,7 +8911,7 @@ function botTargetPos(g, tSec){
   if(g.roamer){
     // In fresh water a roamer patrols the LENGTH of a channel. Left on the open
     // wander it aimed clean across the map, and every bend between it and that
-    // target was bank — which is why half the fleet was still being dragged back
+    // target was bank: which is why half the fleet was still being dragged back
     // even once the spot-workers had settled.
     if(shoreScene()){
       const chans=channelsFor(S.zone);
@@ -9286,7 +9286,7 @@ function updateGhosts(){
     if(pTop3&&pVisible){tp={x:tp.x+(boat.wx-tp.x)*0.40,y:tp.y+(boat.wy-tp.y)*0.40};}
     // ---- fresh water: travel the channel, don't try to cross it ----
     // Projected AFTER the hunt-the-leader pull, so this one line covers orbits,
-    // roamers and chasing alike — every destination a bot can be given ends up
+    // roamers and chasing alike: every destination a bot can be given ends up
     // on the waterway. Without it a bot aims through the bank, gets shoved back
     // by keepOffWater every frame, and grinds along the shoreline going nowhere.
     let chanMove=null;
@@ -9315,7 +9315,7 @@ function updateGhosts(){
     }else if(chanMove){
       // ---- channel space: advance ALONG the river ----
       // Easing x/y toward a point on the centreline still travels in a straight
-      // line, and a straight line across a dogleg goes over the bank — which is
+      // line, and a straight line across a dogleg goes over the bank: which is
       // what kept dragging bots back roughly 960px/sec each. Advancing the arc
       // length instead means the bot's path IS the channel, bends and all.
       const ch=channelsFor(S.zone)[chanMove.ci];
@@ -9616,7 +9616,7 @@ function drawExploreMap(){
   const zn=document.getElementById('coop-map-zone');if(zn)zn.textContent=(activeTournament&&activeTournament.def&&activeTournament.def.session)?'Challenge':'Tournament';
   const md=document.getElementById('coop-map-mode');if(md)md.textContent='Explore';
   const lg=document.getElementById('coop-map-legend');
-  if(lg)lg.innerHTML='<span style="color:#1d7a4a;">●</span> You &nbsp; <span style="color:#7cc6ff;">―</span> Your trail &nbsp; <span style="opacity:.7;">Drive to uncover the map</span>';
+  if(lg)lg.innerHTML='<span style="color:#1d7a4a;">●</span> You &nbsp; <span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#7cc6ff;vertical-align:middle;"></span> Your trail &nbsp; <span style="opacity:.7;">Drive to uncover the map</span>';
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex, a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
@@ -9784,7 +9784,7 @@ function drawAbilityFx(){
   }
 }
 // Pick a bot's rod/reel: the BUYABLE gear of the world this match is in, scaled
-// to the bot's boat tier. Never reward gear — a bot holding the Chainsaw Rod is
+// to the bot's boat tier. Never reward gear: a bot holding the Chainsaw Rod is
 // both wrong on its face and the thing that leaks it onto the real player when
 // drawGhostFull borrows the gear globals to render them.
 function _botGear(list, tier, r){
@@ -9808,7 +9808,7 @@ function drawGhostFull(g, dark){
   // real player's gear globals to render somebody else; if anything in here
   // throws while they are swapped, the player is left wearing the ghost's rod
   // and the next queueSave() writes it to disk. That is exactly how an unowned
-  // Chainsaw Rod ends up equipped — bots can roll one, and it survives the frame.
+  // Chainsaw Rod ends up equipped: bots can roll one, and it survives the frame.
   try{
     S.boat=g.boat||'kayak';
     S.cosmetic=g.cosmetic||{hat:'none',shirt:'none',shades:'none',crown:'none'};
@@ -9816,7 +9816,7 @@ function drawGhostFull(g, dark){
     S.rod=g.rod||'rod0'; S.reel=g.reel||'reel0'; S.braid=g.braid||'braid0';
     // gearGet() reads S.fgear[region] in fresh water, NOT S.rod/S.reel/S.boat,
     // so swapping the saltwater slots alone left every freshwater ghost wearing
-    // the local player's own rig — a whole fleet of identical boats. Swap the
+    // the local player's own rig: a whole fleet of identical boats. Swap the
     // region bag too. Restored in the finally below.
     if(_ghostBag)_ghostBag(g);
     boat.anchored=true;            // anchored pose so the rod & reel are shown
@@ -10459,7 +10459,7 @@ function gateBlockReason(tz){
     // destination was unsatisfiable once regions started empty in V0.9.8.3:
     // a region's boats are only sold while you are standing in that region, so
     // "need the Levee Walk for Southern" could never be cleared from outside it.
-    // You arrive with nothing and buy the rig there — which is the point — and
+    // You arrive with nothing and buy the rig there (which is the point) and
     // the empty rig bar is what stops you fishing until you do.
     return '';
   }
@@ -10470,7 +10470,7 @@ function gateBlockReason(tz){
   }
   return '';
 }
-// A region whose ONLY wall is the licence — the gate offers to sell it rather
+// A region whose ONLY wall is the licence: the gate offers to sell it rather
 // than just refusing. Craft no longer gate freshwater travel (the licence grants
 // the region's starter), so the licence being absent is enough.
 function gateNeedsLicense(tz){
@@ -10495,12 +10495,12 @@ function regionTravelBlock(z){
   if(z===S.zone)return 'You\u2019re already here.';
   return gateBlockReason(z);
 }
-// enterWorld() is the whole jump — it is also the only place that records
+// enterWorld() is the whole jump: it is also the only place that records
 // S.lastZone.fresh, so a later world swap returns you where you teleported to.
 function regionTeleport(z){
   const why=regionTravelBlock(z);
   if(why){
-    // A missing licence is a sale, not a dead end — same as walking into the gate.
+    // A missing licence is a sale, not a dead end: same as walking into the gate.
     if(gateNeedsLicense(z)){closeModal();openLicenseModal(z);return;}
     toast(why,'#b3402a');return;
   }
@@ -10834,7 +10834,7 @@ function drawLandProps(t, sky, sparse){
       else drawPalmetto(px, py,(9+r*8)*sc, P, dk);
       continue;
     }
-    // Canyon country (V0.9.8.4): rock walls crowd the river — any cell within
+    // Canyon country (V0.9.8.4): rock walls crowd the river, so any cell within
     // about a grid-step of water draws cliff or talus, and the conifers hang
     // back on the benches. This near-water test is what makes the gorge read
     // as a gorge: the walls follow every bend of the new slot-canyon shape.
@@ -10854,7 +10854,7 @@ function drawLandProps(t, sky, sparse){
     else drawScrub(px, py,(8+r*9)*sc, P, dk, winter);
   }
 }
-// Is this grid cell hard against the water? Cached forever per zone+cell —
+// Is this grid cell hard against the water? Cached forever per zone+cell: 
 // the shape is static, so each cell pays for its eight point-in-path samples
 // exactly once, not per frame.
 const _canyonCell={};
@@ -10975,8 +10975,8 @@ function drawScrub(x, y, r, P, dk, winter){
 }
 // The waterline: a damp margin and a crisp edge, so a shore reads as a shore
 // and not as a colour change.
-// The damp margin at the waterline. Strokes ONE path — the mainland shore or an
-// island's — and is always drawn before whatever fill covers its inner half, so
+// The damp margin at the waterline. Strokes ONE path (the mainland shore or an
+// island's) and is always drawn before whatever fill covers its inner half, so
 // the visible band sits on land and no internal seam survives.
 function drawShoreEdge(t, sky, forIsland){
   const P=landPal();
@@ -11024,8 +11024,8 @@ function drawWaterFill(t, sky){
   g.addColorStop(0,z.baseWater[0]);g.addColorStop(.45,z.baseWater[1]);g.addColorStop(1,z.baseWater[2]);
   ctx.fillStyle=g;ctx.fillRect(x0, y0, w, h);
   // NOTE: no shelf stroke here. Stroking the union path drew a pale band along
-  // every internal seam — i.e. straight through open water wherever a channel
-  // overlaps a basin — which read as overlapping shorelines. The shallow-water
+  // every internal seam: i.e. straight through open water wherever a channel
+  // overlaps a basin: which read as overlapping shorelines. The shallow-water
   // read now comes from the shore band itself, which the caller draws first.
 
   if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*0.62)+')';ctx.fillRect(x0, y0, w, h);}
@@ -11656,7 +11656,7 @@ else if(s.kind==='crab_trap'){
       ctx.fillStyle='rgba(255,70,60,'+(dark*(.45+.35*Math.abs(Math.sin(t*1.8))))+')';
       for(const px3 of [x-15,x+15]){ctx.beginPath();ctx.arc(px3,y-33,2,0,6.28);ctx.fill();}}
 }else if(s.kind==='tailrace'){
-    // dam wall across the top with the gates cracked open — loudest, whitest water in the river
+    // dam wall across the top with the gates cracked open: loudest, whitest water in the river
     ctx.fillStyle='#b8b4a8';ctx.fillRect(x-44,y-36,88,15);
     ctx.fillStyle='#8f8b80';ctx.fillRect(x-44,y-22,88,4);
     ctx.strokeStyle='#6e6a60';ctx.lineWidth=1;
@@ -11718,7 +11718,7 @@ else if(s.kind==='crab_trap'){
     for(let k=0;k<2;k++){ctx.beginPath();
       for(let i=-32;i<=32;i+=8)ctx.lineTo(x+30+k*8+Math.sin(i*0.12+t*2+k)*1.6,y+i);ctx.stroke();}
   }else if(s.kind==='seam'){
-    // fast water shouldering against slow — fish sit on the soft side and dart across
+    // fast water shouldering against slow: fish sit on the soft side and dart across
     ctx.save();
     ctx.beginPath();ctx.moveTo(x-16,y-38);ctx.lineTo(x+12,y+38);ctx.lineTo(x+46,y+38);ctx.lineTo(x+46,y-38);ctx.closePath();ctx.clip();
     ctx.fillStyle='rgba(255,255,255,.07)';ctx.fillRect(x-46,y-38,92,76);
@@ -11819,7 +11819,7 @@ else if(s.kind==='crab_trap'){
     for(let k=0;k<3;k++){ctx.beginPath();
       for(let i=-24;i<=24;i+=8)ctx.lineTo(x+i*1.2,y+24+k*6+Math.sin(i*0.2+t*3+k)*1.8);ctx.stroke();}
   }else if(s.kind==='deephole'){
-    // scoured-out hole the river has dug under the bank — no bottom you can see
+    // scoured-out hole the river has dug under the bank: no bottom you can see
     ctx.save();ctx.translate(x,y);ctx.scale(1,0.76);
     const hg2=ctx.createRadialGradient(0,0,3,0,0,42);
     hg2.addColorStop(0,'#061518');hg2.addColorStop(.45,'#0d2a2c');hg2.addColorStop(.55,'rgba(13,42,44,.72)');hg2.addColorStop(1,'rgba(13,42,44,0)');
@@ -11861,7 +11861,7 @@ else if(s.kind==='crab_trap'){
     ctx.fillStyle=ug;ctx.beginPath();
     ctx.moveTo(x-30,y+24);ctx.lineTo(x+28,y+22);ctx.lineTo(x+30,y+42);ctx.lineTo(x-32,y+44);ctx.closePath();ctx.fill();
   }else if(s.kind==='confluence'){
-    // Where two flows meet, the tell is the SEAM — you are already floating on
+    // Where two flows meet, the tell is the SEAM: you are already floating on
     // one of the two rivers, so drawing both of them is drawing the map twice.
     // Two soft PLUMES of differently-coloured water and the ragged line they
     // argue over down the middle.
@@ -11973,7 +11973,7 @@ else if(s.kind==='crab_trap'){
       ctx.beginPath();ctx.arc(x+Math.sin(ba)*bpr*22,y-4+bpr*24,0.9+bpr*1.3,0,6.28);ctx.fill();}
     ctx.globalAlpha=1;
   }else if(s.kind==='undercut'){
-    // An undercut IS the bank, and the land layer already draws the bank — so
+    // An undercut IS the bank, and the land layer already draws the bank, so
     // the old version painted a second grass-green slab on top of the real one,
     // at a slightly different green, floating over the water. What is left is
     // the part the land layer CANNOT draw: the black slot hollowed out beneath
@@ -11992,14 +11992,14 @@ else if(s.kind==='crab_trap'){
     // the overhanging lip itself: a hard dark edge, not a coloured slab
     ctx.strokeStyle='rgba(24,38,26,.75)';ctx.lineWidth=2.6;ctx.lineCap='round';
     ctx.beginPath();ctx.moveTo(x-11,y-31);ctx.quadraticCurveTo(x-6,y, x-11,y+31);ctx.stroke();
-    // turf breaking over the lip — a fringe of blades, all leaning downstream
+    // turf breaking over the lip: a fringe of blades, all leaning downstream
     ctx.lineCap='round';
     for(let i2=0;i2<14;i2++){const gy=y-29+rr(i2+12)*58,gl=5+rr(i2+24)*5,gs=Math.sin(t*1.2+i2)*1.5;
       ctx.strokeStyle=['rgba(74,140,78,.85)','rgba(63,122,68,.8)','rgba(86,160,90,.75)'][i2%3];
       ctx.lineWidth=1.4;
       ctx.beginPath();ctx.moveTo(x-11+rr(i2)*3,gy);
       ctx.quadraticCurveTo(x-7+gs*0.4,gy+gl*0.55,x-4+gs, gy+gl);ctx.stroke();}
-    // pale roots hanging out of the cut into the slot — the one bright thing
+    // pale roots hanging out of the cut into the slot: the one bright thing
     ctx.strokeStyle='rgba(206,194,160,.55)';ctx.lineWidth=.9;
     for(let i2=0;i2<5;i2++){const ry2=y-20+i2*10+rr(i2+40)*4;
       ctx.beginPath();ctx.moveTo(x-9,ry2);
@@ -12032,7 +12032,7 @@ else if(s.kind==='crab_trap'){
       ctx.beginPath();ctx.ellipse(cx4,cy4,cr4,cr4*0.75,rr(i2+6)*3,0,6.28);ctx.fill();
       ctx.fillStyle='rgba(255,255,255,.22)';
       ctx.beginPath();ctx.ellipse(cx4-cr4*0.3,cy4-cr4*0.32,cr4*0.4,cr4*0.26,0,0,6.28);ctx.fill();}
-    // one soft highlight, no chop at all — that is what glassy means
+    // one soft highlight, no chop at all: that is what glassy means
     ctx.fillStyle='rgba(255,255,255,.13)';
     ctx.beginPath();ctx.ellipse(x-6,y-7,19,10,-0.35,0,6.28);ctx.fill();
     ctx.restore();
@@ -12234,7 +12234,7 @@ const REGION_SCENERY={
     {k:'loon',    xF:.70,yF:.66},
   ],
   // V0.9.8.4: a serrated rim chain down BOTH flanks, not three lonely peaks
-  // at the top edge — the river should always read as running between
+  // at the top edge: the river should always read as running between
   // mountains. 'bigpeak' is _scPeak drawn half again as large.
   mountains:[
     {k:'bigpeak', xF:.08,yF:.025},{k:'peak',   xF:.20,yF:.045},
@@ -12259,7 +12259,7 @@ function _sceneryAnchors(rid, W, H, list){
   const key=rid+'_'+W+'x'+H;
   if(_scAnchor[key])return _scAnchor[key];
   // Most scenery is landscape and belongs on the bank, but a drifting gator, a
-  // wading heron and a swimming loon are IN the water — anchoring them to the
+  // wading heron and a swimming loon are IN the water: anchoring them to the
   // nearest land beached them.
   const WET={gator:1, heron:1, loon:1};
   const out=list.map(function(p){
@@ -12301,13 +12301,13 @@ function drawRegionScenery(t){
   const winter=seasonNow()==='winter'&&!!SNOW_REGIONS[curRegionId()];
   // These were authored to hug the map edges and read as a far bank, back when
   // freshwater was water to every edge. Now that the regions have real
-  // shorelines, a prop that lands in the water is slid onto the nearest land —
+  // shorelines, a prop that lands in the water is slid onto the nearest land: 
   // a barn floating on a reservoir is exactly what the shoreline pass is for.
   const _sc=_sceneryAnchors(curRegionId(), W, H, list);
   for(let i=0;i<list.length;i++){
     const p=list[i], anch=_sc[i];
     const x=anch.x-camera.x, y=anch.y-camera.y;
-    // Cull generously — props are drawn from their own origin outward.
+    // Cull generously: props are drawn from their own origin outward.
     if(x<-140||x>CW+140||y<-160||y>CH+140)continue;
     const j=_scJit(i,1), j2=_scJit(i,2);
     ctx.save();
@@ -12519,7 +12519,7 @@ function _scElk(x,y,t,j){
 
 // ===================== SNOW (V0.9.8.1) =====================
 // Winter snow falls in the Midwest, Northern and Mountains regions. The
-// Southern swamp is deliberately excluded — it does not snow on a Florida
+// Southern swamp is deliberately excluded: it does not snow on a Florida
 // canal, and leaving it out is what makes the other three read as cold.
 const SNOW=[];
 let _snowLastT=0;
@@ -12535,7 +12535,7 @@ function _initSnow(n){
     x:Math.random()*CW, y:Math.random()*CH,
     r:0.9+Math.random()*2.2,                 // flake size
     // V0.9.8.7: slower and softer. Fall speed roughly halved and the sway
-    // amplitude cut, so the field drifts rather than streaks — the old 8-30px/s
+    // amplitude cut, so the field drifts rather than streaks: the old 8-30px/s
     // with a 44px swing read as sleet.
     vy:4+Math.random()*11,                   // fall speed, px/sec
     sway:8+Math.random()*16,                 // horizontal drift amplitude
@@ -12920,7 +12920,7 @@ function drawAnglerCrown(cx, cy, r){
 
 // V0.9.6: only the ONE equipped pet floats beside the boat (earned by prestige,
 // equipped in the Projects tab).
-// EVERY equipped companion floats beside the boat — normally one, up to five
+// EVERY equipped companion floats beside the boat: normally one, up to five
 // while the Dragon is out. Pet #1 keeps its historical spot exactly; the rest
 // fan out to port so a five-pet raft still reads clearly.
 const PET_RAFT=[[-46,0],[-70,-16],[-70,16],[-40,-30],[-40,30]];
@@ -13088,9 +13088,9 @@ function drawBoat(dark){
   else if(b==='driftboat')drawWalkaround(dark);
   // V0.9.8.3: these four were added with the regions but never given a draw
   // case, so the player was invisible in the Southern and Northern regions.
-  else if(b==='so_boat0')drawKayak(dark);          // Levee Walk — a pirogue off the levee
+  else if(b==='so_boat0')drawKayak(dark);          // Levee Walk: a pirogue off the levee
   else if(b==='so_boat1')drawJonBoat(dark);        // Go-Devil Skiff
-  else if(b==='no_boat0')drawJonBoat(dark);        // Dock & Shore — a tin boat off the dock
+  else if(b==='no_boat0')drawJonBoat(dark);        // Dock & Shore: a tin boat off the dock
   else if(b==='no_boat1')drawBayBoat(dark);        // Deep-V Lund
   // Anything still unmatched falls back to a hull rather than drawing nothing:
   // an invisible player is unrecoverable, a generic boat is merely wrong.
@@ -13098,7 +13098,7 @@ function drawBoat(dark){
   ctx.restore();
   if(boat.anchored)drawRodAndReel(dark);
 }
-// Stood on the ice. No ripples and no submerged legs — the giveaway that you
+// Stood on the ice. No ripples and no submerged legs: the giveaway that you
 // are on a hard surface is a crisp contact shadow and boot prints behind you,
 // plus the auger and sled you dragged out. Deliberately compact so the hole and
 // the flasher stay readable underneath.
@@ -13476,7 +13476,7 @@ function drawChainsawRod(x1,y1,x2,y2){
 // A rod is drawn in its OWN frame: origin at the butt, +x to the tip, +y below
 // the blank. Everything below is written in that frame, which is what makes a
 // trigger grip, an under-slung stripping guide and a gimbal butt expressible at
-// all — in screen space they were six lines of trigonometry each.
+// all: in screen space they were six lines of trigonometry each.
 //
 // The blank TAPERS (a filled polygon, not a stroked line). That single change is
 // most of why these read as rods now: a constant-width stroke reads as a stick.
@@ -13574,7 +13574,7 @@ function drawRod(x1,y1,x2,y2,rod){
 }
 
 // Reels are drawn in the ROD's frame too: +x toward the tip, +y below the blank.
-// Where each one sits along the blank is part of what identifies it — a fly reel
+// Where each one sits along the blank is part of what identifies it: a fly reel
 // is right at the butt behind the hand, a spinning reel a third of the way up
 // under the seat, a baitcaster on top of it.
 function drawReelArt(bx, by, theta, reel, art, rodLen){
@@ -13584,7 +13584,7 @@ function drawReelArt(bx, by, theta, reel, art, rodLen){
   ctx.translate(bx, by);ctx.rotate(theta);
   // Rods run 22px (an ultralight) to 46px (a bluewater stick). A fixed reel size
   // across that range makes the short rods look like they are dragging an anchor,
-  // so the reel scales with the blank — gently, and clamped, because a 5wt reel
+  // so the reel scales with the blank: gently, and clamped, because a 5wt reel
   // really is small and a two-speed really is not.
   const k=Math.max(0.80, Math.min(1.18,(rodLen||30)/34));
   ctx.scale(k, k);
@@ -13726,7 +13726,7 @@ function render(ts){
   }
   // Freshwater banks and the inshore sand are solid whether you're under way or
   // sitting still, so these run every frame rather than only inside the driving
-  // branch — initWorld('bottom') spawns the boat past the waterline.
+  // branch: initWorld('bottom') spawns the boat past the waterline.
   keepOffWater(boat);keepOffBeach(boat);
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
   updateSurfButton();updateIceButton();
@@ -13769,7 +13769,7 @@ function render(ts){
     ctx.restore();
   }
   // day/night tint. Ice takes the darkness but only a fraction of the warm
-  // low-sun wash — at full strength it turned a white sheet muddy brown.
+  // low-sun wash: at full strength it turned a white sheet muddy brown.
   const _iceNow=(typeof lakeFrozen==='function')&&lakeFrozen()&&!tourn.active;
   if(sky.darkness>0){ctx.fillStyle='rgba(6,12,30,'+(sky.darkness*(_iceNow?0.45:0.62))+')';ctx.fillRect(0,0,CW, CH);}
   if(sky.warm>0){ctx.fillStyle='rgba(255,140,60,'+(sky.warm*(_iceNow?0.04:0.16))+')';ctx.fillRect(0,0,CW, CH);}
@@ -13781,7 +13781,7 @@ function render(ts){
   const _frozen=(typeof lakeFrozen==='function')&&lakeFrozen()&&!tourn.active;
   if(_shore){ctx.save();ctx.translate(-camera.x,-camera.y);ctx.clip(_shore);ctx.setTransform(1,0,0,1,0,0);}
   // swells (fewer rows in low-detail mode). None of this runs on ice.
-  // Freshwater gets no rolling swell at all — those long sine crests are an
+  // Freshwater gets no rolling swell at all: those long sine crests are an
   // ocean tell, and a lake or a canyon river should read as flat water.
   const _nsw=(_frozen||isFresh())?0:(gfxLow?3:5);
   for(let i=0;i<_nsw;i++){const y0=(i/_nsw)*CH+8;ctx.strokeStyle='rgba(255,255,255,'+(0.07*(1-sky.darkness*.6))+')';ctx.lineWidth=10;ctx.beginPath();for(let x=-10;x<=CW+10;x+=14){const y=y0+Math.sin(x*.02+t*.6+i*.8)*7;if(x<=-10)ctx.moveTo(x, y);else ctx.lineTo(x, y);}ctx.stroke();}
@@ -13966,7 +13966,7 @@ function openLicenseModal(zone){
   const prevMissing=prev&&!hasLicense(zone-1);
   let action;
   if(owned)action='<div class="mrow"><span class="ml">Status</span><span class="mv" style="color:#1f9d57;font-weight:800;">Held</span></div>';
-  else if(prevMissing)action='<div class="mfact" style="color:#b3402a;">Buy the '+prev.name+' first — the regions open in order.</div>';
+  else if(prevMissing)action='<div class="mfact" style="color:#b3402a;">Buy the '+prev.name+' first. The regions open in order.</div>';
   else action='<button class="catch-ok" style="width:100%;margin-top:12px;'+(afford?'':'opacity:.55;')+'" onclick="licenseBuyClick('+zone+')">'
     +(afford?('Buy for '+l.cost.toLocaleString()+' cash'):('Need '+(l.cost-have).toLocaleString()+' more cash'))+'</button>';
   const modal=document.getElementById('modal');
@@ -14063,7 +14063,7 @@ let zoneSel={left:35,width:30,dir:1,speed:1.3},marker={pos:50,dir:1,speed:0.39};
 // not legal where it is equipped. Nothing used to check this: ensureRig()
 // validated the method, tackle and bait but never the rod, reel, boat or braid,
 // so once a bad id got into a slot it stayed there forever and saved. That is
-// what left players with a Chainsaw Rod equipped without owning one — and it
+// what left players with a Chainsaw Rod equipped without owning one, and it
 // mattered, because surfRigOK() and the SLOW-MO button both key off the rod id.
 // Returns how many slots it had to fix.
 function validateEquipped(){
@@ -14170,8 +14170,8 @@ canvas.addEventListener('click',e=>{
   if(_cannonArmed||Date.now()-(_cannonJustFired||0)<350)return;
   // The fly loop owns the water while it is live. Pointer handlers can suppress
   // compatibility mouse events but never the synthesized `click`, so the beat-1
-  // release that presents the fly lands here ~1ms later and — without this
-  // guard — fell into the phase==='waiting' reel-in below, corrupting the
+  // release that presents the fly lands here ~1ms later and (without this
+  // guard) fell into the phase==='waiting' reel-in below, corrupting the
   // shared state under the drift: a perfectly timed set then did NOTHING
   // (triggerBite bails when phase isn't 'waiting') while misses still spoke.
   if(typeof flyPhase!=='undefined'&&(flyPhase==='drift'||flyPhase==='take'))return;
@@ -14308,7 +14308,7 @@ const PROJECTS=[
   {id:'submarine', name:'Ruby Submarine', icon:'submarine',
    blurb:'Surfaces in the offshore once a day, tap it for 10 free rubies.',
    parts:[{id:'sub_prop',zone:0,name:'Sub Propeller'},{id:'sub_rudder',zone:1,name:'Sub Rudder'},{id:'sub_periscope',zone:2,name:'Sub Periscope'}]},
-  // The first FRESHWATER project, so it has four parts rather than three — one
+  // The first FRESHWATER project, so it has four parts rather than three: one
   // per region. Parts drop on ordinary casts in each region; the finished heater
   // is only ever used through the ice.
   {id:'heater', name:'Ice Shanty Heater', icon:'heater', world:'fresh',
@@ -14347,7 +14347,7 @@ function maybeCatchDronePart(){maybeCatchProjectPart();}
 function cast(x, y){
   const m=curMethod();
   // Limited Casts lobby: each angler gets a fixed number of casts.
-  if(activeTournament&&activeTournament.limited&&(activeTournament.castsUsed||0)>=(activeTournament.castLimit||0)){setStatus('Out of casts! Sit tight — most species when time runs out wins.');return;}
+  if(activeTournament&&activeTournament.limited&&(activeTournament.castsUsed||0)>=(activeTournament.castLimit||0)){setStatus('Out of casts! Sit tight. Most species when time runs out wins.');return;}
   // V0.9 Snag Rock: hung up, can't cast until it wears off.
   if(_snaggedUntil>Date.now()){setStatus('Snagged on a rock,'+Math.ceil((_snaggedUntil-Date.now())/1000)+'s left. Hang tight.');return;}
   // V0.9: casting onto someone's snag rock hangs you up and removes the rock.
@@ -14362,9 +14362,9 @@ function cast(x, y){
   // a bare treble IS the terminal tackle, so the check above is all it needs)
   if(!m.bait&&!m.snag){
     const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
-    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first — tap the Lure slot below.');flashRigGap();return;}
+    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Tap the Lure slot below.');flashRigGap();return;}
     if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tap the Lure slot for '+ZONE_LBL[S.zone]+' lures.');flashRigGap();return;}
-    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+' — tap the Lure slot below to restock.');flashRigGap();return;}
+    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+'. Tap the Lure slot below to restock.');flashRigGap();return;}
   }
   // Fly fishing takes over here: its own casting rhythm, drift and set, then it
   // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
@@ -14438,11 +14438,11 @@ const ICE_DOUBLETAP=300;
 const ICE_TOL_FT=1.6, ICE_TOL_TIGHT=0.9;    // "on it" window; tighter for legendary+
 const ICE_LOCK_MS=1400, ICE_LOCK_HARD=2000; // dwell needed to make it eat
 const ICE_DRAIN_X=1.6;                  // dwell drains faster than it fills
-// V0.9.8.8 — a live fish under the hole does not hold one depth. It sways, and
+// V0.9.8.8: a live fish under the hole does not hold one depth. It sways, and
 // every second or so it JUMPS. How hard it does both scales with rarity, so
 // parking the jig on a blackfish is nothing like staying with an Inconnu.
 const ICE_MOVE={common:0.55,uncommon:0.80,rare:1.15,epic:1.55,legendary:2.10,ultra:2.90};
-// Sway AMPLITUDE and sway RATE both scale with rarity — scaling only the speed
+// Sway AMPLITUDE and sway RATE both scale with rarity: scaling only the speed
 // leaves every fish covering the same ground, just quicker, which is not what
 // "rarer fish move more" should feel like. A blackfish breathes ±0.2 ft once
 // every nine seconds; an Inconnu swings ±0.9 ft twice as often again.
@@ -14531,7 +14531,7 @@ function maybeAlaskaSeasonNotice(){
   if(typeof S._akOpen!=='boolean'){S._akOpen=open;return;}   // first observation, stay quiet
   if(S._akOpen===open)return;
   S._akOpen=open;
-  if(open)toast('The Alaskan ice season is OPEN — the alpine lake has locked up. Fish there pay rubies.','#4a9fd4');
+  if(open)toast('The Alaskan ice season is OPEN. The alpine lake has locked up. Fish there pay rubies.','#4a9fd4');
   else toast('The Alaskan ice season is CLOSED until late fall. The alpine lake is open water again.','#b58b53');
   queueSave();
 }
@@ -14550,7 +14550,7 @@ function tryEnterIce(){
 }
 function enterIce(mode){
   // Burn the auger HERE rather than in tryEnterIce, so every path into the mode
-  // pays for its hole — and only once the entry has actually succeeded.
+  // pays for its hole, and only once the entry has actually succeeded.
   if(((S.itemInv&&S.itemInv.auger)||0)<=0){
     toast('You need an Ice Auger to cut a hole. Shop → Special → Items.','#b58b53');return;
   }
@@ -14672,8 +14672,8 @@ function iceSpawn(){
   iceFishState='approach';iceStateT=performance.now();iceDwell=0;iceTrailFish=[];
   iceFishPh=Math.random()*6.283;iceFishSway=0;
   setIceStatus(f.rarity==='ultra'
-    ? 'SOMETHING ENORMOUS at '+Math.round(iceFishFt)+' ft. It is not leaving — take your time.'
-    : 'Mark at '+Math.round(iceFishFt)+' ft — get on it.');
+    ? 'SOMETHING ENORMOUS at '+Math.round(iceFishFt)+' ft. It is not leaving. Take your time.'
+    : 'Mark at '+Math.round(iceFishFt)+' ft, get on it.');
   AUDIO.sfx('tick');
 }
 function iceClearFish(msg){
@@ -14735,7 +14735,7 @@ function iceLoop(ts){
     // An ultra legendary that shows on the dial does NOT leave. The Greenland
     // Shark carries the shortest patience on the roster (4.5s) on top of a
     // 0.12% spawn, so the old behaviour was to flash up and vanish before most
-    // players had found it with the jig — the rarest mark in the game was also
+    // players had found it with the jig: the rarest mark in the game was also
     // the one you were least likely to get a fair crack at. It now holds under
     // the hole until it eats, however long that takes.
     const staysDown=(f.rarity==='ultra');
@@ -14752,8 +14752,8 @@ function iceLoop(ts){
       const onIt=gap<=iceTol;
       iceDwell=Math.max(0,Math.min(iceLockMs, iceDwell+(onIt?dtMs:-ICE_DRAIN_X*dtMs)));
       if(onIt&&now-iceLastTick>200){iceLastTick=now;AUDIO.sfx('tick');}
-      if(onIt&&iceDwell<iceLockMs)setIceStatus('ON IT — hold…');
-      // Thrashing the rod, or dropping it on their head, sends them away —
+      if(onIt&&iceDwell<iceLockMs)setIceStatus('ON IT, hold…');
+      // Thrashing the rod, or dropping it on their head, sends them away: 
       // unless it is the ultra, which cannot be spooked or waited out.
       if(!staysDown&&rate>13&&Math.random()<0.02)iceClearFish('You jigged too hard and spooked it.');
       else if(!staysDown&&now-iceStateT>(f.icePatience||8000))iceClearFish('It looked and left.');
@@ -14767,7 +14767,7 @@ function iceLoop(ts){
   iceDrawLine();
   const nightEl=document.getElementById('ice-night');
   if(nightEl){const dk=skyState(hourNow()).darkness;nightEl.style.opacity=(dk*0.72).toFixed(2);
-    // The aurora belongs to the ALASKAN ice and is up whatever the hour — it is
+    // The aurora belongs to the ALASKAN ice and is up whatever the hour: it is
     // what that mode looks like, not a night effect. It was previously gated on
     // darkness>0.45 in BOTH modes, so most sessions never saw it at all. It
     // still brightens after dark, the way a real one reads against a black sky.
@@ -14775,8 +14775,8 @@ function iceLoop(ts){
     if(au)au.style.opacity=(iceMode==='alaska')?(0.34+dk*0.62).toFixed(2):'0';}
   iceAnimId=requestAnimationFrame(iceLoop);
 }
-// The line, rod tip to hole. Both ends move — the rod bends on a hookup, and
-// the hole and tip both shift with the viewport — so rather than guess at
+// The line, rod tip to hole. Both ends move (the rod bends on a hookup, and
+// the hole and tip both shift with the viewport) so rather than guess at
 // percentages we ask the DOM where the tip circle actually ended up this frame
 // and draw to it. A slack curve between them, because 4 lb mono does not hang
 // straight, and a short wet segment into the hole that lengthens as the jig
@@ -14794,7 +14794,7 @@ function iceDrawLine(){
   const hx=hb.left+hb.width/2-ob.left, hy=hb.top+hb.height*0.44-ob.top;
   const frac=Math.min(1, iceJigFt/Math.max(1, iceHoleFt));
   // Slack: a little always, more as line pays out, none at all while it's bent
-  // into a fish — that moment is the one time the line should be a straight bar.
+  // into a fish: that moment is the one time the line should be a straight bar.
   const bent=document.getElementById('ice-rod');
   const slack=(bent&&bent.classList.contains('bent'))?2:(9+frac*13);
   dry.setAttribute('d','M'+tx.toFixed(1)+','+ty.toFixed(1)
@@ -14885,7 +14885,7 @@ function startIceFight(){
   iceSpawnAt=performance.now()+2600;
   // Both of these take the fish as an argument. Calling them bare threw
   // ("cannot read 'rarity' of undefined") the instant anything ate, so from the
-  // day the mode shipped no ice fish — Alaskan or Northern — could be landed.
+  // day the mode shipped no ice fish (Alaskan or Northern) could be landed.
   if((f.rarity==='legendary'||f.rarity==='ultra')&&typeof showLegendaryAlert==='function')showLegendaryAlert(f);
   else startSdewGame(f);
 }
@@ -14937,7 +14937,7 @@ const FLY_DRIFT_MS=9000;              // a drift runs about nine seconds
 // V0.9.8.5: eased from 26. Mending used to be a free tap, so a 3.8 s fuse was
 // fair; now that a mend has to catch the sweeping band, the player needs time
 // to actually read it. At 19 an unmended drift dies in ~5.3 s, which is about
-// three passes of the marker — enough to react, still short enough to hurry you.
+// three passes of the marker: enough to react, still short enough to hurry you.
 const FLY_DRAG_PER_SEC=19;            // drag climbs this fast with no mending
 const FLY_MEND_RELIEF=42;             // one mend buys this much back
 // Per-fly-type set windows, ms after the take. This is the heart of the mechanic.
@@ -14945,7 +14945,7 @@ const FLY_MEND_RELIEF=42;             // one mend buys this much back
 //
 // V0.9.9.1 widened every `hi`. Simple reaction time to a cue you cannot
 // anticipate is roughly 250-400ms before a touchscreen adds its own latency, and
-// the tell has to be READ on top of that — so a nymph asking for a press AND a
+// the tell has to be READ on top of that, so a nymph asking for a press AND a
 // release inside 430ms was not a test of timing, it was a coin toss, and a
 // measured press at 300ms already failed. Every window now clears reaction time
 // with room to spare while still rewarding a quick hand.
@@ -14965,7 +14965,7 @@ let flyAim=null, flyHoldStart=0, flyAnim=null, flyDrag=0, flyMends=0;
 
 // ---- Shared timing bar (V0.9.8.5) -------------------------------------
 // One sweeping indicator over one stationary target band. The band does NOT
-// move during an attempt — it is re-placed after every attempt — so the player
+// move during an attempt (it is re-placed after every attempt) so the player
 // has to look each time instead of tapping out a rhythm. Only one bar is ever
 // live (you cannot mend in the Mountains and snag in the Midwest at once), so
 // a single state object serves both callers.
@@ -14988,7 +14988,7 @@ function tbarShow(barId, on){const b=document.getElementById(barId);if(b)b.class
 let flyDriftEnd=0, flyTakeAt=0, flySetSpec=null, flyHoldSet=0, flyTargetFish=null;
 // The PHYSICAL state of the main button, tracked independently of flyPhase.
 // flyPressMain() only ever armed the set on a fresh pointerdown that happened to
-// land while flyPhase was already 'take' — but the commonest way to fish a drift
+// land while flyPhase was already 'take', but the commonest way to fish a drift
 // is to be tapping Mend, so the fish very often eats while a finger is already
 // on that button. No new pointerdown ever arrived, the hold clock never started,
 // and the player sat there holding a button that said "hold" while the window
@@ -15031,7 +15031,7 @@ function drawFlyLoop(t){
   const on=flyOnLoop&&flyTracking;
   const pulse=1+Math.sin(t*5)*0.06;
   const r=FLY_LOOP_R*pulse;
-  // Catch radius, faint — shows how forgiving the tracking is.
+  // Catch radius, faint: shows how forgiving the tracking is.
   ctx.beginPath();ctx.arc(p.x, p.y, FLY_CATCH_R,0,6.28);
   ctx.fillStyle=on?'rgba(74,222,128,.16)':'rgba(74,222,128,.07)';ctx.fill();
   // The loop itself.
@@ -15072,10 +15072,10 @@ function flyShow(on){const p=flyPanel();if(p)p.classList.toggle('show',!!on);}
 function flyBeginCast(x, y){
   // The tap IS the target (V0.9.8.5), so refuse a dry one up front rather than
   // letting the player earn a whole line of shooting head and only then find
-  // out they were aiming at gravel. The canyon channel is narrow — this fires
+  // out they were aiming at gravel. The canyon channel is narrow: this fires
   // often, and it needs to fire before any effort is spent.
   if(!isWaterAt(x+camera.x, y+camera.y)){
-    setStatus('That’s dry bank — pick a line on the water to drift the fly down.');
+    setStatus('That’s dry bank. Pick a line on the water to drift the fly down.');
     return;
   }
   flyPhase='casting';flyLineOut=0;flyStrokes=0;flyAcc=0;flyTangle=0;flyDrag=0;flyMends=0;
@@ -15087,7 +15087,7 @@ function flyBeginCast(x, y){
   document.getElementById('fly-main').textContent='Present';
   document.getElementById('fly-alt').textContent='Cancel';
   document.getElementById('fly-alt').disabled=false;
-  flySay('Press and <b>follow the green loop</b> with your finger. Line pays out while you stay on it — release when you like the length.');
+  flySay('Press and <b>follow the green loop</b> with your finger. Line pays out while you stay on it. Release when you like the length.');
   flyStats();
   if(flyAnim)cancelAnimationFrame(flyAnim);
   flyAnim=requestAnimationFrame(flyLoop);
@@ -15148,7 +15148,7 @@ function flyLoop(){
       if(fill)fill.style.width=flyDrag+'%';
       tbarStep(dtF);tbarPaint('fly-mendzone','fly-mendind');
       // The fly swings downstream as drag builds, which is what kills the
-      // drift — but a current does not run up the bank. Step only onto water;
+      // drift, but a current does not run up the bank. Step only onto water;
       // failing that, try to slide along the shore; failing that, the drift is
       // over. bobber is SCREEN space and isWaterAt takes WORLD, so camera bridges.
       if(bobber&&bobber.active){
@@ -15171,11 +15171,11 @@ function flyLoop(){
       const spec=flySetSpec, since=now-flyTakeAt;
       // A strip-set resolves DURING the hold. The button says "hold", so the
       // window must not expire out from under an obedient finger: once the
-      // press has been held 220ms and the window is open, judge it here —
+      // press has been held 220ms and the window is open, judge it here: 
       // waiting for the release let the hi+260 expiry force-fail the player.
       if(spec.hold&&flyHoldSet&&now-flyHoldSet>=220&&since>=spec.lo){
         if(flyHoldSet-flyTakeAt<=spec.hi){flyStripComplete();}
-        else{flyMissedSet('Too slow — it spat the fly.');}
+        else{flyMissedSet('Too slow, it spat the fly.');}
         return;
       }
       if(fill)fill.style.width=Math.max(0,100-100*since/(spec.hi+260))+'%';
@@ -15191,7 +15191,7 @@ function flyLoop(){
 function flyTrackStart(x, y){
   if(flyPhase!=='casting')return;
   flyTracking=true;flyFinger={x, y};flyLastT=performance.now();
-  flySay('Stay on the loop — the longer you hold it, the more line you shoot.');
+  flySay('Stay on the loop. The longer you hold it, the more line you shoot.');
 }
 function flyTrackMove(x, y){
   if(flyPhase!=='casting'||!flyTracking)return;
@@ -15237,7 +15237,7 @@ function flyStreamPoint(wx, wy){
   if(typeof shoreScene!=='function'||!shoreScene())return {x:wx, y:wy};
   // A mark that is ALREADY on water is never moved. Measured over 12,000 legal
   // aims across the four regions, snapping them too dragged 65 of them off the
-  // water entirely — up to 243px in the Northern, where a point out in a basin
+  // water entirely: up to 243px in the Northern, where a point out in a basin
   // sits within snap range of a ribbon with dry land in between. The player
   // aimed at fishable water; it stays where they put it.
   if(isWaterAt(wx, wy, S.zone))return {x:wx, y:wy};
@@ -15246,7 +15246,7 @@ function flyStreamPoint(wx, wy){
   const p=near.pt;
   // How far across the channel the aim point sits, signed along the normal, so a
   // cast thrown at the far bank still lands on the far seam rather than dead
-  // centre — it just stops at the water's edge instead of in the willows.
+  // centre: it just stops at the water's edge instead of in the willows.
   const lat=(wx-p.x)*p.nx+(wy-p.y)*p.ny;
   const room=Math.max(0, p.hw-FLY_EDGE_KEEP);
   const off=Math.max(-room, Math.min(room, lat));
@@ -15272,16 +15272,16 @@ function flyPresent(){
   // the bots steer by, so a cast aimed a shade wide lands in the current instead
   // of on the gravel. Aim is still expressive: the offset ACROSS the channel is
   // preserved and only clamped by the room actually there, so you can work the
-  // near seam or the far one — you just cannot hang it in the willows.
+  // near seam or the far one: you just cannot hang it in the willows.
   const snapped=flyStreamPoint(px+camera.x, py+camera.y);
   px=snapped.x-camera.x;py=snapped.y-camera.y;
   // Open basins (the alpine lake, the beaver pond) have no centreline to ride,
   // so the dry-bank refusal is still the backstop there.
   if(!isWaterAt(px+camera.x, py+camera.y)){
-    flySay('That is dry bank — pick a line on the water and present again.');
+    flySay('That is dry bank. Pick a line on the water and present again.');
     return;
   }
-  if(f<1)flySay('Short of your mark — shoot more line next time.');
+  if(f<1)flySay('Short of your mark. Shoot more line next time.');
   bobber={x:px, y:py, active:true, struct:nearestStruct(px, py)};
   ripples.push({x:px, y:py, r:2,life:1},{x:px, y:py, r:6,life:.6});
   noteLastCast(bobber.struct);
@@ -15367,21 +15367,21 @@ function flyResolveSet(){
   if(ok){
     // Belt and braces: never hand a set off to triggerBite() with nothing to
     // hook, or the player lands in phase 'done' with no explanation.
-    if(poolNow().strength<=0){flyEndDrift('You came tight on nothing — the fly pulled free.');return;}
+    if(poolNow().strength<=0){flyEndDrift('You came tight on nothing, the fly pulled free.');return;}
     flyFinish();
     triggerBite();           // hands off to the existing bite -> fight pipeline
   }else{
-    const why=since<spec.lo?(spec.hold?'You snatched it away before it turned.':'Too quick — you pulled it out of its mouth.')
-                           :'Too slow — it spat the fly.';
+    const why=since<spec.lo?(spec.hold?'You snatched it away before it turned.':'Too quick, you pulled it out of its mouth.')
+                           :'Too slow, it spat the fly.';
     flyMissedSet(why);
   }
 }
 // The success half of a held strip-set, fired from the rAF loop once the press
-// has been held long enough inside the window — mirrors flyResolveSet's ok
+// has been held long enough inside the window: mirrors flyResolveSet's ok
 // branch. The press moment was already judged by the caller.
 function flyStripComplete(){
   if(flyPhase!=='take')return;
-  if(poolNow().strength<=0){flyEndDrift('You came tight on nothing — the fly pulled free.');return;}
+  if(poolNow().strength<=0){flyEndDrift('You came tight on nothing, the fly pulled free.');return;}
   flyFinish();
   triggerBite();
 }
@@ -15499,7 +15499,7 @@ function snagStroke(){
   const {strength}=poolNow();
   if(strength<=0){snagEnd('Nothing is holding here. Try the creek channel, a deep hole or the dam.');return;}
   // Each clean sweep is an independent roll, scaled by what is actually under
-  // the boat and by the conditions — the same shape retrieveLure() uses.
+  // the boat and by the conditions: the same shape retrieveLure() uses.
   const chance=Math.min(0.9,(0.16+strength/240)*environmentBiteFactor());
   if(Math.random()<chance){
     snagSay('<b>Solid weight \u2014 you\u2019re into one!</b>');
@@ -15510,7 +15510,7 @@ function snagStroke(){
   snagSay(snagSweeps>=SNAG_MAX_SWEEPS?'\u2026':'Clean sweep, nothing there. Again.');
   if(snagSweeps>=SNAG_MAX_SWEEPS){snagEnd('You worked the school out. Reel up and cast back into them.');return;}
 }
-// Tear down WITHOUT touching phase/bobber, so triggerBite() can take over —
+// Tear down WITHOUT touching phase/bobber, so triggerBite() can take over: 
 // it bails unless phase is still 'waiting'.
 function snagFinish(){
   snagPhase='idle';
@@ -15719,7 +15719,7 @@ function poolNow(){
       if(S.chumCasts>0)w*=1.3;
       if(ledActive())w*=1.2;
     }
-    // Season, still a strong modifier — the right season makes a fish far more
+    // Season, still a strong modifier: the right season makes a fish far more
     // likely. Three things switch it off entirely:
     //   BOUNTY      you are handed a species list, so the calendar must not veto it
     //   MERMAID SET the set's whole point is that anything is fair game
@@ -15727,7 +15727,7 @@ function poolNow(){
     //     cannot pick everyone's season, so gating on it would quietly make most
     //     of the region uncatchable for the whole match.
     // These used to be one if/else, which tied "skip the season" to "apply the
-    // bounty boost" — two unrelated things. Splitting them means a freshwater
+    // bounty boost": two unrelated things. Splitting them means a freshwater
     // match skips the calendar WITHOUT inheriting bounty targeting, and the
     // bounty deref below is null-guarded rather than relying on the branch it
     // sits in (the Mermaid set could reach it with no tournament running at all).
@@ -15788,7 +15788,7 @@ function biteWait(strength, st, rarityDelay){
   boatFreq*=playerBiteMult();
   // V0.9.5: a better reel works the bait/lure more effectively, higher bite chance.
   // Tier WITHIN the region you're fishing, not a position in the merged
-  // catalog — and from the equipped slot, which in freshwater is the region bag.
+  // catalog, and from the equipped slot, which in freshwater is the region bag.
   const reelIdx=forHere(REELS).indexOf(curReel());
   boatFreq*=(1+Math.max(0,reelIdx)*0.07);   // starter -> top tier = +0%..+28% bites
   const poolMul=Math.max(0.25,Math.min(2.2,strength/40));
@@ -15839,7 +15839,7 @@ function triggerBite(){
     if(!pick){
       if(out.length===0||strength<=0){
         // Scent promises a bite, so it must not be spent over water that holds
-        // nothing your rig can catch — there is no fish here for it to call in.
+        // nothing your rig can catch: there is no fish here for it to call in.
         scentRefund();
         phase='done';bobber.active=false;
         setStatus('No takers. Try a different bait, leader, or spot, or wait for a better bite window.');
@@ -15972,7 +15972,7 @@ let sdewLunar=false;                           // Astronaut "Lunar Sun": this fi
 // ---- multi-round fights (V0.9.8.8) ------------------------------------------
 // The two modes that pay rubies now take THREE full bars. Max the meter and the
 // fight resets for the next round rather than ending; only the third one puts
-// the fish in the net. Losing at any point is still one loss — the paid retry
+// the fish in the net. Losing at any point is still one loss: the paid retry
 // starts you back at round 1, which is what the 5 rubies are actually buying.
 let sdewRound=1, sdewRounds=1;
 function sdewRoundsFor(){
@@ -15982,7 +15982,7 @@ function sdewRoundsFor(){
 }
 // How much slower the meter moves in these modes, applied to the fill AND the
 // drain. Slowing only the fill would not lengthen the fight, it would just make
-// it unwinnable — the ratio between the two is the difficulty, the scale is the
+// it unwinnable: the ratio between the two is the difficulty, the scale is the
 // duration, and the ask here was duration.
 function sdewMeterScale(){
   if(sdewSurf)return 0.46;
@@ -15993,8 +15993,8 @@ function sdewMeterScale(){
 // not just the Alaskan one: a mark under the hole should be lively either way.
 // Sanity-checked by driving the bar with a time-optimal controller and counting
 // the frames the fish spends inside it: at these values a clean controller holds
-// it ~100%, so the ceiling is skill and not the tuning. Break-even — the point
-// where the meter stops resolving in either direction — is 52.4% in the bar, and
+// it ~100%, so the ceiling is skill and not the tuning. Break-even (the point
+// where the meter stops resolving in either direction) is 52.4% in the bar, and
 // a human somewhere in the 75-85% band lands a round in about five seconds,
 // which is the intended pace for three of them back to back.
 // Each round the fish is a little quicker than the last, so a three-round fight
@@ -16011,14 +16011,14 @@ function sdewMeterScale(){
 //
 // Combined with sdewDifficultyFor()'s own rarity curve (0.55 common .. 1.2
 // ultra), the product is monotonic in rarity at round 1, 2 and 3 alike AT EQUAL
-// SIZE — a common's hardest round stays easier than a legendary's easiest.
+// SIZE: a common's hardest round stays easier than a legendary's easiest.
 //
 // V0.9.9 relaxed that from "always" to "at equal size": difficulty now also
 // scales with how big the fish is within its own species, and the 0.88-1.18 size
 // band is wider than the 1.11 gap between adjacent rarity steps. So a
 // maximum-size common can out-fight a runt uncommon. That overlap is deliberate
-// and is the point of the feature — a 4 lb bluegill SHOULD be more of a handful
-// than a barely-legal walleye — but it does mean rarity alone no longer orders
+// and is the point of the feature (a 4 lb bluegill SHOULD be more of a handful
+// than a barely-legal walleye) but it does mean rarity alone no longer orders
 // every possible fight.
 const SDEW_ROUND_RAMP={common:0.03,uncommon:0.04,rare:0.05,epic:0.06,legendary:0.07,ultra:0.08};
 const SDEW_ROUND_RAMP_DEF=0.05;
@@ -16046,7 +16046,7 @@ function sdewSetRoundLabel(){
 // Deliberately reads the global hookW instead of taking the weight as an
 // argument. showLegendaryAlert hands the fish to startSdewGame through a 2.5s
 // setTimeout that closes over the FISH ALONE, so a second parameter would arrive
-// undefined for every legendary and ultra — the heaviest fights in the game —
+// undefined for every legendary and ultra (the heaviest fights in the game) 
 // and an undefined here becomes NaN maxVel, a fish at NaN, and a fight that
 // cannot be won or lost with nothing logged. Reading the global also guarantees
 // the paid retry re-fights the exact weight it will later be landed at, which is
@@ -16065,7 +16065,7 @@ function sdewSizeFactor(fish){
 }
 function sdewDifficultyFor(fish){
   // The size factor multiplies ALL THREE paths. Applied only to the rarity curve
-  // below it would miss every ultra and all six hand-tuned species — precisely
+  // below it would miss every ultra and all six hand-tuned species: precisely
   // the fights where a 4x weight range matters most.
   const k=sdewSizeFactor(fish);
   if(fish.rarity==='ultra')return 1.2*k;   // hardest fight in the game
@@ -16108,13 +16108,13 @@ function startSdewGame(fish){
   updateSdewDOM();
   sdewAnimId=requestAnimationFrame(sdewLoop);
   setStatus(sdewRounds>1
-    ? 'Round 1 of '+sdewRounds+'. Fill the bar to move up a round — three rounds lands it.'
+    ? 'Round 1 of '+sdewRounds+'. Fill the bar to move up a round. Three rounds lands it.'
     : 'Keep the fish in the green bar! Hold REEL to rise, release to sink.');
 }
 
 // A round is won: reset the arena and go again with the SAME fish. Everything
-// that is per-fight rather than per-round — the Chainsaw slow-mo, the retry
-// flag, the Lunar buff — is deliberately left alone, so one slow-mo covers the
+// that is per-fight rather than per-round (the Chainsaw slow-mo, the retry
+// flag, the Lunar buff) is deliberately left alone, so one slow-mo covers the
 // whole three-round fight and not one per bar.
 function sdewNextRound(){
   sdewRound++;
@@ -16130,7 +16130,7 @@ function sdewNextRound(){
   updateSdewDOM();
   AUDIO.sfx('tick');
   toast('Round '+sdewRound+' of '+sdewRounds+'! It’s still on.','#2aa890');
-  setStatus('Round '+sdewRound+' of '+sdewRounds+' — hold on.');
+  setStatus('Round '+sdewRound+' of '+sdewRounds+', hold on.');
   sdewAnimId=requestAnimationFrame(sdewLoop);
 }
 
@@ -16231,8 +16231,8 @@ function endSdewGame(success){
 }
 
 // Lose the Stardew fight: offer a retry. One PAID chance for a normal fish.
-// An ultra legendary is a once-in-a-lifetime spawn — often a fraction of a
-// percent — so losing one to a wallet balance is the worst possible outcome.
+// An ultra legendary is a once-in-a-lifetime spawn (often a fraction of a
+// percent) so losing one to a wallet balance is the worst possible outcome.
 // Those are retried as many times as it takes, and they cost nothing.
 const SDEW_RETRY_COST=5;
 function sdewRetryCost(){return (hookedFish&&hookedFish.rarity==='ultra')?0:SDEW_RETRY_COST;}
@@ -16250,14 +16250,14 @@ function offerSdewRetry(){
   }
   document.getElementById('retry-title').textContent='The '+f.name+' is winning!';
   document.getElementById('retry-sub').innerHTML=ultra
-    ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b>, a once in a lifetime fish. Grab the rod again — <b>free</b>, as many times as it takes. You will not lose this one.'
+    ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b>, a once in a lifetime fish. Grab the rod again, <b>free</b>, as many times as it takes. You will not lose this one.'
     : 'Pay <b>'+SDEW_RETRY_COST+'</b> rubies to grab the rod again. You get <b>one</b> more chance.';
   const pay=document.getElementById('retry-pay');
-  // The separator here was a comma, rendering "Pay 5,Try again" — a mangled
-  // em dash; the static markup this replaces uses &mdash;.
+  // Keep this separator in step with the static markup in the retry button:
+  // the two render the same line, and they have drifted apart before.
   pay.innerHTML=ultra
-    ? 'Grab the rod again — FREE'
-    : '<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+' — Try again ('+(S.rubies||0)+')';
+    ? 'Grab the rod again, FREE'
+    : '<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+'. Try again ('+(S.rubies||0)+')';
   document.getElementById('retry-overlay').classList.add('show');
 }
 function sdewRetryPay(){
@@ -16283,7 +16283,7 @@ let surfActive=false, surfPhase='idle',surfBiteTimer=null, surfShark=null, surfT
 const SURF_SHARKS=['nurseshark','sandbarshark','lemonshark','bullshark','hammerhead','tigershark','greatwhite'];
 function updateSurfButton(){
   const b=document.getElementById('surf-btn');if(!b)return;
-  // Was `boat.wy > worldH()-185`, i.e. 15px ONTO the sand — unreachable now the
+  // Was `boat.wy > worldH()-185`, i.e. 15px ONTO the sand: unreachable now the
   // boat stops at the waterline, which would have made every surf shark
   // uncatchable with no error shown. It is a proximity test to the beach instead.
   const near=S.zone===0&&!tourn.active&&!activeTournament&&!surfActive
@@ -16508,7 +16508,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
 // the old check read the raw saltwater reel slot and demanded line no
 // freshwater shop sells, so all three freshwater ultras snapped 100% of the
 // time. The freshwater bar is "the best of what THIS region sells, in the
-// kind you are fishing" — a fly-caught ultra wants the top fly line and fly
+// kind you are fishing": a fly-caught ultra wants the top fly line and fly
 // reel, a bottom-caught one the top conventional pair. Always satisfiable by
 // construction, never trivial.
 function ultraGearOK(){
@@ -16538,7 +16538,7 @@ function snap(f, w, msg){phase='done';bobber.active=false;S.misses++;S.breakoffs
 function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
 // Ruby payout. The Alaskan ice roster carries a FIXED, published price on the
-// species row (V0.9.8.8) — a Burbot is always 3 rubies, an Inconnu always 30, so
+// species row (V0.9.8.8): a Burbot is always 3 rubies, an Inconnu always 30, so
 // a player can decide which mark is worth chasing before they commit to it. Surf
 // sharks keep the original 5-25 rarity curve with a size kicker.
 function sharkRubyReward(f, w){
@@ -16559,7 +16559,7 @@ function land(f, w, perfect, bullseye){
     const lr=activeLure();
     if(lr){wearLure(lr.id);}
     else if(curMethod().bait||curMethod().id==='troll'){
-      // Sturgeon Eggs are endless — never decremented.
+      // Sturgeon Eggs are endless: never decremented.
       const bsel=gearGet('baitSel');
       if(!baitEndless(bsel)&&!(curBoat().perk==='baitsaver'&&Math.random()<0.12)){S.baitInv[bsel]=Math.max(0,(S.baitInv[bsel]||0)-1);}
     }
@@ -16572,8 +16572,8 @@ function land(f, w, perfect, bullseye){
   const[a, b]=f.size;const sizeFrac=(w-a)/Math.max(0.01,(b-a));
   let xp=Math.round(f.xp*(0.8+sizeFrac*0.5)*0.7); // global 30% xp reduction
   let gold=catchCoinValue(f, w);
-  // Fly fishing is the hardest way in the game to put a fish in the net —
-  // earn the line, land it on the mark, mend it clean, then time the set — so
+  // Fly fishing is the hardest way in the game to put a fish in the net:
+  // earn the line, land it on the mark, mend it clean, then time the set. So
   // it pays DOUBLE on both xp and cash. Applied first, before every other
   // bonus multiplies on top, so it stacks with new-species, perfect fight,
   // bullseye and personal best rather than replacing them. Computed before any
@@ -16581,7 +16581,7 @@ function land(f, w, perfect, bullseye){
   // can never disagree.
   // ...but only when you are actually fly fishing. The rig bar still reads "Fly"
   // while you are down the ice hole or out in the surf, because those modes take
-  // over the screen without changing the region's equipped method — so an ice
+  // over the screen without changing the region's equipped method, so an ice
   // fish was collecting the fly bonus for a jig dropped through a hole.
   const _flyBonus=!!(curMethod()&&curMethod().fly)
     &&!(typeof sdewIce!=='undefined'&&sdewIce)
@@ -16602,7 +16602,7 @@ function land(f, w, perfect, bullseye){
   if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))gold=0;
   // The soft payout lands in the wallet of the world you are fishing: gold in
   // saltwater, cash in freshwater. Alaskan ice species carry gold:0 because they
-  // are meant to pay RUBIES instead — that award is NOT wired up yet, so they
+  // are meant to pay RUBIES instead: that award is NOT wired up yet, so they
   // currently pay nothing. It lands with the Alaskan ice mode commit.
   coinAdd(gold);
   S.totalCatches++;setTimeout(pushLeaderboard,2000);
@@ -16627,7 +16627,7 @@ function land(f, w, perfect, bullseye){
   recordTournamentCatch(f, w);
   addXP(xp);
   const trophy=sizeFrac>0.85;
-  setStatus('Landed a '+f.name+' — '+fmtLb(w)+' lb, '+fishLenIn(f, w)+'.');
+  setStatus('Landed a '+f.name+', '+fmtLb(w)+' lb, '+fishLenIn(f, w)+'.');
   if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
   // After surf is unlocked, jacks & amberjacks are kept as the only surf bait.
   if(S.surfUnlocked&&(f.id==='jack'||f.id==='amberjack')){S.surfBait=(S.surfBait||0)+1;setTimeout(function(){toast('Kept as surf bait (x'+S.surfBait+').','#2aa890');},950);}
@@ -16678,16 +16678,16 @@ function grantUltraReward(f){
 // pays no coin" (the surf sharks and the Alaskan ice roster, which pay rubies).
 const COIN_BY_RARITY={common:9,uncommon:23,rare:62,epic:142,legendary:284,ultra:1330};
 // Per-zone multiplier, calibrated so each region's MEDIAN payout lands close to
-// what it paid before this change — the curve is being fixed, not the economy.
+// what it paid before this change: the curve is being fixed, not the economy.
 // Mountains carries the deliberate 4x from V0.9.8.8 on top of its natural ~1.4.
 const COIN_ZONE_MULT=[0.85,0.95,1.20, 0.50,0.70,0.90, 5.60];
-// The surf roster needs its own band. Its species are LOW RARITY but enormous —
-// a Nurse Shark is 'common' among sharks and still a 200 lb animal — so on the
+// The surf roster needs its own band. Its species are LOW RARITY but enormous:
+// a Nurse Shark is 'common' among sharks and still a 200 lb animal. So on the
 // inshore multiplier a shark would have paid 9 coins, the same as a pinfish.
 // Calibrated to the surf roster's own median so the mode earns what it always
 // did overall, while rarity and size now order it internally.
 const COIN_SURF_MULT=3.4;
-// Size band: a runt is worth 0.55x, a maximum fish 1.70x — a 3.1x spread, up from
+// Size band: a runt is worth 0.55x, a maximum fish 1.70x, a 3.1x spread up from
 // 1.75x, so hunting a big one of a species you already have is worth doing.
 const COIN_SIZE_LO=0.55, COIN_SIZE_HI=1.70;
 function catchCoinValue(f, w){
@@ -16786,7 +16786,7 @@ function updateRigBar(){
   document.getElementById('gold-pill').textContent=coinGet().toLocaleString();
   var ci=document.getElementById('coin-icon'),cp=document.getElementById('coin-pill');
   if(ci)ci.className=isFresh()?'cash-s':'coin-s';
-  if(cp)cp.title=isFresh()?'Cash — the freshwater wallet. Buys freshwater gear and region licences.':'Gold — the saltwater wallet.';
+  if(cp)cp.title=isFresh()?'Cash: the freshwater wallet. Buys freshwater gear and region licences.':'Gold: the saltwater wallet.';
   var rc=document.getElementById('rubies-count');if(rc)rc.textContent=S.rubies||0;
   document.getElementById('zone-name').textContent=curZone().name;
   const zi=document.getElementById('zone-icon');if(zi)zi.innerHTML=svgIcon('zone-pin',14);
@@ -16841,7 +16841,7 @@ function openChooser(type){
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
       // Reward bait (Sturgeon Eggs) only appears once its ultra has been landed,
-      // and is never buyable — so it is filtered in by ownership, not by stock.
+      // and is never buyable, so it is filtered in by ownership, not by stock.
       forHere(BAIT).filter(bt=>!bt.reward||baitOwned(bt.id)).forEach(bt=>{const own=baitOwned(bt.id);
         html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+(bt.endless?' ultra-glint':'')+'" data-pick="'+(own?'bait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?baitStock(bt.id):'tap to buy')+'</div></div>';});}
   } else if(type==='leader'){
@@ -16944,7 +16944,7 @@ function useItem(id){
     return;
   }
   // ---- Scent: the next three casts are a sure thing ----
-  else if(id==='scent'){S.scentCasts=3;toast('Scent on the bait — the next 3 casts will get eaten.','#2aa890');}
+  else if(id==='scent'){S.scentCasts=3;toast('Scent on the bait. The next 3 casts will get eaten.','#2aa890');}
   // ---- Air Horn: a ring of anglers goes off the bite ----
   // Broadcast POSITIONALLY (target null) rather than per-rival: one act carries
   // one target uid, and this hits everyone in the ring. Each client decides for
@@ -17028,7 +17028,7 @@ document.getElementById('chooser-bg').addEventListener('click',e=>{
   if(useOpt){if(useOpt.dataset.use)useItem(useOpt.dataset.use);return;}
   const opt=e.target.closest('.opt');if(!opt||!opt.dataset.pick)return;
   const[type, val, val2]=opt.dataset.pick.split(':');
-  // "shop:<tab>:<sub>" — a row for something you don't own yet. Close the
+  // "shop:<tab>:<sub>": a row for something you don't own yet. Close the
   // chooser and land on the shelf that sells it instead of doing nothing.
   if(type==='shop'){closeChooser();openShopAt(val, val2||null);return;}
   if(type==='zone'){const zi=+val;if(gateBlockReason(zi))return;S.zone=zi;if(S.lastZone)S.lastZone[worldOf(zi)]=zi;bobber.active=false;ensureRig();clearSightFish();setStatus('Now fishing the '+ZONES[zi].name.toLowerCase()+', '+ZONES[zi].sub.toLowerCase()+'.');}
@@ -17281,7 +17281,7 @@ function renderLogbook(){
   document.getElementById('species-total').textContent=_inWorld.length;
 }
 
-// Boats, rods, reels — and, since V0.9.8.4, lines — must be purchased in
+// Boats, rods, reels (and, since V0.9.8.4, lines) must be purchased in
 // order. Returns the name of the previous required tier if the current one is
 // gated by progression, else null.
 //
@@ -17290,7 +17290,7 @@ function renderLogbook(){
 // freshwater tiers appended after the saltwater ones, and the ultra rewards
 // (Chainsaw Rod, Black Marlin Speedboat) sit at the end of their saltwater run.
 // Walking the raw array handed every freshwater STARTER the last saltwater item
-// as its prerequisite — the Ultralight Rod demanded the Chainsaw Rod, which
+// as its prerequisite: the Ultralight Rod demanded the Chainsaw Rod, which
 // cannot be bought at all since it only drops for landing a Sawfish. Narrowing
 // again by region in V0.9.8.1 keeps the same bug from reappearing one level
 // down, where the Southern Cane Pole would have inherited the last MIDWEST rod.
@@ -17300,7 +17300,7 @@ function renderLogbook(){
 // V0.9.8.4: fly gear is its OWN ladder, split from the host region's. The fly
 // rod/reel/line are dual-stocked at the Northern outfitter (regions:
 // ['northern','mountains'], the V0.9.8.3 deadlock fix) and were being chained
-// onto the tail of the Northern trolling run — the lvl-5 620-cash fly rod
+// onto the tail of the Northern trolling run: the lvl-5 620-cash fly rod
 // demanded the lvl-10 4200-cash Downrigger first, which walled the Mountains
 // behind topping out the Northern and made the shop read as two merged combo
 // sets. Split by kind, the fly pieces ladder among themselves (5wt before
@@ -17328,7 +17328,7 @@ function coinIcon(){
 }
 // Combo leaves: the region's spin ladder first, then any fly gear under its
 // own header. Fly gear became a separate purchase ladder in V0.9.8.4, and at
-// the Northern outfitter the fly kit is guest stock for the Mountains — mixed
+// the Northern outfitter the fly kit is guest stock for the Mountains: mixed
 // inline it read as "two sets of combos" chained into one another.
 function comboRows(rows, render){
   const spin=rows.filter(function(r){return !r.fly;}), fly=rows.filter(function(r){return r.fly;});
@@ -17378,7 +17378,7 @@ function renderShop(){
   // from the start and swapped on the rig bar, so neither appears in the shop.
   // Freshwater shops are REGIONAL: everything below the banner is stocked for
   // the region you are standing in, and nothing you buy here works elsewhere.
-  // The banner is a statement of where you are, not a picker — you change region
+  // The banner is a statement of where you are, not a picker: you change region
   // by travelling, which is also what swaps your loadout.
   const rb=document.getElementById('shop-region');
   if(rb){
@@ -17563,7 +17563,7 @@ document.getElementById('shop-list').addEventListener('click',e=>{
   const kind=item.dataset.kind, id=item.dataset.id;
   if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
     if(t.surfGear){if(S.surfHook){toast('You already own the 14/0 Circle Hook.','#b58b53');return;}if(!coinCanAfford(t.cost)){toast('Not enough '+coinLabel()+'.','#b3402a');return;}coinSpend(t.cost);S.surfHook=true;toast('Bought the 14/0 Circle Hook! Surf rig ready.','#2aa890');updateRigBar();renderShop();queueSave();return;}
-    // The auger is a ONE-TIME UNLOCK, not a consumable — same shape as the surf
+    // The auger is a ONE-TIME UNLOCK, not a consumable: same shape as the surf
     // hook above. Without this branch it fell through to the generic tackle path,
     // actually reads, so the Drill button stayed hidden however many you bought.
     if(t.iceGear){if(S.iceAuger){toast('You already own the '+t.name+'.','#b58b53');return;}
@@ -17809,7 +17809,7 @@ function _fishStructText(f){
 }
 function _fishTackleText(f){
   // Zone-legal methods only. Reading f.methods raw would name tackle for a
-  // method the player cannot use in this fish's water — the exact fault that
+  // method the player cannot use in this fish's water: the exact fault that
   // had the Sawfish advertising a Knocker Rig and a Chunk Rig inshore.
   const _ms=(typeof clancyUsableMethods==='function')?clancyUsableMethods(f):(f.methods||[]);
   const cats=[...new Set(_ms.map(function(mid){const m=METHODS.find(x=>x.id===mid);return m?m.cat:null;}).filter(Boolean))];
@@ -17824,7 +17824,7 @@ function _fishTackleText(f){
 function openFish(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
   // Judge reachability against the fish's OWN world, not whichever one we're
-  // standing in — otherwise every freshwater fish reads as locked from the coast.
+  // standing in: otherwise every freshwater fish reads as locked from the coast.
   const caught=(S.caught[f.id]||0)>0;if(!caught&&f.zone>maxZoneIn(worldOf(f.zone)))return;
   const seasons=f.season.includes('all')?'Year-round':f.season.map(s=>SEASON_LABEL[s]).join(', ');
   const times=f.time.includes('all')?'Any time':f.time.map(x=>x.charAt(0).toUpperCase()+x.slice(1)).join(', ');
@@ -17952,12 +17952,12 @@ function clancyFishDetail(id){
   const tackle=clancyTackleFor(f, usable).join(', ')||'none';
   const baitList=clancyBaits(f);
   const lures=clancyLures(f).map(function(l){return l.name;});
-  // Bait row has to admit when a fish takes NO bait sold here — an artificial-only
+  // Bait row has to admit when a fish takes NO bait sold here: an artificial-only
   // species (or one whose baits are stocked in another region) is a dead end
   // otherwise, and Clancy used to list baits you could not buy.
   const baitRow=baitList.length
     ? '<div class="mrow"><span class="ml">Best baits</span><span class="mv">'+baitList.join(', ')+'</span></div>'
-    : '<div class="mrow"><span class="ml">Best baits</span><span class="mv">None sold here — this one comes on artificials.</span></div>';
+    : '<div class="mrow"><span class="ml">Best baits</span><span class="mv">None sold here, this one comes on artificials.</span></div>';
   const lureRow=lures.length
     ? '<div class="mrow"><span class="ml">Lures</span><span class="mv">'+lures.join(', ')+'</span></div>'
     : '<div class="mrow"><span class="ml">Lures</span><span class="mv">None, this one won’t take a lure. Use bait.</span></div>';
@@ -17966,13 +17966,13 @@ function clancyFishDetail(id){
   // was being told they had it right.
   const inSeason=f.season.includes('all')||f.season.includes(seasonNow());
   const seasonTxt=f.season.includes('all')?'Year-round'
-    :f.season.map(function(s){return SEASON_LABEL[s]||s;}).join(', ')+(inSeason?' — in season now':' — out of season, bites are rare');
+    :f.season.map(function(s){return SEASON_LABEL[s]||s;}).join(', ')+(inSeason?' (in season now)':' (out of season, bites are rare)');
   const ph=phaseOf(hourNow());
   const timeOK=f.time.includes('all')||f.time.includes(ph);
   const timeTxt=f.time.includes('all')?'Any time'
-    :f.time.map(function(x){return x.charAt(0).toUpperCase()+x.slice(1);}).join(', ')+(timeOK?' — good right now':' — wrong window, they’re slow');
-  const leaderTxt=f.leader==='wire'?'Wire — it’ll bite clean through anything else'
-    :f.leader==='fluoro'?'Fluorocarbon — line-shy, it spooks off heavy leader'
+    :f.time.map(function(x){return x.charAt(0).toUpperCase()+x.slice(1);}).join(', ')+(timeOK?' (good right now)':' (wrong window, they’re slow)');
+  const leaderTxt=f.leader==='wire'?'Wire: it’ll bite clean through anything else'
+    :f.leader==='fluoro'?'Fluorocarbon: line-shy, it spooks off heavy leader'
     :'Any leader will do';
   const modal=document.getElementById('modal');
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()
@@ -18230,7 +18230,7 @@ function drawNpcInBoat(boatImg, sprite, t, label, sub, accent, bobSeed, opts){
   if(_spriteReady(boatImg))ctx.drawImage(boatImg,-BS/2,-BS/2,BS,BS);
   // NPC standing near the middle of the deck (feet a touch below boat centre)
   if(_spriteReady(sprite)){const NS=60*nsc;ctx.drawImage(sprite,-NS/2,-NS/2+ndy,NS,NS);}
-  // Name flag above the bow — skipped entirely when no label is given.
+  // Name flag above the bow: skipped entirely when no label is given.
   if(label){
     const flagY=-BS/2-2;
     ctx.fillStyle=accent;roundRect(ctx,-30,flagY-9,60,17,5);ctx.fill();
