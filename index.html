@@ -905,7 +905,7 @@
     <!-- Snagging (V0.9.8.5): the Midwest paddlefish loop. Same timing bar as
          the fly mend, its own panel so the copy can talk about ripping. -->
     <div class="fly-game" id="snag-game">
-      <div class="fly-hint" id="snag-hint">Rip the treble through the school \u2014 hit the yellow band.</div>
+      <div class="fly-hint" id="snag-hint">Rip the treble through the school. Hit the yellow band.</div>
       <div class="tbar show" id="snag-bar"><div class="tbar-zone" id="snag-zone"></div><div class="catch-ind" id="snag-ind"></div></div>
       <div class="fly-stats"><span id="snag-sweeps">0 sweeps</span><span id="snag-feel"></span></div>
       <div class="fly-row">
@@ -1778,7 +1778,7 @@ function renderEquipSections(){
   // with what earns them. ownedPets() is untouched: the buff logic still needs it.
   const pets=PETS;
   const eqIds=equippedPets(), petCap=petEquipCap(), multiPet=petCap>1;
-  let petHtml=head('Companions','Earned by Prestige \u2014 saltwater and freshwater \u2014 and by landing certain Ultra Legendaries. '
+  let petHtml=head('Companions','Earned by Prestige (saltwater and freshwater) and by landing certain Ultra Legendaries. '
     +(multiPet
       ? 'The <b>Dragon</b> is out: up to <b>'+petCap+'</b> companions ride with ye at once and every buff stacks. <b>'+eqIds.length+' / '+petCap+' equipped.</b>'
       : 'Only one pet floats with ye at a time, giving its buff. Equip the <b>Dragon</b> to bring four more along.'));
@@ -1850,14 +1850,14 @@ function equipPet(id){
     // Taking the Dragon off collapses the extra slots.
     if(id==='dragon'&&S.equippedPets.length>PET_SOLO_CAP){
       const kept=S.equippedPets[0];S.equippedPets=[kept];
-      toast('The Dragon left \u2014 only '+petNameOf(kept)+' stays with ye.','#b58b53');
+      toast('The Dragon left, only '+petNameOf(kept)+' stays with ye.','#b58b53');
     }
   }else{
     // Equipping the Golden Trout is what starts its 10-minute run, but only
     // from a ready state, so re-equipping mid-cooldown never sneaks a second one.
     if(id==='goldentrout'){
       const st=goldenState();
-      if(st==='cooling'){toast('The Golden Trout is still resting \u2014 ready in '+fmtDur(goldenMsLeft())+'.','#b58b53');return;}
+      if(st==='cooling'){toast('The Golden Trout is still resting, ready in '+fmtDur(goldenMsLeft())+'.','#b58b53');return;}
       if(st==='ready')goldenTryStart();
     }
     // The Dragon opens its slots the moment it goes on, so measure the cap
@@ -3759,7 +3759,7 @@ function joinLobby(id){
     // The host may have vanished since the list was drawn.
     const _stamp=(typeof data.hostSeen==='number')?data.hostSeen:(data.createdAt||0);
     if(_stamp&&(Date.now()-_stamp)>LOBBY_STALE_MS*2){
-      toast('That lobby has closed \u2014 the host left.','#b58b53');
+      toast('That lobby has closed. The host left.','#b58b53');
       fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});
       return;
     }
@@ -4153,7 +4153,7 @@ const METHODS=[
   // `snagging` carries neither bait nor lure: a bare treble is the whole rig.
   // The `snag` flag is what tells poolNow and the cast gate to skip both.
   {id:'snagging', name:'Snagging',   cat:'fwsnag',   bait:false, zones:[3],     world:'fresh', snag:true,
-   blurb:'A weighted treble ripped through a school of filter feeders. No bait, no lure \u2014 just the hook and your timing. The only way to take a paddlefish.'},
+   blurb:'A weighted treble ripped through a school of filter feeders. No bait, no lure, just the hook and your timing. The only way to take a paddlefish.'},
 ];
 // A method's TACKLE category depends on which world you're in: `bottom`, `troll`
 // and `jig` are the same technique in both worlds and keep one id (the fish
@@ -4211,7 +4211,7 @@ const TACKLE=[
   // Freshwater terminal tackle, two per method category, scoped to the regions
   // whose legal methods actually use that category (V0.9.8.1). The Southern
   // swamp has no trolling water, and the Mountains only run fly / spin cast /
-  // still \u2014 so neither is ever offered tackle it cannot legally fish.
+  // still, so neither is ever offered tackle it cannot legally fish.
   {id:'fwbob_b', cat:'fwbobber', name:'Red & White Float Rig',    icon:'tackle-cork',   cost:35,  pack:4, dur:7,  rare:1,    lvl:1, desc:'A clip-on float, a split shot and an Aberdeen hook.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
   {id:'fwbob_p', cat:'fwbobber', name:'Slip Float Rig',           icon:'tackle-cork',   cost:155, pack:4, dur:16, rare:1.25, lvl:3, desc:'Bobber stop and a slip float. Fish any depth you like, and it casts a mile.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
   {id:'fwcast_b',cat:'fwcast',   name:'Snap Swivel Pack',         icon:'tackle-hook',   cost:45,  pack:4, dur:7,  rare:1,    lvl:1, desc:'Barrel swivel and a snap for quick lure changes.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
@@ -4224,7 +4224,7 @@ const TACKLE=[
   {id:'fwtrl_p', cat:'fwtroll',  name:'Lead Core & Dipsy Spread', icon:'tackle-lure',   cost:450, pack:3, dur:18, rare:1.35, lvl:7, desc:'Lead core line and diving discs put lures right on the thermocline.',regions:['midwest','northern'],world:'fresh',fixedCost:true},
   {id:'fwfly_b', cat:'fwfly',    name:'Tapered Leader & Tippet',  icon:'tackle-circle', cost:70,  pack:4, dur:7,  rare:1,    lvl:5, desc:'A 9 ft tapered leader and a spool of 4x tippet. The fly angler\u2019s terminal end.',regions:['mountains'],world:'fresh',fixedCost:true},
   {id:'fwfly_p', cat:'fwfly',    name:'Furled Leader & Fluoro Tippet',icon:'tackle-circle',cost:280,pack:4,dur:16,rare:1.3,  lvl:8, desc:'A hand-furled butt section turns over big streamers and still lands soft.',regions:['mountains'],world:'fresh',fixedCost:true},
-  {id:'fwsnag_b', cat:'fwsnag',   name:'Large Treble Hook',       icon:'tackle-hook', cost:210, pack:4, dur:10, rare:1.2, lvl:8, desc:'A weighted 8/0 treble on a heavy shank. Nothing to bait and nothing to tie on \u2014 you rip it through the school and hope it finds a shoulder.',regions:['midwest'],world:'fresh',fixedCost:true},
+  {id:'fwsnag_b', cat:'fwsnag',   name:'Large Treble Hook',       icon:'tackle-hook', cost:210, pack:4, dur:10, rare:1.2, lvl:8, desc:'A weighted 8/0 treble on a heavy shank. Nothing to bait and nothing to tie on. You rip it through the school and hope it finds a shoulder.',regions:['midwest'],world:'fresh',fixedCost:true},
 ];
 
 const BAIT=[
@@ -4255,7 +4255,7 @@ const BAIT=[
   {id:'shad',        name:'Gizzard Shad',     icon:'bait-fish-long',cost:130, pack:12, lvl:6, desc:'Cast-netted shad, whole or cut. The forage every open-water predator follows.',regions:['midwest','southern','northern'],world:'fresh',fixedCost:true},
   {id:'shiner',      name:'Wild Shiners',     icon:'bait-fish',     cost:140, pack:12, lvl:6, desc:'Big hand-picked golden shiners. The premium bait for trophy bass, pike and muskie.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true},
   {id:'waxworm', name:'Wax Worms', icon:'bait-shrimp', cost:70, pack:20, lvl:12, desc:'A tub of wax moth larvae kept warm in a jacket pocket. The ice angler\u2019s bait.',regions:['northern','mountains'],world:'fresh',fixedCost:true},
-  // STURGEON EGGS \u2014 the Alabama Sturgeon ultra reward. Never bought, never runs
+  // STURGEON EGGS: the Alabama Sturgeon ultra reward. Never bought, never runs
   // out, and skips the bait gate entirely so anything will eat it. cost:0 keeps
   // it off the shop shelves (renderShop filters bait on cost>0).
   {id:'sturgeoneggs', name:'Sturgeon Eggs', icon:'bait-shrimp', cost:0, pack:0, lvl:1, desc:'A palmful of pearlescent roe from the rarest fish in America. Endless, and everything in fresh water wants it.',regions:['midwest','southern','northern','mountains'],world:'fresh',fixedCost:true,endless:true,reward:'alabamasturgeon'},
@@ -4683,7 +4683,7 @@ const PETS=[
   // `artMove` is swapped in on the game canvas while the boat is under way.
   {id:'alligator',name:'Alligator', prestige:3, world:'fresh', art:'alligator sitting.png', artMove:'alligator swimming.png', buff:'+100% sight-fishing spawn rate'},
   {id:'otter',    name:'Otter',     prestige:4, world:'fresh', buff:'Lands one target fish for ye, once per multiplayer match'},
-  {id:'dragon',   name:'Dragon',    prestige:5, world:'fresh', buff:'Take 4 other companions along at once \u2014 every buff stacks'},
+  {id:'dragon',   name:'Dragon',    prestige:5, world:'fresh', buff:'Take 4 other companions along at once, every buff stacks'},
   // Earned, not prestiged: landing the California Golden Trout. prestige:99 keeps
   // it out of ownedPets()'s level check; petOwned() special-cases it.
   {id:'goldentrout', name:'Golden Trout', prestige:99, reward:'cagoldentrout',
@@ -5031,36 +5031,95 @@ function prestigeFromStats(w){
   if(typeof closeMenu==='function')closeMenu();
   setTimeout(function(){showPrestigeOffer(w);},250);
 }
-// ---- Fail-safe: if a player is out of gear AND broke, Clancy spots them a starter kit ----
+// ---- Fail-safe: out of gear AND broke, Clancy spots you a working kit -------
+// The point is that a player can NEVER be hard-locked. Measured against seven
+// stranded states, the old version rescued four: it always handed out live bait,
+// and `livebait` is not legal in the Mountains, so ensureRig() bounced the
+// player onto `spincast` and the gift went in the bin. Broke, gearless and in
+// the canyon meant never fishing again.
+//
+// So the kit is now derived from the catalogs for the zone and the method the
+// player is actually standing on: the right tackle category, bait only if the
+// method takes bait, lures only if it needs them, all region-legal.
+const FAILSAFE_BAIT=5, FAILSAFE_TACKLE=2, FAILSAFE_LURES=3, FAILSAFE_MS=4000;
 let _failsafeAt=0;
-function clancyFailsafe(){
-  // Check the wallet of the world you're actually standing in: a freshwater
-  // angler with no cash is stranded no matter how much saltwater gold they hold,
-  // and the two never convert.
-  if(coinGet()>=50)return false;          // can still afford a cheap restock
-  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))return false; // not mid-tournament
-  if(Date.now()-_failsafeAt<4000)return true; // already just helped; swallow the cast
-  _failsafeAt=Date.now();
-  S.baitInv=S.baitInv||{};S.tackleInv=S.tackleInv||{};
-  // The gift has to be usable where the player is standing: saltwater gets live
-  // shrimp on a circle hook, freshwater gets nightcrawlers under a float. Handing
-  // a lake angler a bag of shrimp and a 6/0 circle hook helps nobody.
+// Cheapest row a player at this level could actually be sold here. Falls back to
+// the cheapest in the category at all, so a level gate can never empty the kit.
+function _kitPick(rows){
+  const here=rows.filter(function(r){return typeof itemHere!=='function'||itemHere(r);});
+  const pool=here.length?here:rows;
+  const afford=pool.filter(function(r){return (r.lvl||1)<=Math.max(1,S.level||1);});
+  const list=(afford.length?afford:pool).slice().sort(function(a,b){return (a.cost||0)-(b.cost||0);});
+  return list[0]||null;
+}
+// What it would take to put ONE working rig in the player's hands right here.
+function clancyKit(){
+  const zm=(typeof methodsForZone==='function')?methodsForZone(S.zone):[];
+  if(!zm.length)return null;
+  // Keep the player on the method they chose when it is legal here; otherwise
+  // fall back to a bait method (cheapest to keep stocked), then to anything.
+  const cur=gearGet('method');
+  let m=zm.find(function(x){return x.id===cur;})
+      ||zm.find(function(x){return x.bait&&!x.snag;})
+      ||zm.find(function(x){return !x.snag;})||zm[0];
   const fresh=isFresh();
-  const baitId=fresh?'worm':'shrimp', tackId=fresh?'fwbob_b':'lh_b', cat=fresh?'fwbobber':'livehook';
-  S.baitInv[baitId]=(S.baitInv[baitId]||0)+5;
-  const hk=S.tackleInv[tackId]||(S.tackleInv[tackId]={qty:0,dur:0});
-  hk.qty+=2;if(hk.dur<=0)hk.dur=(tackleById(tackId)||{dur:8}).dur;
-  // make the gift immediately usable, through the per-world gear fields
-  gearSet('method','livebait');
-  S.tackleSel=S.tackleSel||{};S.tackleSel[cat]=tackId;
-  gearSet('baitSel', baitId);
+  const cat=(fresh&&m.fwcat)?m.fwcat:m.cat;
+  const tackle=_kitPick(TACKLE.filter(function(t){return t.cat===cat&&!t.reward&&!t.iceGear;}));
+  const bait=m.bait?_kitPick(BAIT.filter(function(b){return !!b.cost;})):null;
+  // An artificial method is dead without a lure that serves it in THIS zone.
+  const lure=(!m.bait&&!m.snag)
+    ? _kitPick(LURES.filter(function(l){return l.zone===S.zone&&(l.methods||[]).indexOf(m.id)>=0;}))
+    : null;
+  return {method:m, cat:cat, tackle:tackle, bait:bait, lure:lure};
+}
+// What that kit would cost to buy, which is the real test of "can they get
+// themselves out of this?" A flat threshold cannot be right in both a 45-cash
+// inshore shop and a 605-cash Northern one.
+function clancyKitCost(k){
+  if(!k)return 0;
+  return ((k.tackle&&k.tackle.cost)||0)+((k.bait&&k.bait.cost)||0)+((k.lure&&k.lure.cost)||0);
+}
+function clancyFailsafe(){
+  // Never mid-tournament: a match is a level field and a handout is not.
+  if(activeTournament&&!(activeTournament.def&&activeTournament.def.coop))return false;
+  const kit=clancyKit();
+  if(!kit)return false;
+  // Check the wallet of the world you are standing in. A freshwater angler with
+  // no cash is stranded no matter how much saltwater gold they hold, and the two
+  // never convert. If they can buy their own way out, let them.
+  if(coinGet()>=clancyKitCost(kit))return false;
+  // Already just helped: swallow the cast rather than stacking gifts.
+  if(Date.now()-_failsafeAt<FAILSAFE_MS)return true;
+  _failsafeAt=Date.now();
+  S.baitInv=S.baitInv||{};S.tackleInv=S.tackleInv||{};S.lureInv=S.lureInv||{};S.tackleSel=S.tackleSel||{};
+  const got=[];
+  gearSet('method', kit.method.id);
+  if(kit.tackle){
+    const t=S.tackleInv[kit.tackle.id]||(S.tackleInv[kit.tackle.id]={qty:0,dur:0});
+    t.qty+=FAILSAFE_TACKLE;
+    if(t.dur<=0)t.dur=(tackleById(kit.tackle.id)||{dur:8}).dur;
+    S.tackleSel[kit.cat]=kit.tackle.id;
+    got.push(FAILSAFE_TACKLE+' '+kit.tackle.name);
+  }
+  if(kit.bait){
+    S.baitInv[kit.bait.id]=(S.baitInv[kit.bait.id]||0)+FAILSAFE_BAIT;
+    gearSet('baitSel', kit.bait.id);
+    got.push(FAILSAFE_BAIT+' '+kit.bait.name);
+  }
+  if(kit.lure){
+    S.lureInv[kit.lure.id]=(S.lureInv[kit.lure.id]||0)+FAILSAFE_LURES;
+    gearSet('lureSel', kit.lure.id);
+    got.push(FAILSAFE_LURES+' '+kit.lure.name);
+  }
   if(typeof ensureRig==='function')ensureRig();
   updateRigBar&&updateRigBar();queueSave&&queueSave();
-  toast(fresh
-    ? "Cap'n Clancy slipped ye 5 nightcrawlers & 2 float rigs, can’t have ye stranded!"
-    : "Cap'n Clancy slipped ye 5 live shrimp & 2 circle hooks, can’t have ye stranded!",'#e0a93c');
+  // Join naturally: several item names already contain an ampersand ("Tapered
+  // Leader & Tippet"), so joining on one more stutters.
+  const list=(got.length>1)?(got.slice(0,-1).join(', ')+' and '+got[got.length-1]):got[0];
+  toast("Cap'n Clancy slipped ye "+list+", can’t have ye stranded!",'#e0a93c');
   return true;
 }
+
 
 // Six skin tones, matched to the male/female 1-6 avatar PNGs (n = image number).
 const SKIN_TONES=[
@@ -5150,7 +5209,7 @@ const RODS=[
   {id:'no_rod2',  name:'Downrigger Trolling Rod',zoneBonus:16,color:'#22303a',cost:4200,lvl:10, desc:'A long parabolic blank that loads against a big-water laker without pulling hooks.',world:'fresh',region:'northern',fixedCost:true},
   // -- Mountains -- (fly:true marks half of the fly combo that opens the region)
   {id:'mt_rod0',  name:'Creek Spin Rod',     zoneBonus:0,  color:'#a8b89a', cost:0,    lvl:1,  desc:'A stubby 5 ft spin rod for flicking hardware under overhanging brush.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains \u2014 stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
+  {id:'flyrod',   name:'5wt Fly Rod',        zoneBonus:9,  color:'#8a6b2e', cost:620,  lvl:5,  desc:'A 9 ft 5-weight graphite fly rod. Half of the fly combo that opens the Mountains. Stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'flyrod_p', name:'8wt Fly Rod',        zoneBonus:15, color:'#2e4a3a', cost:3600, lvl:10, desc:'A fast 8-weight that turns over streamers and stops a king in heavy current.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 const REELS=[
@@ -5182,7 +5241,7 @@ const REELS=[
   // region, and a still-fished white sturgeon (fight strength up to 48 against
   // 7 lb of drag) snapped off deterministically.
   {id:'mt_reel1', name:'8000 Longcast Spinning',   range:420, drag:50, color:'#4a4e54', cost:3800, lvl:11, desc:'A surf-sized spinner packed up the canyon for one reason: sturgeon.',world:'fresh',region:'mountains',fixedCost:true},
-  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains \u2014 stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
+  {id:'flyreel',  name:'5/6 Click-Pawl Fly Reel',  range:300, drag:22, color:'#8a7a3a', cost:620,  lvl:5,  desc:'A simple click-pawl trout reel. Half of the fly combo that opens the Mountains. Stocked at the Northern outfitter so you can kit up before the trailhead.', fly:true,world:'fresh',regions:['northern','mountains'],fixedCost:true},
   {id:'flyreel_p',name:'9/10 Sealed-Drag Fly Reel',range:430, drag:50, color:'#2a4038', cost:3600, lvl:10, desc:'A sealed carbon drag that will stop anything that swims in fresh water.', fly:true,world:'fresh',region:'mountains',fixedCost:true},
 ];
 // Fish fight strength from size + rarity. Tuned so each reel's drag rating
@@ -14356,15 +14415,15 @@ function cast(x, y){
   if(m.id==='troll'){setStatus('Trolling works on the move, pull anchor and drive to drag your line.');return;}
   const tid=currentTackleId();
   // Out of something: say WHERE to fix it and make the rig bar the button.
-  if(!tid){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle \u2014 tap the Tackle slot below to buy more.');flashRigGap();return;}
-  if(m.bait){if(!gearGet('baitSel')||!(baitOwned(gearGet('baitSel')))){if(typeof clancyFailsafe==='function'&&clancyFailsafe())return;setStatus('Out of bait \u2014 tap the Bait slot below to restock.');flashRigGap();return;}}
+  if(!tid){if(clancyFailsafe())return;setStatus('You\u2019re out of '+m.name.toLowerCase()+' tackle. Tap the Tackle slot below to buy more.');flashRigGap();return;}
+  if(m.bait){if(!gearGet('baitSel')||!(baitOwned(gearGet('baitSel')))){if(clancyFailsafe())return;setStatus('Out of bait. Tap the Bait slot below to restock.');flashRigGap();return;}}
   // Artificial methods now require a lure tied on (snagging is the exception:
   // a bare treble IS the terminal tackle, so the check above is all it needs)
   if(!m.bait&&!m.snag){
     const lure=gearGet('lureSel')?LURES.find(l=>l.id===gearGet('lureSel')):null;
-    if(!lure||!lure.methods.includes(m.id)){setStatus('Tie on a lure that fits this method first. Tap the Lure slot below.');flashRigGap();return;}
-    if(typeof lure.zone==='number'&&lure.zone!==S.zone){setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tap the Lure slot for '+ZONE_LBL[S.zone]+' lures.');flashRigGap();return;}
-    if(!(S.lureInv[gearGet('lureSel')]>0)){setStatus('Out of '+lure.name+'. Tap the Lure slot below to restock.');flashRigGap();return;}
+    if(!lure||!lure.methods.includes(m.id)){if(clancyFailsafe())return;setStatus('Tie on a lure that fits this method first. Tap the Lure slot below.');flashRigGap();return;}
+    if(typeof lure.zone==='number'&&lure.zone!==S.zone){if(clancyFailsafe())return;setStatus('That '+lure.name+' is a '+ZONE_LBL[lure.zone]+' lure, it won’t draw fish here. Tap the Lure slot for '+ZONE_LBL[S.zone]+' lures.');flashRigGap();return;}
+    if(!(S.lureInv[gearGet('lureSel')]>0)){if(clancyFailsafe())return;setStatus('Out of '+lure.name+'. Tap the Lure slot below to restock.');flashRigGap();return;}
   }
   // Fly fishing takes over here: its own casting rhythm, drift and set, then it
   // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
@@ -15327,7 +15386,7 @@ function flyMend(){
     flyDrag=Math.min(100, flyDrag+12);
     tbarPlace();
     try{AUDIO.sfx('fail');}catch(e){}
-    flySay('Botched mend \u2014 the line bellied and the fly skated.');
+    flySay('Botched mend, the line bellied and the fly skated.');
     flyStats();
     if(flyDrag>=100)flyEndDrift('The fly dragged across the seam and the lie went quiet.');
     return;
@@ -15465,8 +15524,8 @@ function snagBeginCast(x, y){
   snagPhase='sweeping';snagSweeps=0;snagMisses=0;snagLastT=0;
   tbarInit(62, 20);
   snagShow(true);snagStats();
-  snagSay('Rip the treble through the school \u2014 hit the yellow band.');
-  setStatus('Snagging \u2014 rip the treble back through them.');
+  snagSay('Rip the treble through the school. Hit the yellow band.');
+  setStatus('Snagging: rip the treble back through them.');
   if(snagAnim)cancelAnimationFrame(snagAnim);
   snagAnim=requestAnimationFrame(snagLoop);
 }
@@ -15502,7 +15561,7 @@ function snagStroke(){
   // the boat and by the conditions: the same shape retrieveLure() uses.
   const chance=Math.min(0.9,(0.16+strength/240)*environmentBiteFactor());
   if(Math.random()<chance){
-    snagSay('<b>Solid weight \u2014 you\u2019re into one!</b>');
+    snagSay('<b>Solid weight, you\u2019re into one!</b>');
     snagFinish();
     triggerBite();
     return;
@@ -16651,7 +16710,7 @@ function grantUltraReward(f){
     if(!S.ownedBoats.includes('marlinboat'))S.ownedBoats.push('marlinboat');
     S.boat='marlinboat';msg='Black Marlin Speedboat';sub='Equipped! The fastest boat in the game.';
   }else if(f.id==='greatwhite'){
-    S.toothHook=true;S.ownedTooth=true;msg='Great White Tooth Hook';sub='Unbreakable \u2014 jighead or circle hook.';
+    S.toothHook=true;S.ownedTooth=true;msg='Great White Tooth Hook';sub='Unbreakable: jighead or circle hook.';
   // ---- Freshwater ultra rewards (V0.9.8.1) ----
   }else if(f.id==='greenlandshark'){
     S.greenIce=true;msg='Green Ice';sub='Never runs out. Set the season to whatever you like from the Conditions pill.';
@@ -16811,7 +16870,7 @@ function openChooser(type){
       html+='<div class="opt '+(m.id===gearGet('method')?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
   } else if(type==='tackle'){
     const cat=methodCat();
-    html='<h3>Tackle</h3><div class="sub">Wears out with use. Better tackle lasts longer &amp; draws more \u2014 tap one you don\u2019t own to go buy it.</div>';
+    html='<h3>Tackle</h3><div class="sub">Wears out with use. Better tackle lasts longer &amp; draws more. Tap one you don\u2019t own to go buy it.</div>';
     // Unowned rows are no longer dead ends: they deep-link to this category's
     // shelf in the shop rather than sitting greyed out with nothing to tap.
     TACKLE.filter(t=>t.cat===cat&&itemHere(t)).forEach(t=>{const inv=S.tackleInv[t.id];const own=inv&&inv.qty>0;
@@ -17238,7 +17297,7 @@ function renderLogbook(){
   // common first, on through to the ultra legendaries.
   const byProgress=function(a, b){const ra=RARITY_ORDER.indexOf(a.rarity),rb=RARITY_ORDER.indexOf(b.rarity);if(ra!==rb)return ra-rb;return (a.gold||0)-(b.gold||0);};
   // Both worlds are listed, each region locked against the gear equipped in ITS
-  // world \u2014 a freshwater zone must not be judged against your saltwater boat.
+  // world: a freshwater zone must not be judged against your saltwater boat.
   // The logbook shows the world you are STANDING IN. The two worlds have
   // separate species, separate gear and separate money, so listing both at once
   // made the saltwater angler scroll past four freshwater regions to reach the
@@ -17335,7 +17394,7 @@ function comboRows(rows, render){
   let html=spin.map(render).join('');
   if(fly.length){
     html+='<div style="margin:10px 2px 5px;font-size:11px;font-weight:800;letter-spacing:.4px;color:var(--text-soft);">'
-      +(curRegionId()==='mountains'?'THE FLY COMBO':'FLY GEAR \u00b7 opens the Mountains \u2014 kit up before the trailhead')+'</div>';
+      +(curRegionId()==='mountains'?'THE FLY COMBO':'FLY GEAR \u00b7 opens the Mountains, kit up before the trailhead')+'</div>';
     html+=fly.map(render).join('');
   }
   return html;
