@@ -661,6 +661,8 @@
 /* While the menu/shop is open, dock the guide to the bottom so it never covers
    the tabs or shop items the player needs to tap. */
 .tut-npc.docked{top:auto;bottom:14px;}
+/* A modal (z 320) would otherwise bury the guide and the button it is waiting on. */
+.tut-npc.over{z-index:330;}
 @keyframes tutpop{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 .tut-npc-portrait{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:2px solid var(--accent);overflow:hidden;line-height:0;}
 .tut-npc-body{flex:1;min-width:0;}
@@ -1406,8 +1408,9 @@ if(typeof fbAuth!=="undefined"&&fbAuth){
 // TUTORIAL
 // ─────────────────────────────────────────────────────────────
 // Interactive, NPC-guided tutorial. Captain Clancy picks a target fish and walks
-// the player through the logbook, the shop, structure, a real catch, then a
-// no-stakes legendary (Stardew) fight they retry until they win.
+// the player through the logbook, the shop, structure, a real catch, asking him
+// what holds on a spot, the rig, the two worlds and their wallets, projects, then
+// a no-stakes legendary (Stardew) fight they retry until they win.
 // Centered captain portrait (fills the round frame evenly, top hat to beard).
 const CLANCY_SVG='<svg viewBox="0 0 48 48" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" style="display:block;">'
   +'<rect width="48" height="48" fill="#1d5e7a"/>'
@@ -1463,6 +1466,8 @@ function buildTutSteps(){
     {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". Ye can't move with the anchor down, so first tap <b>Pull Anchor</b> to bring it up, then the joystick appears and ye can drive. I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it, you want to cast TO the structure, not sit on it.",hint:"Pull anchor, drive, then anchor a short cast from the spot",await:'anchor',onEnter:function(){S.radarActive=true;}},
     {say:"Right on the money. Now <b>cast onto the spot</b>, tap the water right on the structure, inside your range ring. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Cast onto the structure, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
     {say:"HAAA! A beauty of a "+tName+"! See how it all comes together, right bait, right spot. That's the whole game.",btn:"Heck yeah"},
+    {say:"Now a trick worth more than any lure. Ye just cast on that <b>structure</b>. See my face up in the <b>top right</b>? <b>Tap it</b>, and I'll tell ye every species holding on the spot ye last cast to.",hint:"Tap Clancy's face, top right",await:'clancyinfo'},
+    {say:"That's every fish on that spot. <b>Tap any of them</b> and I'll tell ye its baits, lures, methods and seasons. Do this every time ye find a new spot: cast on it, then tap me.",btn:"Handy!",onBtn:function(){closeModal();}},
     {say:"Now look at the four cards along the bottom, that's yer <b>rig</b>. Tap any of them to change it.",btn:"Show me"},
     {say:"<b>METHOD</b> is HOW ye fish, cork, jig, live bait, bottom, trolling. It decides which fish are even possible AND whether ye're throwing a <b>lure</b> or natural <b>bait</b>.",btn:"Next"},
     {say:"<b>TACKLE</b> is yer hooks and rigs. Ye need the right tackle on to fish bait or lures at all, and it <b>wears out</b> with use, so keep some stocked in the Shop.",btn:"Next"},
@@ -1470,11 +1475,14 @@ function buildTutSteps(){
     {say:"And yer <b>LEADER</b>, the last bit o' line to the hook. Tie on <b>WIRE</b> for toothy cutters like mackerel and sharks, or <b>FLUORO</b> for sharp eyed, spooky fish. Match it to whatever ye're targeting.",btn:"Aye"},
     {say:"Your rig matters as much as yer bait. Your <b>ROD</b> and <b>REEL</b> decide how big a fish ye can fight, and your <b>BRAID</b> is the line class, heavier braid lands heavier fish. Upgrade all three in the <b>Shop</b> as ye level up.",btn:"Aye, captain"},
     {say:"No two fish want the same thing, and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b>, cork, jig, live bait, trolling, until ye find what's biting.",btn:"Got it"},
-    {say:"And there's two kinds o' coin out here. <b>GOLD</b> buys yer everyday gear, boats, rods, bait and lures. <b>RUBIES</b> are the rare stuff, ye win them in tournaments and challenges, and they buy gear sets, abilities and special items.",btn:"Makes sense"},
+    {say:"Now, there's <b>two worlds</b> to fish. See the <b>Travel to Freshwater</b> button up in the <b>top left</b>? Tap it to swap between the <b>saltwater</b> and the <b>freshwater</b>, and tap it again to come home. The freshwater opens at <b>Level 3</b>.",btn:"Two worlds!"},
+    {say:"Each world keeps its own coin. <b>GOLD</b> is the saltwater wallet and <b>CASH</b> is the freshwater one, and they never convert, so earn each where ye spend it. Gear's the same: saltwater tackle stays in the salt, freshwater tackle in the fresh. <b>RUBIES</b> are the rare stuff that works everywhere: win them in tournaments and challenges for gear sets, abilities and special items.",btn:"Makes sense"},
+    {say:"One more thing to keep an eye on: <b>Projects</b>. Open the menu <b>☰</b> and tap <b>Projects</b>.",hint:"Open ☰ → Projects",await:'projects'},
+    {say:"Every project is built from <b>parts</b>, one from each region. Every cast has a <b>1% chance</b> to reel up the part for that region, so fish all over. Finish the <b>Surf Drone</b> for faster surf fishing, the <b>Ruby Submarine</b> for free rubies every day, or the <b>Ice Shanty Heater</b> to earn more on the ice. Yer <b>pets</b> and <b>crowns</b> live in here too.",btn:"Got it",onBtn:function(){closeMenu();}},
     {say:"Now listen close. Every so often a <b>LEGEND</b> hits, they don't use the hookset. It's a tug o' war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run, no reward, just the feel of it.",btn:"Bring it on"},
     {say:"Here she comes, a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL, keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
     {say:"YES!! Ye tamed a legend! Ye're ready for the salt now, angler.",btn:"One last thing"},
-    {say:"And this is the big one: see my face up in the <b>top right</b>? Cast on any spot, then <b>tap my face</b>, I'll name every fish that bites there, and ye can tap a fish to learn its baits, lures and methods. If ye ever need more help, come find me out in the <b>inshore</b> on my sailboat. Tight lines, angler!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
+    {say:"That's the lot. Remember: cast on a spot, then <b>tap my face</b> to see what's biting. If ye ever need more help, come find me out in the <b>inshore</b> on my sailboat. Tight lines, angler!",btn:"Start Fishing!",onBtn:function(){tutFinish();}},
   ];
 }
 function showTutorial(){
@@ -1507,8 +1515,10 @@ function tutAdvance(){tut.i++;tutRender();}
 // tabs or shop items the player has to tap.
 function tutPlaceBar(){
   const bar=document.getElementById('tut-npc');if(!bar)return;
-  const mp=document.getElementById('menu-panel');
-  bar.classList.toggle('docked',!!(mp&&mp.classList.contains('show')));
+  const mp=document.getElementById('menu-panel'), mb=document.getElementById('modal-bg');
+  const modal=!!(mb&&mb.classList.contains('show'));
+  bar.classList.toggle('docked',!!(mp&&mp.classList.contains('show'))||modal);
+  bar.classList.toggle('over',modal);
 }
 // Called from game events; advances if the current step is waiting on that event.
 function tutNotify(ev){
@@ -1569,6 +1579,50 @@ function flushTournIntro(){
   const busy=(card&&card.classList.contains('show'))||surfActive||tut.active||_clancySeq;
   if(busy){setTimeout(flushTournIntro,1200);return;}
   _pendingTournIntro=false;showTournamentIntro();
+}
+// Freshwater opens at Level 3: tell the player where the door is.
+let _pendingFreshIntro=false;
+function maybeFreshUnlock(){
+  if(freshUnlocked()&&!S.freshIntroSeen&&!S.everSwapped){
+    S.freshIntroSeen=true;queueSave();
+    _pendingFreshIntro=true;setTimeout(flushFreshIntro,1400);
+  }
+}
+function _briefingBusy(){
+  const card=document.getElementById('catch-bg'), mb=document.getElementById('modal-bg'), mp=document.getElementById('menu-panel');
+  return (card&&card.classList.contains('show'))||(mb&&mb.classList.contains('show'))||(mp&&mp.classList.contains('show'))
+    ||surfActive||tut.active||_clancySeq||_worldSwapping;
+}
+function flushFreshIntro(){
+  if(!_pendingFreshIntro)return;
+  if(_briefingBusy()){setTimeout(flushFreshIntro,1200);return;}
+  _pendingFreshIntro=false;
+  clancyTalk([
+    {say:"<b>Level 3!</b> The <b>freshwater</b> is open to ye now: lakes, rivers, swamps and mountain streams, with a whole new logbook of fish.",btn:"Where?"},
+    {say:"Tap the <b>Travel to Freshwater</b> button in the <b>top left</b> and head over. The same button brings ye back to the salt any time.",btn:"Got it"},
+    {say:"Mind yer wallet: freshwater runs on <b>CASH</b>, not gold, and ye earn it by fishing there. Ye'll start in the <b>Midwest</b>, and each new region needs its own <b>licence</b>, bought with cash.",btn:"Let's go!"}
+  ]);
+}
+// The Southern licence is the first one that gives the player somewhere to
+// travel BETWEEN, so that is when fast travel gets explained. Saves that already
+// held it get the same briefing the next time they are in the freshwater.
+let _pendingFastTravelIntro=false;
+function maybeFastTravelIntro(){
+  if(S.fastTravelIntroSeen||!isFresh()||!hasLicense(4)||_pendingFastTravelIntro)return;
+  _pendingFastTravelIntro=true;setTimeout(flushFastTravelIntro,1600);
+}
+function flushFastTravelIntro(){
+  if(!_pendingFastTravelIntro)return;
+  if(_briefingBusy()||activeTournament||tourn.active||tourn.coop){setTimeout(flushFastTravelIntro,1200);return;}
+  _pendingFastTravelIntro=false;
+  if(S.fastTravelIntroSeen||!isFresh())return;
+  S.fastTravelIntroSeen=true;queueSave();
+  clancyTalk([
+    {say:"The <b>Southern</b> is yers! And now ye've two regions, ye don't have to drive between them. Let me show ye how to <b>fast travel</b>.",btn:"Show me"},
+    {say:"Tap the <b>region name</b> at the top of the screen, the one showing where ye are. That opens the <b>Freshwater Regions</b> board.",btn:"Next"},
+    {say:"Tap <b>Travel</b> on any region ye hold a licence for and ye're there in a blink. Reel in and come off the ice first, and it won't work mid match.",btn:"Next"},
+    {say:"Regions ye haven't bought yet show their <b>licence price</b> on the same board. Tap one to buy it when ye've the cash.",btn:"Aye, captain"}
+  ]);
 }
 function showTournamentIntro(){
   clancyTalk([
@@ -2291,6 +2345,9 @@ function updateZonePill(){
   // funnels through here, so this one line covers boot, gates, teleport,
   // world swap, tournament start and the cloud-save merge.
   if(typeof AUDIO!=='undefined'&&AUDIO.setScene)AUDIO.setScene();
+  // Same funnel, so a save that already holds the Southern licence gets the
+  // fast travel briefing however it arrives in the freshwater.
+  if(typeof maybeFastTravelIntro==='function')maybeFastTravelIntro();
 }
 
 // A monotonic day counter in US Eastern time, so the bounty's region and species
@@ -5879,6 +5936,7 @@ function buyLicense(zone){
   grantRegionStarter(l.id);
   try{AUDIO.sfx('coin');}catch(e){}
   toast(l.name+' bought! '+ZONE_LBL[zone]+' is open.','#2aa890');
+  maybeFastTravelIntro();
   if(typeof updatePills==='function')updatePills();
   if(typeof refreshMenu==='function')refreshMenu();
   queueSave();
@@ -14388,7 +14446,7 @@ function maybeCatchProjectPart(){
     toast('You reeled up a '+part.name+'! '+proj.name+': '+projectPartCount(proj)+'/'+proj.parts.length,'#5ad6c0');
     if(projectBuilt(proj.id)){
       if(proj.id==='drone')S.droneBuilt=true;
-      setTimeout(function(){toast('Project complete,'+proj.name+' is ready!','#5ad6c0');},1300);
+      setTimeout(function(){toast('Project complete! '+proj.name+' is ready!','#5ad6c0');},1300);
     }
     queueSave();
   });
@@ -16690,7 +16748,7 @@ function land(f, w, perfect, bullseye){
   // Tutorial: this was the guided target catch, advance Captain Clancy.
   if(tut&&tut.active&&tut.forceTargetActive){tut.forceTargetActive=false;_forcedBiteFish=null;tutNotify('catch');}
 }
-function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('Angler Level '+S.level+'!','#2aa890');}if(typeof maybeTournamentUnlock==='function')maybeTournamentUnlock();}
+function addXP(n){S.xp+=n;while(S.level<XP_CURVE.length-1&&S.xp>=levelNeed()){S.xp-=levelNeed();S.level++;toast('Angler Level '+S.level+'!','#2aa890');}if(typeof maybeTournamentUnlock==='function')maybeTournamentUnlock();if(typeof maybeFreshUnlock==='function')maybeFreshUnlock();}
 
 // Ultra legendary catches award a signature piece of gear tied to that species.
 function grantUltraReward(f){
@@ -17249,6 +17307,7 @@ document.querySelectorAll('.menu-tab').forEach(t=>t.addEventListener('click',()=
     if(t.dataset.mtab==='settings'){renderSettings();}
     if(t.dataset.mtab==='projects'){renderProjectsPanel();}
     if(t.dataset.mtab==='logbook'){tutNotify('logbook');}
+    if(t.dataset.mtab==='projects'){tutNotify('projects');}
   document.querySelectorAll('.menu-tab').forEach(x=>x.classList.remove('active'));
   document.querySelectorAll('.mpanel').forEach(x=>x.classList.remove('active'));
   t.classList.add('active');document.getElementById('mp-'+t.dataset.mtab).classList.add('active');
@@ -17995,6 +18054,9 @@ function openClancyInfo(){
   }
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+body;
   bg.classList.add('show');
+  // Only a real answer counts: tapping him before any cast just gets "cast first".
+  if(fish&&fish.length)tutNotify('clancyinfo');
+  tutPlaceBar();
 }
 function clancyFishDetail(id){
   const f=FISH.find(x=>x.id===id);if(!f)return;
@@ -18365,7 +18427,7 @@ async function purgeUserData(uid){
   if(uname&&uname!=='guest'&&uname!=='angler')jobs.push(fbDb.collection('usernames').doc(uname).delete());
   await Promise.all(jobs.map(function(p){return p.catch(function(){});}));
 }
-function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;}
+function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;if(typeof tutPlaceBar==='function')tutPlaceBar();}
 document.getElementById('modal-bg').addEventListener('click',e=>{if(e.target.id==='modal-bg')closeModal();});
 document.getElementById('catch-bg').addEventListener('click',e=>{if(e.target.id==='catch-bg')closeCatch();});
 document.getElementById('logbook-zones').addEventListener('click',e=>{const c=e.target.closest('.fish-card');if(c)openFish(c.dataset.fish);});
