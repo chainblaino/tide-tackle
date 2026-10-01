@@ -10606,15 +10606,13 @@ function drawSwimFish(g, size, color, t){
 // (curRegionId() falls back to 'midwest' for zones with no .region), so it would
 // paint farm greens and pine trees on the sand.
 const BEACH_PAL={
-  wet:'rgba(176,150,96,0.45)', pool:'rgba(120,164,178,0.5)',
   grass:'#93b063', grassDk:'#6f8b45',
   wood:'#ab7a45', woodDk:'#7d5529',
   shell:'#f7efe2', shellDk:'#dcc9ad',
   towelA:'#4aa3c7', towelB:'#e0574f', towelC:'#5fb07a',
   poleA:'#f7f2e6', poleB:'#e0574f',
   tower:'#c98f4e', towerDk:'#8e6231', roof:'#d8534b',
-  gull:'#f6f6f4', gullDk:'#57646d',
-  castle:'#dcc38a', castleDk:'#c0a469'
+  gull:'#f6f6f4', gullDk:'#57646d'
 };
 let _beachProps=null,_beachPropsKey='';
 function beachProps(){
@@ -10625,25 +10623,35 @@ function beachProps(){
   // The two piers run down to the sand; keep the dressing out from under them.
   const piers=[Math.round(W*0.30),Math.round(W*0.70)];
   function clearOfPier(x, pad){for(let i=0;i<piers.length;i++){if(Math.abs(x-piers[i])<pad)return false;}return true;}
-  function place(pad){for(let i=0;i<24;i++){const x=60+r()*(W-120);if(clearOfPier(x,pad))return x;}return -1;}
+  // Big props also keep their distance from each other, so the sand reads as a
+  // few deliberate pieces rather than a jumble. Dropped when no spot is found.
+  const taken=[];
+  function place(pad){
+    for(let i=0;i<40;i++){
+      const x=60+r()*(W-120);
+      if(!clearOfPier(x,pad))continue;
+      if(taken.some(function(tx){return Math.abs(x-tx)<170;}))continue;
+      taken.push(x);return x;
+    }
+    return -1;
+  }
   function push(kind, pad, y, extra){
     const x=place(pad);if(x<0)return;
     out.push(Object.assign({kind:kind,x:x,y:y,f:r()},extra||{}));
   }
-  // back of the beach: dune grass all along, plus the lifeguard tower
-  for(let i=0;i<38;i++){const x=30+r()*(W-60);out.push({kind:'grass',x:x,y:y0+128+r()*58,f:r()});}
+  // Kept deliberately sparse: the beach is a backdrop, not a play area, and the
+  // fuller version (98 props) crowded the waterline the player fishes from.
+  // back of the beach: a light line of dune grass, plus the lifeguard tower
+  for(let i=0;i<14;i++){const x=30+r()*(W-60);out.push({kind:'grass',x:x,y:y0+134+r()*52,f:r()});}
   push('tower',110, y0+120);
-  // the busy middle band
-  for(let i=0;i<7;i++) push('umbrella',80, y0+62+r()*46);
-  for(let i=0;i<6;i++) push('towel',   70, y0+74+r()*44);
-  for(let i=0;i<4;i++) push('castle',  60, y0+56+r()*30);
-  for(let i=0;i<5;i++) push('drift',   60, y0+96+r()*54);
+  // a few beachgoers' things in the middle band
+  for(let i=0;i<3;i++) push('umbrella',80, y0+66+r()*40);
+  for(let i=0;i<2;i++) push('towel',   70, y0+78+r()*36);
   push('rowboat',120, y0+104);
-  // the wet strip at the waterline
-  for(let i=0;i<9;i++) push('pool', 50, y0+16+r()*26);
-  for(let i=0;i<22;i++){const x=20+r()*(W-40);out.push({kind:'shell',x:x,y:y0+14+r()*40,f:r()});}
-  // gulls loiter near the water
-  for(let i=0;i<5;i++) push('gull', 40, y0+30+r()*70);
+  for(let i=0;i<2;i++) push('drift',   60, y0+110+r()*40);
+  // the waterline: a scatter of shells and a couple of gulls, nothing else
+  for(let i=0;i<8;i++){const x=20+r()*(W-40);out.push({kind:'shell',x:x,y:y0+16+r()*34,f:r()});}
+  for(let i=0;i<2;i++){const x=80+r()*(W-160);if(clearOfPier(x,40))out.push({kind:'gull',x:x,y:y0+34+r()*50,f:r()});}
   out.sort(function(a,b){return a.y-b.y;});   // painter's order: far sand first
   _beachProps=out;_beachPropsKey=key;
   return out;
@@ -10658,11 +10666,6 @@ function drawBeachProps(t, sky){
     const f=p.f;
     switch(p.kind){
       case 'wet': break;
-      case 'pool':{                              // a shallow tide pool
-        const rx=16+f*22, ry=5+f*5;
-        g.fillStyle=P.pool;g.beginPath();g.ellipse(x,y,rx,ry,0,0,6.283);g.fill();
-        g.strokeStyle='rgba(255,255,255,0.35)';g.lineWidth=1;g.stroke();
-        break;}
       case 'shell':{
         g.fillStyle=f<0.5?P.shell:P.shellDk;
         g.beginPath();g.ellipse(x,y,2.6+f*1.8,1.8+f*1.2,f*3,0,6.283);g.fill();
@@ -10683,17 +10686,6 @@ function drawBeachProps(t, sky){
         g.strokeStyle=P.wood;g.lineWidth=4;
         g.beginPath();g.moveTo(-len/2,-1);g.lineTo(len/2,-1);g.stroke();
         if(f>0.5){g.lineWidth=3;g.beginPath();g.moveTo(2,0);g.lineTo(10,-7);g.stroke();}
-        g.restore();
-        break;}
-      case 'castle':{                            // a sandcastle, towers and all
-        const s=0.8+f*0.5;
-        g.save();g.translate(x,y);g.scale(s,s);
-        g.fillStyle=P.castleDk;g.fillRect(-14,-10,28,10);
-        g.fillStyle=P.castle;g.fillRect(-14,-12,28,3);
-        for(let k=-1;k<=1;k++){
-          g.fillStyle=P.castle;g.fillRect(k*10-3.5,-24,7,14);
-          g.fillStyle=P.castleDk;g.beginPath();g.moveTo(k*10-5,-24);g.lineTo(k*10,-31);g.lineTo(k*10+5,-24);g.closePath();g.fill();
-        }
         g.restore();
         break;}
       case 'umbrella':{                          // striped parasol, planted
