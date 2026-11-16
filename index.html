@@ -5411,12 +5411,12 @@ const ZONE_STRUCTS=[
   [{kind:'lilypad',xF:0.098,yF:0.194,tier:1},
    {kind:'weedbed',xF:0.474,yF:0.126,tier:1},
    {kind:'boatdock',xF:0.314,yF:0.244,tier:1},
-   {kind:'laydown',xF:0.902,yF:0.176,tier:1},
+   {kind:'laydown',xF:0.8333,yF:0.1429,tier:1},   // NE flat, on the J2/K2 line
    {kind:'brushpile',xF:0.1,yF:0.586,tier:2},
    {kind:'riprap',xF:0.236,yF:0.53,tier:2},
    {kind:'point',xF:0.762,yF:0.516,tier:2},
    {kind:'timber',xF:0.502,yF:0.674,tier:2},
-   {kind:'creekchan',xF:0.308,yF:0.936,tier:3},
+   {kind:'creekchan',xF:0.625,yF:0.2381,tier:3},  // up the Big Creek fork (H3)
    {kind:'dam',xF:0.802,yF:0.846,tier:3}],
 
   // ---- zone 4: SOUTHERN (blackwater swamp, canal and oxbow) ----
@@ -5433,7 +5433,7 @@ const ZONE_STRUCTS=[
    {kind:'timber',xF:0.585,yF:0.468,tier:2},
    {kind:'eddy',xF:0.292,yF:0.662,tier:3},
    {kind:'creekchan',xF:0.5125,yF:0.681,tier:3},
-   {kind:'deephole',xF:0.519,yF:0.852,tier:3}],
+   {kind:'deephole',xF:0.125,yF:0.8095,tier:3}],  // the south-west oxbow ring (B9)
 
   // ---- zone 5: NORTHERN (shield lakes, big water and the tailrace) ----
   // V0.9.9.1 re-placement. The gravel bar was jammed into the top-centre corner
@@ -5444,16 +5444,16 @@ const ZONE_STRUCTS=[
    {kind:'weedbed',xF:0.8,yF:0.285,tier:1},
    {kind:'point',xF:0.345,yF:0.56,tier:2},
    {kind:'rockledge',xF:0.82,yF:0.56,tier:2},
-   {kind:'seam',xF:0.548,yF:0.492,tier:2},
+   // Pinned (fix) so the clearance push cannot slide it into the J2/K3 corner.
+   {kind:'seam',xF:0.7308,yF:0.1333,tier:2, fix:true},  // north-east shore of the North Basin (J2)
    {kind:'riprap',xF:0.912,yF:0.69,tier:2},
    {kind:'timber',xF:0.165,yF:0.665,tier:3},
    {kind:'deephole',xF:0.56,yF:0.7,tier:3},
-   {kind:'confluence',xF:0.345,yF:0.815,tier:3},
-   // The tailrace is the boil BELOW the dam. Authored at 0.938 it was correct,
-   // but the clearance push dragged it 97px back up into the basin: i.e. above
-   // the dam: because the basin is roomier than the outflow. It is now fixed in
-   // place, and the outflow has been widened into a boil pocket to hold it.
-   {kind:'tailrace',xF:0.502,yF:0.936,tier:3, fix:true}],
+   {kind:'confluence',xF:0.1154,yF:0.9333,tier:3},  // the south-west arm (B11)
+   // The tailrace is fixed in place (no clearance push). It used to sit in the
+   // boil pocket of the southern outflow (G11); it now sits in the east of the
+   // South Basin (L10), so anything moving it again must land it on real water.
+   {kind:'tailrace',xF:0.8846,yF:0.8444,tier:3, fix:true}],
 
   // ---- zone 6: MOUNTAINS (freestone stream and alpine lake) ----
   // V0.9.8.4 canyon layout: tailout below the plunge bowl, boulders on the
