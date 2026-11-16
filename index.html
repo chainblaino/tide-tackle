@@ -5440,7 +5440,10 @@ const ZONE_STRUCTS=[
   // of the map on the river mouth, a long run from anywhere and sharing that
   // water with the upstream travel gate: a poor home for the region's FIRST
   // spot. It moves onto the open shoal in the west of the North Basin.
-  [{kind:'gravelbar',xF:0.280,yF:0.205,tier:1, fix:true},
+  // Moved again to the far north-west corner of the basin (grid B2). Most of B2
+  // is land; this is its one open-water corner, and the spot is fix:true, so it
+  // must stay authored onto real water.
+  [{kind:'gravelbar',xF:0.1423,yF:0.1644,tier:1, fix:true},
    {kind:'weedbed',xF:0.8,yF:0.285,tier:1},
    {kind:'point',xF:0.345,yF:0.56,tier:2},
    {kind:'rockledge',xF:0.82,yF:0.56,tier:2},
