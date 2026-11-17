@@ -2852,12 +2852,9 @@ function startTournamentMode(def){
   freezeClockForMatch();   // remember the player's real clock/season
   if(typeof AUDIO!=='undefined')AUDIO.setMood('tourn');
   S.zone=def.zone;
-  // Fly High: put the fly rod in their hands before the world builds, so the
-  // very first cast of the match is already the right one.
-  if(def.flyOnly){
-    const fm=METHODS.find(function(m){return m.fly&&m.zones.includes(def.zone);});
-    if(fm)gearSet('method', fm.id);
-  }
+  // Fly High allows only the fly method. gearGet masks to it for the match and
+  // does not write that mask over the rig the angler had tied on.
+  if(worldOf(S.zone)==='fresh')mirrorFreshLoadout();
   // The match clock is driven from elapsed time (see render): it starts at the
   // beginning of the day and ends exactly at the end of the night, one full cycle.
   S.clock=TOURN_DAY_START;
@@ -5031,6 +5028,7 @@ function doPrestige(w){
     // you is the logbook, the gear and every region loadout.
     S.fgear={};grantRegionStarter('midwest');
     S.zone=3;S.lastZone=S.lastZone||{};S.lastZone.fresh=3;
+    delete S.fwLoadout; // the shared fishing rig reseeds from the new Midwest bag
     // Freshwater consumables only.
     ['worm','cricket','corn','stinkbait','powerbait','chickenliver','minnow','shiner',
      'shad','leech','crawfish','salmonegg','waxworm'].forEach(function(b){delete S.baitInv[b];});
@@ -7036,6 +7034,10 @@ function normalizeState(){
   grantRegionStarter('midwest');
   FRESH_LICENSES.forEach(function(l){if(hasLicense(l.zone))grantRegionStarter(l.id);});
   ['fboat','frod','freel','fbraid','fleader','fmethod','fbaitSel','fLureSel'].forEach(function(k){delete S[k];});
+  // One fishing rig for every freshwater region. Seed it from the region this
+  // save is actually standing in (or the one a world swap will return to)
+  // before anything travels, so a destination bag cannot replace it.
+  if(typeof freshLoadout==='function')freshLoadout();
   if(typeof S.baitInv.worm!=='number')S.baitInv.worm=20;
   // Starter terminal tackle, mirroring the saltwater kit at S's declaration: a
   // float rig and a bottom rig so the Lake is fishable the moment you arrive.
@@ -7500,11 +7502,16 @@ function applyRecovery(key){
 // carries world:'salt'|'fresh' and ids never collide), so ownership lists and
 // inventories stay shared and existing saves load untouched; only the SELECTION
 // is split, under parallel f* fields. Saltwater keeps the original field names.
-// V0.9.8.1: freshwater gear is per REGION, not per world. Each region keeps its
-// own equipped set under S.fgear[regionId], so walking from the Midwest into the
-// Southern swaps your whole rig with no explicit "switch loadout" step: the
-// region IS the loadout. Saltwater keeps the original flat S.boat/S.rod/... .
+// V0.9.8.1: freshwater boats, rods, reels and line are per REGION under
+// S.fgear[regionId]. The fishing loadout is not. Method, bait, lure and leader
+// live on S.fwLoadout and follow the angler: the Regions board tells you the
+// rig you tied on comes with you, and a per-region copy of those four slots was
+// what swapped a live-bait rig for whatever the destination had last saved.
+// Saltwater keeps the original flat S.boat/S.rod/... .
 const GEAR_SLOTS=['boat','rod','reel','braid','leader','method','baitSel','lureSel'];
+// Slots that travel with the player. Tackle quantity and S.tackleSel are
+// already shared, so preserving the method keeps the same terminal tackle.
+const FRESH_LOADOUT_KEYS=['method','baitSel','lureSel','leader'];
 // The free kit every region hands you the moment its licence is bought, so you
 // can always fish the water you just paid to enter.
 const REGION_STARTER={
@@ -7524,8 +7531,57 @@ function regionGearBag(rid){
   if(!S.fgear[rid])S.fgear[rid]=defaultRegionGear(rid);
   return S.fgear[rid];
 }
-function gearGet(k){return isFresh()?regionGearBag()[k]:S[k];}
-function gearSet(k, v){if(isFresh())regionGearBag()[k]=v;else S[k]=v;}
+// The fishing rig is one set for the whole freshwater, not one per region.
+// Older saves keep a copy on each S.fgear bag; the first load copies the bag
+// for the region the angler is standing in, and every equip after that writes
+// here. Boats, rods, reels and line stay on the region bag.
+function freshLoadout(){
+  if(!S.fwLoadout||typeof S.fwLoadout!=='object'){
+    let rid='midwest';
+    if(isFresh())rid=curRegionId();
+    else if(S.lastZone&&typeof S.lastZone.fresh==='number')rid=regionIdOf(S.lastZone.fresh)||'midwest';
+    const bag=(S.fgear&&S.fgear[rid])||defaultRegionGear(rid);
+    const starter=defaultRegionGear(rid);
+    S.fwLoadout={};
+    FRESH_LOADOUT_KEYS.forEach(function(k){
+      S.fwLoadout[k]=(bag[k]!==undefined&&bag[k]!==null)?bag[k]:starter[k];
+    });
+  }
+  return S.fwLoadout;
+}
+// Keep the current region's bag in step, so a direct read of the bag can't
+// revive the rig that region last saved.
+function mirrorFreshLoadout(rid){
+  if(!isFresh()&&!rid)return;
+  const bag=regionGearBag(rid||curRegionId());
+  const src=freshLoadout();
+  FRESH_LOADOUT_KEYS.forEach(function(k){bag[k]=src[k];});
+}
+function gearGet(k){
+  if(isFresh()&&FRESH_LOADOUT_KEYS.indexOf(k)>=0){
+    const bag=freshLoadout();
+    if(k==='method'){
+      const want=bag.method;
+      const zm=(typeof methodsForZone==='function')?methodsForZone(S.zone):[];
+      // Illegal here (snagging down south, fly on the lakes): show a legal
+      // stand-in. Do not write it back. The chosen rig is still in fwLoadout
+      // and returns as soon as the angler is somewhere it is allowed.
+      if(!zm.length||zm.some(function(m){return m.id===want;}))return want;
+      return zm[0].id;
+    }
+    return bag[k];
+  }
+  return isFresh()?regionGearBag()[k]:S[k];
+}
+function gearSet(k, v){
+  if(isFresh()&&FRESH_LOADOUT_KEYS.indexOf(k)>=0){
+    freshLoadout()[k]=v;
+    const rid=curRegionId();
+    if(S.fgear&&S.fgear[rid])S.fgear[rid][k]=v;
+    return;
+  }
+  if(isFresh())regionGearBag()[k]=v;else S[k]=v;
+}
 // Grant a region's free starter kit and equip it. Called when its licence is
 // bought (and for the Midwest on first load), so nobody lands in a region with
 // nothing they are allowed to tie on.
@@ -10704,6 +10760,7 @@ function confirmWorldSwap(){
     // Standing somewhere this world's gear can no longer reach (sold the boat,
     // unequipped the fly rod) drops you back to the furthest you CAN reach.
     if(S.zone>maxZone())S.zone=maxZone();
+    if(worldOf(S.zone)==='fresh')mirrorFreshLoadout();
     S.everSwapped=true;
     ensureRig();initStructures();clearSightFish();initWorld('center',true);
     updateDriveUI();updateRigBar();updateZonePill();updateWorldPill();refreshMenu();queueSave();
@@ -10717,8 +10774,12 @@ function confirmWorldSwap(){
 }
 
 function enterWorld(tz, arriveDir){
+  // Snapshot before S.zone changes. Once fwLoadout exists this is a no-op;
+  // the rig the angler tied on is already there, not on the destination bag.
+  if(worldOf(S.zone)==='fresh'||worldOf(tz)==='fresh')freshLoadout();
   S.zone=tz;
   if(S.lastZone)S.lastZone[worldOf(tz)]=tz;   // so a world swap returns you where you left off
+  if(worldOf(tz)==='fresh')mirrorFreshLoadout();
   initWorld(arriveDir, false);
   ensureRig();initStructures();clearSightFish();updateRigBar();updateZonePill();refreshMenu();queueSave();
   toast('Entered '+ZONES[tz].name,'#2aa890');
@@ -14378,7 +14439,9 @@ function ensureRig(){
   validateEquipped();
   const zm=methodsForZone(S.zone);
   if(!zm.length)return;                                   // never crash on an unmapped zone
-  if(!zm.find(m=>m.id===gearGet('method')))gearSet('method', zm[0].id);
+  // Freshwater gearGet already stands in a legal method without saving it.
+  // Writing that stand-in would erase the rig the angler is carrying.
+  if(!zm.find(m=>m.id===gearGet('method'))&&!isFresh())gearSet('method', zm[0].id);
   const cat=methodCat();const own=tackleForCat(cat);
   if(!S.tackleSel[cat]||!own.includes(S.tackleSel[cat]))S.tackleSel[cat]=own[0]||null;
   // Bait selection is per world, and only bait from THIS world's catalog counts.
@@ -17688,9 +17751,9 @@ function renderShop(){
   // Folder tabs. Pets & Crowns now live in the Projects tab; leaders are owned
   // from the start and swapped on the rig bar, so neither appears in the shop.
   // Freshwater shops are REGIONAL: everything below the banner is stocked for
-  // the region you are standing in, and nothing you buy here works elsewhere.
-  // The banner is a statement of where you are, not a picker: you change region
-  // by travelling, which is also what swaps your loadout.
+  // the region you are standing in. The banner is a statement of where you are,
+  // not a picker: you change region by travelling. Travelling does not retie
+  // the method, tackle, bait or leader you already have on (S.fwLoadout).
   const rb=document.getElementById('shop-region');
   if(rb){
     if(isFresh()){
