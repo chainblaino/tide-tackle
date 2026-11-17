@@ -8600,36 +8600,122 @@ function keepOffBeach(o){
     if(o===boat&&o.vy>0)o.vy*=0.25;    // bleed the throttle rather than a hard stop
   }
 }
+// Shortest axis of the water under the boat, in px. Opposite rays are added so
+// an off-centre reading still measures the channel WIDTH, not the distance to
+// the nearer bank. A lake shore has one short ray and one long one, so it stays
+// "wide"; a canal is short on both sides of its narrow axis.
+function channelWidthAt(x, y){
+  const caps=[];
+  for(let a=0;a<8;a++){
+    const ang=a*(Math.PI/4), cx=Math.cos(ang), cy=Math.sin(ang);
+    let t=10;
+    for(;t<=170;t+=10){if(!isWaterAt(x+cx*t, y+cy*t))break;}
+    caps.push(t);
+  }
+  let narrow=1e9;
+  for(let a=0;a<4;a++){
+    const span=caps[a]+caps[a+4];
+    if(span<narrow)narrow=span;
+  }
+  return narrow;
+}
+// First water sample on expanding rings. Used only when there is no recent
+// in-water position to slide back to (a spawn in the trees, a real wedge).
+function _ringWater(x, y, r0, r1, step, nAng){
+  for(let r=r0;r<=r1;r+=step){
+    for(let a=0;a<nAng;a++){
+      const ang=a*(6.283/nAng);
+      const nx=x+Math.cos(ang)*r, ny=y+Math.sin(ang)*r;
+      if(isWaterAt(nx, ny))return {x:nx,y:ny,r:r};
+    }
+  }
+  return null;
+}
+function _rememberWater(o){o._safeX=o.wx;o._safeY=o.wy;o._safeZ=S.zone;}
+// Stop on the bank and keep the part of the velocity that runs ALONG it.
+// The old fix snapped to the first water cell on a 30° ring. On a narrow canal
+// that cell is usually beside the boat rather than behind it, so holding into
+// the shore walked the hull along the bank (and, on the Southern levee, down
+// into the pilings pocket) at full throttle. The camera follows the hull, so
+// the picture then ran off in a direction the player never steered.
+// Direction from a water point toward the nearest bank, or null in open water.
+// Averaging the rays that leave the water gives the shore normal, which is not
+// the same thing as the way the boat was travelling. Using the travel direction
+// as the normal cancels the whole velocity and pins the boat on the first graze.
+function _shoreNormal(x, y){
+  let nx=0, ny=0;
+  const R=18;
+  for(let a=0;a<12;a++){
+    const ang=a*(Math.PI/6), c=Math.cos(ang), s=Math.sin(ang);
+    if(!isWaterAt(x+c*R, y+s*R)){nx+=c;ny+=s;}
+  }
+  const m=Math.hypot(nx, ny);
+  return m>0.4?{x:nx/m,y:ny/m}:null;
+}
+function _slideToWater(o){
+  const sx=o._safeX, sy=o._safeY, ax=o.wx, ay=o.wy;
+  let lo=0, hi=1;
+  for(let i=0;i<12;i++){
+    const m=(lo+hi)*0.5, x=sx+(ax-sx)*m, y=sy+(ay-sy)*m;
+    if(isWaterAt(x, y))lo=m;else hi=m;
+  }
+  o.wx=sx+(ax-sx)*lo;o.wy=sy+(ay-sy)*lo;
+  const bx=sx-o.wx, by=sy-o.wy, bl=Math.hypot(bx, by);
+  if(bl>1){
+    const k=Math.min(2.5, bl-0.5)/bl;
+    const ix=o.wx+bx*k, iy=o.wy+by*k;
+    if(isWaterAt(ix, iy)){o.wx=ix;o.wy=iy;}
+  }
+  if(o.vx!=null){
+    // Prefer the real shore normal so a glancing hit keeps the along-shore
+    // part of the speed. Fall back to the step we just rejected, which stops
+    // the boat, when the probes can't see a bank (a one-pixel nick).
+    let nx, ny;
+    const sn=_shoreNormal(o.wx, o.wy);
+    if(sn){nx=sn.x;ny=sn.y;}
+    else{
+      const ol=Math.hypot(ax-o.wx, ay-o.wy)||1;
+      nx=(ax-o.wx)/ol;ny=(ay-o.wy)/ol;
+    }
+    const vn=o.vx*nx+o.vy*ny;
+    if(vn>0){o.vx-=vn*nx;o.vy-=vn*ny;}
+  }
+  _rememberWater(o);
+}
+function _rescueToWater(o){
+  const x0=o.wx, y0=o.wy;
+  // Captured before _rememberWater overwrites it. Spawn clears the safe point
+  // first, so a fresh arrival in the trees does not announce itself.
+  const wasPiloting=o===boat&&!boat.anchored&&o._safeZ===S.zone&&o._safeX!=null;
+  // Fine steps up close, then a wider net. The Southern top spawn sits ~164px
+  // from the nearest channel, so the second pass has to be willing to look
+  // that far. This is the only path that relocates the boat.
+  const hit=_ringWater(x0, y0, 8, 150, 8, 16)||_ringWater(x0, y0, 170, 920, 20, 24);
+  if(!hit)return false;
+  const d=Math.hypot(hit.x-x0, hit.y-y0);
+  o.wx=hit.x;o.wy=hit.y;
+  if(o.vx!=null){o.vx=0;o.vy=0;}
+  _rememberWater(o);
+  if(wasPiloting&&d>120){
+    const now=Date.now();
+    if(now-(boat._unstuckAt||0)>5000){
+      boat._unstuckAt=now;
+      toast('Hung up on the bank. Eased back to open water.','#b58b53');
+      setStatus('The boat was stuck on the bank and has been moved back to water.');
+    }
+  }
+  return true;
+}
 function keepOffWater(o){
   if(tourn.active&&!isFresh())return;
   if(!WATER_SHAPE[S.zone])return;
-  if(isWaterAt(o.wx, o.wy))return;
-  // Two passes. The near pass is the common case and stays tight so a boat that
-  // clips a bank is nudged, not teleported. The far pass only ever runs when the
-  // object is genuinely stranded: the Southern's top spawn sits ~164px from the
-  // nearest channel, so at 140px the player used to arrive standing in the swamp.
-  for(let r=8;r<=140;r+=8){
-    for(let a=0;a<12;a++){
-      const ang=a*(6.283/12);
-      const nx=o.wx+Math.cos(ang)*r, ny=o.wy+Math.sin(ang)*r;
-      if(isWaterAt(nx, ny)){
-        o.wx=nx;o.wy=ny;
-        if(o===boat){o.vx*=0.25;o.vy*=0.25;}
-        return;
-      }
-    }
-  }
-  for(let r=160;r<=900;r+=20){
-    for(let a=0;a<24;a++){
-      const ang=a*(6.283/24);
-      const nx=o.wx+Math.cos(ang)*r, ny=o.wy+Math.sin(ang)*r;
-      if(isWaterAt(nx, ny)){
-        o.wx=nx;o.wy=ny;
-        if(o===boat){o.vx=0;o.vy=0;}
-        return;
-      }
-    }
-  }
+  if(isWaterAt(o.wx, o.wy)){_rememberWater(o);return;}
+  const have=o._safeZ===S.zone&&o._safeX!=null&&isWaterAt(o._safeX, o._safeY);
+  const gap=have?Math.hypot(o.wx-o._safeX, o.wy-o._safeY):1e9;
+  // A single frame of travel, even with a slow frame tripling the step, stays
+  // well inside this. Anything further never had a water position to return to.
+  if(have&&gap<=360){_slideToWater(o);return;}
+  _rescueToWater(o);
 }
 // Tournament world: a single big, vast map with randomly scattered structures
 // and other players (ghosts) roaming around. Set up in startTournamentMode.
@@ -8971,6 +9057,9 @@ function initWorld(entry, anchored){
   const W=worldW(),H=worldH();
   boat.wx=W/2;
   boat.wy=entry==='top'?180:entry==='bottom'?H-180:H*0.62;
+  // Drop the previous zone's safe point first. Otherwise a bank slide would
+  // pull the boat back toward coordinates that belonged to the map we just left.
+  boat._safeX=null;boat._safeY=null;boat._safeZ=-1;
   // In freshwater the middle of the map is often dry land (a swamp or a canyon
   // is mostly bank), so slide to the nearest water before the camera settles.
   if(shoreScene())keepOffWater(boat);
@@ -13965,22 +14054,41 @@ function render(ts){
 
   // ---- boat physics + camera (open world) ----
   if(driving()){
-    const spd=boatSpeed(gearGet('boat'))*playerMoveMult();
-    // Confuse ability: input is overridden with a wandering drift
-    let jdx=joy.dx, jdy=joy.dy;
-    // Keyboard steers when the stick is idle. Arrows and WASD. The stick wins
-    // while a finger is on it so the two don't fight.
-    if(!joy.active){const sv=steerVec();if(sv){jdx=sv.x;jdy=sv.y;}}
+    let spd=boatSpeed(gearGet('boat'))*playerMoveMult();
+    // Stick and keys add. A finger resting on the stick (or a stick that never
+    // got a pointerup) must not swallow the keyboard, and a half-thrown stick
+    // must not replace a full key press. Magnitude is clamped to 1 so holding
+    // both in the same direction matches holding either one at full lock.
+    let jdx=0, jdy=0;
+    if(joy.active){jdx=joy.dx;jdy=joy.dy;if(Math.hypot(jdx,jdy)<0.12){jdx=0;jdy=0;}}
+    const sv=steerVec();
+    if(sv){jdx+=sv.x;jdy+=sv.y;}
+    const jm=Math.hypot(jdx,jdy);
+    if(jm>1){jdx/=jm;jdy/=jm;}
     // Confused: a wandering drift, but the player keeps partial control so they
     // are never fully locked out. (Compared with Date.now() to match the setter;
     // performance.now() uses a different time origin and would never expire.)
     if(typeof confusedUntil!=='undefined'&&Date.now()<confusedUntil){
       confuseAng+=(Math.random()-0.5)*0.3;
-      jdx=Math.cos(confuseAng)*0.8+joy.dx*0.55;
-      jdy=Math.sin(confuseAng)*0.8+joy.dy*0.55;
+      jdx=Math.cos(confuseAng)*0.8+jdx*0.55;
+      jdy=Math.sin(confuseAng)*0.8+jdy*0.55;
     }
-    boat.vx+=(jdx*spd-boat.vx)*0.12*frameScale;
-    boat.vy+=(jdy*spd-boat.vy)*0.12*frameScale;
+    // A bass boat at full lock crosses a Southern canal sideways in about a
+    // tenth of a second, which reads as the view leaping ahead of the input.
+    // Cap speed from the NARROW axis of the water so a canal slows down and the
+    // middle of a lake does not. Saltwater has no banks and skips this.
+    if(shoreScene()&&jm>0.01){
+      const width=channelWidthAt(boat.wx, boat.wy);
+      const tight=Math.max(1.15, (width-40)/26);
+      if(tight<spd)spd=tight;
+    }
+    // Release brakes harder than throttle builds, so letting go stops you
+    // inside the channel instead of coasting up the bank. Clamp the blend:
+    // a slow frame (frameScale 3) must not overshoot the target velocity.
+    const pressing=Math.hypot(jdx,jdy)>0.04;
+    const k=Math.min(1, (pressing?0.16:0.36)*frameScale);
+    boat.vx+=(jdx*spd-boat.vx)*k;
+    boat.vy+=(jdy*spd-boat.vy)*k;
     // Punch / knockback impulse decays over time
     if(typeof knockVX!=='undefined'&&(Math.abs(knockVX)>0.05||Math.abs(knockVY)>0.05)){
       boat.wx+=knockVX*frameScale;boat.wy+=knockVY*frameScale;knockVX*=Math.pow(0.88,frameScale);knockVY*=Math.pow(0.88,frameScale);
@@ -13988,21 +14096,25 @@ function render(ts){
     boat.wx+=boat.vx*frameScale;boat.wy+=boat.vy*frameScale;
     boat.wx=Math.max(40,Math.min(worldW()-40,boat.wx));
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
-    keepOffBeach(boat);        // the inshore sand is not navigable
-    keepOffStructures(boat);   // can't park on a spot in multiplayer
-    keepOffSolids(boat);       // piers, wrecks, rigs: stop at the drawn edge
+  }
+  // Freshwater banks and the inshore sand are solid whether you're under way or
+  // sitting still, so these run every frame rather than only inside the driving
+  // branch: initWorld('bottom') spawns the boat past the waterline. Water is
+  // last, then the camera, so a bank correction cannot leave the hull off-screen
+  // while the view shows where it tried to go.
+  keepOffBeach(boat);        // the inshore sand is not navigable
+  keepOffStructures(boat);   // can't park on a spot in multiplayer
+  keepOffSolids(boat);       // piers, wrecks, rigs: stop at the drawn edge
+  keepOffWater(boat);
+  if(driving()){
     const sp=Math.hypot(boat.vx, boat.vy);
     if(sp>0.25)boat.heading=Math.atan2(boat.vy, boat.vx)+Math.PI/2;
-    clampCamera();
     // trolling: drag a line behind the boat while it's moving
     if(gearGet('method')==='troll'&&!surfActive)updateTrolling(sp);
     // gate proximity
     for(const gt of gatesFor()){if(dist(boat.wx, boat.wy, gt.wx, gt.wy)<85){tryGate(gt);break;}}
   }
-  // Freshwater banks and the inshore sand are solid whether you're under way or
-  // sitting still, so these run every frame rather than only inside the driving
-  // branch: initWorld('bottom') spawns the boat past the waterline.
-  keepOffWater(boat);keepOffBeach(boat);keepOffSolids(boat);
+  clampCamera();
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
   updateSurfButton();updateIceButton();
   if(surfActive)updateSurfSky();
@@ -14526,19 +14638,30 @@ function updateDriveUI(){
 (function setupJoystick(){
   const j=document.getElementById('joystick'),k=document.getElementById('joy-knob');
   if(!j)return;
-  const R=30;
-  function setKnob(dx, dy){k.style.left=(28+dx)+'px';k.style.top=(28+dy)+'px';}
+  // Radius follows the pad's padding box (clientWidth excludes the border).
+  // A fixed 30px made a full throw on the 96px phone stick report less than
+  // full throttle, so a drag never matched a held key.
+  function radius(){
+    return Math.max(18, (Math.min(j.clientWidth, j.clientHeight)-Math.min(k.offsetWidth, k.offsetHeight))/2);
+  }
+  function setKnob(dx, dy){
+    const left=(j.clientWidth-k.offsetWidth)/2, top=(j.clientHeight-k.offsetHeight)/2;
+    k.style.left=(left+dx)+'px';k.style.top=(top+dy)+'px';
+  }
   function move(cx, cy){
-    const r=j.getBoundingClientRect();
+    const r=j.getBoundingClientRect(), R=radius();
     let dx=cx-(r.left+r.width/2),dy=cy-(r.top+r.height/2);
     const d=Math.hypot(dx, dy);if(d>R){dx=dx/d*R;dy=dy/d*R;}
     setKnob(dx, dy);joy.dx=dx/R;joy.dy=dy/R;
   }
-  function end(){joy.active=false;joy.dx=0;joy.dy=0;joy.id=null;setKnob(0,0);}
+  function end(e){
+    if(e&&joy.id!==null&&e.pointerId!==undefined&&e.pointerId!==joy.id)return;
+    joy.active=false;joy.dx=0;joy.dy=0;joy.id=null;setKnob(0,0);
+  }
   j.addEventListener('pointerdown',e=>{if(boat.anchored)return;joy.active=true;joy.id=e.pointerId;try{j.setPointerCapture(e.pointerId);}catch(_){}move(e.clientX, e.clientY);e.preventDefault();});
   j.addEventListener('pointermove',e=>{if(!joy.active||(joy.id!==null&&e.pointerId!==joy.id))return;move(e.clientX, e.clientY);e.preventDefault();});
   j.addEventListener('pointerup',end);j.addEventListener('pointercancel',end);
-  window.addEventListener('pointerup',()=>{if(joy.active)end();});
+  window.addEventListener('pointerup',end);window.addEventListener('pointercancel',end);
 })();
 // Fire on pointerdown rather than click: a second finger taps the button reliably
 // even while the joystick has captured the driving pointer (browsers suppress the
