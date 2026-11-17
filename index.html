@@ -207,7 +207,7 @@
   .clancy-head-face{width:42px;height:42px;border-radius:50%;overflow:hidden;line-height:0;border:2px solid var(--accent);flex:0 0 auto;}
   .clancy-head-name{font-size:12px;font-weight:900;color:var(--accent);text-transform:uppercase;letter-spacing:.4px;}
   .clancy-tip{font-size:13px;color:var(--ink);line-height:1.55;margin-bottom:12px;}
-  .clancy-fishlist{display:flex;flex-direction:column;gap:7px;max-height:46vh;overflow-y:auto;}
+  .clancy-fishlist{display:flex;flex-direction:column;gap:7px;max-height:min(42dvh,320px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
   .clancy-fishrow{display:flex;align-items:center;gap:10px;padding:7px 10px;border:1.5px solid #e3d3b0;border-radius:11px;background:var(--parchment);cursor:pointer;text-align:left;width:100%;font-family:'Fredoka';}
   .clancy-fishrow:hover{border-color:var(--accent);}
   .clancy-fishrow .cfr-art{flex:0 0 auto;width:40px;height:27px;display:flex;align-items:center;overflow:hidden;}
@@ -242,8 +242,9 @@
   .cash-s::after{content:"";position:absolute;inset:2.5px 3px;border-radius:1px;border:1px solid rgba(255,255,255,.55);}
   .gem-s{width:14px;height:14px;background:linear-gradient(135deg,#ff7a8a,#d61f3a 60%,#9c0f25);display:inline-block;vertical-align:-1px;transform:rotate(45deg);border:1.5px solid #ffb0bc;border-radius:2px;box-shadow:0 0 5px rgba(214,31,58,.55);}
 
-  /* drive controls (open world) */
-  .drive-controls{position:absolute;left:14px;bottom:16px;display:flex;align-items:flex-end;pointer-events:none;z-index:7;}
+  /* drive controls (open world). The stick sits on the same row as Pull Anchor,
+     above the tackle bar, so the bar can never cover it. */
+  .drive-controls{position:absolute;left:14px;bottom:calc(env(safe-area-inset-bottom,0px) + 84px);display:flex;align-items:flex-end;pointer-events:none;z-index:9;}
   .drive-controls.anchored .joystick{opacity:0;pointer-events:none;}
   .joystick{width:108px;height:108px;border-radius:50%;background:rgba(20,33,46,.58);border:2px solid rgba(255,255,255,.28);position:relative;pointer-events:auto;touch-action:none;transition:opacity .2s;}
   .joy-knob{width:48px;height:48px;border-radius:50%;background:radial-gradient(circle at 38% 32%,#f3b878,#e08a3c 70%);border:2px solid var(--accent-dark);position:absolute;left:28px;top:28px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
@@ -352,7 +353,7 @@
   @media (max-width:600px){.joystick{width:96px;height:96px;}.joy-knob{width:42px;height:42px;left:25px;top:25px;}.anchor-btn{font-size:12.5px;padding:8px 12px;bottom:calc(env(safe-area-inset-bottom,0px) + 78px);}}
 
   /* status banner */
-  .status-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:134px;z-index:6;background:rgba(20,33,46,.9);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 16px;color:#fff;font-weight:700;font-size:13.5px;text-align:center;max-width:86%;line-height:1.4;transition:opacity .2s;}
+  .status-banner{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 204px);z-index:6;background:rgba(20,33,46,.9);border:1.5px solid rgba(255,255,255,.2);border-radius:12px;padding:8px 16px;color:#fff;font-weight:700;font-size:13.5px;text-align:center;max-width:min(86%,calc(100% - 150px));line-height:1.4;transition:opacity .2s;}
 
   /* mini-game overlay */
   .catch-game{position:absolute;left:50%;transform:translateX(-50%);bottom:14px;z-index:7;width:min(420px,86%);background:rgba(20,33,46,.9);border:2px solid var(--accent);border-radius:14px;padding:12px 14px;display:none;}
@@ -371,7 +372,7 @@
   .reel-btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--accent-dark);}
 
   /* rig bar */
-  .rig-bar{flex-shrink:0;display:flex;gap:6px;padding:9px 10px calc(env(safe-area-inset-bottom,0px) + 9px);background:rgba(12,20,30,.92);border-top:1.5px solid rgba(255,255,255,.09);z-index:6;}
+  .rig-bar{position:relative;flex-shrink:0;display:flex;gap:6px;padding:9px 10px calc(env(safe-area-inset-bottom,0px) + 9px);background:rgba(12,20,30,.92);border-top:1.5px solid rgba(255,255,255,.09);z-index:6;}
   .rig-slot{flex:1;min-width:0;background:var(--cream);border:1px solid var(--wood);border-radius:12px;padding:7px 9px;cursor:pointer;transition:background .12s;}
   .rig-slot:hover{background:#fff;}
   .rig-slot .rl{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--text-soft);}
@@ -521,8 +522,8 @@
   /* modals (catch + fish detail) */
   .modal-bg{position:fixed;inset:0;background:rgba(20,12,5,.55);display:none;align-items:center;justify-content:center;z-index:320;padding:18px;}
   .modal-bg.show{display:flex;}
-  .modal{background:var(--cream);border:1px solid var(--wood);border-radius:18px;box-shadow:0 16px 40px rgba(6,20,30,.32);max-width:380px;width:100%;padding:20px;position:relative;}
-  .modal .close-x{position:absolute;top:12px;right:14px;font-size:22px;font-weight:800;color:var(--text-soft);cursor:pointer;line-height:1;}
+  .modal{background:var(--cream);border:1px solid var(--wood);border-radius:18px;box-shadow:0 16px 40px rgba(6,20,30,.32);max-width:380px;width:100%;padding:20px;position:relative;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 28px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}
+  .modal .close-x{position:sticky;top:0;float:right;z-index:2;width:44px;height:44px;margin:-8px -8px -28px 0;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;color:var(--text-soft);cursor:pointer;line-height:1;background:var(--cream);border-radius:12px;touch-action:manipulation;}
   .modal .mhead{display:flex;align-items:center;gap:12px;margin-bottom:12px;}
   .modal .mname{font-family:'Fredoka';font-size:20px;font-weight:600;color:var(--wood-dark);line-height:1.1;}
   .modal .mrarity{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;}
@@ -560,10 +561,17 @@
   .catch-ok{margin-top:13px;width:100%;padding:12px;font-family:'Fredoka';font-size:16px;font-weight:700;color:#fff;background:var(--grass);border:none;border-radius:13px;box-shadow:0 4px 16px rgba(47,167,149,.42);cursor:pointer;}
   .catch-ok:active{transform:translateY(1px);}
 
-  /* ===== mobile / iOS ===== */
-  html, body{height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;}
-  body{position:fixed;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;}
-  .stage{padding-top:calc(env(safe-area-inset-top,0px) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);padding-left:calc(env(safe-area-inset-left,0px) + 8px);padding-right:calc(env(safe-area-inset-right,0px) + 8px);min-height:100dvh;}
+  /* ===== viewport fit (phone + desktop) =====
+     The stage used to be min-height:100vh/100dvh inside a body that could
+     scroll. On a phone the layout viewport is taller than the visible area,
+     and a resized canvas keeps its old aspect ratio, so the column grew past
+     the screen and the joystick, Pull Anchor and tackle bar slid below the
+     fold. Lock every layer to the dynamic viewport and let the canvas flex. */
+  html, body{height:100vh;height:100dvh;max-height:100dvh;min-height:0;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;-webkit-user-select:none;user-select:none;touch-action:manipulation;}
+  body{position:fixed;inset:0;width:100%;overflow:hidden;}
+  .stage{height:100%;max-height:100%;min-height:0;overflow:hidden;padding-top:calc(env(safe-area-inset-top,0px) + 8px);padding-bottom:calc(env(safe-area-inset-bottom,0px) + 8px);padding-left:calc(env(safe-area-inset-left,0px) + 8px);padding-right:calc(env(safe-area-inset-right,0px) + 8px);}
+  .ocean-wrap{flex:1 1 0%;min-height:0;}
+  #ocean{flex:1 1 0%;min-height:0;height:auto;max-height:100%;}
   .menu-body,.chooser,.modal,.catch-card{-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
   #ocean{-webkit-user-drag:none;}
   .click,.pill,.rig-slot,.opt,.shop-tab,.shop-item,.fish-card,.menu-tab,.reel-btn,.catch-ok,.chooser-close,.x,.close-x,.reset-btn,.zone-pill{touch-action:manipulation;}
@@ -587,7 +595,8 @@
     .hud.tr{flex-shrink:0;}
     .hud.tr .pill{flex-shrink:0;}     /* gold/cosmetic never shrink or clip */
     /* status banner and catch game */
-    .status-banner{bottom:120px;font-size:11.5px;padding:4px 10px;max-width:92%;}
+    .drive-controls{bottom:calc(env(safe-area-inset-bottom,0px) + 78px);}
+    .status-banner{bottom:calc(env(safe-area-inset-bottom,0px) + 186px);font-size:11.5px;padding:4px 10px;max-width:min(92%,calc(100% - 120px));}
     .catch-game{bottom:10px;width:min(360px,94%);padding:9px 11px;}
     .catch-track{height:24px;}
     .reel-btn{padding:11px;font-size:15px;}
@@ -604,8 +613,8 @@
     .menu-head{padding:11px 13px;}
     .mt{font-size:18px;}
     .menu-body{padding:12px 13px calc(env(safe-area-inset-bottom,0px) + 14px);}
-    .modal-bg{padding:10px;align-items:flex-start;padding-top:calc(env(safe-area-inset-top,0px) + 14px);}
-    .modal{padding:16px;border-radius:14px;max-height:88vh;overflow-y:auto;}
+    .modal-bg{align-items:center;padding:calc(env(safe-area-inset-top,0px) + 12px) 10px calc(env(safe-area-inset-bottom,0px) + 12px);}
+    .modal{padding:16px;border-radius:14px;max-height:calc(100dvh - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 28px);}
     /* logbook grid: 3 columns on phone */
     .fish-grid{grid-template-columns:repeat(3,1fr) !important;gap:6px !important;}
     /* shop tabs scroll if needed */
@@ -8785,6 +8794,155 @@ function noParkRadiusAt(x, y){
   const r=Math.min(NOPARK_R, room-NOPARK_PASS);
   return r>=NOPARK_MIN?r:0;
 }
+// Solid structures: the hull stops at the drawn edge. Watery spots (grass, reef,
+// rip, a channel) are not in this list, you are meant to float over them. The
+// shapes match the art, not the fishing radius, so you can still anchor a cast
+// away and Drop Anchor still knows you are beside the pier.
+function solidShapes(s){
+  const x=s.x, y=s.y, k=s.kind;
+  if(k==='bridge'||k==='dock'||k==='boatdock'){
+    const len=s.pierLen||(k==='bridge'?210:(k==='boatdock'?110:120));
+    const hw=k==='bridge'?19:(k==='boatdock'?20:15); // head / roof is wider than the deck
+    return [{x:x-hw, y:y-14, w:hw*2, h:len+14}];
+  }
+  if(k==='oil_rig') return [{x:x-26,y:y-26,w:52,h:52}];
+  if(k==='power_plant') return [{x:x-24,y:y-30,w:48,h:44}];
+  if(k==='mangrove') return [{x:x,y:y-2,r:22}];
+  if(k==='oyster') return [{x:x,y:y,r:20}];
+  if(k==='wreck') return [{cx:x,cy:y,hw:32,hh:14,rot:0.38}];
+  if(k==='dam') return [{x:x-52,y:y-32,w:104,h:26}];
+  if(k==='tailrace') return [{x:x-44,y:y-36,w:88,h:18}];
+  // The two piers stand 18px apart, narrower than a hull, so the gap is solid too.
+  if(k==='pilings') return [{x:x-35,y:y-28,w:70,h:64}];
+  if(k==='logjam') return [{x:x-40,y:y-32,w:80,h:56}];
+  if(k==='waterfall') return [{x:x-34,y:y-29,w:68,h:38}];
+  if(k==='boulders') return [{x:x,y:y,r:22}];
+  if(k==='laydown') return [{cx:x,cy:y,hw:36,hh:10,rot:0.44}];
+  if(k==='timber') return [{x:x,y:y,r:20}];
+  if(k==='wingdam') return [{cx:x,cy:y,hw:38,hh:12,rot:-0.61}];
+  return null;
+}
+// Circle centre in a shape's local box. rot matches canvas.rotate (the art's angle).
+function _solidLocal(px, py, sh){
+  if(sh.rot){
+    const dx=px-sh.cx, dy=py-sh.cy, c=Math.cos(sh.rot), s=Math.sin(sh.rot);
+    return {x:dx*c+dy*s, y:-dx*s+dy*c, l:-sh.hw, t:-sh.hh, r:sh.hw, b:sh.hh};
+  }
+  return {x:px, y:py, l:sh.x, t:sh.y, r:sh.x+sh.w, b:sh.y+sh.h};
+}
+// How far (px, py) is outside a solid shape. 0 when it is inside or touching.
+function distToShape(px, py, sh){
+  if(sh.r!=null)return Math.max(0, Math.hypot(px-sh.x, py-sh.y)-sh.r);
+  const L=_solidLocal(px, py, sh);
+  const qx=Math.max(L.l, Math.min(L.r, L.x)), qy=Math.max(L.t, Math.min(L.b, L.y));
+  return Math.hypot(L.x-qx, L.y-qy);
+}
+function distToStruct(wx, wy, s){
+  const shapes=solidShapes(s);
+  if(!shapes)return Math.hypot(wx-s.x, wy-s.y);
+  let best=1e9;
+  for(let i=0;i<shapes.length;i++){const d=distToShape(wx, wy, shapes[i]);if(d<best)best=d;}
+  return best;
+}
+// Push a circle out of one shape. Returns a world-space delta, or null.
+function _pushCircle(cx, cy, rad, sh){
+  if(sh.r!=null){
+    let dx=cx-sh.x, dy=cy-sh.y, d=Math.hypot(dx, dy), need=rad+sh.r;
+    if(d>=need)return null;
+    if(d<0.01)return {x:need, y:0};
+    const k=(need-d)/d;return {x:dx*k, y:dy*k};
+  }
+  const L=_solidLocal(cx, cy, sh);
+  const qx=Math.max(L.l, Math.min(L.r, L.x)), qy=Math.max(L.t, Math.min(L.b, L.y));
+  let dx=L.x-qx, dy=L.y-qy, d=Math.hypot(dx, dy);
+  const inside=L.x>L.l&&L.x<L.r&&L.y>L.t&&L.y<L.b;
+  if(!inside&&d>=rad)return null;
+  let px, py;
+  if(d<0.01||inside){
+    const dl=L.x-L.l, dr=L.r-L.x, dt=L.y-L.t, db=L.b-L.y, m=Math.min(dl,dr,dt,db);
+    if(m===dl){px=-(dl+rad);py=0;}
+    else if(m===dr){px=dr+rad;py=0;}
+    else if(m===dt){px=0;py=-(dt+rad);}
+    else{px=0;py=db+rad;}
+  }else{
+    const k=(rad-d)/d;px=dx*k;py=dy*k;
+  }
+  if(!sh.rot)return {x:px, y:py};
+  const c=Math.cos(sh.rot), s=Math.sin(sh.rot);
+  return {x:px*c-py*s, y:px*s+py*c};
+}
+// Bow, beam and stern. The kayak is long and thin; one fat circle would stop
+// you a hull-length short of a pier and out of range to fish it.
+function hullSamples(o){
+  let bow=44, back=14, rad=13, lift=o===boat?8:0;
+  if(o===boat){
+    if(onFoot())return [{x:o.wx, y:o.wy, r:11}];
+    const id=gearGet('boat')||'kayak';
+    if(id==='sport'||id==='marlinboat'||id==='console'||id==='jetsled'||id==='walk'||id==='driftboat'){bow=60;back=24;rad=22;}
+    else if(id==='bay'||id==='bassboat'||id==='no_boat1'){bow=54;back=20;rad=18;}
+    else if(id==='jon'||id==='jonboat'||id==='so_boat1'||id==='no_boat0'){bow=48;back=18;rad=16;}
+  }
+  const h=o.heading||0, fx=Math.sin(h), fy=-Math.cos(h);
+  const cx=o.wx, cy=o.wy-lift;
+  return [
+    {x:cx+fx*bow, y:cy+fy*bow, r:Math.max(10,rad-2)},
+    {x:cx+fx*8, y:cy+fy*8, r:rad},
+    {x:cx-fx*back, y:cy-fy*back, r:Math.max(10,rad-2)}
+  ];
+}
+function _hullHits(o, sh){
+  const samples=hullSamples(o);
+  for(let i=0;i<samples.length;i++){
+    const c=samples[i];
+    const clear=sh.r!=null?Math.hypot(c.x-sh.x, c.y-sh.y)-(sh.r+c.r):distToShape(c.x, c.y, sh)-c.r;
+    if(clear<-0.4)return true;
+  }
+  return false;
+}
+// Move the whole hull out along one normal. Pushing whichever end is deepest
+// flips direction on a solid smaller than the boat (an oyster, a wreck) and the
+// hull rattles through it. The normal is from the solid toward the boat, which
+// is the way you were already sitting, so a pier still stops you on its edge.
+function _pushHull(o, sh){
+  if(!_hullHits(o, sh))return false;
+  let sx, sy;
+  if(sh.r!=null){sx=sh.x;sy=sh.y;}
+  else if(sh.cx!=null){sx=sh.cx;sy=sh.cy;}
+  else{sx=sh.x+sh.w/2;sy=sh.y+sh.h/2;}
+  let nx=o.wx-sx, ny=o.wy-sy, nlen=Math.hypot(nx, ny);
+  if(nlen<1){
+    if(Math.hypot(o.vx||0, o.vy||0)>0.3){nx=-o.vx;ny=-o.vy;nlen=Math.hypot(nx, ny);}
+    else{nx=0;ny=-1;nlen=1;}
+  }
+  nx/=nlen;ny/=nlen;
+  let t=0;
+  const samples=hullSamples(o);
+  for(let i=0;i<samples.length;i++){
+    const p=_pushCircle(samples[i].x, samples[i].y, samples[i].r, sh);
+    if(!p)continue;
+    const along=p.x*nx+p.y*ny;
+    if(along>t)t=along;
+  }
+  o.wx+=nx*t;o.wy+=ny*t;
+  for(let i=0;i<16&&_hullHits(o, sh);i++){o.wx+=nx*3;o.wy+=ny*3;}
+  if(o.vx!=null){
+    const vn=o.vx*nx+o.vy*ny;
+    if(vn<0){o.vx-=vn*nx;o.vy-=vn*ny;}
+  }
+  return true;
+}
+function keepOffSolids(o){
+  const list=activeStructures();
+  for(let pass=0;pass<3;pass++){
+    let moved=false;
+    for(let i=0;i<list.length;i++){
+      const shapes=solidShapes(list[i]);
+      if(!shapes)continue;
+      for(let b=0;b<shapes.length;b++){if(_pushHull(o, shapes[b]))moved=true;}
+    }
+    if(!moved)break;
+  }
+}
 function keepOffStructures(o){
   if(!mpActive())return;
   const list=activeStructures();
@@ -9454,6 +9612,7 @@ function updateGhosts(){
     }
     clampGhost(g);
     keepOffStructures(g);   // bots can't park on a spot either
+    keepOffSolids(g);
     // ...and they cannot walk on water's opposite. clampGhost only ever held them
     // inside the world RECTANGLE, which is all the sea a saltwater match has, but
     // a freshwater match is mostly bank. Water is the hard constraint and goes
@@ -13809,6 +13968,9 @@ function render(ts){
     const spd=boatSpeed(gearGet('boat'))*playerMoveMult();
     // Confuse ability: input is overridden with a wandering drift
     let jdx=joy.dx, jdy=joy.dy;
+    // Keyboard steers when the stick is idle. Arrows and WASD. The stick wins
+    // while a finger is on it so the two don't fight.
+    if(!joy.active){const sv=steerVec();if(sv){jdx=sv.x;jdy=sv.y;}}
     // Confused: a wandering drift, but the player keeps partial control so they
     // are never fully locked out. (Compared with Date.now() to match the setter;
     // performance.now() uses a different time origin and would never expire.)
@@ -13828,6 +13990,7 @@ function render(ts){
     boat.wy=Math.max(40,Math.min(worldH()-40,boat.wy));
     keepOffBeach(boat);        // the inshore sand is not navigable
     keepOffStructures(boat);   // can't park on a spot in multiplayer
+    keepOffSolids(boat);       // piers, wrecks, rigs: stop at the drawn edge
     const sp=Math.hypot(boat.vx, boat.vy);
     if(sp>0.25)boat.heading=Math.atan2(boat.vy, boat.vx)+Math.PI/2;
     clampCamera();
@@ -13839,7 +14002,7 @@ function render(ts){
   // Freshwater banks and the inshore sand are solid whether you're under way or
   // sitting still, so these run every frame rather than only inside the driving
   // branch: initWorld('bottom') spawns the boat past the waterline.
-  keepOffWater(boat);keepOffBeach(boat);
+  keepOffWater(boat);keepOffBeach(boat);keepOffSolids(boat);
   ORIGIN.x=Math.round(boat.wx-camera.x);ORIGIN.y=Math.round(boat.wy-camera.y);
   updateSurfButton();updateIceButton();
   if(surfActive)updateSurfSky();
@@ -14230,7 +14393,18 @@ function ensureRig(){
 
 // Hard to find structures need a tighter anchor radius, you must be right on top of them
 const FIND_RADIUS={power_plant:36,wreck:40};
-function nearestStruct(x, y){let best=null, bd=1e9;for(const s of activeStructures()){const d=dist(x, y, s.x-camera.x, s.y-camera.y);const rad=FIND_RADIUS[s.kind]||62;if(d<rad&&d<bd){bd=d;best=s;}}return best;}
+// Distance is to the solid shape when there is one, so sitting against a pier
+// deck (far from the fishing head) still counts as "by the pier".
+function nearestStruct(x, y){
+  const wx=x+camera.x, wy=y+camera.y;
+  let best=null, bd=1e9;
+  for(const s of activeStructures()){
+    const d=distToStruct(wx, wy, s);
+    const rad=FIND_RADIUS[s.kind]||62;
+    if(d<rad&&d<bd){bd=d;best=s;}
+  }
+  return best;
+}
 
 // ── Bounty cannon: drag-aim slingshot on the canvas ──
 // Canvas point -> internal canvas coordinates.
@@ -14373,12 +14547,36 @@ document.getElementById('ability-btn').addEventListener('pointerdown',function(e
 // Keyboard shortcut so a desktop player can fire their ability WHILE driving, a
 // single mouse can't hold the joystick and click the button at the same time, so
 // Space / Q trigger the ability at any speed. (On touch, two thumbs already work.)
+// Arrow keys and Space scroll the page (body used to be overflow-y:auto). During
+// play they steer instead. WASD steers too. Space still fires a tournament ability.
+const steerKeys={};
+function steerVec(){
+  const menu=document.getElementById('menu-panel');
+  if(menu&&menu.classList.contains('show'))return null;
+  const modal=document.getElementById('modal-bg');
+  if(modal&&modal.classList.contains('show'))return null;
+  const ch=document.getElementById('chooser-bg');
+  if(ch&&ch.classList.contains('show'))return null;
+  let x=0,y=0;
+  if(steerKeys.ArrowLeft||steerKeys.KeyA)x-=1;
+  if(steerKeys.ArrowRight||steerKeys.KeyD)x+=1;
+  if(steerKeys.ArrowUp||steerKeys.KeyW)y-=1;
+  if(steerKeys.ArrowDown||steerKeys.KeyS)y+=1;
+  if(!x&&!y)return null;
+  const m=Math.hypot(x,y);
+  return {x:x/m,y:y/m};
+}
 window.addEventListener('keydown',function(e){
-  if(!activeTournament)return;
   const t=e.target;
   if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.isContentEditable))return;
-  if(e.code==='Space'||e.key===' '||e.key==='q'||e.key==='Q'){e.preventDefault();useAbility();}
+  const code=e.code;
+  if(code==='ArrowUp'||code==='ArrowDown'||code==='ArrowLeft'||code==='ArrowRight'||code==='Space')e.preventDefault();
+  if(code==='ArrowUp'||code==='ArrowDown'||code==='ArrowLeft'||code==='ArrowRight'||code==='KeyW'||code==='KeyA'||code==='KeyS'||code==='KeyD')steerKeys[code]=true;
+  if(!activeTournament)return;
+  if(code==='Space'||e.key===' '||e.key==='q'||e.key==='Q'){e.preventDefault();useAbility();}
 });
+window.addEventListener('keyup',function(e){delete steerKeys[e.code];});
+window.addEventListener('blur',function(){for(const k in steerKeys)delete steerKeys[k];});
 document.getElementById('anchor-btn').addEventListener('click',()=>{
   if(boat.anchored){
     if(phase==='waiting'||phase==='biting'||(typeof sdewActive!=='undefined'&&sdewActive)){toast('Reel in or finish the fight first.','#b58b53');return;}
@@ -18055,7 +18253,8 @@ function openClancyInfo(){
         return '<button class="clancy-fishrow" onclick="clancyFishDetail(\''+f.id+'\')"><span class="cfr-art">'+buildFishArt(f.id,38)+'</span><span class="cfr-name">'+f.name+'</span><span class="cfr-rar" style="color:'+RARITY_COLORS[f.rarity]+'">'+(RAR_LBL[f.rarity]||f.rarity)+'</span></button>';
       }).join('')+'</div>';
   }
-  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+body;
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+body
+    +'<button class="chooser-close" onclick="closeModal()" style="margin-top:12px;">Close</button>';
   bg.classList.add('show');
   // Only a real answer counts: tapping him before any cast just gets "cast first".
   if(fish&&fish.length)tutNotify('clancyinfo');
@@ -18101,7 +18300,8 @@ function clancyFishDetail(id){
     +'<div class="mrow"><span class="ml">Season</span><span class="mv"'+(inSeason?'':' style="color:#b3402a;"')+'>'+seasonTxt+'</span></div>'
     +'<div class="mrow"><span class="ml">Best time</span><span class="mv"'+(timeOK?'':' style="color:#b3402a;"')+'>'+timeTxt+'</span></div>'
     +'<div class="mrow"><span class="ml">Line</span><span class="mv">'+f.line+' lb+ to land one</span></div>'
-    +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>';
+    +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>'
+    +'<button class="chooser-close" onclick="closeModal()">Close</button>';
 }
 // Clancy's offshore sailboat: a fixed spot in the bluewater you can sail up to.
 function clancyBoatPos(){return {x:Math.round(WORLD_DIMS[0][0]*0.72), y:Math.round(WORLD_DIMS[0][1]*0.28)};}
