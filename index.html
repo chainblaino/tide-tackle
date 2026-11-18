@@ -8977,7 +8977,13 @@ function solidShapes(s){
   if(k==='waterfall') return [{x:x-34,y:y-29,w:68,h:38}];
   if(k==='boulders') return [{x:x,y:y,r:22}];
   if(k==='laydown') return [{cx:x,cy:y,hw:36,hh:10,rot:0.44}];
-  if(k==='timber') return [{x:x,y:y,r:20}];
+  // Standing timber is ten trunks drawn across ~76px (x-36..x+36), bases on a
+  // band just below y and trunks rising ~40px above it. A 20px circle let the
+  // hull sit on half of them. The box covers the footprint and the lower trunks.
+  if(k==='timber') return [{x:x-38,y:y-22,w:76,h:34}];
+  // A brush pile's sticks poke through the surface across ~60px; it had no
+  // shape at all, so the boat drew straight over the logs.
+  if(k==='brushpile') return [{x:x-30,y:y-8,w:60,h:21}];
   if(k==='wingdam') return [{cx:x,cy:y,hw:38,hh:12,rot:-0.61}];
   return null;
 }
@@ -9101,6 +9107,79 @@ function keepOffSolids(o){
     }
     if(!moved)break;
   }
+}
+// Banks and islands, for the whole hull. keepOffWater() tests the boat's CENTRE
+// only, so the bow (44px ahead of it on a kayak) ran up onto island sand and
+// over the bank before anything noticed. This tests the same bow/beam/stern
+// circles keepOffSolids() uses and pushes the hull off along the shore normal,
+// keeping the along-shore speed, so a glancing hit slides instead of sticking.
+// An island's sand band is the shoreline stroke (lineWidth 22, see drawShoreEdge)
+// and only its INNER half is covered by the island fill, so the visible beach
+// sits ~11px out over the water. For the hull, that beach is land: test against
+// the island outline grown by the band, not the bare outline the water test uses.
+const ISLAND_BEACH=11;
+const _islandHullPath={};
+function islandHullPathFor(zi){
+  const shape=WATER_SHAPE[zi];
+  if(!shape||!shape.islands||!shape.islands.length)return null;
+  if(_islandHullPath[zi])return _islandHullPath[zi];
+  const W=WORLD_DIMS[zi][0], H=WORLD_DIMS[zi][1], p=new Path2D();
+  shape.islands.forEach(function(is){
+    const rx=is.rx*W+ISLAND_BEACH, ry=is.ry*H+ISLAND_BEACH;
+    p.moveTo(is.cx*W+rx, is.cy*H);
+    p.ellipse(is.cx*W, is.cy*H, rx, ry, is.rot||0,0,6.28);
+  });
+  return (_islandHullPath[zi]=p);
+}
+function _hullDry(px, py){
+  if(!isWaterAt(px, py))return true;
+  const ip=islandHullPathFor(S.zone);
+  return !!(ip&&_inPathWorld(ip, px, py));
+}
+function _toWaterDir(px, py){
+  let nx=0, ny=0;
+  for(let a=0;a<12;a++){
+    const ang=a*(Math.PI/6), c=Math.cos(ang), s=Math.sin(ang);
+    if(!_hullDry(px+c*16, py+s*16)){nx+=c;ny+=s;}
+  }
+  return {x:nx, y:ny};
+}
+function keepHullOffLand(o){
+  if(o!==boat||onFoot())return;
+  if(tourn.active&&!isFresh())return;
+  if(!WATER_SHAPE[S.zone])return;
+  if(!isWaterAt(o.wx, o.wy))return;          // centre on land: keepOffWater's job
+  let moved=false;
+  for(let it=0;it<10;it++){
+    let nx=0, ny=0, hit=false;
+    const smp=hullSamples(o);
+    for(let i=0;i<smp.length;i++){
+      const c=smp[i], pr=c.r*0.55;
+      const probes=[[0,0],[pr,0],[-pr,0],[0,pr],[0,-pr]];
+      for(let j=0;j<probes.length;j++){
+        const px=c.x+probes[j][0], py=c.y+probes[j][1];
+        if(!_hullDry(px, py))continue;
+        hit=true;
+        const d=_toWaterDir(px, py);
+        nx+=d.x;ny+=d.y;
+      }
+    }
+    if(!hit)break;
+    let m=Math.hypot(nx, ny);
+    if(m<0.3){
+      // Pinched from both sides (hull longer than the gap): back straight off
+      // the way it came rather than guessing a side.
+      const vl=Math.hypot(o.vx||0, o.vy||0);
+      if(vl<0.05)break;
+      nx=-o.vx;ny=-o.vy;m=vl;
+    }
+    nx/=m;ny/=m;
+    const tx=o.wx+nx*3, ty=o.wy+ny*3;
+    if(_hullDry(tx, ty))break;
+    o.wx=tx;o.wy=ty;moved=true;
+    if(o.vx!=null){const vn=o.vx*nx+o.vy*ny;if(vn<0){o.vx-=vn*nx;o.vy-=vn*ny;}}
+  }
+  if(moved)_rememberWater(o);
 }
 function keepOffStructures(o){
   if(!mpActive())return;
@@ -10044,6 +10123,36 @@ function drawExploreMap(){
     g.lineTo(MX(boat.wx),MY(boat.wy));g.stroke();
   }
   g.restore();
+  // SPOTS. The map used to stay blank of spots even over water you had covered,
+  // so a bounty hint naming "Lily Pads" pointed at something you could not find.
+  // Spots you have explored near now show, and in a bounty the current target's
+  // spots are always marked in gold: the room tells you where the fish lives, the
+  // trip there is still yours to make.
+  const _tgt=(typeof _bountyTarget==='function')?_bountyTarget():null;
+  const _want=_tgt?(_tgt.structure||[]):[];
+  const _near2=Math.pow(EXPLORE_REVEAL*0.8,2);
+  const _seen=function(s){
+    if(Math.pow(s.x-boat.wx,2)+Math.pow(s.y-boat.wy,2)<_near2)return true;
+    for(const pt of trail){if(Math.pow(s.x-pt.x,2)+Math.pow(s.y-pt.y,2)<_near2)return true;}
+    return false;
+  };
+  let _goldN=0;
+  for(const s of (tourn.structs||[])){
+    const isTgt=_want.length&&_want.indexOf(structKindAlias(s.kind))>=0;
+    if(!isTgt&&!_seen(s))continue;
+    const x=MX(s.x),y=MY(s.y);
+    if(isTgt){
+      _goldN++;
+      const pulse=0.5+0.5*Math.sin(Date.now()/260);
+      g.strokeStyle='rgba(255,210,74,'+(0.45+0.45*pulse)+')';g.lineWidth=2;
+      g.beginPath();g.arc(x, y,7+pulse*2.5,0,6.28);g.stroke();
+      g.fillStyle='#ffd24a';
+    }else g.fillStyle='#e8b66a';
+    g.strokeStyle='rgba(0,0,0,.5)';g.lineWidth=1;
+    g.beginPath();g.moveTo(x, y-4);g.lineTo(x+4,y);g.lineTo(x, y+4);g.lineTo(x-4,y);g.closePath();g.fill();g.stroke();
+    if(isTgt){g.fillStyle='#ffe9a6';g.font='700 8px Fredoka, system-ui, sans-serif';g.textAlign='center';
+      g.fillText(structLabel(s.kind),x, y+14);}
+  }
   // arena border
   g.strokeStyle='rgba(255,255,255,.22)';g.lineWidth=1.5;g.strokeRect(offX, offY, W*sc, H*sc);
   // you
@@ -10057,7 +10166,9 @@ function drawExploreMap(){
   const zn=document.getElementById('coop-map-zone');if(zn)zn.textContent=(activeTournament&&activeTournament.def&&activeTournament.def.session)?'Challenge':'Tournament';
   const md=document.getElementById('coop-map-mode');if(md)md.textContent='Explore';
   const lg=document.getElementById('coop-map-legend');
-  if(lg)lg.innerHTML='<span style="color:#1d7a4a;">●</span> You &nbsp; <span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#7cc6ff;vertical-align:middle;"></span> Your trail &nbsp; <span style="opacity:.7;">Drive to uncover the map</span>';
+  if(lg)lg.innerHTML='<span style="color:#1d7a4a;">●</span> You &nbsp; <span style="display:inline-block;width:14px;height:3px;border-radius:2px;background:#7cc6ff;vertical-align:middle;"></span> Your trail &nbsp; <span style="color:#e8b66a;">◆</span> Spots found'
+    +(_goldN?' &nbsp; <span style="color:#ffd24a;">◆</span> '+_tgt.name+' spots':'')
+    +' &nbsp; <span style="opacity:.7;">Drive to uncover the map</span>';
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex, a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
@@ -10742,7 +10853,11 @@ function bountyRigHint(f){
   if(baits.length)parts.push(baits.join(', ').toLowerCase());
   if(anyLure){const ls=clancyLures(f).slice(0,2).map(function(l){return l.name;});if(ls.length)parts.push(ls.join(' or '));}
   const spots=[...new Set((f.structure||[]).map(function(s){return FISH_STRUCT_LABEL[s]||(STRUCT_META[s]&&STRUCT_META[s].label)||s;}))];
-  if(spots.length)parts.push('at '+spots.join(', '));
+  if(spots.length){
+    const _mb=document.getElementById('map-btn');
+    const mapOn=!!(_mb&&_mb.style.display!=='none'&&tourn.active);
+    parts.push('at '+spots.join(', ')+(mapOn?' (gold on your map)':''));
+  }
   if(f.time&&f.time.length&&f.time.indexOf('all')<0)parts.push('best by '+f.time.join('/'));
   let s=parts.join(' · ')+'.';
   if(!rigCanTake(f))s+=' Your rig won’t take it: change it on the rig bar below.';
@@ -14242,6 +14357,7 @@ function render(ts){
   keepOffStructures(boat);   // can't park on a spot in multiplayer
   keepOffSolids(boat);       // piers, wrecks, rigs: stop at the drawn edge
   keepOffWater(boat);
+  keepHullOffLand(boat);     // bow and stern too, not just the centre
   if(driving()){
     const sp=Math.hypot(boat.vx, boat.vy);
     if(sp>0.25)boat.heading=Math.atan2(boat.vy, boat.vx)+Math.PI/2;
