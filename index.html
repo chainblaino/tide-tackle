@@ -8980,10 +8980,11 @@ function solidShapes(s){
   // Standing timber is ten trunks drawn across ~76px (x-36..x+36), bases on a
   // band just below y and trunks rising ~40px above it. A 20px circle let the
   // hull sit on half of them. The box covers the footprint and the lower trunks.
-  if(k==='timber') return [{x:x-38,y:y-22,w:76,h:34}];
+  if(k==='timber') return [{x:x-41,y:y-25,w:82,h:40}];
   // A brush pile's sticks poke through the surface across ~60px; it had no
   // shape at all, so the boat drew straight over the logs.
-  if(k==='brushpile') return [{x:x-30,y:y-8,w:60,h:21}];
+  // Sized to the stick tips, not the dome: the longest sticks reach ~35px out.
+  if(k==='brushpile') return [{x:x-35,y:y-12,w:70,h:27}];
   if(k==='wingdam') return [{cx:x,cy:y,hw:38,hh:12,rot:-0.61}];
   return null;
 }
@@ -16569,6 +16570,10 @@ function triggerBite(){
   hookedFish=pick;hookW=rollWeight(pick);
   sdewRetryUsed=false;sdewSurf=false;sdewIce=false;
   phase='biting';
+  // A bite under the open match map played out unseen: the hookset ran behind
+  // it, the fish threw the hook, and the taps right after closing the map hit a
+  // line that was no longer there. Close it so the bite is the thing you see.
+  {const _mbg=document.getElementById('coop-map-bg');if(_mbg&&_mbg.style.display!=='none')closeCoopMap();}
   AUDIO.sfx('bite');
   if(activeTournament&&isBounty()){
     // Bounty: landing the species CURRENTLY listed triggers the Stardew fight and
