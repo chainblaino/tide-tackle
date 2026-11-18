@@ -8693,7 +8693,15 @@ function waterPathFor(zi){
   if(_waterPath[zi]&&_waterPathKey[zi]===key)return _waterPath[zi];
   const p=new Path2D();
   (shape.parts||[]).forEach(function(part){
-    if(part.kind==='ribbon')_ribbon(p, part.cs.map(function(q){return [q[0]*W,q[1]*H];}), part.hw.map(function(v){return v*W;}));
+    if(part.kind==='ribbon'){
+      const cs=part.cs.map(function(q){return [q[0]*W,q[1]*H];});
+      const hws=part.hw.map(function(v){return v*W;});
+      // The Mountains canyon is the one walked on foot. A mitred corner there
+      // is both the stair-step in the bank and the notch that wedges a wader,
+      // so that zone fillets the same centreline instead of mitring it.
+      if(zi===6)_ribbonRound(p, cs, hws);
+      else _ribbon(p, cs, hws);
+    }
     else _closedSpline(p, part.pts.map(function(q){return [q[0]*W,q[1]*H];}));
   });
   _waterPath[zi]=p;_waterPathKey[zi]=key;
@@ -8831,6 +8839,68 @@ function _ribbon(p, cs, hw){
   p.lineTo(R[R.length-1][0],R[R.length-1][1]);
   for(let i=R.length-2;i>0;i--)p.quadraticCurveTo(R[i][0],R[i][1],(R[i][0]+R[i-1][0])/2,(R[i][1]+R[i-1][1])/2);
   p.lineTo(R[0][0],R[0][1]);
+  p.closePath();
+}
+// A channel whose corners are arcs of the local half-width instead of mitres.
+// Straight reaches keep the width they were authored with. Only the Mountains
+// use this: every other region keeps the mitred ribbon its spots were placed on.
+function _ribbonRound(p, cs, hw){
+  const n=cs.length;
+  if(n<2)return;
+  const L=[], R=[];
+  function segN(i){
+    const a=cs[i], b=cs[Math.min(n-1, i+1)];
+    let dx=b[0]-a[0], dy=b[1]-a[1];
+    const len=Math.hypot(dx, dy);
+    const d=len||1; dx/=d; dy/=d;
+    return {x:-dy, y:dx, len:len};
+  }
+  function pushPt(bucket, x, y){
+    const last=bucket[bucket.length-1];
+    if(last&&(last[0]-x)*(last[0]-x)+(last[1]-y)*(last[1]-y)<0.36)return;
+    bucket.push([x, y]);
+  }
+  function arc(bucket, x, y, w, n0, n1, side){
+    const ax=n0.x*side, ay=n0.y*side, bx=n1.x*side, by=n1.y*side;
+    let dot=ax*bx+ay*by;
+    if(dot>1)dot=1; else if(dot<-1)dot=-1;
+    const ang=Math.acos(dot), cross=ax*by-ay*bx;
+    const steps=ang<0.22?1:Math.ceil(ang/0.28);
+    const dir=cross>=0?1:-1;
+    for(let s=0;s<=steps;s++){
+      const a=dir*ang*(s/steps), c=Math.cos(a), sn=Math.sin(a);
+      pushPt(bucket, x+(ax*c-ay*sn)*w, y+(ax*sn+ay*c)*w);
+    }
+  }
+  for(let i=0;i<n-1;i++){
+    const N=segN(i);
+    const aw=hw[Math.min(i, hw.length-1)], bw=hw[Math.min(i+1, hw.length-1)];
+    const steps=Math.max(1, Math.round(N.len/40));
+    for(let s=0;s<steps;s++){
+      const t=s/steps;
+      const x=cs[i][0]+(cs[i+1][0]-cs[i][0])*t;
+      const y=cs[i][1]+(cs[i+1][1]-cs[i][1])*t;
+      const w=aw+(bw-aw)*t;
+      if(s===0&&i>0){
+        arc(L, cs[i][0], cs[i][1], aw, segN(i-1), N, 1);
+        arc(R, cs[i][0], cs[i][1], aw, segN(i-1), N, -1);
+      }else{
+        pushPt(L, x+N.x*w, y+N.y*w);
+        pushPt(R, x-N.x*w, y-N.y*w);
+      }
+    }
+  }
+  const Ne=segN(n-2), wEnd=hw[Math.min(n-1, hw.length-1)];
+  pushPt(L, cs[n-1][0]+Ne.x*wEnd, cs[n-1][1]+Ne.y*wEnd);
+  pushPt(R, cs[n-1][0]-Ne.x*wEnd, cs[n-1][1]-Ne.y*wEnd);
+  if(L.length<2||R.length<2)return;
+  if(_signedArea(L.concat(R.slice().reverse()))>0){
+    const tmp=L.slice(); L.length=0;
+    Array.prototype.push.apply(L, R); R.length=0; Array.prototype.push.apply(R, tmp);
+  }
+  p.moveTo(L[0][0], L[0][1]);
+  for(let i=1;i<L.length;i++)p.lineTo(L[i][0], L[i][1]);
+  for(let i=R.length-1;i>=0;i--)p.lineTo(R[i][0], R[i][1]);
   p.closePath();
 }
 function islandPathFor(zi){
@@ -11506,6 +11576,553 @@ function drawPier(g, x, y, len, t, dark, isPier){
   }
   g.restore();
 }
+// ===================== MOUNTAINS TERRAIN =====================
+// The canyon used to be one khaki fill plus a grid of flat cliff blocks, which
+// is why it read as the plainest region and why its mitred bends looked like
+// stairs. This paints the land once (season by season) onto an offscreen canvas
+// and blits the visible rect, then draws only the moving water on top. The
+// walkable channel is still the water path; nothing here is solid.
+function mtnHash(x, y){
+  let n=Math.imul(x|0, 374761393)+Math.imul(y|0, 668265263);
+  n=Math.imul(n^(n>>>13), 1274126177);
+  return ((n^(n>>>16))>>>0)/4294967296;
+}
+// Smooth value noise. The ground used to sample the hash in hard squares, which
+// read as a checkerboard; interpolating the grid is what makes a patch of meadow
+// fade into the next instead of ending on a pixel edge.
+function mtnNoise(x, y, scale){
+  const gx=x/scale, gy=y/scale;
+  const x0=Math.floor(gx), y0=Math.floor(gy);
+  let tx=gx-x0, ty=gy-y0;
+  tx=tx*tx*(3-2*tx); ty=ty*ty*(3-2*ty);
+  const a=mtnHash(x0, y0), b=mtnHash(x0+1, y0), c=mtnHash(x0, y0+1), d=mtnHash(x0+1, y0+1);
+  return (a*(1-tx)+b*tx)*(1-ty)+(c*(1-tx)+d*tx)*ty;
+}
+function mtnLook(){
+  const s=(typeof seasonNow==='function')?seasonNow():'summer';
+  const winter=s==='winter', fall=s==='fall', spring=s==='spring';
+  return {
+    season:s, winter:winter, fall:fall, flowers:spring||s==='summer',
+    meadow: spring?[138,178,90]: fall?[190,158,74]: winter?[220,230,234]:[118,160,76],
+    meadow2: spring?[98,148,70]: fall?[128,142,68]: winter?[190,206,214]:[80,126,62],
+    rock:[140,128,112], rock2:[116,106,92],
+    gravel:[176,158,128], gravel2:[146,128,102],
+    snow:[244,248,250],
+    trail: winter?[186,202,210]: fall?[156,114,72]:[176,142,92]
+  };
+}
+let _mtnGeo=null;
+function mtnGeo(){
+  if(_mtnGeo)return _mtnGeo;
+  const W=WORLD_DIMS[6][0], H=WORLD_DIMS[6][1], shape=WATER_SHAPE[6];
+  const ribbons=[];
+  (shape.parts||[]).forEach(function(part, pi){
+    if(part.kind!=='ribbon'||!part.cs||part.cs.length<2)return;
+    const cs=part.cs.map(function(q){return [q[0]*W, q[1]*H];});
+    const hw=part.hw.map(function(v){return v*W;});
+    const raw=[];
+    for(let i=0;i<cs.length-1;i++){
+      const ax=cs[i][0], ay=cs[i][1], bx=cs[i+1][0], by=cs[i+1][1];
+      const aw=hw[Math.min(i, hw.length-1)], bw=hw[Math.min(i+1, hw.length-1)];
+      const len=Math.hypot(bx-ax, by-ay)||1;
+      const steps=Math.max(1, Math.round(len/16));
+      for(let s=0;s<steps;s++){
+        const t=s/steps;
+        raw.push({x:ax+(bx-ax)*t, y:ay+(by-ay)*t, w:aw+(bw-aw)*t});
+      }
+    }
+    const last=cs.length-1;
+    raw.push({x:cs[last][0], y:cs[last][1], w:hw[Math.min(last, hw.length-1)]});
+    let acc=0;
+    for(let i=0;i<raw.length;i++){
+      const a=raw[Math.max(0, i-1)], b=raw[Math.min(raw.length-1, i+1)];
+      let tx=b.x-a.x, ty=b.y-a.y; const m=Math.hypot(tx, ty)||1;
+      raw[i].tx=tx/m; raw[i].ty=ty/m; raw[i].nx=-ty/m; raw[i].ny=tx/m;
+      if(i)acc+=Math.hypot(raw[i].x-raw[i-1].x, raw[i].y-raw[i-1].y);
+      raw[i].s=acc; raw[i].rib=pi;
+    }
+    for(let i=0;i<raw.length;i++){
+      const a=raw[Math.max(0, i-1)], b=raw[Math.min(raw.length-1, i+1)];
+      const cr=a.tx*b.ty-a.ty*b.tx, dt=a.tx*b.tx+a.ty*b.ty;
+      raw[i].turn=Math.abs(Math.atan2(cr, dt))||0;
+    }
+    ribbons.push({pts:raw, len:acc, i:pi});
+  });
+  let lake=null;
+  (shape.parts||[]).forEach(function(part){
+    if(part.kind!=='poly'||!part.pts||part.pts.length<3)return;
+    let sx=0, sy=0;
+    part.pts.forEach(function(q){sx+=q[0]; sy+=q[1];});
+    sx/=part.pts.length; sy/=part.pts.length;
+    let r=0;
+    part.pts.forEach(function(q){const d=Math.hypot((q[0]-sx)*W, (q[1]-sy)*H); if(d>r)r=d;});
+    const c={x:sx*W, y:sy*H, r:r};
+    if(!lake||c.y>lake.y)lake=c;
+  });
+  _mtnGeo={ribbons:ribbons, lake:lake};
+  return _mtnGeo;
+}
+// A spruce in the same painted language as the ice treeline: stacked tiers,
+// a lit cap of snow, a short trunk. Drawn into the terrain bake or, for the
+// peak landmarks, straight onto the frame.
+function mtnSpruce(g, x, y, h, winter, seed){
+  const lean=((seed%1)-0.5)*0.18;
+  g.save(); g.translate(x, y); g.rotate(lean);
+  g.fillStyle='rgba(24,30,20,.22)';
+  g.beginPath(); g.ellipse(h*0.16, h*0.1, h*0.46, h*0.16, 0, 0, 6.28); g.fill();
+  g.fillStyle='#4a3826';
+  g.fillRect(-h*0.055, -h*0.02, h*0.11, h*0.26);
+  const cols=['#1c382c','#274838','#163028','#2e5642'];
+  for(let i=0;i<4;i++){
+    const y1=-h*(0.02+i*0.2), hw=h*(0.5-i*0.09);
+    g.fillStyle=cols[i];
+    g.beginPath(); g.moveTo(0, y1-h*0.26); g.lineTo(hw, y1); g.lineTo(-hw, y1); g.closePath(); g.fill();
+    if(winter||i>=2){
+      g.fillStyle='rgba(244,250,252,.9)';
+      g.beginPath();
+      g.moveTo(0, y1-h*0.24);
+      g.lineTo(-hw*0.46, y1-h*0.06);
+      g.lineTo(hw*0.06, y1-h*0.1);
+      g.closePath(); g.fill();
+    }
+  }
+  g.restore();
+}
+function mtnRock(g, x, y, r, winter, seed){
+  const rot=(seed%1)*2+0.2;
+  g.fillStyle='rgba(24,18,12,.22)';
+  g.beginPath(); g.ellipse(x+r*0.25, y+r*0.38, r*1.05, r*0.4, 0, 0, 6.28); g.fill();
+  g.fillStyle=(seed%2>0.6)?'#8d8274':'#6f6558';
+  g.beginPath(); g.ellipse(x, y, r, r*0.74, rot, 0, 6.28); g.fill();
+  g.fillStyle='rgba(255,250,240,.2)';
+  g.beginPath(); g.ellipse(x-r*0.22, y-r*0.22, r*0.48, r*0.28, rot, 0, 6.28); g.fill();
+  if(winter){
+    g.fillStyle='rgba(244,249,252,.82)';
+    g.beginPath(); g.ellipse(x-r*0.1, y-r*0.28, r*0.62, r*0.26, rot, 0, 6.28); g.fill();
+  }
+}
+let _mtnCv=null, _mtnKey='';
+function mtnBake(){
+  const W=WORLD_DIMS[6][0], H=WORLD_DIMS[6][1];
+  const look=mtnLook();
+  const key=W+'x'+H+'|'+look.season+'|'+(gfxLow?1:0);
+  if(_mtnCv&&_mtnKey===key)return _mtnCv;
+  const cv=document.createElement('canvas');
+  cv.width=W; cv.height=H;
+  const g=cv.getContext('2d', {alpha:false});
+  if(!g)return null;
+  const path=waterPathFor(6), isl=islandPathFor(6);
+  const CELL=6, gw=Math.ceil(W/CELL), gh=Math.ceil(H/CELL);
+  const dist=new Float32Array(gw*gh), INF=9999;
+  for(let i=0;i<dist.length;i++)dist[i]=INF;
+  for(let gy=0;gy<gh;gy++)for(let gx=0;gx<gw;gx++){
+    const x=(gx+0.5)*CELL, y=(gy+0.5)*CELL;
+    if(g.isPointInPath(path, x, y)&&!(isl&&g.isPointInPath(isl, x, y)))dist[gy*gw+gx]=0;
+  }
+  for(let gy=0;gy<gh;gy++)for(let gx=0;gx<gw;gx++){
+    const i=gy*gw+gx; let d=dist[i];
+    if(gx>0)d=Math.min(d, dist[i-1]+1);
+    if(gy>0)d=Math.min(d, dist[i-gw]+1);
+    if(gx>0&&gy>0)d=Math.min(d, dist[i-gw-1]+1.414);
+    if(gx+1<gw&&gy>0)d=Math.min(d, dist[i-gw+1]+1.414);
+    dist[i]=d;
+  }
+  for(let gy=gh-1;gy>=0;gy--)for(let gx=gw-1;gx>=0;gx--){
+    const i=gy*gw+gx; let d=dist[i];
+    if(gx+1<gw)d=Math.min(d, dist[i+1]+1);
+    if(gy+1<gh)d=Math.min(d, dist[i+gw]+1);
+    if(gx+1<gw&&gy+1<gh)d=Math.min(d, dist[i+gw+1]+1.414);
+    if(gx>0&&gy+1<gh)d=Math.min(d, dist[i+gw-1]+1.414);
+    dist[i]=d;
+  }
+  function distAt(x, y){
+    const fx=x/CELL-0.5, fy=y/CELL-0.5;
+    let x0=fx|0, y0=fy|0;
+    if(x0<0)x0=0; else if(x0>=gw)x0=gw-1;
+    if(y0<0)y0=0; else if(y0>=gh)y0=gh-1;
+    const x1=x0+1<gw?x0+1:x0, y1=y0+1<gh?y0+1:y0;
+    let tx=fx-x0, ty=fy-y0;
+    if(tx<0)tx=0; else if(tx>1)tx=1;
+    if(ty<0)ty=0; else if(ty>1)ty=1;
+    const d00=dist[y0*gw+x0], d10=dist[y0*gw+x1], d01=dist[y1*gw+x0], d11=dist[y1*gw+x1];
+    return ((d00*(1-tx)+d10*tx)*(1-ty)+(d01*(1-tx)+d11*tx)*ty)*CELL;
+  }
+  function wetAt(x, y){return g.isPointInPath(path, x, y)&&!(isl&&g.isPointInPath(isl, x, y));}
+  const img=g.createImageData(W, H), pix=img.data;
+  const meadow=look.meadow, meadow2=look.meadow2, rock=look.rock, rock2=look.rock2;
+  const gravel=look.gravel, gravel2=look.gravel2, snow=look.snow;
+  let r=0, gc=0, b=0;
+  function mixc(A, B, t){
+    let u=t; if(u<0)u=0; else if(u>1)u=1;
+    const s=u*u*(3-2*u);
+    r=A[0]+(B[0]-A[0])*s; gc=A[1]+(B[1]-A[1])*s; b=A[2]+(B[2]-A[2])*s;
+  }
+  for(let y=0;y<H;y++){
+    for(let x=0;x<W;x++){
+      const n1=mtnNoise(x, y, 64), n2=mtnNoise(x+20, y-10, 22);
+      const d=distAt(x, y)+(n1-0.5)*32;
+      if(d<16)mixc(gravel2, gravel, d/16);
+      else if(d<72)mixc(gravel, rock, (d-16)/56);
+      else if(d<128)mixc(rock, n1<0.5?meadow2:meadow, (d-72)/56);
+      else if(d<250){
+        mixc(meadow, meadow2, n1);
+        if(n2>0.66){
+          const k=(n2-0.66)*0.9;
+          r+=(rock[0]-r)*k; gc+=(rock[1]-gc)*k; b+=(rock[2]-b)*k;
+        }
+      }else mixc(rock, rock2, n1);
+      if(look.winter){
+        const amt=d<14?0.2:(d<40?0.55:0.82);
+        r+=(snow[0]-r)*amt; gc+=(snow[1]-gc)*amt; b+=(snow[2]-b)*amt;
+      }else if(y<H*0.15&&d>70){
+        const amt=0.5;
+        r+=(snow[0]-r)*amt; gc+=(snow[1]-gc)*amt; b+=(snow[2]-b)*amt;
+      }else if(y<H*0.32&&d>160){
+        const amt=0.28+n1*0.2;
+        r+=(snow[0]-r)*amt; gc+=(snow[1]-gc)*amt; b+=(snow[2]-b)*amt;
+      }
+      const grain=(n2-0.5)*7;
+      r+=grain; gc+=grain; b+=grain;
+      const R=r<0?0:r>255?255:r|0, G=gc<0?0:gc>255?255:gc|0, B=b<0?0:b>255?255:b|0;
+      const i=(y*W+x)*4;
+      pix[i]=R; pix[i+1]=G; pix[i+2]=B; pix[i+3]=255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  // Soft washes on top of the field, the same way the ice sheet is painted:
+  // a distance ramp alone still reads as a band, and these drifts break it.
+  for(let i=0;i<48;i++){
+    const x=mtnNoise(i*19, 4, 1)*W, y=mtnNoise(7, i*13, 1)*H;
+    const d=distAt(x, y);
+    if(d<40)continue;
+    const rad=70+mtnNoise(i, 3, 1)*90;
+    const grd=g.createRadialGradient(x, y, 8, x, y, rad);
+    const snowy=look.winter||(y<H*0.2&&d>80);
+    grd.addColorStop(0, snowy?'rgba(255,255,255,.34)':(d>110?'rgba(150,190,96,.22)':'rgba(255,248,230,.12)'));
+    grd.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle=grd;
+    g.beginPath(); g.arc(x, y, rad, 0, 6.28); g.fill();
+  }
+  // The footpath follows the canyon on whichever bank stays dry, and breaks
+  // where a side creek or a cliff pinches it out.
+  const geo=mtnGeo();
+  const trailPts=[];
+  function layTrail(rib, off){
+    if(!rib)return;
+    let side=1, run=[];
+    function commit(){if(run.length>1)trailPts.push(run); run=[];}
+    for(let i=0;i<rib.pts.length;i++){
+      const p=rib.pts[i];
+      function ok(sd){
+        const x=p.x+p.nx*sd*(p.w+off), y=p.y+p.ny*sd*(p.w+off);
+        if(x<8||y<8||x>W-8||y>H-8)return false;
+        if(wetAt(x, y))return false;
+        if(wetAt((x+p.x)*0.5, (y+p.y)*0.5))return false;
+        return {x:x, y:y};
+      }
+      let hit=ok(side);
+      if(!hit){hit=ok(-side); if(hit)side=-side;}
+      if(!hit){commit(); continue;}
+      run.push(hit);
+    }
+    commit();
+  }
+  if(geo.ribbons[0])layTrail(geo.ribbons[0], 54);
+  if(geo.ribbons[1])layTrail(geo.ribbons[1], 40);
+  if(geo.ribbons[2])layTrail(geo.ribbons[2], 40);
+  g.lineCap='round'; g.lineJoin='round';
+  g.strokeStyle='rgba(90,64,40,.35)'; g.lineWidth=11;
+  trailPts.forEach(function(run){
+    g.beginPath();
+    run.forEach(function(p, i){if(i)g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y);});
+    g.stroke();
+  });
+  g.strokeStyle='rgb('+look.trail[0]+','+look.trail[1]+','+look.trail[2]+')'; g.lineWidth=6.5;
+  trailPts.forEach(function(run){
+    g.beginPath();
+    run.forEach(function(p, i){if(i)g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y);});
+    g.stroke();
+  });
+  // Cairns where the path is easy to lose, about one per long stretch.
+  trailPts.forEach(function(run){
+    for(let i=8;i<run.length;i+=18){
+      const p=run[i];
+      mtnRock(g, p.x, p.y-2, 3.2, look.winter, i);
+      mtnRock(g, p.x+0.4, p.y-6, 2.3, look.winter, i+1);
+      mtnRock(g, p.x-0.2, p.y-9, 1.5, look.winter, i+2);
+    }
+  });
+  function nearTrail(x, y, rad){
+    const r2=rad*rad;
+    for(let a=0;a<trailPts.length;a++){
+      const run=trailPts[a];
+      for(let i=0;i<run.length;i++){
+        const dx=run[i].x-x, dy=run[i].y-y;
+        if(dx*dx+dy*dy<r2)return true;
+      }
+    }
+    return false;
+  }
+  // Cobble and scree along the walls, then spruce groves back on the benches.
+  const stepR=gfxLow?26:16;
+  for(let y=stepR;y<H;y+=stepR)for(let x=stepR;x<W;x+=stepR){
+    const d=distAt(x, y);
+    if(d<14||d>96)continue;
+    const hsh=mtnHash(x, y);
+    if(hsh<0.86)continue;
+    const px=x+(hsh-0.5)*stepR, py=y+(mtnHash(y, x)-0.5)*stepR;
+    if(wetAt(px, py))continue;
+    mtnRock(g, px, py, 3.5+hsh*8, look.winter||y<H*0.18, hsh*20);
+  }
+  // A few larger blocks so the gorge has a skyline of its own, not just gravel.
+  for(let y=40;y<H;y+=48)for(let x=40;x<W;x+=48){
+    const d=distAt(x, y);
+    if(d<40||d>420)continue;
+    const hsh=mtnHash(x+3, y+9);
+    if(hsh<0.93)continue;
+    if(wetAt(x, y)||nearTrail(x, y, 18))continue;
+    mtnRock(g, x, y, 11+hsh*8, look.winter||y<H*0.22, hsh*40);
+  }
+  const stepT=gfxLow?32:22;
+  for(let y=stepT;y<H;y+=stepT)for(let x=stepT;x<W;x+=stepT){
+    const d=distAt(x, y);
+    if(d<52||d>360)continue;
+    if(mtnHash((x/110)|0, (y/110)|0)<0.42)continue;
+    const hsh=mtnHash(x, y);
+    if(hsh<0.74)continue;
+    const px=x+(hsh-0.5)*14, py=y+(mtnHash(y, x)-0.5)*14;
+    if(wetAt(px, py)||nearTrail(px, py, 15))continue;
+    const alpine=py<H*0.22;
+    mtnSpruce(g, px, py, 14+hsh*15, look.winter||alpine, hsh*50);
+  }
+  // Grass and flowers on the benches. Winter keeps a few tufts poking through.
+  const stepF=gfxLow?28:16;
+  for(let y=stepF;y<H;y+=stepF)for(let x=stepF;x<W;x+=stepF){
+    const d=distAt(x, y);
+    if(d<70||d>200)continue;
+    const hsh=mtnHash(x+5, y+2);
+    if(hsh<0.62)continue;
+    if(wetAt(x, y))continue;
+    if(!look.winter&&hsh>0.8){
+      g.strokeStyle=hsh>0.9?'rgba(64,96,40,.8)':'rgba(86,118,52,.75)';
+      g.lineWidth=1.2; g.lineCap='round';
+      for(let k=0;k<3;k++){
+        const gx=x+(k-1)*3.2, sway=(hsh-0.5)*2;
+        g.beginPath(); g.moveTo(gx, y+2); g.quadraticCurveTo(gx+sway, y-3, gx+sway*1.4, y-7-k); g.stroke();
+      }
+    }
+    if(look.flowers&&hsh>0.9){
+      const cols=[[228,190,58],[200,86,112],[108,128,198],[232,160,184]];
+      const c=cols[(hsh*4)|0];
+      g.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
+      for(let k=0;k<5;k++){
+        const a=hsh*6+k*1.3;
+        g.beginPath(); g.arc(x+Math.cos(a)*5.5, y+Math.sin(a)*3.6, 2.1+(k%2)*0.5, 0, 6.28); g.fill();
+      }
+    }else if(look.fall&&hsh>0.88){
+      g.fillStyle='#c4542a';
+      g.beginPath(); g.arc(x, y, 2.2, 0, 6.28); g.fill();
+    }
+  }
+  // A tree on each lake island, which is too small for the grove grid to hit.
+  (WATER_SHAPE[6].islands||[]).forEach(function(is, i){
+    const x=is.cx*W, y=is.cy*H;
+    if(!wetAt(x, y))mtnSpruce(g, x, y, 16, look.winter, i+3);
+  });
+  // Strata on the walls, so the rock reads as layered and not as a flat wash.
+  g.strokeStyle='rgba(48,40,32,.28)'; g.lineWidth=1;
+  for(let y=20;y<H;y+=14){
+    if(mtnHash(3, y)<0.55)continue;
+    const x0=(mtnHash(y, 1)*W);
+    const d=distAt(x0, y);
+    if(d<30||d>130)continue;
+    g.beginPath(); g.moveTo(x0, y); g.lineTo(x0+10+mtnHash(y, 4)*16, y+1); g.stroke();
+  }
+  cv._mw=W; cv._mh=H;
+  _mtnCv=cv; _mtnKey=key;
+  return cv;
+}
+function blitMtnLand(){
+  let cv=null;
+  try{cv=mtnBake();}catch(e){cv=null;}
+  if(!cv)return false;
+  const W=cv._mw, H=cv._mh;
+  const x0=camera.x-40, y0=camera.y-40, w=CW+80, h=CH+80;
+  const sx=Math.max(0, x0), sy=Math.max(0, y0);
+  const ex=Math.min(W, x0+w), ey=Math.min(H, y0+h);
+  if(ex<=sx||ey<=sy)return true;
+  ctx.drawImage(cv, sx, sy, ex-sx, ey-sy, sx, sy, ex-sx, ey-sy);
+  return true;
+}
+// Shallows, the deep thread of the channel, and foam that actually travels
+// downstream. Drawn inside the water clip, so none of it can climb the bank.
+function drawMtnWater(t, sky){
+  const geo=mtnGeo();
+  const winter=(typeof seasonNow==='function')&&seasonNow()==='winter';
+  const fall=(typeof seasonNow==='function')&&seasonNow()==='fall';
+  const x0=camera.x-30, y0=camera.y-30, x1=camera.x+CW+30, y1=camera.y+CH+30;
+  if(geo.lake){
+    const L=geo.lake;
+    if(L.x>x0-L.r&&L.x<x1+L.r&&L.y>y0-L.r&&L.y<y1+L.r){
+      const lg=ctx.createRadialGradient(L.x, L.y, 18, L.x, L.y, L.r);
+      lg.addColorStop(0, 'rgba(6,28,42,.32)');
+      lg.addColorStop(0.55, 'rgba(10,48,58,.1)');
+      lg.addColorStop(0.84, 'rgba(170,214,204,.04)');
+      lg.addColorStop(1, 'rgba(214,236,226,.18)');
+      ctx.fillStyle=lg;
+      ctx.beginPath(); ctx.arc(L.x, L.y, L.r, 0, 6.28); ctx.fill();
+      const sx=L.x+Math.sin(t*0.22)*L.r*0.28, sy=L.y+Math.cos(t*0.18)*L.r*0.12;
+      ctx.fillStyle='rgba(255,255,255,.08)';
+      ctx.beginPath(); ctx.ellipse(sx, sy, L.r*0.34, L.r*0.1, -0.5, 0, 6.28); ctx.fill();
+    }
+  }
+  ctx.save();
+  for(let r=0;r<geo.ribbons.length;r++){
+    const pts=geo.ribbons[r].pts;
+    for(let i=0;i<pts.length;i++){
+      const p=pts[i];
+      if(p.x<x0||p.x>x1||p.y<y0||p.y>y1)continue;
+      const ang=Math.atan2(p.ty, p.tx);
+      ctx.fillStyle='rgba(6,32,40,.15)';
+      ctx.beginPath(); ctx.ellipse(p.x, p.y, Math.max(5, p.w*0.4), 7, ang, 0, 6.28); ctx.fill();
+      ctx.fillStyle='rgba(198,230,220,.16)';
+      ctx.beginPath(); ctx.ellipse(p.x+p.nx*p.w*0.66, p.y+p.ny*p.w*0.66, 9, 4.2, ang, 0, 6.28); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(p.x-p.nx*p.w*0.66, p.y-p.ny*p.w*0.66, 9, 4.2, ang, 0, 6.28); ctx.fill();
+      const st=mtnHash(i*3+r*17, r+4);
+      if(st>0.42){
+        const sd=st>0.7?1:-1;
+        const ox=p.x+p.nx*sd*p.w*0.8, oy=p.y+p.ny*sd*p.w*0.8;
+        const rr=1.5+st*2.1;
+        ctx.fillStyle='rgba(96,104,98,.5)';
+        ctx.beginPath(); ctx.ellipse(ox, oy, rr, rr*0.68, st*5, 0, 6.28); ctx.fill();
+        ctx.fillStyle='rgba(255,255,255,.18)';
+        ctx.beginPath(); ctx.ellipse(ox-rr*0.25, oy-rr*0.25, rr*0.4, rr*0.25, 0, 0, 6.28); ctx.fill();
+      }
+      if(p.w<36||p.turn>0.28){
+        ctx.save();
+        ctx.translate(p.x, p.y); ctx.rotate(ang);
+        ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=1.35; ctx.lineCap='round'; ctx.lineJoin='round';
+        const slide=((t*30+i*19)%26)-8;
+        for(let k=0;k<2;k++){
+          const ox=k===0?0:slide;
+          ctx.beginPath();
+          ctx.moveTo(ox-3, -4.5); ctx.lineTo(ox+4, 0); ctx.lineTo(ox-3, 4.5);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+  }
+  ctx.restore();
+  if(winter){ctx.fillStyle='rgba(176,206,222,.12)'; ctx.fillRect(x0, y0, x1-x0, y1-y0);}
+  else if(fall){ctx.fillStyle='rgba(150,110,50,.05)'; ctx.fillRect(x0, y0, x1-x0, y1-y0);}
+  if(sky&&sky.darkness>0.35){
+    // Moon glint riding the riffles. The day/night wash covers the whole frame
+    // later; this is the bit of the water that should still catch light.
+    ctx.fillStyle='rgba(220,232,244,'+(0.05+sky.darkness*0.06)+')';
+    ctx.fillRect(x0, y0, x1-x0, y1-y0);
+  }
+}
+const MTN_SIGN={
+  riffle:'Riffle', tailout:'Tailout', run:'The Run', boulders:'Boulders',
+  undercut:'Undercut', beaverpond:'Beaver Pond', plungepool:'Plunge Pool',
+  springcreek:'Spring Creek', alpinelake:'Alpine Lake', waterfall:'Falls'
+};
+function mtnBridgeAt(){
+  const structs=(typeof activeStructures==='function')?activeStructures():[];
+  const run=structs.find(function(s){return s.kind==='run';});
+  const stem=mtnGeo().ribbons[0];
+  if(!stem)return null;
+  const tx=run?run.x:WORLD_DIMS[6][0]*0.36, ty=run?run.y:WORLD_DIMS[6][1]*0.39;
+  let best=stem.pts[0], bd=1e9;
+  for(let i=0;i<stem.pts.length;i++){
+    const p=stem.pts[i], d=(p.x-tx)*(p.x-tx)+(p.y-ty)*(p.y-ty);
+    if(d<bd){bd=d; best=p;}
+  }
+  const want=Math.max(0, best.s-125);
+  let br=stem.pts[0];
+  for(let i=0;i<stem.pts.length;i++){
+    if(Math.abs(stem.pts[i].s-want)<Math.abs(br.s-want))br=stem.pts[i];
+  }
+  return br;
+}
+function mtnSigns(){
+  const structs=(typeof activeStructures==='function')?activeStructures():[];
+  const stamp=S.zone+':'+structs.length+':'+(structs[0]?structs[0].x+','+structs[0].y:'');
+  if(mtnSigns._c&&mtnSigns._k===stamp)return mtnSigns._c;
+  const placed=[];
+  structs.forEach(function(s){
+    const label=MTN_SIGN[s.kind];
+    if(!label)return;
+    let best=null;
+    // The alpine lake is a couple of hundred pixels across, so a short probe
+    // never leaves the water. River spots still take the first dry bank.
+    for(let rad=48; rad<=300&&!best; rad+=20){
+      for(let a=0;a<12;a++){
+        const ang=a*(6.283/12)+s.x*0.002;
+        const x=s.x+Math.cos(ang)*rad, y=s.y+Math.sin(ang)*rad;
+        if(isWaterAt(x, y))continue;
+        const isl=islandPathFor(S.zone);
+        if(isl&&_inPathWorld(isl, x, y))continue;
+        if(isWaterAt(x+14, y)||isWaterAt(x-14, y)||isWaterAt(x, y+14)||isWaterAt(x, y-14))continue;
+        let crowded=false;
+        for(let i=0;i<placed.length;i++){
+          if(Math.hypot(placed[i].x-x, placed[i].y-y)<64)crowded=true;
+        }
+        if(crowded)continue;
+        best={x:x, y:y, label:label};
+        break;
+      }
+    }
+    if(best)placed.push(best);
+  });
+  mtnSigns._c=placed; mtnSigns._k=stamp;
+  return placed;
+}
+// Footbridge and the spot signs. World space, under the day/night wash, and
+// not solid: a wader walks under the bridge the same as before.
+function drawMtnDressing(t, sky){
+  const winter=(typeof seasonNow==='function')&&seasonNow()==='winter';
+  const br=mtnBridgeAt();
+  if(br&&br.x>camera.x-80&&br.x<camera.x+CW+80&&br.y>camera.y-80&&br.y<camera.y+CH+80){
+    const ang=Math.atan2(br.ny, br.nx), len=br.w+26;
+    ctx.save();
+    ctx.translate(br.x, br.y); ctx.rotate(ang);
+    ctx.fillStyle='rgba(20,14,8,.28)';
+    roundRect(ctx, -len+2, -6, len*2, 16, 3); ctx.fill();
+    ctx.fillStyle=winter?'#8d7660':'#7a5532';
+    roundRect(ctx, -len, -8, len*2, 14, 2); ctx.fill();
+    ctx.strokeStyle='rgba(48,28,14,.4)'; ctx.lineWidth=1;
+    for(let x=-len+5;x<len;x+=5){ctx.beginPath(); ctx.moveTo(x, -7); ctx.lineTo(x, 5); ctx.stroke();}
+    ctx.strokeStyle='#4a321e'; ctx.lineWidth=2.2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(-len, -8); ctx.lineTo(len, -8); ctx.moveTo(-len, 6); ctx.lineTo(len, 6); ctx.stroke();
+    ctx.fillStyle='#3a2816';
+    ctx.fillRect(-len-1.5, -12, 3, 22); ctx.fillRect(len-1.5, -12, 3, 22);
+    ctx.restore();
+  }
+  const signs=mtnSigns();
+  for(let i=0;i<signs.length;i++){
+    const s=signs[i];
+    if(s.x<camera.x-50||s.x>camera.x+CW+50||s.y<camera.y-50||s.y>camera.y+CH+50)continue;
+    ctx.save();
+    ctx.translate(s.x, s.y);
+    ctx.fillStyle='rgba(20,14,8,.22)';
+    ctx.beginPath(); ctx.ellipse(2, 8, 9, 3.2, 0, 0, 6.28); ctx.fill();
+    ctx.fillStyle='#5b3f28';
+    ctx.fillRect(-1.6, -16, 3.2, 24);
+    const tw=Math.max(52, s.label.length*6.3+14);
+    ctx.fillStyle=winter?'#f4f1e8':'#f3e4c4';
+    roundRect(ctx, -tw/2, -36, tw, 18, 3); ctx.fill();
+    ctx.strokeStyle='#6b4c30'; ctx.lineWidth=1; ctx.stroke();
+    ctx.fillStyle='#3a2916';
+    ctx.font='700 11px Fredoka, Nunito, sans-serif';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(s.label, 0, -27);
+    ctx.restore();
+  }
+}
+
+
 // ===================== LAND (V0.9.9) =====================
 // Only freshwater has a shoreline. These draw in WORLD coordinates with the
 // camera translate already applied by the caller, and only over the visible
@@ -11539,6 +12156,9 @@ function landPal(){return LAND_PAL[curRegionId()]||LAND_PAL.midwest;}
 function _lh(a, b){const v=Math.sin(a*127.1+b*311.7)*43758.5453;return v-Math.floor(v);}
 // The ground itself: soil with tonal mottling, then props.
 function drawLandBase(t, sky, isIsland){
+  // The Mountains ground is a baked painting. Falling through to the grid of
+  // cliff blocks only happens if that canvas could not be built.
+  if(curRegionId()==='mountains'&&blitMtnLand())return;
   const P=landPal();
   const x0=camera.x-40, y0=camera.y-40, x1=camera.x+CW+40, y1=camera.y+CH+40;
   ctx.fillStyle=P.soil;ctx.fillRect(x0, y0, x1-x0, y1-y0);
@@ -11738,7 +12358,15 @@ function drawShoreEdge(t, sky, forIsland){
   if(!path)return;
   const winter=(typeof seasonNow==='function')&&seasonNow()==='winter'&&(typeof SNOW_REGIONS!=='undefined')&&!!SNOW_REGIONS[curRegionId()];
   ctx.save();
-  // doubled width because only the outer half survives the fill that follows
+  // The canyon bank is cobble, not the sand beach the other regions use.
+  // Doubled width because only the outer half survives the fill that follows.
+  if(curRegionId()==='mountains'){
+    ctx.strokeStyle=winter?'#c5d4dc':'#a89878'; ctx.lineWidth=34; ctx.globalAlpha=0.92; ctx.stroke(path);
+    ctx.strokeStyle=winter?'#e7eef2':'#d4c4a2'; ctx.lineWidth=16; ctx.globalAlpha=0.9; ctx.stroke(path);
+    ctx.strokeStyle='rgba(255,255,255,.62)'; ctx.lineWidth=5; ctx.globalAlpha=0.42+0.1*Math.sin(t*1.25); ctx.stroke(path);
+    ctx.globalAlpha=1; ctx.restore();
+    return;
+  }
   ctx.strokeStyle=winter?'#e8f1f6':P.sand;ctx.lineWidth=22;ctx.globalAlpha=0.8;ctx.stroke(path);
   ctx.strokeStyle='rgba(255,255,255,.55)';ctx.lineWidth=7;ctx.globalAlpha=0.5+0.08*Math.sin(t*0.9);ctx.stroke(path);
   ctx.globalAlpha=1;ctx.restore();
@@ -13222,14 +13850,55 @@ function _scCabin(x,y,winter){
 }
 // ---- Mountains props ----
 function _scPeak(x,y,j){
-  const h=70+j*40, w=95+j*45;
-  ctx.fillStyle='#7d8a95';
-  ctx.beginPath();ctx.moveTo(x-w/2,y+h*0.45);ctx.lineTo(x-w*0.12,y-h*0.5);ctx.lineTo(x+w*0.1,y-h*0.28);ctx.lineTo(x+w/2,y+h*0.45);ctx.closePath();ctx.fill();
-  ctx.fillStyle='#96a3ad';
-  ctx.beginPath();ctx.moveTo(x-w*0.12,y-h*0.5);ctx.lineTo(x+w*0.1,y-h*0.28);ctx.lineTo(x+w*0.06,y+h*0.45);ctx.lineTo(x-w*0.06,y+h*0.45);ctx.closePath();ctx.fill();
-  ctx.fillStyle='rgba(246,252,255,.92)';                                  // permanent snowcap
-  ctx.beginPath();ctx.moveTo(x-w*0.12,y-h*0.5);ctx.lineTo(x+w*0.1,y-h*0.28);
-  ctx.lineTo(x+w*0.04,y-h*0.17);ctx.lineTo(x-w*0.03,y-h*0.26);ctx.lineTo(x-w*0.1,y-h*0.19);ctx.closePath();ctx.fill();
+  // Two ridges and a snowcap, in the same painted language as the ice horizon.
+  // Big peaks pass j past 1; the fractional part still jitters the silhouette.
+  const frac=j%1, big=j>1.15;
+  const sc=(big?1.25:0.92)+frac*0.28;
+  const h=86*sc, w=118*sc;
+  const winter=(typeof seasonNow==='function')&&seasonNow()==='winter';
+  ctx.fillStyle='rgba(24,32,40,.2)';
+  ctx.beginPath(); ctx.ellipse(x+2, y+h*0.46, w*0.52, 9, 0, 0, 6.28); ctx.fill();
+  // far ridge, cooler and lower, so the peak has depth instead of one triangle
+  ctx.fillStyle='#7f96a6';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.58, y+h*0.4);
+  ctx.lineTo(x-w*0.28, y-h*0.08);
+  ctx.lineTo(x-w*0.02, y+h*0.08);
+  ctx.lineTo(x+w*0.22, y-h*0.02);
+  ctx.lineTo(x+w*0.58, y+h*0.4);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(244,250,252,.9)';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.28, y-h*0.08);
+  ctx.lineTo(x-w*0.16, y+h*0.02);
+  ctx.lineTo(x-w*0.36, y+h*0.04);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#5d7384';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.46, y+h*0.5);
+  ctx.lineTo(x-w*0.06, y-h*0.58);
+  ctx.lineTo(x+w*0.14, y-h*0.2);
+  ctx.lineTo(x+w*0.48, y+h*0.5);
+  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#8aa0ae';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.06, y-h*0.58);
+  ctx.lineTo(x+w*0.14, y-h*0.2);
+  ctx.lineTo(x+w*0.06, y+h*0.5);
+  ctx.lineTo(x-w*0.02, y+h*0.5);
+  ctx.closePath(); ctx.fill();
+  const drop=winter?0.42:0.22;
+  ctx.fillStyle='rgba(246,251,255,.96)';
+  ctx.beginPath();
+  ctx.moveTo(x-w*0.06, y-h*0.58);
+  ctx.lineTo(x+w*0.14, y-h*0.2);
+  ctx.lineTo(x+w*0.08, y-h*0.2+h*drop);
+  ctx.quadraticCurveTo(x, y-h*0.34, x-w*0.05, y-h*0.58+h*drop*0.85);
+  ctx.closePath(); ctx.fill();
+  if(typeof mtnSpruce==='function'){
+    mtnSpruce(ctx, x-w*0.34, y+h*0.42, big?18:14, true, frac*9+1);
+    mtnSpruce(ctx, x+w*0.36, y+h*0.46, big?15:12, true, frac*9+4);
+  }
 }
 function _scSpruce(x,y,j,winter){
   ctx.fillStyle='rgba(0,0,0,.15)';ctx.beginPath();ctx.ellipse(x+2,y+18,9,4,0,0,6.28);ctx.fill();
@@ -14540,6 +15209,7 @@ function render(ts){
     drawShoreEdge(t, sky, false);
     ctx.save();ctx.clip(_shore);
     drawWaterFill(t, sky);
+    if(curRegionId()==='mountains')drawMtnWater(t, sky);
     ctx.restore();
     const _isl=islandPathFor(S.zone);
     if(_isl){
@@ -14548,6 +15218,7 @@ function render(ts){
       drawShoreEdge(t, sky, true);   // island beach, clipped so it stays on the island
       ctx.restore();
     }
+    if(curRegionId()==='mountains')drawMtnDressing(t, sky);
     ctx.restore();
   }
   // day/night tint. Ice takes the darkness but only a fraction of the warm
@@ -14576,7 +15247,7 @@ function render(ts){
   // A reservoir covered in whitecaps is the single loudest 'this is still the
   // sea' tell left in the freshwater world.
   const _fw=isFresh(), _wStep=(gfxLow?2:1)*(_fw?2:1), _wAlpha=_fw?0.38:1, _wSize=_fw?0.55:1;
-  for(let _wi=0;!_frozen&&_wi<WHITECAPS.length;_wi+=_wStep){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5)*_wAlpha;ctx.fillStyle=_fw?'#dff2ea':'#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r*_wSize, w.r*.38*_wSize,0,0,6.28);ctx.fill();}
+  for(let _wi=0;!_frozen&&curRegionId()!=='mountains'&&_wi<WHITECAPS.length;_wi+=_wStep){const w=WHITECAPS[_wi];const wx=((w.x+t*w.spd*22)%(CW+40))-20;const wy=w.y+Math.sin(t*1.1+w.ph)*3;ctx.globalAlpha=(0.16+0.16*Math.abs(Math.sin(t*.9+w.ph)))*(1-sky.darkness*.5)*_wAlpha;ctx.fillStyle=_fw?'#dff2ea':'#eafaff';ctx.beginPath();ctx.ellipse(wx, wy, w.r*_wSize, w.r*.38*_wSize,0,0,6.28);ctx.fill();}
   ctx.globalAlpha=1;
   if(_shore)ctx.restore();          // done with water-only decoration
 
