@@ -30,54 +30,145 @@
     --accent:#d98a33;--accent-dark:#a9631d;
     --text:#22302a;--text-soft:#5c6b60;--ink:#22302a;
   }
-  /* ---- ice fishing (V0.9.8): a first-person scene like the surf mode ---- */
+  /* ---- ice fishing (V0.9.8): a first-person scene like the surf mode ----
+     The scenery (sky, ridges, snow, hole) is paint. Every control below keeps
+     its id and its place: the jig pad, flasher, depth, status and leave button
+     are untouched and sit above the picture. */
   .ice-btn{position:absolute;left:50%;transform:translateX(-50%);bottom:150px;z-index:55;display:none;
     padding:11px 20px;border:none;border-radius:26px;background:#d8ecf4;color:#1e4356;
     font-family:'Fredoka';font-size:14.5px;font-weight:700;cursor:pointer;box-shadow:0 5px 16px rgba(10,40,60,.4);}
   .ice-btn.show{display:block;}
-  .ice-overlay{position:fixed;inset:0;z-index:300;display:none;overflow:hidden;background:#0a1a24;}
+  .ice-overlay{--ice-warm:0;position:fixed;inset:0;z-index:300;display:none;overflow:hidden;background:#07141e;}
   .ice-overlay.show{display:block;}
-  .ice-sky{position:absolute;left:0;right:0;top:0;height:46%;background:linear-gradient(180deg,#1d3f5c 0%,#3f6f8e 55%,#8fb6c8 100%);}
+  /* Cold winter day. Dawn and dusk warmth is a separate layer (--ice-warm), and
+     night is a top-heavy wash so the snow keeps its texture after dark. */
+  .ice-sky{position:absolute;inset:0;pointer-events:none;
+    background:
+      radial-gradient(90% 46% at 50% 0%, rgba(255,255,255,.14), transparent 58%),
+      linear-gradient(180deg,#1a4c70 0%,#2d78a6 16%,#6aafd0 40%,#c5dce8 68%,#e7f1f5 100%);}
+  .ice-sky::after{content:'';position:absolute;left:0;right:0;top:0;height:108px;pointer-events:none;
+    background:linear-gradient(180deg,rgba(6,16,28,.38),transparent);}
+  .ice-cirrus{position:absolute;left:-15%;right:-15%;top:7%;height:20%;pointer-events:none;
+    background:
+      radial-gradient(42% 80% at 16% 70%, rgba(255,255,255,.20), transparent 70%),
+      radial-gradient(48% 90% at 58% 36%, rgba(255,255,255,.14), transparent 72%),
+      radial-gradient(36% 80% at 90% 58%, rgba(255,255,255,.12), transparent 70%);
+    animation:iceCirrus 70s ease-in-out infinite;}
+  @keyframes iceCirrus{0%,100%{transform:translateX(0)}50%{transform:translateX(3.5%)}}
+  .ice-glow{position:absolute;left:0;right:0;top:22%;height:30%;pointer-events:none;opacity:var(--ice-warm);
+    background:linear-gradient(180deg,transparent,rgba(255,150,80,.62) 46%,rgba(255,186,140,.28) 74%,transparent);
+    mix-blend-mode:screen;}
+  .ice-sun{position:absolute;width:100px;height:100px;margin:-50px 0 0 -50px;border-radius:50%;
+    pointer-events:none;opacity:0;
+    background:radial-gradient(circle,#fffceb 0%,#ffe7a4 24%,#ffc56a 40%,rgba(255,176,90,0) 68%);}
+  .ice-moon{position:absolute;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;
+    pointer-events:none;opacity:0;
+    background:
+      radial-gradient(circle at 64% 60%, rgba(126,146,172,.55) 0 7%, transparent 8%),
+      radial-gradient(circle at 32% 68%, rgba(140,158,180,.4) 0 4%, transparent 5%),
+      radial-gradient(circle at 35% 32%, #fff 0%, #f4f7fb 28%, #d5deec 66%, #c0cce0 100%);
+    box-shadow:0 0 20px rgba(214,226,255,.75), inset -6px -4px 8px rgba(90,110,140,.28);}
+  .ice-moon.blood{background:radial-gradient(circle at 36% 32%, #ffd0c4 0%, #e24a3c 48%, #6e1016 100%);
+    box-shadow:0 0 26px rgba(226,48,40,.8);}
   /* THE NORTHERN LIGHTS (V0.9.9.1): Alaskan ice only, and shown by day too.
      A real aurora is vertical CURTAINS, so this is three banded layers drifting
      at different speeds over each other, not one blurred blob. Each band is a
      repeating gradient masked to fade at the bottom, which is what gives the
-     rayed, hanging-drapery look. */
-  .ice-aurora{position:absolute;left:-25%;right:-25%;top:0;height:40%;opacity:0;
+     rayed, hanging-drapery look. Bands are wide and soft so they read as light,
+     not as stripes. */
+  .ice-aurora{position:absolute;left:-25%;right:-25%;top:0;height:42%;opacity:0;
     pointer-events:none;mix-blend-mode:screen;transition:opacity .8s linear;}
   .ice-aurora i{position:absolute;inset:0;display:block;
-    -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 26%,#000 58%,transparent 96%);
-            mask-image:linear-gradient(180deg,transparent 0%,#000 26%,#000 58%,transparent 96%);}
-  .ice-aurora i:nth-child(1){filter:blur(9px);opacity:.85;
-    background:repeating-linear-gradient(84deg,rgba(74,238,166,0) 0 26px,rgba(74,238,166,.55) 40px,rgba(74,238,166,0) 74px);
+    -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 18%,#000 62%,transparent 96%);
+            mask-image:linear-gradient(180deg,transparent 0%,#000 18%,#000 62%,transparent 96%);}
+  .ice-aurora i:nth-child(1){filter:blur(14px);opacity:.8;
+    background:repeating-linear-gradient(86deg,rgba(74,238,166,0) 0 70px,rgba(74,238,166,.42) 110px,rgba(74,238,166,0) 190px);
     animation:iceAur1 19s ease-in-out infinite;}
-  .ice-aurora i:nth-child(2){filter:blur(13px);opacity:.6;
-    background:repeating-linear-gradient(94deg,rgba(110,150,255,0) 0 44px,rgba(110,150,255,.5) 62px,rgba(110,150,255,0) 112px);
+  .ice-aurora i:nth-child(2){filter:blur(18px);opacity:.55;
+    background:repeating-linear-gradient(96deg,rgba(110,150,255,0) 0 90px,rgba(110,150,255,.4) 140px,rgba(110,150,255,0) 240px);
     animation:iceAur2 27s ease-in-out infinite;}
-  .ice-aurora i:nth-child(3){filter:blur(7px);opacity:.42;
-    background:repeating-linear-gradient(88deg,rgba(210,120,255,0) 0 62px,rgba(210,120,255,.42) 82px,rgba(210,120,255,0) 150px);
+  .ice-aurora i:nth-child(3){filter:blur(12px);opacity:.4;
+    background:repeating-linear-gradient(90deg,rgba(210,140,255,0) 0 120px,rgba(210,140,255,.32) 170px,rgba(210,140,255,0) 280px);
     animation:iceAur3 23s ease-in-out infinite;}
   @keyframes iceAur1{0%,100%{transform:translateX(-5%) scaleY(.88)}50%{transform:translateX(5%) scaleY(1.14)}}
   @keyframes iceAur2{0%,100%{transform:translateX(6%)  scaleY(1.12)}50%{transform:translateX(-6%) scaleY(.9)}}
   @keyframes iceAur3{0%,100%{transform:translateX(-8%) scaleY(1.05)}50%{transform:translateX(4%)  scaleY(.94)}}
-  .ice-treeline{position:absolute;left:0;right:0;top:38%;height:11%;opacity:.9;
-    background:
-      repeating-linear-gradient(90deg,transparent 0 17px,rgba(14,39,24,.85) 17px 23px,transparent 23px 41px),
-      repeating-linear-gradient(90deg,transparent 0 29px,rgba(18,48,31,.7) 29px 34px,transparent 34px 63px),
-      linear-gradient(180deg,transparent 0%,rgba(11,32,21,.9) 55%,rgba(9,26,18,1) 100%);
-    -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 42%);mask-image:linear-gradient(180deg,transparent 0%,#000 42%);}
-  .ice-field{position:absolute;left:0;right:0;top:46%;bottom:0;background:linear-gradient(180deg,#cfe2ec 0%,#eaf4f8 34%,#ffffff 100%);}
-  .ice-field::before{content:'';position:absolute;left:-20%;right:-20%;top:6%;height:34%;
-    background:repeating-linear-gradient(96deg,rgba(160,190,208,.30) 0 3px,transparent 3px 34px);}
-  /* the drilled hole: a dark ellipse with a shaved rim and a slush ring */
+  /* Ridges and spruce are painted once onto this canvas (see paintIceHorizon)
+     so a phone and a desktop both get real tree shapes instead of a stretched
+     silhouette. Transparent everywhere the sky or the snow should show. */
+  .ice-horizon{position:absolute;left:0;right:0;top:15%;height:36%;width:100%;pointer-events:none;}
+  .ice-field{position:absolute;left:0;right:0;top:42%;bottom:0;overflow:hidden;pointer-events:none;
+    background:linear-gradient(180deg,#8eacbc 0%,#c5d6e0 16%,#e6eef2 48%,#f7fafc 100%);}
+  .ice-sheet{position:absolute;inset:0;width:100%;height:100%;display:block;}
+  /* A slow sheen, one transform, so the snow doesn't sit dead. */
+  .ice-field::after{content:'';position:absolute;top:0;bottom:0;left:0;width:38%;pointer-events:none;
+    background:linear-gradient(100deg,transparent,rgba(255,255,255,.28) 48%,transparent 72%);
+    transform:translateX(-40%);animation:iceSheen 16s ease-in-out infinite;}
+  @keyframes iceSheen{0%,100%{transform:translateX(-50%)}50%{transform:translateX(280%)}}
+  /* The drilled hole keeps its old box (the line is measured from it). The rim,
+     the ice wall and the water are painted inside that box. */
   .ice-hole{position:absolute;left:50%;transform:translateX(-50%);bottom:19%;width:min(270px,54vw);height:118px;
-    border-radius:50%;background:radial-gradient(ellipse at 50% 40%,#0b2b3a 0%,#06171f 62%,#041016 100%);
-    box-shadow:0 0 0 9px #e6f1f6, 0 0 0 13px #c3d9e4, inset 0 5px 14px rgba(0,0,0,.6);}
-  .ice-shavings{position:absolute;left:50%;transform:translateX(-50%);bottom:17%;width:min(340px,70vw);height:48px;
-    background:radial-gradient(ellipse at 50% 50%,rgba(255,255,255,.9),rgba(255,255,255,0) 68%);}
+    border-radius:50%;pointer-events:none;}
+  /* One lip of cut ice around the open water: blue wall, bright rim, snow.
+     Kept to a single ring so the hole doesn't read as a target. */
+  .ice-cut{position:absolute;inset:-12px -18px -8px -18px;border-radius:50%;
+    background:
+      radial-gradient(ellipse at 50% 46%,
+        transparent 0 56%,
+        #1a6e86 58.5%,
+        #d7eef4 61.5%,
+        #ffffff 64%,
+        rgba(255,255,255,.55) 67.5%,
+        transparent 73%);
+    box-shadow:0 8px 10px rgba(30,55,70,.12);}
+  .ice-water{position:absolute;left:17%;right:17%;top:17%;bottom:26%;border-radius:50%;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 42%, #18546a 0%, #0b2836 42%, #061018 100%);
+    background-size:160% 160%;background-position:40% 42%;
+    box-shadow:inset 0 0 0 2px rgba(150,210,220,.28), inset 0 10px 14px rgba(0,0,0,.6), inset 0 -5px 8px rgba(160,210,220,.1);
+    animation:iceWater 8s ease-in-out infinite;}
+  @keyframes iceWater{0%,100%{background-position:38% 36%}50%{background-position:62% 52%}}
+  .ice-water::before{content:'';position:absolute;left:6%;right:10%;top:4%;height:28%;border-radius:50%;
+    background:radial-gradient(ellipse at 50% 100%, rgba(200,236,248,.42), transparent 68%);}
+  .ice-water .rip{position:absolute;left:50%;top:46%;width:38%;height:30%;border-radius:50%;
+    border:1.5px solid rgba(186,226,238,.75);transform:translate(-50%,-50%) scale(1);opacity:.16;
+    animation:iceRipple 3.6s ease-out infinite;}
+  .ice-water .rip.b{animation-delay:-1.8s;}
+  .ice-hole.jigging .rip{opacity:.9;animation-duration:1.35s;border-color:rgba(214,242,250,.95);}
+  .ice-hole.biting .rip{opacity:1;animation-duration:.85s;border-color:rgba(255,206,140,.95);border-width:2px;}
+  .ice-hole.biting .ice-water{box-shadow:inset 0 0 18px rgba(255,176,80,.45), inset 0 8px 14px rgba(0,0,0,.5);}
+  @keyframes iceRipple{0%{transform:translate(-50%,-50%) scale(.4);opacity:.75}100%{transform:translate(-50%,-50%) scale(2.5);opacity:0}}
+  .ice-water .glint{position:absolute;left:16%;top:20%;width:34%;height:20%;border-radius:50%;
+    background:radial-gradient(ellipse, rgba(220,246,255,.5), transparent 70%);
+    animation:iceGlint 6.5s ease-in-out infinite;}
+  @keyframes iceGlint{0%,100%{transform:translateX(0);opacity:.4}50%{transform:translateX(40%);opacity:.85}}
+  .ice-shavings{position:absolute;left:50%;bottom:calc(19% - 26px);width:min(440px,90vw);height:170px;
+    transform:translateX(-50%);pointer-events:none;}
+  .ice-shavings i{position:absolute;height:6px;border-radius:6px;background:linear-gradient(#fff,#d5e6ee);
+    box-shadow:0 1px 0 rgba(80,110,130,.4);}
+  .ice-shavings i:nth-child(1){left:7%;top:64%;width:18px;transform:rotate(-26deg)}
+  .ice-shavings i:nth-child(2){left:16%;top:40%;width:12px;transform:rotate(14deg)}
+  .ice-shavings i:nth-child(3){left:24%;top:78%;width:16px;transform:rotate(8deg)}
+  .ice-shavings i:nth-child(4){right:6%;top:58%;width:18px;transform:rotate(22deg)}
+  .ice-shavings i:nth-child(5){right:15%;top:36%;width:11px;transform:rotate(-14deg)}
+  .ice-shavings i:nth-child(6){right:23%;top:76%;width:15px;transform:rotate(-18deg)}
+  .ice-shavings i:nth-child(7){left:40%;top:10%;width:14px;transform:rotate(6deg)}
+  .ice-shavings i:nth-child(8){left:56%;top:14%;width:10px;transform:rotate(-10deg)}
+  .ice-shavings i:nth-child(9){left:34%;bottom:6%;width:14px;transform:rotate(16deg)}
+  .ice-shavings i:nth-child(10){right:32%;bottom:4%;width:17px;transform:rotate(-12deg)}
+  /* Auger and bucket are scenery. They never take a click (the jig pad does). */
+  .ice-gear{position:absolute;inset:0;pointer-events:none;}
+  .ice-auger{position:absolute;left:5.5%;bottom:34%;width:74px;height:132px;transform:rotate(-14deg);transform-origin:50% 90%;}
+  .ice-bucket{position:absolute;left:14%;bottom:31%;width:62px;height:54px;}
+  @media (max-width:640px){
+    .ice-auger{left:1%;bottom:46%;width:48px;height:86px;}
+    .ice-bucket{left:12%;bottom:44%;width:40px;height:36px;}
+  }
+  @media (max-height:560px){.ice-gear{display:none;}}
   /* The line is drawn, not stacked: one SVG spanning the whole scene, so it can
-     start at the rod tip wherever the bend has put it and finish in the hole. */
+     start at the rod tip wherever the bend has put it and finish in the hole.
+     A hairline halo keeps the dark mono readable on snow and on the black water. */
   .ice-lineart{position:absolute;inset:0;pointer-events:none;overflow:visible;}
+  #ice-linetip{filter:drop-shadow(0 0 1px rgba(255,255,255,.95));}
   /* The Heater, once built: stood on the ice to the RIGHT of the hole (V0.9.9.1).
      The glow is a separate layer under the body so it spills onto the ice rather
      than lighting up the metal.
@@ -99,29 +190,103 @@
     transform:rotate(-13deg);transition:transform .1s;}
   .ice-rod.bent{transform:rotate(-30deg);}
   .ice-rod svg{width:100%;height:100%;}
-  .ice-snowfall{position:absolute;inset:0;pointer-events:none;
-    background-image:radial-gradient(2px 2px at 20% 30%,rgba(255,255,255,.9),transparent),
-                     radial-gradient(1.6px 1.6px at 70% 60%,rgba(255,255,255,.8),transparent),
-                     radial-gradient(2px 2px at 45% 80%,rgba(255,255,255,.75),transparent),
-                     radial-gradient(1.4px 1.4px at 85% 20%,rgba(255,255,255,.7),transparent);
-    background-size:280px 280px,220px 220px,320px 320px,190px 190px;animation:iceSnow 11s linear infinite;}
-  @keyframes iceSnow{to{background-position:-40px 280px,30px 220px,-25px 320px,18px 190px;}}
-  .ice-night{position:absolute;inset:0;background:#04121c;opacity:0;pointer-events:none;}
+  /* Three tiled sheets, drifted by background-position (one paint each, no
+     per-flake nodes). Gentle on purpose: a blizzard would hide the flasher. */
+  .ice-snowfall{position:absolute;inset:0;pointer-events:none;overflow:hidden;}
+  .ice-snowfall span{position:absolute;inset:-15% -8%;background-repeat:repeat;}
+  .ice-snowfall span:nth-child(1){
+    background-image:
+      radial-gradient(1.5px 1.5px at 12px 18px,#fff,transparent),
+      radial-gradient(1.3px 1.3px at 78px 64px,rgba(255,255,255,.9),transparent),
+      radial-gradient(1.8px 1.8px at 150px 28px,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 206px 96px,rgba(255,255,255,.75),transparent),
+      radial-gradient(1.6px 1.6px at 40px 148px,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 118px 176px,rgba(255,255,255,.8),transparent),
+      radial-gradient(1.7px 1.7px at 188px 210px,#fff,transparent),
+      radial-gradient(1.3px 1.3px at 28px 236px,rgba(255,255,255,.7),transparent),
+      radial-gradient(1.4px 1.4px at 146px 258px,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 220px 150px,rgba(255,255,255,.85),transparent);
+    background-size:240px 280px;animation:iceSnowA 20s linear infinite;}
+  .ice-snowfall span:nth-child(2){
+    background-image:
+      radial-gradient(2px 2px at 30px 40px,rgba(255,255,255,.85),transparent),
+      radial-gradient(1.4px 1.4px at 100px 20px,#fff,transparent),
+      radial-gradient(1.6px 1.6px at 180px 80px,rgba(255,255,255,.8),transparent),
+      radial-gradient(1.3px 1.3px at 60px 130px,#fff,transparent),
+      radial-gradient(2.1px 2.1px at 150px 160px,rgba(255,255,255,.75),transparent),
+      radial-gradient(1.3px 1.3px at 220px 200px,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 16px 220px,rgba(255,255,255,.7),transparent),
+      radial-gradient(1.2px 1.2px at 120px 270px,#fff,transparent);
+    background-size:260px 320px;animation:iceSnowB 13s linear infinite;opacity:.8;}
+  .ice-snowfall span:nth-child(3){
+    background-image:
+      radial-gradient(3px 3px at 40px 50px,rgba(255,255,255,.55),transparent),
+      radial-gradient(2.6px 2.6px at 160px 140px,rgba(255,255,255,.4),transparent),
+      radial-gradient(3.2px 3.2px at 90px 240px,rgba(255,255,255,.45),transparent),
+      radial-gradient(2.4px 2.4px at 230px 80px,rgba(255,255,255,.35),transparent);
+    background-size:300px 360px;animation:iceSnowC 24s linear infinite;opacity:.7;}
+  @keyframes iceSnowA{to{background-position:26px 280px}}
+  @keyframes iceSnowB{to{background-position:-40px 320px}}
+  @keyframes iceSnowC{to{background-position:16px 360px}}
+  .ice-vignette{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 58%, transparent 50%, rgba(6,16,28,.22) 100%);}
+  /* Strong at the zenith, almost clear on the snow, so night reads as night
+     without flattening the ice back to a gray slab. Stars live in here so they
+     fade in with the dark. Opacity is set from skyState().darkness. */
+  /* Sky only. Mountains are painted in night colors, and the snow is left
+     bright, so this wash must not cover the ice or it flattens the hole. */
+  .ice-night{position:absolute;left:0;right:0;top:0;height:58%;opacity:0;pointer-events:none;
+    background:linear-gradient(180deg,rgba(3,8,18,.9) 0%,rgba(6,14,28,.72) 46%,rgba(10,22,36,.28) 80%,rgba(10,22,36,0) 100%);}
+  .ice-stars{position:absolute;left:0;right:0;top:0;height:78%;
+    background-repeat:no-repeat;
+    background-image:
+      radial-gradient(1.3px 1.3px at 6% 22%,#fff,transparent),
+      radial-gradient(1.1px 1.1px at 12% 48%,rgba(255,255,255,.8),transparent),
+      radial-gradient(1.6px 1.6px at 18% 16%,#fff,transparent),
+      radial-gradient(1px 1px at 24% 38%,rgba(255,255,255,.7),transparent),
+      radial-gradient(1.4px 1.4px at 31% 12%,#fff,transparent),
+      radial-gradient(1.1px 1.1px at 37% 44%,rgba(226,236,255,.85),transparent),
+      radial-gradient(1.8px 1.8px at 44% 20%,#fff,transparent),
+      radial-gradient(1px 1px at 49% 52%,rgba(255,255,255,.65),transparent),
+      radial-gradient(1.3px 1.3px at 55% 14%,#fff,transparent),
+      radial-gradient(1.1px 1.1px at 61% 36%,rgba(255,255,255,.8),transparent),
+      radial-gradient(1.5px 1.5px at 68% 18%,#fff,transparent),
+      radial-gradient(1px 1px at 73% 46%,rgba(226,236,255,.75),transparent),
+      radial-gradient(1.7px 1.7px at 80% 12%,#fff,transparent),
+      radial-gradient(1.2px 1.2px at 86% 34%,rgba(255,255,255,.85),transparent),
+      radial-gradient(1.1px 1.1px at 92% 20%,#fff,transparent),
+      radial-gradient(1.4px 1.4px at 96% 48%,rgba(255,255,255,.7),transparent),
+      radial-gradient(1px 1px at 9% 70%,rgba(255,255,255,.55),transparent),
+      radial-gradient(1.2px 1.2px at 28% 64%,rgba(255,255,255,.5),transparent),
+      radial-gradient(1px 1px at 52% 72%,rgba(255,255,255,.45),transparent),
+      radial-gradient(1.3px 1.3px at 77% 66%,rgba(255,255,255,.5),transparent);}
+  .ice-stars.tw{height:72%;animation:iceTwinkle 3.8s ease-in-out infinite;
+    background-image:
+      radial-gradient(1.8px 1.8px at 15% 28%,#fff,transparent),
+      radial-gradient(1.6px 1.6px at 41% 18%,#fff,transparent),
+      radial-gradient(2px 2px at 63% 30%,#fff,transparent),
+      radial-gradient(1.5px 1.5px at 88% 22%,#fff,transparent),
+      radial-gradient(1.4px 1.4px at 33% 52%,rgba(255,255,255,.9),transparent);}
+  @keyframes iceTwinkle{0%,100%{opacity:.35}50%{opacity:1}}
+  @media (prefers-reduced-motion:reduce){
+    .ice-snowfall span,.ice-cirrus,.ice-field::after,.ice-water,.ice-water .rip,.ice-water .glint,.ice-stars.tw,.ice-aurora i{animation:none;}
+  }
   /* the flasher unit, on its bucket, bottom-left */
   .ice-flasher{position:absolute;left:12px;bottom:44px;width:min(178px,34vw);}
   .ice-flasher canvas{width:100%;height:auto;display:block;filter:drop-shadow(0 6px 16px rgba(0,20,32,.55));}
   .ice-panel{position:absolute;left:0;right:0;top:12px;text-align:center;padding:0 14px;pointer-events:none;}
-  .ice-h{font-family:'Fredoka';font-size:17px;font-weight:700;color:#eaf5fa;text-shadow:0 2px 8px rgba(0,20,30,.6);}
-  .ice-status{font-size:12.5px;font-weight:800;color:#cfe6f2;margin-top:3px;text-shadow:0 1px 5px rgba(0,20,30,.7);min-height:17px;}
+  .ice-h{font-family:'Fredoka';font-size:17px;font-weight:700;color:#eaf5fa;text-shadow:0 1px 2px rgba(0,16,28,.9),0 2px 10px rgba(0,16,28,.55);}
+  .ice-status{font-size:12.5px;font-weight:800;color:#cfe6f2;margin-top:3px;text-shadow:0 1px 2px rgba(0,16,28,.9),0 1px 6px rgba(0,16,28,.55);min-height:17px;}
   .ice-depth{position:absolute;right:14px;top:64px;text-align:right;color:#eaf5fa;font-family:'Fredoka';pointer-events:none;}
-  .ice-depth .dnum{font-size:26px;font-weight:700;line-height:1;text-shadow:0 2px 8px rgba(0,20,30,.6);}
+  .ice-depth .dnum{font-size:26px;font-weight:700;line-height:1;text-shadow:0 1px 2px rgba(0,16,28,.9),0 2px 10px rgba(0,16,28,.5);}
   .ice-depth .dlbl{font-size:9.5px;font-weight:800;letter-spacing:.7px;text-transform:uppercase;opacity:.7;}
   /* the whole lower screen is the jig pad; drag up/down to work the bait */
   .ice-jigpad{position:absolute;left:0;right:0;top:34%;bottom:0;touch-action:none;cursor:ns-resize;}
   .ice-leave{position:absolute;right:14px;bottom:14px;padding:9px 15px;border:none;border-radius:20px;
     background:rgba(232,244,250,.92);color:#1e4356;font-family:'Fredoka';font-size:13px;font-weight:700;cursor:pointer;z-index:5;}
   .ice-hint{position:absolute;left:0;right:0;bottom:8px;text-align:center;font-size:10.5px;font-weight:800;
-    color:rgba(210,235,246,.72);letter-spacing:.3px;pointer-events:none;padding:0 12px;}
+    color:rgba(22,46,62,.78);letter-spacing:.3px;pointer-events:none;padding:0 120px 0 12px;
+    text-shadow:0 1px 0 rgba(255,255,255,.55);}
   /* ---- fly fishing panel (V0.9.8) ---- */
   .fly-game{position:absolute;left:50%;transform:translateX(-50%);bottom:118px;width:min(340px,calc(100% - 28px));
     background:var(--cream);border:1px solid var(--wood);border-radius:16px;padding:11px 12px 12px;
@@ -1070,22 +1235,56 @@
   <button class="sdew-btn" id="sdew-btn">HOLD TO REEL</button>
   <button class="sdew-slowmo" id="sdew-slowmo" style="display:none" onclick="useChainsawSlowmo()"><span class="cs-blade"></span> SLOW-MO</button>
 </div>
-<!-- Ice fishing (V0.9.8): first-person over a drilled hole, read on a flasher. -->
+<!-- Ice fishing (V0.9.8): first-person over a drilled hole, read on a flasher.
+     The picture is sky, a one-shot horizon canvas and a one-shot snow canvas.
+     Everything with an id below is a control and stays where it was. -->
 <div class="ice-overlay" id="ice-overlay">
   <div class="ice-sky"></div>
+  <div class="ice-cirrus" aria-hidden="true"></div>
+  <div class="ice-sun" id="ice-sun" aria-hidden="true"></div>
+  <div class="ice-moon" id="ice-moon" aria-hidden="true"></div>
+  <div class="ice-night" id="ice-night"><div class="ice-stars" aria-hidden="true"></div><div class="ice-stars tw" aria-hidden="true"></div></div>
+  <div class="ice-glow" aria-hidden="true"></div>
   <div class="ice-aurora" id="ice-aurora"><i></i><i></i><i></i></div>
-  <div class="ice-treeline"></div>
-  <div class="ice-field"></div>
-  <div class="ice-shavings"></div>
-  <div class="ice-hole"></div>
+  <div class="ice-field" id="ice-field"><canvas class="ice-sheet" id="ice-sheet" aria-hidden="true"></canvas></div>
+  <canvas class="ice-horizon" id="ice-horizon" aria-hidden="true"></canvas>
+  <div class="ice-shavings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="ice-hole">
+    <div class="ice-cut"></div>
+    <div class="ice-water"><i class="rip a"></i><i class="rip b"></i><i class="glint"></i></div>
+  </div>
+  <div class="ice-gear" aria-hidden="true">
+    <div class="ice-auger"><svg viewBox="0 0 80 150" width="74" height="132">
+      <ellipse cx="40" cy="142" rx="26" ry="6" fill="rgba(40,70,90,.22)"/>
+      <ellipse cx="40" cy="138" rx="16" ry="5" fill="#f5fafc"/>
+      <polygon points="40,132 33,116 47,116" fill="#8e9ca6"/>
+      <ellipse cx="40" cy="112" rx="13" ry="4.2" fill="none" stroke="#b7c3cb" stroke-width="3.2"/>
+      <ellipse cx="40" cy="100" rx="13" ry="4.2" fill="none" stroke="#7f8e98" stroke-width="3.2"/>
+      <ellipse cx="40" cy="88" rx="12" ry="4" fill="none" stroke="#d5dee4" stroke-width="3"/>
+      <rect x="37" y="30" width="6" height="68" rx="2" fill="#80909a"/>
+      <rect x="38.4" y="30" width="2" height="68" fill="rgba(255,255,255,.45)"/>
+      <rect x="32" y="26" width="16" height="7" rx="2" fill="#4c5b66"/>
+      <rect x="10" y="16" width="60" height="8" rx="4" fill="#8b5a2b"/>
+      <rect x="10" y="16" width="60" height="3" rx="2" fill="rgba(255,220,170,.45)"/>
+      <rect x="35" y="7" width="10" height="14" rx="2" fill="#6a421e"/>
+    </svg></div>
+    <div class="ice-bucket"><svg viewBox="0 0 80 70" width="62" height="54">
+      <ellipse cx="40" cy="64" rx="26" ry="5" fill="rgba(40,70,90,.2)"/>
+      <path d="M16,24 h48 l-6,32 h-36 z" fill="#2c6d60"/>
+      <path d="M18,24 h18 l-2,32 h-13 z" fill="rgba(255,255,255,.12)"/>
+      <ellipse cx="40" cy="24" rx="24" ry="7" fill="#3c8f7c"/>
+      <ellipse cx="40" cy="24" rx="17" ry="4.2" fill="#143e36"/>
+      <path d="M22,22 C22,6 58,6 58,22" fill="none" stroke="#c9a24a" stroke-width="3" stroke-linecap="round"/>
+    </svg></div>
+  </div>
   <div class="ice-heater" id="ice-heater"></div>
   <div class="ice-rod" id="ice-rod"></div>
   <svg class="ice-lineart" id="ice-lineart" width="100%" height="100%">
-    <path id="ice-linetip" fill="none" stroke="#f2fbff" stroke-width="1.6" stroke-linecap="round" opacity=".85"/>
-    <path id="ice-linewet" fill="none" stroke="#bfe4f2" stroke-width="1.5" stroke-linecap="round" opacity=".5"/>
+    <path id="ice-linetip" fill="none" stroke="#173044" stroke-width="1.7" stroke-linecap="round" opacity=".9"/>
+    <path id="ice-linewet" fill="none" stroke="#d7f4ff" stroke-width="1.5" stroke-linecap="round" opacity=".55"/>
   </svg>
-  <div class="ice-snowfall"></div>
-  <div class="ice-night" id="ice-night"></div>
+  <div class="ice-vignette" aria-hidden="true"></div>
+  <div class="ice-snowfall" aria-hidden="true"><span></span><span></span><span></span></div>
   <div class="ice-panel"><div class="ice-h">Ice Fishing</div><div class="ice-status" id="ice-status">Drop the jig and watch the flasher.</div></div>
   <div class="ice-depth"><div class="dnum" id="ice-depth-num">0</div><div class="dlbl">ft down</div><div class="dlbl" id="ice-hole-depth" style="margin-top:5px;opacity:.55;"></div></div>
   <div class="ice-flasher"><canvas id="ice-dial" width="260" height="260"></canvas></div>
@@ -15213,7 +15412,18 @@ function enterIce(mode){
   document.getElementById('ice-rod').innerHTML=buildIceRod();
   updateIceHeater();
   document.getElementById('ice-hole-depth').textContent=iceHoleFt+' ft of water';
-  document.getElementById('ice-overlay').classList.add('show');
+  const iceOv=document.getElementById('ice-overlay');
+  iceOv.classList.add('show');
+  iceOv.classList.toggle('alaska', iceMode==='alaska');
+  iceOv.classList.toggle('northern', iceMode!=='alaska');
+  const holeEl=document.querySelector('.ice-hole');
+  if(holeEl)holeEl.classList.remove('jigging','biting');
+  // A fresh hole gets its own snow: cracks and prints are painted once, not per frame.
+  paintIceAtmosphere.q='';
+  paintIceScenery.ready=false;
+  paintIceScenery.seed=(Math.random()*1e9)>>>0;
+  paintIceScenery();
+  paintIceAtmosphere();
   iceDrawLine();                       // before the first frame, or it snaps into place
   setIceStatus('Drop the jig. Jig it to call something up.');
   iceLastT=0;if(iceAnimId)cancelAnimationFrame(iceAnimId);
@@ -15411,15 +15621,327 @@ function iceLoop(ts){
   iceDrawDial(now/1000);
   const dn=document.getElementById('ice-depth-num');if(dn)dn.textContent=Math.round(iceJigFt);
   iceDrawLine();
-  const nightEl=document.getElementById('ice-night');
-  if(nightEl){const dk=skyState(hourNow()).darkness;nightEl.style.opacity=(dk*0.72).toFixed(2);
-    // The aurora belongs to the ALASKAN ice and is up whatever the hour: it is
-    // what that mode looks like, not a night effect. It was previously gated on
-    // darkness>0.45 in BOTH modes, so most sessions never saw it at all. It
-    // still brightens after dark, the way a real one reads against a black sky.
-    const au=document.getElementById('ice-aurora');
-    if(au)au.style.opacity=(iceMode==='alaska')?(0.34+dk*0.62).toFixed(2):'0';}
+  // Ripples on the open water. Class toggles only; the motion is CSS.
+  const holeEl=iceLoop.hole||(iceLoop.hole=document.querySelector('.ice-hole'));
+  if(holeEl){
+    holeEl.classList.toggle('jigging', iceDragging||Math.abs(iceJigFt-prev)>0.02);
+    const mouthing=iceFish&&iceFishState==='inspect'&&Math.abs(iceJigFt-iceFishFt)<=iceTol;
+    holeEl.classList.toggle('biting', iceFishState==='commit'||!!mouthing);
+  }
+  if(!paintIceScenery.ready)paintIceScenery();
+  paintIceAtmosphere();
   iceAnimId=requestAnimationFrame(iceLoop);
+}
+// Sky, sun and moon follow the same clock as the rest of the game. Quantized so
+// a frame doesn't write style unless the light actually moved. The aurora curve
+// is the one from V0.9.9.1: on for Alaskan ice in daylight, brighter after dark.
+function paintIceAtmosphere(){
+  const h=hourNow(), sky=skyState(h);
+  const dk=sky.darkness, warm=sky.warm||0;
+  const blood=(typeof isBloodMoon==='function'&&isBloodMoon());
+  const q=(dk*40|0)+':'+(warm*40|0)+':'+(h*12|0)+':'+(blood?1:0)+':'+iceMode;
+  if(paintIceAtmosphere.q===q)return;
+  paintIceAtmosphere.q=q;
+  const nightEl=document.getElementById('ice-night');
+  if(nightEl)nightEl.style.opacity=dk.toFixed(3);
+  const au=document.getElementById('ice-aurora');
+  // On top of the sky wash (not under it), so the curtains stay visible after dark
+  // without the old flat night layer crushing them. Daytime stays a hint.
+  if(au)au.style.opacity=(iceMode==='alaska')?(0.22+dk*0.5).toFixed(3):'0';
+  const ov=document.getElementById('ice-overlay');
+  if(ov)ov.style.setProperty('--ice-warm', warm.toFixed(3));
+  const dayFrac=Math.min(1,Math.max(0,(h-5)/14));
+  const sunVis=dk<0.55?(1-dk/0.55):0;
+  const sun=document.getElementById('ice-sun');
+  if(sun){
+    const lift=Math.sin(dayFrac*Math.PI);
+    sun.style.left=(14+dayFrac*68)+'%';
+    sun.style.top=(41-lift*11)+'%';
+    sun.style.opacity=sunVis.toFixed(3);
+  }
+  let nf;if(h>=19)nf=(h-19)/10;else if(h<5)nf=(h+5)/10;else nf=0.5;
+  const moonVis=dk>=0.4?Math.min(1,(dk-0.4)/0.45):0;
+  const moon=document.getElementById('ice-moon');
+  if(moon){
+    const lift=Math.sin(Math.max(0,Math.min(1,nf))*Math.PI);
+    moon.style.left=(18+nf*52)+'%';
+    moon.style.top=(36-lift*12)+'%';
+    moon.style.opacity=moonVis.toFixed(3);
+    moon.classList.toggle('blood', !!blood);
+  }
+  paintIceHorizon();
+}
+function iceRand(seed){
+  let a=seed>>>0;
+  return function(){
+    a|=0;a=a+0x6D2B79F5|0;
+    let t=Math.imul(a^a>>>15,1|a);
+    t=t+Math.imul(t^t>>>7,61|t)^t;
+    return ((t^t>>>14)>>>0)/4294967296;
+  };
+}
+// Size a scenery canvas to its CSS box. Returns null until the overlay has layout.
+function iceCanvasBox(cv){
+  const w=cv.clientWidth, h=cv.clientHeight;
+  if(w<2||h<2)return null;
+  const dpr=Math.min(2, window.devicePixelRatio||1);
+  return {w:w,h:h,dpr:dpr};
+}
+function paintIceScenery(){
+  const a=paintIceSheet(), b=paintIceHorizon();
+  paintIceScenery.ready=!!(a&&b);
+  return paintIceScenery.ready;
+}
+// Snowfield: drifts, a few cracks, boot prints. Painted once per hole (and on
+// resize). Nothing here runs per frame.
+function paintIceSheet(){
+  const cv=document.getElementById('ice-sheet');
+  if(!cv)return false;
+  const box=iceCanvasBox(cv);if(!box)return false;
+  const w=box.w, h=box.h, dpr=box.dpr;
+  const seed=paintIceScenery.seed||7;
+  const key=w+'x'+h+'@'+dpr+'#'+seed;
+  if(cv.dataset.k===key)return true;
+  cv.dataset.k=key;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  const rnd=iceRand(seed);
+  const bg=g.createLinearGradient(0,0,0,h);
+  bg.addColorStop(0,'#8eacbc');
+  bg.addColorStop(0.1,'#b7c9d4');
+  bg.addColorStop(0.28,'#d7e4ec');
+  bg.addColorStop(0.62,'#eef3f6');
+  bg.addColorStop(1,'#f8fbfc');
+  g.fillStyle=bg;g.fillRect(0,0,w,h);
+  // soft hollows and drifts
+  for(let i=0;i<8;i++){
+    const x=rnd()*w, y=h*(0.12+rnd()*0.82);
+    const rx=w*(0.16+rnd()*0.26), ry=22+rnd()*64;
+    const grd=g.createRadialGradient(x,y,8,x,y,Math.max(rx,ry));
+    const dark=rnd()<0.45;
+    grd.addColorStop(0, dark?'rgba(74,108,128,.16)':'rgba(255,255,255,.5)');
+    grd.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle=grd;
+    g.beginPath();g.ellipse(x,y,rx,ry,0,0,6.28);g.fill();
+  }
+  // the hole sits in a shallow dish
+  const hx=w*0.5, hy=h*0.5;
+  const dish=g.createRadialGradient(hx,hy,10,hx,hy,Math.min(w,h)*0.46);
+  dish.addColorStop(0,'rgba(64,98,118,.15)');
+  dish.addColorStop(0.55,'rgba(64,98,118,.04)');
+  dish.addColorStop(1,'rgba(64,98,118,0)');
+  g.fillStyle=dish;g.beginPath();g.ellipse(hx,hy,w*0.36,h*0.32,0,0,6.28);g.fill();
+  // wind-scoured lines, tighter toward the horizon
+  g.lineCap='round';
+  for(let i=0;i<9;i++){
+    const y=h*(0.05+i*i*0.008);
+    g.globalAlpha=0.12+(1-i/9)*0.18;
+    g.strokeStyle='rgba(255,255,255,.8)';
+    g.lineWidth=1;
+    g.beginPath();g.moveTo(0,y);
+    for(let s=1;s<=5;s++){
+      g.quadraticCurveTo(w*(s-0.5)/5, y+(rnd()-0.5)*5, w*s/5, y+(rnd()-0.5)*2.5);
+    }
+    g.stroke();
+  }
+  g.globalAlpha=1;
+  // a couple of longer polished streaks in the foreground
+  g.strokeStyle='rgba(255,255,255,.42)';g.lineWidth=1.6;
+  for(let i=0;i<3;i++){
+    const y=h*(0.58+rnd()*0.3);
+    g.beginPath();g.moveTo(w*rnd()*0.2, y);
+    g.bezierCurveTo(w*0.3, y+(rnd()-0.5)*16, w*0.6, y+(rnd()-0.5)*14, w*(0.75+rnd()*0.2), y+(rnd()-0.5)*8);
+    g.stroke();
+  }
+  function crack(x,y,ang,len,depth){
+    if(depth>2||len<20)return;
+    g.beginPath();g.moveTo(x,y);
+    let cx=x, cy=y, a=ang;
+    const n=2+(rnd()*2|0);
+    const joints=[];
+    for(let i=0;i<n;i++){
+      a+=(rnd()-0.5)*0.7;
+      const L=len*(0.45+rnd()*0.4);
+      cx+=Math.cos(a)*L;cy+=Math.sin(a)*L*0.42;
+      g.lineTo(cx,cy);
+      joints.push([cx,cy,a]);
+    }
+    g.strokeStyle='rgba(236,246,250,.75)';g.lineWidth=1.6;g.stroke();
+    g.strokeStyle='rgba(42,74,94,.45)';g.lineWidth=1;g.stroke();
+    if(depth<2&&rnd()<0.7){
+      const j=joints[(rnd()*joints.length)|0];
+      crack(j[0],j[1],j[2]+(rnd()<0.5?-1:1)*(0.7+rnd()*0.5),len*0.5,depth+1);
+    }
+  }
+  g.lineCap='round';g.lineJoin='round';
+  for(let i=0;i<3;i++)crack(w*(0.18+rnd()*0.64), h*(0.28+rnd()*0.5), (rnd()-0.5)*1.2, 70+rnd()*80, 0);
+  // boot prints walking in from the near left, stopping short of the hole
+  let fx=w*0.1, fy=h*0.93, ang=-0.95;
+  g.fillStyle='rgba(58,92,112,.26)';
+  for(let i=0;i<13;i++){
+    if(Math.hypot(fx-hx, fy-hy)<Math.min(w,h)*0.16)break;
+    const side=i%2?1:-1;
+    g.save();
+    g.translate(fx+Math.cos(ang+1.35)*side*6, fy);
+    g.rotate(ang+Math.PI/2);
+    g.beginPath();g.ellipse(0,0,3.3,6.2,0,0,6.28);g.fill();
+    g.restore();
+    fx+=Math.cos(ang)*17;fy+=Math.sin(ang)*11;
+    ang+=(rnd()-0.5)*0.35;
+    if(fx<0||fy<h*0.2||fx>w)break;
+  }
+  // fine grain, kept faint so it reads as snow and not noise
+  for(let i=0;i<360;i++){
+    g.globalAlpha=0.12+rnd()*0.35;
+    g.fillStyle=rnd()<0.72?'#fff':'rgba(70,104,124,.55)';
+    const s=rnd()<0.86?1.15:1.7;
+    g.fillRect(rnd()*w, rnd()*h, s, s);
+  }
+  g.globalAlpha=1;
+  return true;
+}
+// Mountains and spruce, in real pixels so a narrow phone doesn't squash them
+// into the old stripe of identical trees. Alaska gets the high peaks; Northern
+// ice is a lower, denser treeline.
+function paintIceHorizon(){
+  const cv=document.getElementById('ice-horizon');
+  if(!cv)return false;
+  const box=iceCanvasBox(cv);if(!box)return false;
+  const w=box.w, h=box.h, dpr=box.dpr;
+  const seed=paintIceScenery.seed||7;
+  const phase=(typeof skyState==='function')?skyState(hourNow()).phase:'day';
+  const alaska=iceMode!=='northern';
+  const key=w+'x'+h+'@'+dpr+'#'+seed+'#'+(alaska?'a':'n')+'#'+phase;
+  if(cv.dataset.k===key)return true;
+  cv.dataset.k=key;
+  cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);
+  const g=cv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  g.clearRect(0,0,w,h);
+  const rnd=iceRand(seed^(alaska?0x51A:0x0E7));
+  // Catmull-Rom so the silhouette passes through every summit. Snow caps are
+  // drawn on those same points, which is what keeps them from floating.
+  function ridge(pts, color){
+    const P=pts.map(function(p){return [p[0]*w, p[1]*h];});
+    g.beginPath();
+    g.moveTo(P[0][0], P[0][1]);
+    for(let i=0;i<P.length-1;i++){
+      const p0=P[Math.max(0,i-1)], p1=P[i], p2=P[i+1], p3=P[Math.min(P.length-1,i+2)];
+      g.bezierCurveTo(
+        p1[0]+(p2[0]-p0[0])/6, p1[1]+(p2[1]-p0[1])/6,
+        p2[0]-(p3[0]-p1[0])/6, p2[1]-(p3[1]-p1[1])/6,
+        p2[0], p2[1]);
+    }
+    g.lineTo(w, h+2);g.lineTo(0, h+2);g.closePath();
+    g.fillStyle=color;g.fill();
+  }
+  function caps(pts, minY, color){
+    g.fillStyle=color;
+    for(let i=1;i<pts.length-1;i++){
+      const y=pts[i][1];
+      if(y>minY||y>pts[i-1][1]||y>pts[i+1][1])continue;
+      const x=pts[i][0]*w, py=y*h;
+      const drop=Math.max(10, h*0.085);
+      const lx=x-(x-pts[i-1][0]*w)*0.42;
+      const rx=x+(pts[i+1][0]*w-x)*0.42;
+      g.beginPath();
+      g.moveTo(x, py-1);
+      g.lineTo(lx, py+drop);
+      g.quadraticCurveTo(x, py+drop*0.55, rx, py+drop);
+      g.closePath();g.fill();
+    }
+  }
+  const night=phase==='night', dusk=(phase==='dawn'||phase==='dusk');
+  if(alaska){
+    const far=[[0,.74],[.07,.56],[.14,.66],[.22,.38],[.30,.54],[.38,.26],[.47,.48],[.55,.20],[.64,.46],[.73,.28],[.82,.50],[.90,.32],[1,.62]];
+    ridge(far, night?'#3a5c72':(dusk?'#567e96':'#6d93a8'));
+    caps(far,.42,'rgba(244,250,252,.96)');
+  }
+  const mid=alaska
+    ?[[0,.80],[.09,.64],[.18,.72],[.28,.54],[.38,.68],[.48,.50],[.58,.66],[.68,.52],[.78,.70],[.88,.56],[.95,.68],[1,.78]]
+    :[[0,.70],[.08,.48],[.16,.60],[.26,.40],[.36,.58],[.46,.44],[.56,.62],[.66,.42],[.76,.58],[.86,.46],[.94,.60],[1,.68]];
+  ridge(mid, night?(alaska?'#163044':'#243e52'):(dusk?(alaska?'#243f50':'#3d6278'):(alaska?'#2c4c5e':'#4a7388')));
+  caps(mid, alaska?0.62:0.52, 'rgba(232,242,246,.95)');
+  // Dissolve the ridge into the snowfield. Trees are drawn after this, solid.
+  g.save();
+  g.globalCompositeOperation='destination-out';
+  const fade=g.createLinearGradient(0, h*0.66, 0, h);
+  fade.addColorStop(0,'rgba(0,0,0,0)');
+  fade.addColorStop(1,'rgba(0,0,0,1)');
+  g.fillStyle=fade;g.fillRect(0, h*0.66, w, h*0.34+1);
+  g.restore();
+  function spruce(x, base, ht, col){
+    if(ht<16)return;
+    const tw=ht*0.56;
+    g.fillStyle='rgba(40,70,90,.22)';
+    g.beginPath();g.ellipse(x, base+1, tw*0.34, Math.max(2.5, ht*0.03), 0, 0, 6.28);g.fill();
+    for(let i=0;i<4;i++){
+      const y0=base-ht*(0.94-i*0.2);
+      const y1=base-ht*(0.58-i*0.16);
+      const hw=tw*(0.26+i*0.18);
+      g.fillStyle=col;
+      g.beginPath();g.moveTo(x, y0);g.lineTo(x+hw, y1);g.lineTo(x-hw, y1);g.closePath();g.fill();
+      g.fillStyle='rgba(244,250,252,.92)';
+      g.beginPath();
+      g.moveTo(x, y0+ht*0.015);
+      g.lineTo(x-hw*0.42, y0+(y1-y0)*0.52);
+      g.lineTo(x-hw*0.05, y0+(y1-y0)*0.34);
+      g.closePath();g.fill();
+    }
+    g.fillStyle='#2a1c12';
+    g.fillRect(x-ht*0.022, base-ht*0.08, ht*0.044, ht*0.1);
+  }
+  function snag(x, base, ht){
+    g.strokeStyle='#24180f';g.lineWidth=Math.max(1.4, ht*0.035);g.lineCap='round';
+    g.beginPath();
+    g.moveTo(x, base);g.lineTo(x+1, base-ht);
+    g.moveTo(x+1, base-ht*0.62);g.lineTo(x-ht*0.22, base-ht*0.8);
+    g.moveTo(x, base-ht*0.4);g.lineTo(x+ht*0.2, base-ht*0.55);
+    g.stroke();
+  }
+  // distant blue spruce along the ridge, then a nearer snow-laden row
+  let x=8;
+  while(x<w){
+    const valley=Math.exp(-Math.pow((x/w-0.5)/0.26,2));
+    const ht=Math.min(h*0.42, (28+rnd()*36)*(1-valley*0.4));
+    spruce(x, h*(alaska?0.7:0.64), ht, night?'#122832':'#1a3c4e');
+    x+=alaska?54:36;
+  }
+  if(alaska){
+    const cx=w*0.13, cy=h*0.74;
+    const glow=phase==='night'?1:(phase==='day'?0.18:0.62);
+    if(glow>0.4){
+      const rad=g.createRadialGradient(cx+6, cy-16, 1, cx+6, cy-16, 26);
+      rad.addColorStop(0,'rgba(255,168,64,'+(0.4*glow)+')');
+      rad.addColorStop(1,'rgba(255,168,64,0)');
+      g.fillStyle=rad;g.beginPath();g.arc(cx+6, cy-16, 26, 0, 6.28);g.fill();
+    }
+    g.fillStyle='#1a140f';
+    g.beginPath();
+    g.moveTo(cx-16, cy);g.lineTo(cx+20, cy);g.lineTo(cx+20, cy-16);g.lineTo(cx+2, cy-30);g.lineTo(cx-16, cy-16);
+    g.closePath();g.fill();
+    g.fillStyle='#2a2018';g.fillRect(cx+10, cy-32, 5, 12);
+    g.fillStyle=glow>0.5?'#ffb44a':'#3a2c22';
+    g.fillRect(cx-2, cy-13, 8, 6);
+    g.fillStyle='rgba(40,70,90,.25)';
+    g.beginPath();g.ellipse(cx+2, cy+2, 22, 4, 0, 0, 6.28);g.fill();
+  }
+  x=4;
+  const step0=alaska?40:28;
+  while(x<w){
+    const valley=Math.exp(-Math.pow((x/w-0.52)/0.22,2));
+    let ht=(alaska?48:56)+rnd()*58;
+    ht*=(1-valley*0.7);
+    ht=Math.min(h*0.7, ht);
+    if(alaska&&Math.abs(x-w*0.13)<ht*0.6){x+=step0;continue;}
+    spruce(x, h*0.9, ht, night?'#0c1c16':'#10281f');
+    x+=step0*(0.72+rnd()*0.55);
+  }
+  snag(w*(alaska?0.33:0.2), h*0.9, h*0.28);
+  snag(w*0.8, h*0.9, h*0.22);
+  return true;
 }
 // The line, rod tip to hole. Both ends move (the rod bends on a hookup, and
 // the hole and tip both shift with the viewport) so rather than guess at
@@ -15555,6 +16077,18 @@ function startIceFight(){
   ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
     pad.addEventListener(ev,function(){iceDragging=false;});
   });
+})();
+// Repaint the snow and the treeline when the overlay changes size. The paint
+// bails out unless the pixel size actually changed, so this is not a per-frame cost.
+(function wireIceScenery(){
+  const ov=document.getElementById('ice-overlay');
+  if(!ov||typeof ResizeObserver==='undefined')return;
+  let raf=0;
+  new ResizeObserver(function(){
+    if(!ov.classList.contains('show'))return;
+    cancelAnimationFrame(raf);
+    raf=requestAnimationFrame(function(){paintIceScenery();});
+  }).observe(ov);
 })();
 
 // ═══════════════ FLY FISHING (V0.9.8, recast V0.9.8.1) ═══════════════
