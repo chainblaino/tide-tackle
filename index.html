@@ -2893,6 +2893,8 @@ function startTournamentMode(def){
   }else if(isBounty()){
     const first=activeTournament.bountyList&&activeTournament.bountyList[0];
     toast("Bounty on! Land these "+BOUNTY_GOAL+" species in order"+(first?", starting with "+first.name:"")+". "+_tmin+" min.","#e0a93c");
+    // Then say what the first target eats (and whether the rig on now can take it).
+    if(first){setStatus(bountyRigHint(first));setTimeout(function(){if(isBounty()&&!activeTournament.bountyIdx)showBountyHint();},3200);}
   }else{
     toast("Tournament on! Land the biggest "+(def.targetFish?def.targetFish.name:'fish')+" in "+_tmin+" min.","#e0a93c");
   }
@@ -3014,7 +3016,12 @@ function recordTournamentCatch(fish, weight){
       if(weight>(activeTournament.biggestWeight||0)){activeTournament.biggestWeight=weight;activeTournament.biggestName=fish.name;}
       const next=list[activeTournament.bountyIdx];
       if(activeTournament.bountyIdx>=BOUNTY_GOAL)toast('Bounty complete! '+BOUNTY_GOAL+' / '+BOUNTY_GOAL+'!','#2aa890');
-      else toast('Landed the '+fish.name+'! Next up: '+(next?next.name:'?')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#2aa890');
+      else{
+        toast('Landed the '+fish.name+'! Next up: '+(next?next.name:'?')+' ('+activeTournament.bountyIdx+'/'+BOUNTY_GOAL+').','#2aa890');
+        // The catch card covers the status line for a moment; leave the next
+        // target's rig there for when it closes.
+        if(next)setTimeout(function(){if(_bountyTarget()===next&&phase==='idle')setStatus(bountyRigHint(next));},2200);
+      }
       maybeAwardCannon();
       updateTournBanner();
       publishMyPosition(true);
@@ -3149,23 +3156,33 @@ function endTournament(){
   const body=document.getElementById("modal");
   body.innerHTML="<div style=\"font-size:18px;font-weight:900;color:#e0a93c;text-align:center;margin-bottom:4px;\">"+title+"</div>"
     +"<div style=\"font-size:12px;color:var(--text-soft);text-align:center;margin-bottom:14px;\">"+def.name+"</div>"
-    +entries.slice(0,10).map(function(e, i){
+    // Every angler in the room, not just the top 10: a 15-angler Gone Fishin room
+    // used to drop five rows, and whenever you finished 11th or lower one of them
+    // was yours. The list scrolls instead, and opens on your own row (below).
+    +"<div id=\"tourn-results-list\" style=\"position:relative;max-height:46vh;overflow-y:auto;overscroll-behavior:contain;\">"
+    +entries.map(function(e, i){
       const placeIcon=(i<3)?medalBadge(i):"<span style=\"font-size:13px;width:22px;text-align:center;font-weight:800;color:var(--text-soft);\">"+(i+1)+"</span>";
       const hasRes=variety?(e.count>0):(e.weight>0);
       const prizeTag=(!isLobby&&i<3&&hasRes)?"<span style=\"font-size:12px;font-weight:900;white-space:nowrap;margin-left:6px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> "+goldPrizes[i]+"</span> <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> "+prizes[i]+"</span></span>":"";
       const resTxt=variety?((e.count||0)+(isBounty()?"/"+BOUNTY_GOAL+" species":" species")+(e.weight>0?" · "+e.weight.toFixed(1)+"lb":"")):(e.weight?e.weight.toFixed(1)+"lb":"No catch");
-      return "<div style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#e7dcc7")+";margin-bottom:5px;\">"
+      return "<div"+(e.isPlayer?" data-me=\"1\"":"")+" style=\"display:flex;align-items:center;gap:8px;padding:7px;border-radius:8px;background:var(--parchment);border:1.5px solid "+(e.isPlayer?"var(--accent)":"#e7dcc7")+";margin-bottom:5px;\">"
         +placeIcon
         +"<span style=\"flex:1;font-size:13px;font-weight:700;color:var(--ink);min-width:0;\">"+e.username+"</span>"
         +"<span style=\"font-size:12px;color:var(--text-soft);white-space:nowrap;\">"+resTxt+"</span>"
         +prizeTag+"</div>";
     }).join("")
+    +"</div>"
     +(goldPot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#b8860b;\">You won the pot! <span class=\"coin-s\"></span> +"+goldPot+" gold</div>"
        :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
     +(isLobby
       ? "<div style=\"display:flex;gap:8px;margin-top:14px;\"><button onclick=\"returnToLobbyRoom()\" style=\"flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Back to lobby</button><button onclick=\"leaveLobbyFromResults()\" style=\"flex:1;padding:11px;border-radius:10px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;\">Leave lobby</button></div>"
       : "<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>");
   document.getElementById("modal-bg").classList.add("show");
+  // Open the list on your own row. Scrolls the list box only, never the page.
+  try{
+    const _rl=document.getElementById('tourn-results-list'), _me=_rl&&_rl.querySelector('[data-me]');
+    if(_rl&&_me&&_me.offsetTop+_me.offsetHeight>_rl.clientHeight)_rl.scrollTop=_me.offsetTop-_rl.clientHeight/2;
+  }catch(_e){}
   // Lobby: keep it alive so everyone drops back into the room and the host can run
   // another round. The host re-opens the lobby (status 'open') and resets scores.
   if(isLobby&&_lob){
@@ -10692,15 +10709,73 @@ function liveTournPlace(){
   ids.forEach(function(uid){if(rivals[uid].w>myW)ahead++;});   // ties resolve in the player's favor
   return {place:ahead+1,total:ids.length+1,myW:myW};
 }
+// ---- Bounty rig hint ---------------------------------------------------------
+// The bounty hands you a species list, but Clancy is off mid-match and the shop
+// is locked, so nothing told you what the current target eats: a room could
+// open on a Redear Sunfish with no clue it wants worms on a bobber or bottom rig.
+// Built from Clancy's own helpers, which mirror poolNow(), so it cannot disagree
+// with what actually bites.
+function _bountyTarget(){
+  if(!isBounty())return null;
+  const l=activeTournament.bountyList||[];
+  return l[activeTournament.bountyIdx||0]||null;
+}
+// Can the rig tied on right now catch this fish at all, ignoring the spot?
+function rigCanTake(f){
+  if(!f)return false;
+  const m=curMethod();
+  if(!m||!(f.methods||[]).includes(m.id))return false;
+  if(m.snag)return true;
+  const lure=activeLure();
+  if(lure)return clancyLureWorks(lure, f);
+  if(m.bait||m.id==='troll'){const b=gearGet('baitSel');return b==='sturgeoneggs'||(f.baits||[]).includes(b);}
+  return false;
+}
+function bountyRigHint(f){
+  if(!f)return '';
+  const mids=clancyUsableMethods(f);
+  const names=mids.map(function(mid){const m=METHODS.find(function(x){return x.id===mid;});return m?m.name:mid;});
+  const anyBait=mids.some(function(mid){const m=METHODS.find(function(x){return x.id===mid;});return m&&m.bait;});
+  const anyLure=mids.some(function(mid){const m=METHODS.find(function(x){return x.id===mid;});return m&&!m.bait&&!m.snag&&!m.ice;});
+  const parts=[f.name+': '+(names.join(' or ')||'no method sold here')];
+  const baits=anyBait?clancyBaits(f):[];
+  if(baits.length)parts.push(baits.join(', ').toLowerCase());
+  if(anyLure){const ls=clancyLures(f).slice(0,2).map(function(l){return l.name;});if(ls.length)parts.push(ls.join(' or '));}
+  const spots=[...new Set((f.structure||[]).map(function(s){return FISH_STRUCT_LABEL[s]||(STRUCT_META[s]&&STRUCT_META[s].label)||s;}))];
+  if(spots.length)parts.push('at '+spots.join(', '));
+  if(f.time&&f.time.length&&f.time.indexOf('all')<0)parts.push('best by '+f.time.join('/'));
+  let s=parts.join(' · ')+'.';
+  if(!rigCanTake(f))s+=' Your rig won’t take it: change it on the rig bar below.';
+  return s;
+}
+// Said instead of casting when nothing at this spot takes the rig (see castLine).
+function deadWaterMsg(st){
+  const where=st?('the '+((STRUCT_META[st.kind]&&STRUCT_META[st.kind].label)||structLabel(st.kind))):'open water';
+  const lure=activeLure(), m=curMethod();
+  const rig=lure?lure.name:((m&&(m.bait||m.id==='troll'))?(((BAIT.find(function(b){return b.id===gearGet('baitSel');})||{}).name)||'that bait'):'that rig');
+  const tgt=(typeof isBounty==='function'&&isBounty())?_bountyTarget():null;
+  if(tgt)return 'Nothing at '+where+' takes '+rig+'. No tackle used. '+bountyRigHint(tgt);
+  return 'Nothing at '+where+' takes '+rig+(m?' on '+m.name.toLowerCase():'')+'. Try another spot, bait or method'
+    +(activeTournament?'.':', or tap Clancy for what bites here.')+' No tackle used.';
+}
+function showBountyHint(){
+  const f=_bountyTarget();if(!f)return;
+  const h=bountyRigHint(f);
+  setStatus(h);
+  toast(h, rigCanTake(f)?'#2aa890':'#b58b53');
+}
 function updateTournBanner(){
   const bn=document.getElementById('tourn-banner');if(!bn)return;
+  // Only the bounty banner is tappable (it repeats the rig hint for the target).
+  bn.style.pointerEvents='';bn.style.cursor='';bn.onclick=null;
   if(activeTournament&&activeTournament.def&&activeTournament.def.coop){bn.textContent='FISHING WITH FRIENDS';bn.classList.remove('leading');return;}
   if(isBounty()){
     const list=activeTournament.bountyList||[], idx=activeTournament.bountyIdx||0;
     if(idx>=BOUNTY_GOAL||idx>=list.length){bn.textContent='Bounty complete! '+idx+'/'+BOUNTY_GOAL;bn.classList.add('leading');return;}
     const tgt=list[idx];
-    bn.textContent='Catch: '+(tgt?tgt.name:'?')+'  ·  '+idx+'/'+BOUNTY_GOAL;
+    bn.textContent='Catch: '+(tgt?tgt.name:'?')+'  ·  '+idx+'/'+BOUNTY_GOAL+'  ⓘ';
     bn.classList.toggle('leading',false);
+    bn.style.pointerEvents='auto';bn.style.cursor='pointer';bn.onclick=showBountyHint;
     return;
   }
   if(activeTournament&&activeTournament.limited){
@@ -14874,6 +14949,21 @@ function cast(x, y){
     const ts=nearestStruct(x, y);
     if(!(ts&&tutStructMatches(ts))){toast('Cast right ONTO the spot, tap the structure, not open water.','#b58b53');setStatus('Tap the water right on the structure to cast onto it.');return;}
   }
+  // DEAD WATER. When nothing at this spot will take the rig, poolNow() is empty
+  // and the outcome is already certain: the bite timer used to run for up to 26 s
+  // and then end in "No takers" / "Set your rig and cast again", with tackle (and
+  // a limited-casts cast) already spent. Say so now and spend nothing. A pool
+  // that holds only an ultra keeps the cast: that long shot is a real chance.
+  if(!(tut&&tut.forceTargetActive)&&!_forcedBiteFish){
+    const _prevBob=bobber, _st=nearestStruct(x, y);
+    let _dead=false;
+    if(!(_st&&_st.kind==='crab_trap')){
+      bobber={x, y, active:false, struct:_st};
+      try{const pn=poolNow();_dead=(!pn.out.length||pn.strength<=0)&&!(pn.ultras&&pn.ultras.length);}
+      finally{bobber=_prevBob;}
+    }
+    if(_dead){noteLastCast(_st);setStatus(deadWaterMsg(_st));return;}
+  }
   // consume tackle durability (unless tacklesaver perk; the tooth hook never wears)
   if(tid!=='tooth_hook'&&!(curBoat().perk==='tacklesaver'&&Math.random()<0.12)){
     const inv=S.tackleInv[tid];inv.dur--;if(inv.dur<=0){inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}
@@ -16105,7 +16195,10 @@ function updateTrolling(sp){
     }
   }else if(_trollDrag&&phase==='waiting'){ cancelTrollDrag(true); }
 }
-function structLabel(k){return {dock:'dock',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'pier',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot',runoff:'storm runoff',frenzy:'bird frenzy',colorchange:'color change'}[k]||k;}
+function structLabel(k){return {dock:'dock',grass:'grass flat',oyster:'oyster bar',sand:'sandy bottom',mangrove:'mangrove edge',bridge:'pier',pass:'pass',reef:'reef',wreck:'wreck',ledge:'ledge',rip:'rip',weedline:'weed line',deep:'deep edge',open:'hotspot',runoff:'storm runoff',frenzy:'bird frenzy',colorchange:'color change'}[k]
+  // Freshwater spots are not in the table above; use their display name rather
+  // than the raw id ("Cast by the weedbed" -> "Cast by the hydrilla bed").
+  ||((typeof STRUCT_META!=='undefined'&&STRUCT_META[k]&&STRUCT_META[k].label)?STRUCT_META[k].label.toLowerCase():k);}
 
 // How much longer each rarity makes you wait for a bite. The rarer the fish your
 // rig is dialed in for, the longer it takes one to find your bait.
