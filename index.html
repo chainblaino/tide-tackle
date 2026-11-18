@@ -11781,7 +11781,7 @@ function mtnBake(){
         const amt=0.28+n1*0.2;
         r+=(snow[0]-r)*amt; gc+=(snow[1]-gc)*amt; b+=(snow[2]-b)*amt;
       }
-      const grain=(n2-0.5)*7;
+      const grain=(n2-0.5)*3;
       r+=grain; gc+=grain; b+=grain;
       const R=r<0?0:r>255?255:r|0, G=gc<0?0:gc>255?255:gc|0, B=b<0?0:b>255?255:b|0;
       const i=(y*W+x)*4;
@@ -11791,7 +11791,7 @@ function mtnBake(){
   g.putImageData(img, 0, 0);
   // Soft washes on top of the field, the same way the ice sheet is painted:
   // a distance ramp alone still reads as a band, and these drifts break it.
-  for(let i=0;i<48;i++){
+  for(let i=0;i<14;i++){
     const x=mtnNoise(i*19, 4, 1)*W, y=mtnNoise(7, i*13, 1)*H;
     const d=distAt(x, y);
     if(d<40)continue;
@@ -11843,9 +11843,9 @@ function mtnBake(){
     run.forEach(function(p, i){if(i)g.lineTo(p.x, p.y); else g.moveTo(p.x, p.y);});
     g.stroke();
   });
-  // Cairns where the path is easy to lose, about one per long stretch.
+  // One cairn on a long stretch of trail, not a pile every few steps.
   trailPts.forEach(function(run){
-    for(let i=8;i<run.length;i+=18){
+    for(let i=24;i<run.length;i+=70){
       const p=run[i];
       mtnRock(g, p.x, p.y-2, 3.2, look.winter, i);
       mtnRock(g, p.x+0.4, p.y-6, 2.3, look.winter, i+1);
@@ -11863,65 +11863,39 @@ function mtnBake(){
     }
     return false;
   }
-  // Cobble and scree along the walls, then spruce groves back on the benches.
-  const stepR=gfxLow?26:16;
-  for(let y=stepR;y<H;y+=stepR)for(let x=stepR;x<W;x+=stepR){
+  // A few rocks and a few spruce, set well apart. The benches should read as
+  // open ground, not a scatter of marks.
+  for(let y=70;y<H;y+=72)for(let x=70;x<W;x+=72){
     const d=distAt(x, y);
-    if(d<14||d>96)continue;
+    if(d<28||d>160)continue;
     const hsh=mtnHash(x, y);
-    if(hsh<0.86)continue;
-    const px=x+(hsh-0.5)*stepR, py=y+(mtnHash(y, x)-0.5)*stepR;
-    if(wetAt(px, py))continue;
-    mtnRock(g, px, py, 3.5+hsh*8, look.winter||y<H*0.18, hsh*20);
-  }
-  // A few larger blocks so the gorge has a skyline of its own, not just gravel.
-  for(let y=40;y<H;y+=48)for(let x=40;x<W;x+=48){
-    const d=distAt(x, y);
-    if(d<40||d>420)continue;
-    const hsh=mtnHash(x+3, y+9);
-    if(hsh<0.93)continue;
-    if(wetAt(x, y)||nearTrail(x, y, 18))continue;
-    mtnRock(g, x, y, 11+hsh*8, look.winter||y<H*0.22, hsh*40);
-  }
-  const stepT=gfxLow?32:22;
-  for(let y=stepT;y<H;y+=stepT)for(let x=stepT;x<W;x+=stepT){
-    const d=distAt(x, y);
-    if(d<52||d>360)continue;
-    if(mtnHash((x/110)|0, (y/110)|0)<0.42)continue;
-    const hsh=mtnHash(x, y);
-    if(hsh<0.74)continue;
-    const px=x+(hsh-0.5)*14, py=y+(mtnHash(y, x)-0.5)*14;
-    if(wetAt(px, py)||nearTrail(px, py, 15))continue;
-    const alpine=py<H*0.22;
-    mtnSpruce(g, px, py, 14+hsh*15, look.winter||alpine, hsh*50);
-  }
-  // Grass and flowers on the benches. Winter keeps a few tufts poking through.
-  const stepF=gfxLow?28:16;
-  for(let y=stepF;y<H;y+=stepF)for(let x=stepF;x<W;x+=stepF){
-    const d=distAt(x, y);
-    if(d<70||d>200)continue;
-    const hsh=mtnHash(x+5, y+2);
-    if(hsh<0.62)continue;
+    if(hsh<0.94)continue;
     if(wetAt(x, y))continue;
-    if(!look.winter&&hsh>0.8){
-      g.strokeStyle=hsh>0.9?'rgba(64,96,40,.8)':'rgba(86,118,52,.75)';
-      g.lineWidth=1.2; g.lineCap='round';
-      for(let k=0;k<3;k++){
-        const gx=x+(k-1)*3.2, sway=(hsh-0.5)*2;
-        g.beginPath(); g.moveTo(gx, y+2); g.quadraticCurveTo(gx+sway, y-3, gx+sway*1.4, y-7-k); g.stroke();
-      }
-    }
-    if(look.flowers&&hsh>0.9){
-      const cols=[[228,190,58],[200,86,112],[108,128,198],[232,160,184]];
-      const c=cols[(hsh*4)|0];
+    mtnRock(g, x, y, 8+hsh*6, look.winter||y<H*0.2, hsh*20);
+  }
+  for(let y=50;y<H;y+=90)for(let x=50;x<W;x+=90){
+    const d=distAt(x, y);
+    if(d<60||d>280)continue;
+    if(mtnHash((x/160)|0, (y/160)|0)<0.62)continue;
+    const hsh=mtnHash(x+1, y+3);
+    if(hsh<0.86)continue;
+    if(wetAt(x, y)||nearTrail(x, y, 22))continue;
+    mtnSpruce(g, x, y, 18+hsh*10, look.winter||y<H*0.2, hsh*50);
+  }
+  if(look.flowers){
+    for(let y=80;y<H;y+=110)for(let x=80;x<W;x+=110){
+      const d=distAt(x, y);
+      if(d<90||d>220)continue;
+      const hsh=mtnHash(x+5, y+2);
+      if(hsh<0.78)continue;
+      if(wetAt(x, y))continue;
+      const cols=[[228,190,58],[200,86,112],[108,128,198]];
+      const c=cols[(hsh*3)|0];
       g.fillStyle='rgb('+c[0]+','+c[1]+','+c[2]+')';
-      for(let k=0;k<5;k++){
-        const a=hsh*6+k*1.3;
-        g.beginPath(); g.arc(x+Math.cos(a)*5.5, y+Math.sin(a)*3.6, 2.1+(k%2)*0.5, 0, 6.28); g.fill();
+      for(let k=0;k<3;k++){
+        const a=hsh*6+k*2.1;
+        g.beginPath(); g.arc(x+Math.cos(a)*6, y+Math.sin(a)*4, 2.4, 0, 6.28); g.fill();
       }
-    }else if(look.fall&&hsh>0.88){
-      g.fillStyle='#c4542a';
-      g.beginPath(); g.arc(x, y, 2.2, 0, 6.28); g.fill();
     }
   }
   // A tree on each lake island, which is too small for the grove grid to hit.
@@ -11929,15 +11903,6 @@ function mtnBake(){
     const x=is.cx*W, y=is.cy*H;
     if(!wetAt(x, y))mtnSpruce(g, x, y, 16, look.winter, i+3);
   });
-  // Strata on the walls, so the rock reads as layered and not as a flat wash.
-  g.strokeStyle='rgba(48,40,32,.28)'; g.lineWidth=1;
-  for(let y=20;y<H;y+=14){
-    if(mtnHash(3, y)<0.55)continue;
-    const x0=(mtnHash(y, 1)*W);
-    const d=distAt(x0, y);
-    if(d<30||d>130)continue;
-    g.beginPath(); g.moveTo(x0, y); g.lineTo(x0+10+mtnHash(y, 4)*16, y+1); g.stroke();
-  }
   cv._mw=W; cv._mh=H;
   _mtnCv=cv; _mtnKey=key;
   return cv;
@@ -11982,33 +11947,23 @@ function drawMtnWater(t, sky){
     for(let i=0;i<pts.length;i++){
       const p=pts[i];
       if(p.x<x0||p.x>x1||p.y<y0||p.y>y1)continue;
+      if(i%6!==0)continue;
       const ang=Math.atan2(p.ty, p.tx);
-      ctx.fillStyle='rgba(6,32,40,.15)';
-      ctx.beginPath(); ctx.ellipse(p.x, p.y, Math.max(5, p.w*0.4), 7, ang, 0, 6.28); ctx.fill();
-      ctx.fillStyle='rgba(198,230,220,.16)';
-      ctx.beginPath(); ctx.ellipse(p.x+p.nx*p.w*0.66, p.y+p.ny*p.w*0.66, 9, 4.2, ang, 0, 6.28); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(p.x-p.nx*p.w*0.66, p.y-p.ny*p.w*0.66, 9, 4.2, ang, 0, 6.28); ctx.fill();
       const st=mtnHash(i*3+r*17, r+4);
-      if(st>0.42){
-        const sd=st>0.7?1:-1;
-        const ox=p.x+p.nx*sd*p.w*0.8, oy=p.y+p.ny*sd*p.w*0.8;
-        const rr=1.5+st*2.1;
-        ctx.fillStyle='rgba(96,104,98,.5)';
-        ctx.beginPath(); ctx.ellipse(ox, oy, rr, rr*0.68, st*5, 0, 6.28); ctx.fill();
-        ctx.fillStyle='rgba(255,255,255,.18)';
-        ctx.beginPath(); ctx.ellipse(ox-rr*0.25, oy-rr*0.25, rr*0.4, rr*0.25, 0, 0, 6.28); ctx.fill();
+      if(st>0.94){
+        const sd=st>0.97?1:-1;
+        const ox=p.x+p.nx*sd*p.w*0.78, oy=p.y+p.ny*sd*p.w*0.78;
+        ctx.fillStyle='rgba(96,104,98,.35)';
+        ctx.beginPath(); ctx.ellipse(ox, oy, 3.4, 2.3, ang, 0, 6.28); ctx.fill();
       }
-      if(p.w<36||p.turn>0.28){
+      if(p.turn>0.55){
         ctx.save();
         ctx.translate(p.x, p.y); ctx.rotate(ang);
-        ctx.strokeStyle='rgba(255,255,255,.7)'; ctx.lineWidth=1.35; ctx.lineCap='round'; ctx.lineJoin='round';
-        const slide=((t*30+i*19)%26)-8;
-        for(let k=0;k<2;k++){
-          const ox=k===0?0:slide;
-          ctx.beginPath();
-          ctx.moveTo(ox-3, -4.5); ctx.lineTo(ox+4, 0); ctx.lineTo(ox-3, 4.5);
-          ctx.stroke();
-        }
+        ctx.strokeStyle='rgba(255,255,255,.45)'; ctx.lineWidth=1.4; ctx.lineCap='round';
+        const slide=((t*22+i*13)%30)-10;
+        ctx.beginPath();
+        ctx.moveTo(slide-4, -5); ctx.quadraticCurveTo(slide+6, 0, slide-4, 5);
+        ctx.stroke();
         ctx.restore();
       }
     }
@@ -12023,11 +11978,6 @@ function drawMtnWater(t, sky){
     ctx.fillRect(x0, y0, x1-x0, y1-y0);
   }
 }
-const MTN_SIGN={
-  riffle:'Riffle', tailout:'Tailout', run:'The Run', boulders:'Boulders',
-  undercut:'Undercut', beaverpond:'Beaver Pond', plungepool:'Plunge Pool',
-  springcreek:'Spring Creek', alpinelake:'Alpine Lake', waterfall:'Falls'
-};
 function mtnBridgeAt(){
   const structs=(typeof activeStructures==='function')?activeStructures():[];
   const run=structs.find(function(s){return s.kind==='run';});
@@ -12046,41 +11996,7 @@ function mtnBridgeAt(){
   }
   return br;
 }
-function mtnSigns(){
-  const structs=(typeof activeStructures==='function')?activeStructures():[];
-  const stamp=S.zone+':'+structs.length+':'+(structs[0]?structs[0].x+','+structs[0].y:'');
-  if(mtnSigns._c&&mtnSigns._k===stamp)return mtnSigns._c;
-  const placed=[];
-  structs.forEach(function(s){
-    const label=MTN_SIGN[s.kind];
-    if(!label)return;
-    let best=null;
-    // The alpine lake is a couple of hundred pixels across, so a short probe
-    // never leaves the water. River spots still take the first dry bank.
-    for(let rad=48; rad<=300&&!best; rad+=20){
-      for(let a=0;a<12;a++){
-        const ang=a*(6.283/12)+s.x*0.002;
-        const x=s.x+Math.cos(ang)*rad, y=s.y+Math.sin(ang)*rad;
-        if(isWaterAt(x, y))continue;
-        const isl=islandPathFor(S.zone);
-        if(isl&&_inPathWorld(isl, x, y))continue;
-        if(isWaterAt(x+14, y)||isWaterAt(x-14, y)||isWaterAt(x, y+14)||isWaterAt(x, y-14))continue;
-        let crowded=false;
-        for(let i=0;i<placed.length;i++){
-          if(Math.hypot(placed[i].x-x, placed[i].y-y)<64)crowded=true;
-        }
-        if(crowded)continue;
-        best={x:x, y:y, label:label};
-        break;
-      }
-    }
-    if(best)placed.push(best);
-  });
-  mtnSigns._c=placed; mtnSigns._k=stamp;
-  return placed;
-}
-// Footbridge and the spot signs. World space, under the day/night wash, and
-// not solid: a wader walks under the bridge the same as before.
+// A single log bridge. World space, under the day/night wash, and not solid.
 function drawMtnDressing(t, sky){
   const winter=(typeof seasonNow==='function')&&seasonNow()==='winter';
   const br=mtnBridgeAt();
@@ -12098,26 +12014,6 @@ function drawMtnDressing(t, sky){
     ctx.beginPath(); ctx.moveTo(-len, -8); ctx.lineTo(len, -8); ctx.moveTo(-len, 6); ctx.lineTo(len, 6); ctx.stroke();
     ctx.fillStyle='#3a2816';
     ctx.fillRect(-len-1.5, -12, 3, 22); ctx.fillRect(len-1.5, -12, 3, 22);
-    ctx.restore();
-  }
-  const signs=mtnSigns();
-  for(let i=0;i<signs.length;i++){
-    const s=signs[i];
-    if(s.x<camera.x-50||s.x>camera.x+CW+50||s.y<camera.y-50||s.y>camera.y+CH+50)continue;
-    ctx.save();
-    ctx.translate(s.x, s.y);
-    ctx.fillStyle='rgba(20,14,8,.22)';
-    ctx.beginPath(); ctx.ellipse(2, 8, 9, 3.2, 0, 0, 6.28); ctx.fill();
-    ctx.fillStyle='#5b3f28';
-    ctx.fillRect(-1.6, -16, 3.2, 24);
-    const tw=Math.max(52, s.label.length*6.3+14);
-    ctx.fillStyle=winter?'#f4f1e8':'#f3e4c4';
-    roundRect(ctx, -tw/2, -36, tw, 18, 3); ctx.fill();
-    ctx.strokeStyle='#6b4c30'; ctx.lineWidth=1; ctx.stroke();
-    ctx.fillStyle='#3a2916';
-    ctx.font='700 11px Fredoka, Nunito, sans-serif';
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText(s.label, 0, -27);
     ctx.restore();
   }
 }
@@ -13287,169 +13183,133 @@ else if(s.kind==='crab_trap'){
       ctx.beginPath();ctx.moveTo(x-34+i2*7,y-27);ctx.quadraticCurveTo(x-24+i2*7,y-19,x-16+i2*6,y-9);ctx.stroke();
       ctx.beginPath();ctx.moveTo(x+34-i2*7,y-27);ctx.quadraticCurveTo(x+24-i2*7,y-19,x+16-i2*6,y-9);ctx.stroke();}
 }else if(s.kind==='riffle'){
-    // shallow cobble shelf where the whole current trips and breaks white, bank to bank
-    ctx.fillStyle='rgba(118,116,102,.18)';ctx.beginPath();ctx.ellipse(x, y,46,17,0,0,6.28);ctx.fill();
-    // cobble showing straight through the clear water
-    for(let i=0;i<20;i++){const cx2=x-41+rr(i)*82,cy2=y-12+rr(i+11)*24,cr2=2.2+rr(i+5)*2.3;
-      ctx.fillStyle=['#7e8279','#8f938a','#6d716a'][i%3];ctx.beginPath();ctx.ellipse(cx2,cy2,cr2,cr2*0.76,rr(i+3)*3,0,6.28);ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,.18)';ctx.beginPath();ctx.ellipse(cx2-cr2*0.3,cy2-cr2*0.34,cr2*0.42,cr2*0.28,0,0,6.28);ctx.fill();}
-    // pale turquoise band of aerated water laid over the stones
-    ctx.save();ctx.beginPath();ctx.ellipse(x, y,45,15,0,0,6.28);ctx.clip();
-    ctx.globalAlpha=.42;ctx.fillStyle='#7fc9bd';ctx.fillRect(x-46,y-16,92,32);ctx.globalAlpha=1;
-    ctx.restore();
-    // standing chevrons, apex pointing downstream
-    ctx.strokeStyle='rgba(255,255,255,.65)';ctx.lineWidth=2;ctx.lineCap='round';
-    for(let i=0;i<31;i++){const wx=x-41+rr(i+40)*82,wy=y-12+rr(i+70)*24+Math.sin(t*3.2+i*0.8)*1.1,ww=2+rr(i+100)*2.2;
-      ctx.beginPath();ctx.moveTo(wx-ww, wy-1.5);ctx.lineTo(wx, wy+1.7);ctx.lineTo(wx+ww, wy-1.5);ctx.stroke();}
-    if(dark>0.3){ // moonlight riding the tops of the standing waves
-      ctx.fillStyle='rgba(206,228,240,'+(dark*.4)+')';
-      for(let i=0;i<6;i++){ctx.beginPath();ctx.arc(x-34+i*13,y-6+Math.sin(t*1.5+i)*3,1.3,0,6.28);ctx.fill();}}
+    // A short shelf of clear water. A few stones and two soft foam lines,
+    // not a field of chevrons.
+    const rf=ctx.createRadialGradient(x, y, 4, x, y, 40);
+    rf.addColorStop(0,'rgba(190,220,210,.28)');
+    rf.addColorStop(1,'rgba(190,220,210,0)');
+    ctx.fillStyle=rf; ctx.beginPath(); ctx.ellipse(x, y, 40, 16, 0, 0, 6.28); ctx.fill();
+    for(let i=0;i<5;i++){
+      const cx2=x-22+rr(i)*44, cy2=y-6+rr(i+3)*12, cr2=3.4+rr(i+5)*2;
+      ctx.fillStyle='rgba(110,116,108,.55)';
+      ctx.beginPath(); ctx.ellipse(cx2, cy2, cr2, cr2*0.7, rr(i)*2, 0, 6.28); ctx.fill();
+    }
+    ctx.strokeStyle='rgba(255,255,255,.55)'; ctx.lineWidth=1.6; ctx.lineCap='round';
+    for(let i=0;i<2;i++){
+      const yy=y-4+i*8+Math.sin(t*1.6+i)*1.2;
+      ctx.beginPath(); ctx.moveTo(x-18, yy); ctx.quadraticCurveTo(x, yy+3, x+18, yy); ctx.stroke();
+    }
   }else if(s.kind==='run'){
-    // A run is the most featureless water on the creek and that IS its look: a
-    // touch deeper, a touch slower, one unbroken sheet of flow. The old opaque
-    // green capsule sat on the river like a painted stone; this is the same
-    // shape expressed as depth, so the canyon's water colour still shows.
-    const deep=ctx.createRadialGradient(x, y,6,x, y,42);
-    deep.addColorStop(0,'rgba(6,34,32,.34)');
-    deep.addColorStop(.6,'rgba(8,40,38,.19)');
-    deep.addColorStop(1,'rgba(8,40,38,0)');
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(x-17,y-27);ctx.quadraticCurveTo(x, y-35,x+17,y-27);
-    ctx.quadraticCurveTo(x+21,y, x+15,y+28);ctx.quadraticCurveTo(x, y+35,x-15,y+28);
-    ctx.quadraticCurveTo(x-21,y, x-17,y-27);ctx.closePath();
-    ctx.clip();
-    ctx.fillStyle=deep;ctx.fillRect(x-24,y-38,48,76);
-    // cobble, dimmed by the extra foot of water standing over it
-    for(let i2=0;i2<12;i2++){const cx3=x-16+rr(i2+2)*32,cy3=y-26+rr(i2+14)*52,cr3=1.9+rr(i2+26)*2.1;
-      ctx.fillStyle='rgba(104,118,112,.26)';
-      ctx.beginPath();ctx.ellipse(cx3,cy3,cr3,cr3*0.74,rr(i2+7)*3,0,6.28);ctx.fill();}
-    ctx.restore();
-    // the lip at each end, where the run shallows back up
-    ctx.strokeStyle='rgba(255,255,255,.13)';ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(x-16,y-26);ctx.quadraticCurveTo(x, y-31,x+16,y-26);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(x-15,y+27);ctx.quadraticCurveTo(x, y+32,x+15,y+27);ctx.stroke();
-    // long parallel seams sliding down the lane, the only motion in it
-    ctx.strokeStyle='rgba(255,255,255,.15)';ctx.lineWidth=1.1;ctx.lineCap='round';
-    for(let i2=0;i2<5;i2++){const lx2=x-14+i2*7,dr2=(t*13+i2*17)%56;
+    // Deeper, slower water: one soft pool of shade and two curves of current.
+    const deep=ctx.createRadialGradient(x, y, 4, x, y, 36);
+    deep.addColorStop(0,'rgba(6,30,32,.32)');
+    deep.addColorStop(1,'rgba(6,30,32,0)');
+    ctx.fillStyle=deep; ctx.beginPath(); ctx.ellipse(x, y, 16, 32, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.16)'; ctx.lineWidth=1.2; ctx.lineCap='round';
+    for(let i2=0;i2<2;i2++){
+      const ox=(i2?6:-6)+Math.sin(t*0.5+i2)*1.2;
       ctx.beginPath();
-      ctx.moveTo(lx2+Math.sin(t*0.6+i2)*1.1,y-26+dr2*0.16);
-      ctx.lineTo(lx2-Math.sin(t*0.6+i2)*1.1,y+24);ctx.stroke();}
+      ctx.moveTo(x+ox, y-24);
+      ctx.bezierCurveTo(x+ox+2, y-8, x+ox-2, y+8, x+ox, y+24);
+      ctx.stroke();
+    }
   }else if(s.kind==='plungepool'){
-    // the scoured bowl under a drop, the deepest hole on the whole creek
-    const plG=ctx.createRadialGradient(x, y+3,3,x, y+3,34);
-    plG.addColorStop(0,'#0d3a35');plG.addColorStop(.72,'#1c5049');plG.addColorStop(1,'rgba(28,80,73,0)');
-    ctx.fillStyle=plG;ctx.beginPath();ctx.ellipse(x, y+3,34,27,0,0,6.28);ctx.fill();
-    // the ring where the bed shelves off into the depression
-    ctx.strokeStyle='rgba(143,199,190,.26)';ctx.lineWidth=1.6;ctx.beginPath();ctx.ellipse(x, y+3,25,19,0,0,6.28);ctx.stroke();
-    ctx.strokeStyle='rgba(6,30,27,.4)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(x, y+4.6,25,19,0,0,6.28);ctx.stroke();
-    // white aerated column driving in at the upstream lip
-    const cwob=Math.sin(t*3)*1.1;
-    ctx.fillStyle='rgba(255,255,255,.85)';ctx.beginPath();
-    ctx.moveTo(x-6.5,y-24);ctx.quadraticCurveTo(x-5+cwob, y-15,x-5.5,y-6);
-    ctx.lineTo(x+5.5,y-6);ctx.quadraticCurveTo(x+5+cwob, y-15,x+6.5,y-24);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.55)';ctx.beginPath();ctx.ellipse(x, y-5,11,4.4,0,0,6.28);ctx.fill();
-    // bubbles boiling out of the foam and fading as they drift down
-    for(let i=0;i<12;i++){const bpr=(t*0.4+rr(i))%1,ba=(rr(i+9)-0.5)*2.6;
-      ctx.globalAlpha=(1-bpr)*0.6;ctx.fillStyle='rgba(240,250,250,.9)';
-      ctx.beginPath();ctx.arc(x+Math.sin(ba)*bpr*22,y-4+bpr*24,0.9+bpr*1.3,0,6.28);ctx.fill();}
+    const plG=ctx.createRadialGradient(x, y+2, 3, x, y+2, 36);
+    plG.addColorStop(0,'rgba(8,36,34,.72)');
+    plG.addColorStop(.7,'rgba(16,52,48,.28)');
+    plG.addColorStop(1,'rgba(16,52,48,0)');
+    ctx.fillStyle=plG; ctx.beginPath(); ctx.ellipse(x, y+4, 32, 24, 0, 0, 6.28); ctx.fill();
+    const foam=ctx.createRadialGradient(x, y-10, 2, x, y-8, 16);
+    foam.addColorStop(0,'rgba(255,255,255,.75)');
+    foam.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=foam; ctx.beginPath(); ctx.ellipse(x, y-8, 12, 7, 0, 0, 6.28); ctx.fill();
+    for(let i=0;i<5;i++){const bpr=(t*0.35+rr(i))%1;
+      ctx.globalAlpha=(1-bpr)*0.45; ctx.fillStyle='#f4fafa';
+      ctx.beginPath(); ctx.arc(x+(rr(i+2)-0.5)*16, y-6+bpr*18, 1.2, 0, 6.28); ctx.fill();}
     ctx.globalAlpha=1;
   }else if(s.kind==='undercut'){
-    // An undercut IS the bank, and the land layer already draws the bank, so
-    // the old version painted a second grass-green slab on top of the real one,
-    // at a slightly different green, floating over the water. What is left is
-    // the part the land layer CANNOT draw: the black slot hollowed out beneath
-    // the turf, the roots trailing out of it, and the current shearing past.
+    // A curved sod lip hanging over a cove of dark water, with roots in the shade.
     ctx.save();
-    // the slot: deep shadow cut back under the lip, darkest at the very back
-    const slot=ctx.createLinearGradient(x-10,y, x+12,y);
-    slot.addColorStop(0,'rgba(0,0,0,.62)');
-    slot.addColorStop(.55,'rgba(0,0,0,.34)');
-    slot.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=slot;
+    const cove=ctx.createRadialGradient(x+2, y, 4, x+4, y, 40);
+    cove.addColorStop(0,'rgba(6,14,12,.6)');
+    cove.addColorStop(.62,'rgba(8,20,16,.26)');
+    cove.addColorStop(1,'rgba(8,20,16,0)');
+    ctx.fillStyle=cove;
     ctx.beginPath();
-    ctx.moveTo(x-10,y-30);ctx.quadraticCurveTo(x+2,y-26,x+13,y-16);
-    ctx.quadraticCurveTo(x+16,y, x+13,y+16);
-    ctx.quadraticCurveTo(x+2,y+26,x-10,y+30);ctx.closePath();ctx.fill();
-    // the overhanging lip itself: a hard dark edge, not a coloured slab
-    ctx.strokeStyle='rgba(24,38,26,.75)';ctx.lineWidth=2.6;ctx.lineCap='round';
-    ctx.beginPath();ctx.moveTo(x-11,y-31);ctx.quadraticCurveTo(x-6,y, x-11,y+31);ctx.stroke();
-    // turf breaking over the lip: a fringe of blades, all leaning downstream
-    ctx.lineCap='round';
-    for(let i2=0;i2<14;i2++){const gy=y-29+rr(i2+12)*58,gl=5+rr(i2+24)*5,gs=Math.sin(t*1.2+i2)*1.5;
-      ctx.strokeStyle=['rgba(74,140,78,.85)','rgba(63,122,68,.8)','rgba(86,160,90,.75)'][i2%3];
-      ctx.lineWidth=1.4;
-      ctx.beginPath();ctx.moveTo(x-11+rr(i2)*3,gy);
-      ctx.quadraticCurveTo(x-7+gs*0.4,gy+gl*0.55,x-4+gs, gy+gl);ctx.stroke();}
-    // pale roots hanging out of the cut into the slot: the one bright thing
-    ctx.strokeStyle='rgba(206,194,160,.55)';ctx.lineWidth=.9;
-    for(let i2=0;i2<5;i2++){const ry2=y-20+i2*10+rr(i2+40)*4;
-      ctx.beginPath();ctx.moveTo(x-9,ry2);
-      ctx.quadraticCurveTo(x-2,ry2+3+Math.sin(t*1.1+i2)*1.2,x+5,ry2+7);ctx.stroke();}
-    // the food line: current shearing past the lip, tight to the bank
-    ctx.strokeStyle='rgba(255,255,255,.16)';ctx.lineWidth=1.2;
-    for(let i2=0;i2<3;i2++){const sl=x+14+i2*8,sw2=Math.sin(t*0.8+i2)*1.4;
-      ctx.beginPath();ctx.moveTo(sl+sw2,y-27);ctx.quadraticCurveTo(sl+2,y, sl-sw2,y+27);ctx.stroke();}
+    ctx.moveTo(x-6, y-36);
+    ctx.bezierCurveTo(x+24, y-24, x+18, y-6, x+10, y);
+    ctx.bezierCurveTo(x+18, y+6, x+24, y+24, x-6, y+36);
+    ctx.bezierCurveTo(x+6, y+10, x+6, y-10, x-6, y-36);
+    ctx.closePath(); ctx.fill();
+    const lip=ctx.createLinearGradient(x-28, 0, x+4, 0);
+    lip.addColorStop(0,'#6e9054'); lip.addColorStop(1,'#3c5832');
+    ctx.fillStyle=lip;
+    ctx.beginPath();
+    ctx.moveTo(x-24, y-38);
+    ctx.bezierCurveTo(x-6, y-26, x-2, y-8, x-4, y);
+    ctx.bezierCurveTo(x-2, y+8, x-6, y+26, x-24, y+38);
+    ctx.bezierCurveTo(x-34, y+10, x-34, y-10, x-24, y-38);
+    ctx.closePath(); ctx.fill();
+    ctx.fillStyle='rgba(16,28,16,.42)';
+    ctx.beginPath();
+    ctx.moveTo(x-14, y-32);
+    ctx.bezierCurveTo(x, y-20, x+2, y-6, x, y);
+    ctx.bezierCurveTo(x+2, y+6, x, y+20, x-14, y+32);
+    ctx.bezierCurveTo(x-6, y+8, x-6, y-8, x-14, y-32);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#7aa85c'; ctx.lineWidth=1.3; ctx.lineCap='round';
+    for(let i2=0;i2<5;i2++){
+      const gy=y-26+i2*13, sway=Math.sin(t*1.1+i2)*1.5;
+      ctx.beginPath(); ctx.moveTo(x-18, gy);
+      ctx.quadraticCurveTo(x-14+sway*0.4, gy-5, x-12+sway, gy-9); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(214,198,164,.65)'; ctx.lineWidth=1.1;
+    for(let i2=0;i2<4;i2++){
+      const ry=y-16+i2*11;
+      ctx.beginPath(); ctx.moveTo(x-8, ry);
+      ctx.bezierCurveTo(x-1, ry+2, x+6, ry+5+Math.sin(t*0.7+i2), x+14, ry+9); ctx.stroke();
+    }
     ctx.restore();
   }else if(s.kind==='tailout'){
-    // A tailout is SHALLOW and GLASSY: the whole point is that you can see every
-    // stone on the bed and there is not a ripple to hide you. The old version
-    // painted an opaque bright-teal fan over the canyon, which read as a puddle
-    // of the wrong colour. Now the bed is what you see, under a pale sheen.
+    // A smooth fan: deep at the head, pale and thin where the pool shallows out.
     ctx.save();
     ctx.beginPath();
-    ctx.moveTo(x-30,y-25);ctx.quadraticCurveTo(x, y-30,x+30,y-25);
-    ctx.quadraticCurveTo(x+21,y+6,x+12,y+29);ctx.quadraticCurveTo(x, y+32,x-12,y+29);
-    ctx.quadraticCurveTo(x-21,y+6,x-30,y-25);ctx.closePath();
-    ctx.save();ctx.clip();
-    // shallowing sheet: palest where it is thinnest, at the draw
-    const sh=ctx.createLinearGradient(0,y-26,0,y+30);
-    sh.addColorStop(0,'rgba(255,255,255,.10)');
-    sh.addColorStop(.55,'rgba(238,248,246,.20)');
-    sh.addColorStop(1,'rgba(246,252,250,.34)');
-    ctx.fillStyle=sh;ctx.fillRect(x-32,y-31,64,63);
-    // the bed, right there under your feet
-    for(let i2=0;i2<22;i2++){const cx4=x-28+rr(i2)*56,cy4=y-24+rr(i2+16)*52,cr4=1.7+rr(i2+31)*2.3;
-      ctx.fillStyle=['rgba(122,128,116,.55)','rgba(146,150,138,.5)','rgba(104,110,100,.5)'][i2%3];
-      ctx.beginPath();ctx.ellipse(cx4,cy4,cr4,cr4*0.75,rr(i2+6)*3,0,6.28);ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,.22)';
-      ctx.beginPath();ctx.ellipse(cx4-cr4*0.3,cy4-cr4*0.32,cr4*0.4,cr4*0.26,0,0,6.28);ctx.fill();}
-    // one soft highlight, no chop at all: that is what glassy means
-    ctx.fillStyle='rgba(255,255,255,.13)';
-    ctx.beginPath();ctx.ellipse(x-6,y-7,19,10,-0.35,0,6.28);ctx.fill();
+    ctx.moveTo(x, y-32);
+    ctx.bezierCurveTo(x-30, y-16, x-20, y+8, x-7, y+30);
+    ctx.quadraticCurveTo(x, y+36, x+7, y+30);
+    ctx.bezierCurveTo(x+20, y+8, x+30, y-16, x, y-32);
+    ctx.closePath();
+    ctx.save(); ctx.clip();
+    const sh=ctx.createLinearGradient(0, y-32, 0, y+34);
+    sh.addColorStop(0,'rgba(6,36,40,.4)');
+    sh.addColorStop(.42,'rgba(150,200,190,.16)');
+    sh.addColorStop(1,'rgba(244,250,246,.62)');
+    ctx.fillStyle=sh; ctx.fillRect(x-36, y-36, 72, 76);
+    for(let i2=0;i2<4;i2++){
+      const cx4=x+(rr(i2)-0.5)*22, cy4=y+rr(i2+3)*18, cr4=3.2+rr(i2+5)*1.8;
+      ctx.fillStyle='rgba(118,124,114,.42)';
+      ctx.beginPath(); ctx.ellipse(cx4, cy4, cr4, cr4*0.68, rr(i2)*2, 0, 6.28); ctx.fill();
+    }
     ctx.restore();
-    // the rim where it drops away at the head
-    ctx.strokeStyle='rgba(255,255,255,.20)';ctx.lineWidth=1.2;
-    ctx.beginPath();ctx.moveTo(x-30,y-25);ctx.quadraticCurveTo(x, y-30,x+30,y-25);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    for(let i2=0;i2<3;i2++){
+      const yy=y-4+i2*10+Math.sin(t*1.1+i2)*1.1, w=16-i2*3;
+      ctx.beginPath(); ctx.moveTo(x-w, yy); ctx.quadraticCurveTo(x, yy+3.5, x+w, yy); ctx.stroke();
+    }
     ctx.restore();
-    // fine drift lines converging as the fan pinches down to the next drop
-    ctx.strokeStyle='rgba(255,255,255,.22)';ctx.lineWidth=.9;
-    for(let i2=-2;i2<=2;i2++){ctx.beginPath();
-      ctx.moveTo(x+i2*10.5,y-23);ctx.quadraticCurveTo(x+i2*8,y+4,x+i2*4.5,y+27);ctx.stroke();}
   }else if(s.kind==='boulders'){
-    // a boulder garden: every rock builds a white cushion in front and a soft seat behind
-    for(let i=0;i<7;i++){
-      const bx2=x-33+rr(i)*66,by2=y-30+rr(i+13)*60,br3=6+rr(i+21)*5;
-      // pillow of water stacking up on the upstream face
-      ctx.fillStyle='rgba(255,255,255,.5)';ctx.beginPath();ctx.ellipse(bx2,by2-br3*0.95,br3*0.95,br3*0.42+Math.sin(t*2+i)*0.4,0,0,6.28);ctx.fill();
-      // calm pocket in the lee
-      ctx.fillStyle='rgba(16,54,48,.4)';ctx.beginPath();ctx.ellipse(bx2,by2+br3*1.15,br3*0.82,br3*0.72,0,0,6.28);ctx.fill();
-      // the rock: irregular block, sunlit crown, shadowed lower-right face
-      ctx.fillStyle='#6b7a80';ctx.beginPath();
-      for(let k=0;k<7;k++){const ba2=k*0.897,brr=br3*(0.74+rr(i*9+k)*0.46);
-        if(k===0)ctx.moveTo(bx2+Math.cos(ba2)*brr, by2+Math.sin(ba2)*brr*0.86);else ctx.lineTo(bx2+Math.cos(ba2)*brr, by2+Math.sin(ba2)*brr*0.86);}
-      ctx.closePath();ctx.fill();
-      ctx.save();ctx.clip();
-      ctx.fillStyle='#46545a';ctx.beginPath();ctx.moveTo(bx2-br3,by2+br3*0.25);ctx.lineTo(bx2+br3*1.3,by2-br3*0.7);ctx.lineTo(bx2+br3*1.3,by2+br3*1.3);ctx.lineTo(bx2-br3,by2+br3*1.3);ctx.closePath();ctx.fill();
-      ctx.fillStyle='#8e9ba0';ctx.beginPath();ctx.moveTo(bx2-br3*1.3,by2-br3*1.3);ctx.lineTo(bx2+br3*0.9,by2-br3*1.3);ctx.lineTo(bx2-br3*0.5,by2+br3*0.2);ctx.lineTo(bx2-br3*1.3,by2+br3*0.2);ctx.closePath();ctx.fill();
-      ctx.restore();
-      ctx.strokeStyle='rgba(26,38,42,.55)';ctx.lineWidth=1;ctx.beginPath();
-      for(let k=0;k<7;k++){const ba3=k*0.897,brr2=br3*(0.74+rr(i*9+k)*0.46);
-        if(k===0)ctx.moveTo(bx2+Math.cos(ba3)*brr2,by2+Math.sin(ba3)*brr2*0.86);else ctx.lineTo(bx2+Math.cos(ba3)*brr2,by2+Math.sin(ba3)*brr2*0.86);}
-      ctx.closePath();ctx.stroke();
-      // spray flicking off the cushion
-      ctx.fillStyle='rgba(255,255,255,.55)';
-      ctx.beginPath();ctx.arc(bx2-br3*0.4,by2-br3*1.25+Math.sin(t*3+i*1.7)*1.2,1.1,0,6.28);ctx.fill();}
+    // Four rounded stones, each with a soft cushion of water. The solid
+    // circle that stops a wader is unchanged.
+    const rocks=[[-12,-8,11],[14,-4,9],[-4,12,8],[10,10,6]];
+    for(let i=0;i<rocks.length;i++){
+      const bx2=x+rocks[i][0], by2=y+rocks[i][1], br3=rocks[i][2];
+      ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.beginPath(); ctx.ellipse(bx2, by2-br3*0.85, br3*0.8, br3*0.32, 0, 0, 6.28); ctx.fill();
+      const rg=ctx.createRadialGradient(bx2-br3*0.3, by2-br3*0.3, 2, bx2, by2, br3);
+      rg.addColorStop(0,'#a8b0b4'); rg.addColorStop(1,'#5c686e');
+      ctx.fillStyle=rg;
+      ctx.beginPath(); ctx.ellipse(bx2, by2, br3, br3*0.78, 0.3+i*0.2, 0, 6.28); ctx.fill();
+    }
   }else if(s.kind==='beaverpond'){
     // slack water backed up behind a stick dam: round, dark and dead flat
     const bvG=ctx.createRadialGradient(x-6,y-8,5,x, y-2,37);
@@ -13458,13 +13318,11 @@ else if(s.kind==='crab_trap'){
     ctx.strokeStyle='rgba(8,24,20,.45)';ctx.lineWidth=1.4;ctx.stroke();
     // a perfect reflection, because nothing here is moving
     ctx.save();ctx.beginPath();ctx.ellipse(x, y-2,35,31,0,0,6.28);ctx.clip();
-    ctx.fillStyle='rgba(30,70,52,.32)';ctx.beginPath();ctx.moveTo(x+14,y-30);ctx.lineTo(x+20,y+8);ctx.lineTo(x+8,y+8);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(196,220,226,.13)';
-    for(let i=0;i<4;i++)ctx.fillRect(x-36,y-24+i*11+Math.sin(t*0.4+i)*0.5,72,3);
-    ctx.fillStyle='rgba(214,232,236,.10)';ctx.beginPath();ctx.ellipse(x-11,y-13,15,8,-0.3,0,6.28);ctx.fill();
+    ctx.fillStyle='rgba(214,232,236,.12)';
+    ctx.beginPath(); ctx.ellipse(x-8, y-10, 16, 7, -0.3, 0, 6.28); ctx.fill();
     ctx.restore();
-    // the dam itself, sticks crossed and jammed across the downstream end
-    for(let i=0;i<15;i++){const dx2=x-30+rr(i+50)*60,dy2=y+24+rr(i+65)*10,da=(rr(i+80)-0.5)*2.2,dl=5+rr(i+95)*4;
+    // the dam itself, a short arc of sticks across the downstream end
+    for(let i=0;i<8;i++){const dx2=x-22+rr(i+50)*44,dy2=y+22+rr(i+65)*8,da=(rr(i+80)-0.5)*1.4,dl=5+rr(i+95)*3;
       ctx.strokeStyle='rgba(0,0,0,.3)';ctx.lineWidth=2.6;ctx.lineCap='round';
       ctx.beginPath();ctx.moveTo(dx2-Math.cos(da)*dl, dy2-Math.sin(da)*dl+1.4);ctx.lineTo(dx2+Math.cos(da)*dl, dy2+Math.sin(da)*dl+1.4);ctx.stroke();
       ctx.strokeStyle='#6b4b2c';ctx.lineWidth=2.2;
@@ -13472,82 +13330,66 @@ else if(s.kind==='crab_trap'){
       if(i%3===0){ctx.strokeStyle='rgba(190,166,124,.5)';ctx.lineWidth=.8;
         ctx.beginPath();ctx.moveTo(dx2, dy2);ctx.lineTo(dx2+Math.cos(da)*dl, dy2+Math.sin(da)*dl);ctx.stroke();}}
     // gnawed stumps left standing on the bank
-    for(let i=0;i<3;i++){const stx=x-30+i*13+rr(i+7)*6,sty=y-32-rr(i+3)*5;
-      ctx.fillStyle='#5b4128';ctx.fillRect(stx-2.4,sty,4.8,6);
-      ctx.fillStyle='#d8caa4';ctx.beginPath();ctx.moveTo(stx-2.4,sty);ctx.lineTo(stx, sty-4.2);ctx.lineTo(stx+2.4,sty);ctx.closePath();ctx.fill();
-      ctx.strokeStyle='rgba(120,96,58,.6)';ctx.lineWidth=.7;ctx.stroke();}
+    for(let i=0;i<2;i++){const stx=x-16+i*14,sty=y-30;
+      ctx.fillStyle='#5b4128'; ctx.beginPath(); ctx.ellipse(stx, sty+2, 2.2, 3.2, 0, 0, 6.28); ctx.fill();
+      ctx.fillStyle='#d8caa4'; ctx.beginPath(); ctx.ellipse(stx, sty-2, 2.4, 1.4, 0, 0, 6.28); ctx.fill();}
     if(dark>0.3){ // the moon sits whole on water this still
       ctx.fillStyle='rgba(226,240,246,'+(dark*.3)+')';ctx.beginPath();ctx.ellipse(x+4,y-16,7,3.4,0,0,6.28);ctx.fill();}
   }else if(s.kind==='springcreek'){
-    // a chalk spring: gin-clear water over white marl, weed combed flat by the push
-    ctx.fillStyle='#e2ddc9';ctx.beginPath();ctx.ellipse(x, y,29,37,0,0,6.28);ctx.fill();
-    // mottling in the marl bed
-    for(let i=0;i<11;i++){const mx2=x-24+rr(i)*48,my2=y-31+rr(i+13)*62;
-      ctx.fillStyle=i%2?'rgba(255,255,255,.55)':'rgba(198,190,164,.5)';
-      ctx.beginPath();ctx.ellipse(mx2,my2,4+rr(i+22)*4,3+rr(i+33)*3,rr(i+9)*3,0,6.28);ctx.fill();}
-    // the water itself is barely there
-    ctx.save();ctx.globalAlpha=.4;ctx.fillStyle='#a9e0d4';ctx.beginPath();ctx.ellipse(x, y,30,38,0,0,6.28);ctx.fill();ctx.restore();
-    // ranunculus ribbons, every one of them streaming downstream
-    ctx.lineCap='round';
-    for(let i=0;i<10;i++){const wx2=x-23+rr(i+40)*46,wy2=y-30+rr(i+55)*32,wl=14+rr(i+70)*15,ws=Math.sin(t*1.1+i*0.9)*2.6;
-      ctx.strokeStyle='#4fae5f';ctx.lineWidth=2.6;
-      ctx.beginPath();ctx.moveTo(wx2,wy2);ctx.quadraticCurveTo(wx2+ws*0.5,wy2+wl*0.55,wx2+ws, wy2+wl);ctx.stroke();
-      ctx.strokeStyle='rgba(158,226,158,.55)';ctx.lineWidth=.8;
-      ctx.beginPath();ctx.moveTo(wx2+ws*0.3,wy2+wl*0.3);ctx.lineTo(wx2+ws, wy2+wl);ctx.stroke();}
-    // a couple of sand boils where the spring actually comes up
-    ctx.strokeStyle='rgba(255,255,255,.35)';ctx.lineWidth=1;
-    for(let i=0;i<2;i++){ctx.beginPath();ctx.arc(x-10+i*20,y+6-i*16,3.5+Math.sin(t*1.8+i)*1.2,0,6.28);ctx.stroke();}
+    const bed=ctx.createRadialGradient(x, y-6, 4, x, y, 36);
+    bed.addColorStop(0,'rgba(236,232,214,.55)');
+    bed.addColorStop(1,'rgba(186,210,200,0)');
+    ctx.fillStyle=bed; ctx.beginPath(); ctx.ellipse(x, y, 26, 34, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle='#4fae62'; ctx.lineWidth=2; ctx.lineCap='round';
+    for(let i=0;i<4;i++){
+      const wx2=x-12+i*8, ws=Math.sin(t*1.1+i)*2;
+      ctx.beginPath(); ctx.moveTo(wx2, y-16);
+      ctx.quadraticCurveTo(wx2+ws, y, wx2+ws*0.6, y+18); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(255,255,255,.4)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(x, y-4, 3+Math.sin(t*1.6)*0.8, 0, 6.28); ctx.stroke();
   }else if(s.kind==='alpinelake'){
-    // a cirque lake, far bigger and far colder than anything down on the creek
-    ctx.fillStyle='#8fc7d8';ctx.beginPath();ctx.ellipse(x, y,58,46,0,0,6.28);ctx.fill();
-    ctx.strokeStyle='rgba(226,240,246,.3)';ctx.lineWidth=1.2;ctx.stroke();
-    const alG=ctx.createRadialGradient(x+2,y+2,7,x, y,54);
-    alG.addColorStop(0,'#0b2440');alG.addColorStop(.78,'#1d4f7a');alG.addColorStop(1,'rgba(29,79,122,0)');
-    ctx.fillStyle=alG;ctx.beginPath();ctx.ellipse(x, y,53,41,0,0,6.28);ctx.fill();
-    // granite scree spilling down the shoreline side
-    for(let i=0;i<12;i++){const gx2=x-64+rr(i)*24,gy2=y-38+rr(i+17)*76,gr=2+rr(i+29)*2.8;
-      ctx.fillStyle='rgba(0,0,0,.18)';ctx.beginPath();ctx.ellipse(gx2+1,gy2+1.4,gr, gr*0.7,0,0,6.28);ctx.fill();
-      ctx.fillStyle=['#9aa2a4','#b4bcbc','#7f8789'][i%3];ctx.beginPath();
-      ctx.moveTo(gx2-gr, gy2+gr*0.6);ctx.lineTo(gx2-gr*0.3,gy2-gr);ctx.lineTo(gx2+gr, gy2-gr*0.1);ctx.lineTo(gx2+gr*0.4,gy2+gr*0.8);ctx.closePath();ctx.fill();
-      ctx.fillStyle='rgba(255,255,255,.2)';ctx.beginPath();ctx.arc(gx2-gr*0.3,gy2-gr*0.3,gr*0.35,0,6.28);ctx.fill();}
-    // slow cold swell across the open water
-    ctx.strokeStyle='rgba(190,222,236,.14)';ctx.lineWidth=1.4;
-    for(let i=0;i<3;i++){ctx.beginPath();
-      for(let k=-44;k<=44;k+=8)ctx.lineTo(x+k, y-18+i*18+Math.sin(k*0.06+t*0.8+i)*2.4);ctx.stroke();}
-    if(dark>0.3){ // a thin cold sheen sits on the surface after dark
-      const alN=ctx.createLinearGradient(x-40,y-30,x+34,y+26);
-      alN.addColorStop(0,'rgba(178,212,232,0)');alN.addColorStop(.5,'rgba(178,212,232,'+(dark*.22)+')');alN.addColorStop(1,'rgba(178,212,232,0)');
-      ctx.fillStyle=alN;ctx.beginPath();ctx.ellipse(x, y,53,41,0,0,6.28);ctx.fill();}
+    // The lake itself is the shoreline. This is only the deep middle of it.
+    const alG=ctx.createRadialGradient(x, y, 6, x, y, 48);
+    alG.addColorStop(0,'rgba(8,28,48,.45)');
+    alG.addColorStop(.7,'rgba(16,48,72,.12)');
+    alG.addColorStop(1,'rgba(16,48,72,0)');
+    ctx.fillStyle=alG; ctx.beginPath(); ctx.ellipse(x, y, 46, 34, 0, 0, 6.28); ctx.fill();
+    ctx.strokeStyle='rgba(200,224,234,.16)'; ctx.lineWidth=1.2;
+    ctx.beginPath();
+    for(let k=-30;k<=30;k+=6) ctx.lineTo(x+k, y+Math.sin(k*0.08+t*0.6)*2);
+    ctx.stroke();
   }else if(s.kind==='waterfall'){
-    // a hard drop: wet rock lip, a white curtain, and a boiling apron underneath
-    ctx.fillStyle='rgba(8,42,42,.45)';ctx.beginPath();ctx.ellipse(x, y+20,26,16,0,0,6.28);ctx.fill();
-    // the wet ledge the water comes off
-    ctx.fillStyle='#1f2729';ctx.beginPath();ctx.moveTo(x-34,y-23);ctx.lineTo(x+34,y-26);ctx.lineTo(x+34,y-13);ctx.lineTo(x-34,y-10);ctx.closePath();ctx.fill();
-    ctx.fillStyle='#3a4446';ctx.beginPath();ctx.moveTo(x-34,y-26);ctx.lineTo(x+34,y-29);ctx.lineTo(x+34,y-20);ctx.lineTo(x-34,y-17);ctx.closePath();ctx.fill();
-    ctx.fillStyle='rgba(200,218,220,.2)';ctx.beginPath();ctx.moveTo(x-34,y-26);ctx.lineTo(x+34,y-29);ctx.lineTo(x+34,y-26.5);ctx.lineTo(x-34,y-23.5);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='rgba(18,30,32,.6)';ctx.lineWidth=.8;
-    for(let i=0;i<4;i++){const kx=x-24+i*16;ctx.beginPath();ctx.moveTo(kx, y-26);ctx.lineTo(kx+2,y-12);ctx.stroke();}
-    // three overlapping tapered strands of falling water
-    for(let i=0;i<3;i++){const fcx=x-9+i*9,ftop=6+rr(i)*2,fbot=3.2+rr(i+4)*1.4,fwob=Math.sin(t*2.6+i*1.9)*1.2;
-      ctx.fillStyle='rgba(255,255,255,.9)';ctx.beginPath();
-      ctx.moveTo(fcx-ftop, y-24);ctx.quadraticCurveTo(fcx-fbot+fwob, y-8,fcx-fbot+fwob, y+7);
-      ctx.lineTo(fcx+fbot+fwob, y+7);ctx.quadraticCurveTo(fcx+fbot+fwob, y-8,fcx+ftop, y-24);ctx.closePath();ctx.fill();
-      ctx.strokeStyle='rgba(196,224,228,.5)';ctx.lineWidth=.8;
-      ctx.beginPath();ctx.moveTo(fcx, y-22);ctx.lineTo(fcx+fwob, y+6);ctx.stroke();}
-    // heavy froth where it lands
-    ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.ellipse(x, y+8,17,6.5,0,0,6.28);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.4)';ctx.beginPath();ctx.ellipse(x, y+11,23,9.5,0,0,6.28);ctx.fill();
-    // bubble plume washing out downstream and fading
-    for(let i=0;i<14;i++){const wp2=(t*0.5+rr(i+11))%1;
-      ctx.globalAlpha=(1-wp2)*0.65;ctx.fillStyle='rgba(245,252,252,.9)';
-      ctx.beginPath();ctx.arc(x+(rr(i+27)-0.5)*32*(0.35+wp2),y+9+wp2*25,0.9+wp2*1.5,0,6.28);ctx.fill();}
-    ctx.globalAlpha=1;
-    // mist hanging over the plunge
-    const wmG=ctx.createRadialGradient(x, y-2,2,x, y-2,22);
-    wmG.addColorStop(0,'rgba(232,244,244,'+(0.26+Math.sin(t*0.9)*0.05)+')');wmG.addColorStop(1,'rgba(232,244,244,0)');
-    ctx.fillStyle=wmG;ctx.beginPath();ctx.ellipse(x, y-2,22,17,0,0,6.28);ctx.fill();
-    if(dark>0.3){ // after dark the curtain is the only part of it you can see
-      ctx.fillStyle='rgba(216,236,244,'+(dark*.28)+')';ctx.beginPath();ctx.ellipse(x, y-6,14,20,0,0,6.28);ctx.fill();}
+    ctx.fillStyle='rgba(8,36,36,.35)'; ctx.beginPath(); ctx.ellipse(x, y+16, 24, 12, 0, 0, 6.28); ctx.fill();
+    const lip=ctx.createLinearGradient(0, y-28, 0, y-8);
+    lip.addColorStop(0,'#4a5658'); lip.addColorStop(1,'#1e282a');
+    ctx.fillStyle=lip;
+    ctx.beginPath();
+    ctx.moveTo(x-30, y-16);
+    ctx.quadraticCurveTo(x, y-30, x+30, y-14);
+    ctx.quadraticCurveTo(x+18, y-8, x, y-12);
+    ctx.quadraticCurveTo(x-18, y-8, x-30, y-16);
+    ctx.closePath(); ctx.fill();
+    for(let i=0;i<3;i++){
+      const fcx=x-8+i*8, wob=Math.sin(t*2.2+i)*1.4;
+      const strand=ctx.createLinearGradient(0, y-18, 0, y+8);
+      strand.addColorStop(0,'rgba(255,255,255,.85)');
+      strand.addColorStop(1,'rgba(255,255,255,.15)');
+      ctx.fillStyle=strand;
+      ctx.beginPath();
+      ctx.moveTo(fcx-4, y-16);
+      ctx.quadraticCurveTo(fcx-2+wob, y-4, fcx-2+wob, y+8);
+      ctx.lineTo(fcx+2+wob, y+8);
+      ctx.quadraticCurveTo(fcx+2+wob, y-4, fcx+4, y-16);
+      ctx.closePath(); ctx.fill();
+    }
+    const apron=ctx.createRadialGradient(x, y+8, 2, x, y+8, 18);
+    apron.addColorStop(0,'rgba(255,255,255,.7)');
+    apron.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=apron; ctx.beginPath(); ctx.ellipse(x, y+8, 16, 7, 0, 0, 6.28); ctx.fill();
+    const wmG=ctx.createRadialGradient(x, y, 2, x, y, 20);
+    wmG.addColorStop(0,'rgba(232,244,244,.22)'); wmG.addColorStop(1,'rgba(232,244,244,0)');
+    ctx.fillStyle=wmG; ctx.beginPath(); ctx.ellipse(x, y, 18, 14, 0, 0, 6.28); ctx.fill();
   }
     ctx.restore();
 }
