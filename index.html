@@ -2917,11 +2917,33 @@ function cancelLobby(){
   clearInterval(lobbyInt);
   if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
   if(activeLobby){
-    S.gold+=activeLobby.def.fee;updatePills();queueSave();
+    {const _rf=coinField(matchWorld(activeLobby.def));S[_rf]=(S[_rf]||0)+activeLobby.def.fee;}updatePills();queueSave();
     toast("Entry refunded.","#2aa890");
   }
   activeLobby=null;
   document.getElementById("lobby-overlay").style.display="none";
+}
+// ---- Shop while waiting for an online match ----------------------------------
+// The shop stocks the LOBBY's world and region, not the one you are standing in:
+// what you buy while you wait is for that match. Every shop helper (catalog,
+// region stock, wallet, loadout) reads the world from S.zone, so the lobby's zone
+// is swapped in only for the length of a shop render or purchase, then put back.
+let _shopZoneSwapped=false;
+function waitingLobbyZone(){
+  const vis=function(id){const el=document.getElementById(id);return !!(el&&el.style.display==='flex');};
+  if(activeLobby&&!activeTournament&&vis('lobby-overlay'))return (activeLobby.def.zone|0);
+  if(vis('session-overlay')){
+    if(gameLobby&&!gameLobby.started&&gameLobby.settings)return (gameLobby.settings.zone|0);
+    if(activeSession&&!activeSession.started&&activeSession.zone!=null)return (activeSession.zone|0);
+  }
+  return null;
+}
+function withLobbyShopZone(fn){
+  const z=waitingLobbyZone();
+  if(_shopZoneSwapped||z===null||z===(S.zone|0))return fn();
+  const real=S.zone;S.zone=z;_shopZoneSwapped=true;
+  try{return fn();}
+  finally{S.zone=real;_shopZoneSwapped=false;updatePills();if(typeof updateRigBar==='function')updateRigBar();}
 }
 function openShopFromLobby(){
   document.querySelectorAll(".menu-tab").forEach(function(t){t.classList.remove("active");});
@@ -3019,7 +3041,7 @@ function acceptInvite(){
   const inv=_pendingInvite;_pendingInvite=null;closeModal();removeInvite(inv);
   if(activeTournament){toast('Finish your current match first.','#b58b53');return;}
   if(activeLobby){ // leave the current tournament lobby (refund) to join your friend's
-    clearInterval(lobbyInt);S.gold+=activeLobby.def.fee;updatePills();queueSave();activeLobby=null;
+    clearInterval(lobbyInt);{const _rf=coinField(matchWorld(activeLobby.def));S[_rf]=(S[_rf]||0)+activeLobby.def.fee;}updatePills();queueSave();activeLobby=null;
     if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
     document.getElementById('lobby-overlay').style.display='none';
   }
@@ -18558,7 +18580,8 @@ function shopSubChips(opts, sel, parent){
     return '<div class="shop-tab '+(sel===o[0]?'active':'')+'" style="font-size:11.5px;" data-ssub="'+parent+'" data-sval="'+o[0]+'">'+o[1]+'</div>';
   }).join('')+'</div>';
 }
-function renderShop(){
+function renderShop(){return withLobbyShopZone(_renderShopNow);}
+function _renderShopNow(){
   const wg=document.getElementById('wallet-gold');if(wg)wg.textContent=coinGet().toLocaleString();
   const wi=document.getElementById('wallet-coin-icon');if(wi)wi.className=isFresh()?'cash-s':'coin-s';
   const wr=document.getElementById('wallet-rubies');if(wr)wr.textContent=S.rubies||0;
@@ -18746,7 +18769,8 @@ function renderShop(){
 }
 
 document.getElementById('shop-tabs').addEventListener('click',e=>{const t=e.target.closest('.shop-tab');if(!t)return;shopTab=t.dataset.stab;renderShop();});
-document.getElementById('shop-list').addEventListener('click',e=>{
+document.getElementById('shop-list').addEventListener('click',e=>withLobbyShopZone(function(){_shopListClick(e);}));
+function _shopListClick(e){
   const item=e.target.closest('.shop-item');if(!item)return;
   const kind=item.dataset.kind, id=item.dataset.id;
   if(kind==='tackle'){const t=tackleById(id);if(t.reward){toast('Earned by catching '+(t.rewardName||'an Ultra Legendary')+'.','#b58b53');return;}
@@ -18824,13 +18848,13 @@ document.getElementById('shop-list').addEventListener('click',e=>{
     // Buying a smaller boat can strand you past its range. Clamp INSIDE the
     // current world - obj.maxZone is already an absolute zone index (0-2 salt,
     // 3-5 fresh), so this never hops worlds.
-    if(kind==='boat'&&S.zone>obj.maxZone){S.zone=Math.max(worldZoneLo(), obj.maxZone);ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
+    if(kind==='boat'&&!_shopZoneSwapped&&S.zone>obj.maxZone){S.zone=Math.max(worldZoneLo(), obj.maxZone);ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();}
     // Losing the fly combo while standing in the Mountains walks you back down.
-    if((kind==='rod'||kind==='reel')&&S.zone===6&&!hasFlyCombo()){S.zone=5;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();toast('Without a fly combo you head back down out of the mountains.','#b58b53');}
+    if((kind==='rod'||kind==='reel')&&!_shopZoneSwapped&&S.zone===6&&!hasFlyCombo()){S.zone=5;ensureRig();initStructures();clearSightFish();initWorld('center',true);updateDriveUI();toast('Without a fly combo you head back down out of the mountains.','#b58b53');}
   }
   updateRigBar();renderShop();queueSave();
   checkAchievements();
-});
+}
 
 function renderStats(){
   const nameEl=document.querySelector('.angler-name');if(nameEl)nameEl.textContent=(fbUsername&&fbUsername!=='Guest'?fbUsername:'Guest')+' Stats';
