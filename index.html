@@ -1389,7 +1389,7 @@
     <div class="tourn-standings" id="tourn-standings"></div>
 <!-- Co op controls: stacked on the right edge, clear of the Pull Anchor button (top:52) and the joystick (bottom-left). -->
 <button id="map-btn" onclick="openCoopMap()" style="display:none;position:absolute;top:100px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #7fb8e3;background:linear-gradient(135deg,#3a8fd4,#1d5e9c);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #14406c;touch-action:manipulation;white-space:nowrap;">Map</button>
-<button id="coop-exit" onclick="leaveSession(false)" style="display:none;position:absolute;top:146px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #f2a0ac;background:linear-gradient(135deg,#e0344e,#a3132a);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #6c0a1a;touch-action:manipulation;white-space:nowrap;">Leave World</button>
+<button id="coop-exit" onclick="leaveMatch()" style="display:none;position:absolute;top:146px;right:10px;z-index:9;padding:8px 13px;border-radius:11px;border:2px solid #f2a0ac;background:linear-gradient(135deg,#e0344e,#a3132a);color:#fff;font-family:'Fredoka';font-size:12.5px;font-weight:800;cursor:pointer;box-shadow:0 3px 0 #6c0a1a;touch-action:manipulation;white-space:nowrap;">Leave World</button>
 
 <!-- Live co op map overlay -->
 <div id="coop-map-bg" onclick="if(event.target===this)closeCoopMap()" style="display:none;position:fixed;inset:0;z-index:60;background:rgba(8,18,30,.78);align-items:center;justify-content:center;backdrop-filter:blur(2px);">
@@ -3101,7 +3101,8 @@ function startTournamentMode(def){
   const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
   _bn.textContent=def.coop?'FISHING WITH FRIENDS':(def.limited?'LIMITED CASTS':(def.session?'CHALLENGE IN PROGRESS':(isBounty()?'BOUNTY':'TOURNAMENT IN PROGRESS')));_bn.classList.remove('leading');
   // Friends sessions (co op / challenge) skip bots and customise the banner.
-  const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display=def.coop?'block':'none';
+  // Every match can be left (see leaveMatch): co op leaves the world, the rest forfeit.
+  const coopExit=document.getElementById('coop-exit');if(coopExit){coopExit.style.display='block';coopExit.textContent=def.coop?'Leave World':'Leave Match';}
   // Tournaments & challenges get an EMPTY discovery map you fill in by exploring.
   if(!def.coop){const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display=(def.lobby&&!def.mapsOn)?'none':'block';tourn._trail=[];}
   const _tmin=def.timeLimitMin||6;
@@ -3151,7 +3152,7 @@ function startCoopMode(def){
   closeMenu();               // shop stays open: we do NOT add 'tourn-active'
   const _bn=document.getElementById("tourn-banner");_bn.style.display="block";
   _bn.textContent='FISHING WITH FRIENDS';_bn.classList.remove('leading');
-  const coopExit=document.getElementById('coop-exit');if(coopExit)coopExit.style.display='block';
+  const coopExit=document.getElementById('coop-exit');if(coopExit){coopExit.style.display='block';coopExit.textContent='Leave World';}
   const mapBtn=document.getElementById('map-btn');if(mapBtn)mapBtn.style.display='block';
   toast('Fishing with friends! Roam any zone together, same spots for everyone.','#2aa890');
   if(typeof questEvent==='function')questEvent('coopJoin'); // quest: fish with a friend
@@ -3319,6 +3320,7 @@ function endTournament(){
   stopTournamentSync();
   tourn.active=false;tourn.ghosts=[];tourn.structs=[];tourn._leaderBots=null;tourn._trail=null;
   const _mb=document.getElementById('map-btn');if(_mb)_mb.style.display='none';closeCoopMap();
+  const _lx=document.getElementById('coop-exit');if(_lx)_lx.style.display='none';
   initStructures();clearSightFish();initWorld('center',true);updateDriveUI();updateRigBar();
   document.getElementById("tourn-banner").style.display="none";
   const _ts=document.getElementById("tourn-standings");if(_ts){_ts.style.display="none";_ts._last=null;}
@@ -3668,6 +3670,58 @@ function leaveSession(fromLobby){
   gameLobby=null;
   toast('Left the '+(isLobby?'lobby':'session')+'.','#b58b53');
 }
+// ---- Leaving a match -----------------------------------------------------------
+// Every multiplayer match can be left from the Leave button. Co op worlds keep
+// their own path (nothing at stake). A competitive match is a FORFEIT: you get
+// no results and no prize, and the entry fee, buy-in or ruby stake stays spent,
+// otherwise leaving a losing match would be a free refund.
+function leaveMatch(){
+  if(!activeTournament)return;
+  const def=activeTournament.def||{};
+  if(def.coop){leaveSession(false);return;}
+  const w=matchWorld(def);
+  const stake=(def.fee>0)?(def.fee+' '+coinLabel(w)+' entry')
+    :(def.goldBuyIn>0)?(def.goldBuyIn+' '+coinLabel(w)+' buy-in')
+    :(activeSession&&activeSession.stake>0)?(activeSession.stake+' ruby stake'):'';
+  const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
+  modal.innerHTML='<div class="mname" style="margin-bottom:6px;">Leave this match?</div>'
+    +'<div style="font-size:12.5px;color:var(--text-soft);line-height:1.45;margin-bottom:14px;">You forfeit: no results and no prize'
+    +(stake?', and your '+stake+' is not refunded':'')+'.</div>'
+    +'<div style="display:flex;gap:8px;">'
+    +'<button onclick="closeModal()" style="flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;">Keep fishing</button>'
+    +'<button onclick="forfeitMatch()" style="flex:1;padding:11px;border-radius:10px;border:1.5px solid #e0344e;background:transparent;color:#c0213a;font-size:14px;font-weight:800;cursor:pointer;">Leave match</button>'
+    +'</div>';
+  bg.classList.add('show');
+}
+function forfeitMatch(){
+  closeModal();
+  if(!activeTournament)return;
+  // Same safety teardown endTournament does, so a fight in progress can't
+  // strand the player behind a dead overlay.
+  try{
+    if(typeof sdewActive!=='undefined'&&sdewActive){sdewActive=false;if(typeof sdewAnimId!=='undefined'&&sdewAnimId)cancelAnimationFrame(sdewAnimId);const _so=document.getElementById('sdew-overlay');if(_so)_so.classList.remove('show');}
+    if(typeof endMiniGame==='function')endMiniGame();
+    const _cg=document.getElementById('catch-bg');if(_cg)_cg.classList.remove('show');
+    if(typeof phase!=='undefined')phase='idle';
+    if(typeof bobber!=='undefined'&&bobber)bobber.active=false;
+  }catch(_e){}
+  if(typeof closeMenu==='function')closeMenu();
+  if(activeSession){
+    // Ruby challenges and online lobby matches: drop out of the shared doc too.
+    if(gameLobby&&gameLobby.isHost)stopLobbyBeat();
+    leaveSession(false);
+  }else{
+    _restoreWorldAfterSession();
+    activeTournament=null;activeLobby=null;
+    if(_lobbyUnsub){_lobbyUnsub();_lobbyUnsub=null;}
+    if(typeof updateCosmeticHUD==='function')updateCosmeticHUD();
+    toast('Left the match.','#b58b53');
+  }
+  activeTournament=null;
+  updateRigBar();updatePills();queueSave();
+  setTimeout(checkPendingInvites,2500);
+}
+
 // Called from endTournament when the match is a session.
 function endSession(){
   const sess=activeSession, def=activeTournament?activeTournament.def:null;
@@ -7327,6 +7381,10 @@ function normalizeState(){
   if(typeof S.audio.sfx!=='number')S.audio.sfx=0.7;
   if(typeof S.audio.amb!=='number')S.audio.amb=0.5;
   if(typeof S.audio.muted!=='boolean')S.audio.muted=false;
+  // The audio engine only reads these when told to. A save that loads after the
+  // first tap (the cloud save, a recovery) used to change S.audio under it, so the
+  // settings said Muted while the old volumes kept playing.
+  try{AUDIO.refresh();}catch(e){}
   // Repair gear the save says is equipped but that the player does not own. A
   // ghost-render leak could strand another angler's rod (commonly a bot's
   // Chainsaw Rod) in the real player's slot, where it then persisted and (via
@@ -7693,7 +7751,9 @@ async function loadCloudSave(uid){
     const localScore=progressScore(S), cloudScore=progressScore(cloud);
     if(cloudScore>=localScore){
       // Cloud is further along (the normal cross-device case): adopt it.
-      S=Object.assign(S, cloud);
+      // Sound settings belong to THIS device: a mute set here must not be undone
+      // by an older unmuted copy in the cloud.
+      {const _a=S.audio;S=Object.assign(S, cloud);if(_a)S.audio=_a;}
       normalizeState();
       if(S.zone>maxZone())S.zone=maxZone();
       try{localStorage.setItem(SAVE_KEY, d.data);}catch(e){}
@@ -7743,8 +7803,10 @@ async function openRecovery(){
 }
 function applyRecovery(key){
   const r=_recovery;
+  const _a=S.audio;
   if(key==='cloud'&&r.cloud){S=Object.assign(S, r.cloud);}
   else if(key==='local'&&r.local){S=Object.assign(S, r.local);}
+  if(_a)S.audio=_a;   // keep this device's sound settings
   else if(key==='stats'&&r.lb){
     const lb=r.lb;
     S.level=Math.max(S.level||1,lb.level||1);
@@ -19540,7 +19602,9 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
   if(!confirm('Reset all progress? This cannot be undone.'))return;
   try{localStorage.removeItem(SAVE_KEY);}catch(e){}
   try{if(window.storage&&window.storage.delete)window.storage.delete(SAVE_KEY);}catch(e){}
+  const _a=S.audio;   // a progress reset is not a sound reset
   S={xp:0,level:1,gold:0,clock:360,caught:{},best:{},ownedBoats:['kayak'],ownedRods:['rod0'],ownedReels:['reel0'],ownedBraids:['braid0'],ownedLeaders:['fluoro','wire'],ownedCosmetics:[],cosmetic:{hat:'none',shirt:'none',shades:'none'},gender:'',skinTone:'',boat:'kayak',rod:'rod0',reel:'reel0',braid:'braid0',leader:'fluoro',tackleInv:{cork_b:{qty:5,dur:7},jig_b:{qty:5,dur:7},fin_b:{qty:5,dur:7},lh_b:{qty:5,dur:8}},baitInv:{shrimp:20},zone:0,method:'cork',tackleSel:{},baitSel:'shrimp',totalCasts:0,totalCatches:0,misses:0,breakoffs:0,goldEarned:0,biggest:0,biggestName:''};
+  if(_a)S.audio=_a;
   normalizeState();
   // Deliberate reset: force the (empty) state to the cloud too, bypassing the guard.
   forceCloudWrite=true;cloudBaseScore=-1;saveGame();forceCloudWrite=false;
