@@ -2846,7 +2846,8 @@ function startTournamentMode(def){
     abilityReadyAt:0,stolenTargets:[],smokeClouds:[],startMs:Date.now(),
     bountyList:(def.bounty?(def.bountyList||[]).slice():null), bountyIdx:0,
     limited:!!def.limited, limitedSpecies:{}, castLimit:def.castLimit||0, castsUsed:0,
-    speciesCount:0,cannons:0,cannonHits:{},_ended:false};
+    speciesCount:0,cannons:0,cannonHits:{},_ended:false,
+    castsAtStart:(S.totalCasts||0)};   // consolation needs proof you fished
   cannonsSpawned=0;cannonBalls=[];_cannonArmed=false;_cannonDrag=null;
   if(typeof updateCannonButton==='function')updateCannonButton();
   freezeClockForMatch();   // remember the player's real clock/season
@@ -3138,7 +3139,19 @@ function endTournament(){
   }
   // Lobby rubies pass through the daily cap; tournament rubies are uncapped.
   if(isLobby)winnings=grantLobbyRubies(winnings);
-  const goldTotal=goldWin+goldPot;
+  // CONSOLATION (paid daily rooms only; lobbies settle through their own pot).
+  // Only the top three were ever paid, so a blank and a strong 4th place both
+  // walked away with nothing. Anyone who actually fished (3+ casts) and missed
+  // the prizes gets part of the entry back, scaled by the result so a better
+  // finish is always worth more: 25% base, +15% per species in the variety
+  // modes or +35% for any catch in a classic one, capped at 85%.
+  let consolation=0;
+  const _castsMade=(S.totalCasts||0)-(activeTournament.castsAtStart||0);
+  if(!isLobby&&!placed&&(def.fee||0)>0&&_castsMade>=3){
+    const _res=variety?(activeTournament.speciesCount||0)*0.15:(playerHasResult?0.35:0);
+    consolation=Math.round((def.fee||0)*Math.min(0.85,0.25+_res));
+  }
+  const goldTotal=goldWin+goldPot+consolation;
   if(winnings>0||goldTotal>0){
     S.rubies=(S.rubies||0)+winnings;
     // Freshwater matches settle in CASH. Paying a Mountains lobby out in gold
@@ -3173,7 +3186,8 @@ function endTournament(){
     }).join("")
     +"</div>"
     +(goldPot>0?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;color:#b8860b;\">You won the pot! <span class=\"coin-s\"></span> +"+goldPot+" gold</div>"
-       :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>":""))
+       :(placed?"<div style=\"text-align:center;font-size:15px;font-weight:900;margin-top:10px;\"><span style=\"color:#b8860b;\"><span class=\"coin-s\"></span> +"+goldWin+" gold</span> &nbsp;·&nbsp; <span style=\"color:#d61f3a;\"><span class=\"gem-s\"></span> +"+winnings+" rubies!</span></div>"
+         :(consolation>0?"<div style=\"text-align:center;font-size:13.5px;font-weight:800;margin-top:10px;color:var(--text-soft);\">Consolation: <span style=\"color:#b8860b;\">+"+consolation+" "+coinLabel(matchWorld(def))+"</span> of your entry back</div>":"")))
     +(isLobby
       ? "<div style=\"display:flex;gap:8px;margin-top:14px;\"><button onclick=\"returnToLobbyRoom()\" style=\"flex:1;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Back to lobby</button><button onclick=\"leaveLobbyFromResults()\" style=\"flex:1;padding:11px;border-radius:10px;border:1.5px solid #c4a875;background:transparent;color:var(--text-soft);font-size:14px;font-weight:800;cursor:pointer;\">Leave lobby</button></div>"
       : "<button onclick=\"document.getElementById('modal-bg').classList.remove('show')\" style=\"width:100%;margin-top:14px;padding:11px;border-radius:10px;border:none;background:var(--accent);color:#fff;font-size:14px;font-weight:800;cursor:pointer;\">Done</button>");
@@ -4415,7 +4429,7 @@ const LURES=[
   {id:'fly_woolly',      cat:'fly',       zone:6,                   name:'Woolly Bugger',             icon:'bait-fish',  cost:130,lvl:5, methods:['fly'],         baits:['worm'],    targets:['rainbowtrout','brooktrout','cutthroattrout','bulltrout','gilatrout'],             desc:'STREAMER. Marabou tail and palmered hackle. The fly that catches everything, everywhere.',world:'fresh',fixedCost:true},
   {id:'fly_crawfly',     cat:'fly',       zone:6,                   name:'Crawfish Fly',              icon:'bait-crab',  cost:175,lvl:6, methods:['fly'],         baits:['crawfish'],targets:['bulltrout','bulltrout','mtnwhitefish','rainbowtrout'],                         desc:'NYMPH. Rubber-leg claws crawled over a gravel bar. Bull trout candy.',world:'fresh',fixedCost:true},
   // ---- NORTHERN (zone 5) & MOUNTAINS (zone 6) ----
-  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','goldentrout','apachetrout','gilatrout'], desc:'A #1 gold blade swung across a run. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
+  {id:'fw_troutspinner',cat:'spinnerbait',zone:6,color:'gold',      name:'Gold Trout Spinner',        icon:'reel',       cost:200,lvl:5, methods:['spincast'],        baits:['worm'],    targets:['rainbowtrout','dollyvarden','cutthroattrout','brooktrout','grayling','goldentrout','apachetrout','gilatrout'], favors:{goldentrout:3}, desc:'A #1 gold blade swung across a run. Palomino Trout chase gold: 3x as likely to take it, best on the Alpine Lake. Gold: +5% luck in clear water.',world:'fresh',fixedCost:true},
   {id:'fw_castspoon5',  cat:'spoon',     zone:5,                    name:'Casting Spoon',             icon:'reel',       cost:280,lvl:6, methods:['topwater','troll'],baits:['minnow'],  targets:['laketrout','browntrout','cohosalmon','northernpike'],                   desc:'A hammered spoon wobbling in cold water. Simple, and it never stopped working.',world:'fresh',fixedCost:true},
   {id:'fw_tubelaker',   cat:'softplastic',zone:5,color:'white',     name:'White Tube Jig',            icon:'reel',       cost:300,lvl:7, methods:['jig'],         baits:['shiner'],  targets:['laketrout','lakewhitefish','smallmouth','rockbass'],            desc:'A 4 in white tube dragged along a cold, rocky bottom, a crayfish to anything sitting on it. White: +5% bite during the day.',world:'fresh',fixedCost:true},
   {id:'fw_jiggingrap',  cat:'softplastic',zone:5,color:'chartreuse', name:'Jigging Rap',               icon:'fish',       cost:340,lvl:7, methods:['jig'],         baits:['minnow'],  targets:['walleye','walleye','yellowperch','browntrout','cohosalmon'],    desc:'A balanced minnow that swims a circle on every lift, then hangs. The Great Lakes jig, through the ice or over open water. Chartreuse: +5% bite in stained or rainy water.',world:'fresh',fixedCost:true},
@@ -6732,10 +6746,31 @@ function _keyOutFishBg(im){
 // FISH_SPRITE_URL[id] is set either to the keyed dataURL or, when the file
 // already carries its own alpha, to the plain file URL. Until then the fish
 // falls back to its vector art, which never has a background at all.
+// Fish art used to be requested all at once (~110 files, ~216 MB before the
+// 768px resize) and a failed request was simply dropped, so a flaky connection
+// left up to 35 species on vector art for the whole session. Now a few load at
+// a time, and a failure retries with backoff (cache-busted) before giving up.
+const FISH_LOAD_PARALLEL=6, FISH_LOAD_TRIES=3;
+let _fishLoadQueue=[], _fishLoadActive=0;
+const _fishLoadTries={};
+function _pumpFishLoads(){
+  while(_fishLoadActive<FISH_LOAD_PARALLEL&&_fishLoadQueue.length){
+    const id=_fishLoadQueue.shift();
+    _fishLoadActive++;
+    _loadFishSprite(id, function(){_fishLoadActive--;_pumpFishLoads();});
+  }
+}
 function preloadFishSprites(){
   Object.keys(PNG_FISH).forEach(function(id){
     const cfg=PNG_FISH[id];if(!cfg||FISH_SPRITE_URL[id]||_fishSpritePending[id])return;
     _fishSpritePending[id]=1;
+    _fishLoadQueue.push(id);
+  });
+  _pumpFishLoads();
+}
+function _loadFishSprite(id, done){
+  const cfg=PNG_FISH[id];
+  {
     const im=new Image();
     im.onload=function(){
       let u=null;
@@ -6749,12 +6784,25 @@ function preloadFishSprites(){
         if(cc&&cc.dataset&&cc.dataset.fid===id&&typeof _repaintCatchArt==='function')_repaintCatchArt(id);
       }catch(e){}
       delete _fishSpritePending[id];
+      done();   // before the repaint, so a throw there can't hold the slot
       const lz=document.getElementById('logbook-zones');
       if(lz&&lz.children.length&&typeof renderLogbook==='function')renderLogbook();
     };
-    im.onerror=function(){delete _fishSpritePending[id];};
-    im.src=pngFishSrc(cfg.file, cfg.dir);
-  });
+    im.onerror=function(){
+      const n=(_fishLoadTries[id]=(_fishLoadTries[id]||0)+1);
+      if(n<FISH_LOAD_TRIES){
+        // Free the slot now; requeue after a backoff so one bad file cannot
+        // stall the line. The vector art stands in until it lands.
+        done();
+        setTimeout(function(){_fishLoadQueue.push(id);_pumpFishLoads();},1500*n);
+        return;
+      }
+      delete _fishSpritePending[id];
+      done();
+    };
+    const base=pngFishSrc(cfg.file, cfg.dir), tries=_fishLoadTries[id]||0;
+    im.src=tries?base+'?r='+tries:base;
+  }
 }
 function buildPngFishArt(id, px, mono){
   px=px||240;
@@ -16416,6 +16464,10 @@ function poolNow(){
     let w=f.weight;
     // rarity spawn penalty so epic and legendary are genuinely rare
     w*={common:1,uncommon:1,rare:1,epic:0.12,legendary:0.04}[f.rarity]||1;
+    // A lure built for one fish in a shared target list (favors:{id:mult}).
+    // The Gold Trout Spinner draws eight trout, and the Palomino it is named for
+    // was the rarest of them: on a riffle Brook and Rainbow took ~98% of strikes.
+    if(lure&&lure.favors&&lure.favors[f.id])w*=lure.favors[f.id];
     // Jeremy set bonus: +50% legendary spawn chance
     if(f.rarity==='legendary'&&equippedSetId()==='jeremy')w*=1.5;
     // V0.9 Astronaut set: luck boost makes rarer/target fish more likely
