@@ -1544,6 +1544,7 @@ async function afterAuth(user, isNew){
     if(isNew){cloudReady=true;cloudBaseScore=progressScore(S);showGenderSelect();}
     else if(tutDone===false){showTutorial();}
   }catch(e){document.getElementById("auth-overlay").style.display="none";}
+  startArtLoads();   // signed in and the save is loaded: now the pictures
 }
 let _selectedGender='';
 function showGenderSelect(){
@@ -1605,6 +1606,7 @@ function confirmSkin(){
 function playAsGuest(){
   isGuest=true;
   document.getElementById("auth-overlay").style.display="none";
+  startArtLoads();
 }
 function showUserMenu(){
   if(!fbUser){return;}
@@ -4993,6 +4995,21 @@ function equippedSetId(){
 function setColorOf(id){const s=setById(id);return s?s.color:'#cf7a35';}
 // Some sets have a hand-drawn character portrait in /sets; the rest fall back to
 // the flat color swatch. Keep this list in sync with the PNGs in that folder.
+// ---- Deferred art loading ---------------------------------------------------------
+// The game used to request every picture it owns (about 94 MB before resizing) the
+// moment the page opened. On a phone that saturated the connection, and the tiny
+// database read that signs a returning player in sat queued behind it: the sign-in
+// screen stayed up for minutes. Picture loads now wait until sign-in has finished
+// (or the player chose guest), then start with the ones the player sees first.
+const _deferredArt=[]; let _artStarted=false;
+// pri: lower loads first (your own avatar before fish you have not met).
+function whenArtAllowed(fn, pri){if(_artStarted){try{fn();}catch(e){}}else _deferredArt.push({fn:fn, pri:pri||0});}
+function startArtLoads(){
+  if(_artStarted)return;_artStarted=true;
+  _deferredArt.splice(0).sort(function(a,b){return a.pri-b.pri;}).forEach(function(j){try{j.fn();}catch(e){}});
+}
+// Never wait forever: someone idling on the sign-in screen still gets the art.
+setTimeout(startArtLoads, 12000);
 const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot','mermaid'];
 function setHasArt(id){return SET_ART_IDS.includes(id);}
 function setImgSrc(id){return 'sets/'+id+'.png';}
@@ -5019,11 +5036,13 @@ function _downscaleHQ(src, target){
 // are walled off by the black outline and survive), then pre-downscale to a
 // crisp 256px cache. Falls back to the raw image if keying fails.
 const SET_SPRITE={};
+whenArtAllowed(function(){
 SET_ART_IDS.forEach(function(id){
   const im=new Image();
   im.onload=function(){try{SET_SPRITE[id]=_downscaleHQ(_keyOutPetBg(im),384);}catch(e){SET_SPRITE[id]=im;}};
   im.src=setImgSrc(id);
 });
+},3);
 // ── SKINS (V0.9.7) ──────────────────────────────────────────────
 // Alternate looks for an item you already own. A "Customize" button on the
 // instructed items (princess set, mermaid set, sportfisher boat) opens a picker;
@@ -5035,11 +5054,13 @@ const SKINS=[
   {id:'sport_1',    base:'sport',    kind:'boat', name:'Sportfisher Skin 1', cost:250, file:'skins/sportfisher boat skin 1.png'},
 ];
 const SKIN_SPRITE={};
+whenArtAllowed(function(){
 SKINS.forEach(function(sk){
   const im=new Image();
   im.onload=function(){try{SKIN_SPRITE[sk.id]=_downscaleHQ(_keyOutPetBg(im, sk.kind==='boat'?212:234),sk.kind==='boat'?512:384);}catch(e){SKIN_SPRITE[sk.id]=im;}};
   im.src=sk.file;
 });
+},5);
 function skinById(id){return SKINS.find(function(s){return s.id===id;});}
 function skinsForBase(base){return SKINS.filter(function(s){return s.base===base;});}
 function ownsSkinBase(base){
@@ -5127,15 +5148,19 @@ function _normalizeBlue(cnv){
 // out, the blue outfit is normalized to one shade, then cached as a crisp 256px
 // sprite. Keyed 'male_1'..'female_6'. Drawn by drawAnglerFigure when no set is worn.
 const BASE_SPRITE={};
-['male','female'].forEach(function(gen){
-  for(let n=1;n<=6;n++){
+whenArtAllowed(function(){
+  // The tone this player actually wears first; the rest only show on other anglers.
+  const mine=(S.gender||'male')+'_'+skinIdx(S.skinTone), order=[];
+  ['male','female'].forEach(function(gen){for(let n=1;n<=6;n++){order.push([gen,n]);}});
+  order.sort(function(a,b){return ((b[0]+'_'+b[1])===mine)-((a[0]+'_'+a[1])===mine);});
+  order.forEach(function(gn){const gen=gn[0],n=gn[1];
     (function(gen, n){
       const im=new Image();const key=gen+'_'+n;
       im.onload=function(){try{const k=_keyOutPetBg(im);_normalizeBlue(k);BASE_SPRITE[key]=_downscaleHQ(k,256);}catch(e){BASE_SPRITE[key]=im;}};
       im.src='skin tone/'+gen+' '+n+'.png';
     })(gen, n);
-  }
-});
+  });
+},0);
 function baseAvatarSprite(){return BASE_SPRITE[(S.gender||'male')+'_'+skinIdx(S.skinTone)]||null;}
 
 // ═══════════════════ V0.9: PRESTIGE & PETS ═══════════════════
@@ -5226,6 +5251,7 @@ function _keyOutPetBg(im, thr){
 // is preloaded automatically. Art that does not exist yet simply never fires
 // onload (PET_SPRITE stays empty for it and drawPets() skips it) so a new pet
 // is fully playable before its PNG lands.
+whenArtAllowed(function(){
 PETS.forEach(function(p){
   const id=p.id;
   const im=new Image();
@@ -5242,6 +5268,7 @@ PETS.forEach(function(p){
     im2.src='pets/'+encodeURIComponent(p.artMove);
   }
 });
+},2);
 // Which sprite key a pet should use RIGHT NOW. Only pets with a second pose ever
 // return anything but their own id.
 const PET_MOVE_SPD=0.35;     // hull speed that counts as "under way"
@@ -5261,25 +5288,29 @@ function petImgSrc(id){
 // background-keyed sprite for the game canvas.
 const CLANCY_IMG=new Image(); let CLANCY_SPRITE=null;
 CLANCY_IMG.onload=function(){try{CLANCY_SPRITE=_downscaleHQ(_keyOutPetBg(CLANCY_IMG),256);}catch(e){CLANCY_SPRITE=CLANCY_IMG;}};
-CLANCY_IMG.src='npc/clancy.png';
+whenArtAllowed(function(){CLANCY_IMG.src='npc/clancy.png';},1);
 // V0.9.6: NPC challenger art (background keyed for the game canvas). Note the
 // offshore explorer's file is npc/mangellan.png. Pre-downscaled so the small
 // on-canvas draw stays crisp instead of aliasing from 1254px in one step.
 const CHALLENGER_SPRITE={};
+whenArtAllowed(function(){
 [['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png']].forEach(function(p){
   const im=new Image();
   im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
   im.src=p[1];
 });
+},4);
 // V0.9.7: top-down boat art the NPCs sit inside. A tighter key threshold (212)
 // eats the near-white anti-aliased halo so there's no white line around the hull,
 // then a high-quality downscale keeps the boat crisp on the small canvas draw.
 const NPC_BOAT={};
+whenArtAllowed(function(){
 [['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png']].forEach(function(p){
   const im=new Image();
   im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),384);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
 });
+},4);
 // Reward pets are earned by catching their ultra, not by prestiging, so they
 // bypass the level comparison entirely.
 function petRewardHeld(def){return def&&def.reward==='cagoldentrout'&&!!S.goldenPet;}
@@ -6555,7 +6586,7 @@ function buildFishArt(id, px, mono){
   // Raster art is used only once it is known to be background-free; before that
   // we draw the vector fish so a white box never appears.
   if(PNG_FISH[id]&&FISH_SPRITE_URL[id])return buildPngFishArt(id, px, mono);
-  if(PNG_FISH[id]&&typeof preloadFishSprites==='function')preloadFishSprites();
+  if(PNG_FISH[id]&&typeof preloadFishSprites==='function'&&_artStarted)preloadFishSprites();   // not before sign-in (see startArtLoads)
   const base=FISH_ART[id]||FISH_ART.trout;
   const s=base, cid='f'+(__cid++);
   let bodyD='',tailD='',finsB=[],pect='',eye=[100,28,4,'#15202a'],extras='',gillX=88,tailRays=[];
@@ -19739,7 +19770,7 @@ document.getElementById('reset-btn').addEventListener('click',()=>{
 // ===================== BOOT =====================
 (async function(){
   applyV85Pricing();   // bump shop prices before any save/shop render uses them
-  preloadFishSprites();// start keying out flat backgrounds on the raster fish art
+  whenArtAllowed(preloadFishSprites,6);   // fish art queues behind sign-in too (see startArtLoads)
   await loadGame();
   if(S.zone>maxZone())S.zone=maxZone();
   ensureRig();updateRigBar();refreshMenu();updateCosmeticHUD();updateZonePill();
