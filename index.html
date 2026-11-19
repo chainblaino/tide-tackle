@@ -6227,7 +6227,7 @@ const FISH=[
   {id:'arcticchar',ruby:5,name:'Arctic Char',zone:6,ice:true,alaska:true,rarity:'rare',size:[2,25],line:10,methods:['ice'],baits:['salmonegg','minnow','leech'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk'],xp:230,gold:0,weight:16,iceDepth:[20,44],icePatience:8000,iceTS:0.60,iceRise:1.10,iceChase:true,fact:'The northernmost freshwater fish on earth, spawning in lakes so cold they stay ice-covered for most of the year.'},
   {id:'lingcod',ruby:10,name:'Lingcod',zone:6,ice:true,alaska:true,rarity:'epic',size:[5,60],line:20,methods:['ice'],baits:['minnow','shiner','shad'],leader:'wire',structure:['icehole'],season:['winter'],time:['day','dawn','dusk'],xp:340,gold:0,weight:8,iceDepth:[38,60],icePatience:6000,iceTS:0.80,iceRise:1.40,iceChase:true,fact:'Not a cod at all but a greenling, with a mouth of needle teeth and flesh that can run bright blue-green until the moment it is cooked.'},
   {id:'sheefish',ruby:30,name:'Inconnu',zone:6,ice:true,alaska:true,rarity:'legendary',size:[8,55],line:20,methods:['ice'],baits:['shiner','minnow','shad'],leader:'fluoro',structure:['icehole'],season:['winter'],time:['dawn','dusk','night'],xp:560,gold:0,weight:3,iceDepth:[12,40],icePatience:7000,iceTS:1.00,iceRise:1.60,iceChase:true,fact:'The sheefish, or inconnu, French for "the unknown one": the name voyageurs gave a giant silver fish nobody could identify. A tarpon-shaped predator of the far north.'},
-  {id:'greenlandshark',ruby:100,name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.0024,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
+  {id:'greenlandshark',ruby:100,name:'Greenland Shark',zone:6,ice:true,alaska:true,rarity:'ultra',size:[200,1500],line:40,methods:['ice'],baits:['shad','shiner'],leader:'wire',structure:['icehole'],season:['winter'],time:['all'],xp:1600,gold:0,weight:1,spawnChance:0.01,iceDepth:[52,60],icePatience:4500,iceTS:1.00,iceRise:2.60,iceChase:true,fact:'The longest-lived vertebrate known: radiocarbon dating puts the oldest past four hundred years, meaning the one under your hole was already swimming before the United States existed.'},
 ];
 
 // ===================== LENGTH (inches) =====================
@@ -14865,7 +14865,7 @@ function render(ts){
   }
   // Captain Clancy's sailboat (inshore) + the Ruby Submarine (offshore), open world only
   if(!mpActive()&&!surfActive){
-    if(S.zone===0){const cp=clancyBoatPos();const cx2=cp.x-camera.x, cy2=cp.y-camera.y;if(cx2>-80&&cx2<CW+80&&cy2>-80&&cy2<CH+80)drawClancyBoat(cx2,cy2,t, sky.darkness);}
+    if(clancyHere()){const cp=clancyBoatPos();const cx2=cp.x-camera.x, cy2=cp.y-camera.y;if(cx2>-80&&cx2<CW+80&&cy2>-80&&cy2<CH+80)drawClancyBoat(cx2,cy2,t, sky.darkness);}
     if(S.zone===2){const diving=_subDiveAt&&(Date.now()-_subDiveAt<1600);if(subAvailable()||diving){const sp=subPos();const sx2=sp.x-camera.x, sy2=sp.y-camera.y;if(sx2>-90&&sx2<CW+90&&sy2>-90&&sy2<CH+90)drawSubmarine(sx2,sy2,t, diving?(Date.now()-_subDiveAt)/1600:0);}}
     // V0.9.6: a region challenger sits in the open water once you've cleared the region
     {const ch=typeof availableChallenger==='function'?availableChallenger():null;if(ch){const cp=challengerPos(ch);const ccx=cp.x-camera.x,ccy=cp.y-camera.y;if(ccx>-90&&ccx<CW+90&&ccy>-90&&ccy<CH+90)drawChallengerBoat(ch,ccx,ccy,t,sky.darkness);}}
@@ -15229,7 +15229,7 @@ canvas.addEventListener('click',e=>{
   if(!mpActive()&&!surfActive){
     const rect=canvas.getBoundingClientRect();
     const cxp=(e.clientX-rect.left)*(CW/rect.width),cyp=(e.clientY-rect.top)*(CH/rect.height);
-    if(S.zone===0){const cp=clancyBoatPos();if(dist(cxp, cyp, cp.x-camera.x, cp.y-camera.y)<52){clancyBoatTip();return;}}
+    if(clancyHere()){const cp=clancyBoatPos();if(dist(cxp, cyp, cp.x-camera.x, cp.y-camera.y)<52){clancyBoatTip();return;}}
     if(S.zone===2&&subAvailable()){const sp=subPos();if(dist(cxp, cyp, sp.x-camera.x, sp.y-camera.y)<52){collectSubmarine();return;}}
     {const ch=typeof availableChallenger==='function'?availableChallenger():null;if(ch){const cp=challengerPos(ch);if(dist(cxp, cyp, cp.x-camera.x, cp.y-camera.y)<56){tapChallenger(ch);return;}}}
   }
@@ -17651,8 +17651,8 @@ function endSdewGame(success){
   }
   if(!success){offerSdewRetry();return;}
   const f=hookedFish, w=hookW;
-  // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
-  if(f.rarity==='ultra'&&!ultraGearOK()){snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... '+ultraNeedLabel());return;}
+  // Ultra Legendary: win the fight and it lands, no gear check at all.
+  if(f.rarity==='ultra'){land(f, w, true, false);return;}
   // drag ceiling: even a perfect fight loses if the reel is underpowered
   if(fightStrength(f, w)>curReel().drag){snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) had no chance against a '+fmtLb(w)+' lb '+f.name+'. It spooled you and snapped off. You need a heavier reel.');return;}
   if(!f.surf&&f.leader==='wire'&&gearGet('leader')!=='wire'){if(Math.random()<.72){snap(f, w,'It bit straight through your '+curLeader().name.toLowerCase()+'! Toothy fish need wire.');return;}}
@@ -17920,9 +17920,9 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   if(!inZone){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish, w=hookW, perfect=dd<snapZone.width*0.2;
   // During the tutorial catch, the fish always lands once you hit the green.
-  if(!(tut&&tut.forceTargetActive)){
-  // Ultra Legendary: only the Big-Game reel + 130 lb braid can land it.
-  if(f.rarity==='ultra'&&!ultraGearOK()){return snap(f, w,'A '+fmtLb(w)+' lb '+f.name+'! Your gear couldn’t handle it... '+ultraNeedLabel());}
+  // Ultra Legendary: hooking one is the achievement. Win the fight and it lands,
+  // whatever reel, line or leader you happen to have on: no gear check at all.
+  if(!(tut&&tut.forceTargetActive)&&f.rarity!=='ultra'){
   // drag ceiling: fish stronger than the reel's drag rating snaps automatically
   if(fightStrength(f, w)>curReel().drag){return snap(f, w,'Your '+curReel().name+' ('+curReel().drag+'lb drag) couldn’t hold a '+fmtLb(w)+' lb '+f.name+'. It peeled off all your line and snapped. Bring a heavier reel.');}
   // wire cutoff
@@ -17935,30 +17935,6 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   land(f, w, perfect, bullseye);
 });
 
-// Ultra Legendary fish can only be landed with the top-tier reel + 130 lb braid.
-// Saltwater: the Big-Game reel + 130 lb braid, as ever. Freshwater (V0.9.8.4):
-// the old check read the raw saltwater reel slot and demanded line no
-// freshwater shop sells, so all three freshwater ultras snapped 100% of the
-// time. The freshwater bar is "the best of what THIS region sells, in the
-// kind you are fishing": a fly-caught ultra wants the top fly line and fly
-// reel, a bottom-caught one the top conventional pair. Always satisfiable by
-// construction, never trivial.
-function ultraGearOK(){
-  if(isFresh()){
-    const b=curBraid(), r=curReel();
-    const bs=forHere(BRAIDS).filter(function(x){return !x.fly===!b.fly;});
-    const rs=forHere(REELS).filter(function(x){return !x.fly===!r.fly;});
-    const topLine=bs.length?Math.max.apply(null, bs.map(function(x){return x.line;})):0;
-    const topDrag=rs.length?Math.max.apply(null, rs.map(function(x){return x.drag;})):0;
-    return b.line>=topLine&&r.drag>=topDrag;
-  }
-  return S.reel==='reel4'&&curBraid().line>=130;
-}
-// The ultra snap message has to name gear the player can actually buy here.
-function ultraNeedLabel(){
-  return isFresh()?'An Ultra Legendary needs the heaviest line and strongest reel this region sells.'
-                  :'An Ultra Legendary needs the Big-Game reel and 130 lb braid.';
-}
 // Surf fishing gate: Big-Game reel + Bluewater rod (or Chainsaw) + 130 lb braid.
 // Equipped AND owned. Checking the id alone let a leaked Chainsaw Rod hand out
 // the SLOW-MO button and count toward the surf unlock.
@@ -19380,6 +19356,7 @@ function openClancyInfo(){
       }).join('')+'</div>';
   }
   modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+body
+    +(isFresh()?clancyGreenlandHint():'')
     +'<button class="chooser-close" onclick="closeModal()" style="margin-top:12px;">Close</button>';
   bg.classList.add('show');
   // Only a real answer counts: tapping him before any cast just gets "cast first".
@@ -19429,8 +19406,51 @@ function clancyFishDetail(id){
     +'<button class="chooser-close" onclick="openClancyInfo()" style="margin-top:12px;">&larr; Back</button>'
     +'<button class="chooser-close" onclick="closeModal()">Close</button>';
 }
-// Clancy's offshore sailboat: a fixed spot in the bluewater you can sail up to.
-function clancyBoatPos(){return {x:Math.round(WORLD_DIMS[0][0]*0.72), y:Math.round(WORLD_DIMS[0][1]*0.28)};}
+// Clancy's sailboat: a fixed spot you can sail up to. Inshore in saltwater, and
+// in every freshwater region too, so he is never a world away.
+const CLANCY_ZONE_POS={0:[0.72,0.28], 3:[0.5,0.5], 4:[0.5,0.5], 5:[0.5,0.5], 6:[0.5,0.5]};
+const _clancyPosCache={};
+function clancyHere(){return Object.prototype.hasOwnProperty.call(CLANCY_ZONE_POS, S.zone);}
+function clancyBoatPos(){
+  const z=S.zone;
+  if(_clancyPosCache[z])return _clancyPosCache[z];
+  const f=CLANCY_ZONE_POS[z]||CLANCY_ZONE_POS[0], W=WORLD_DIMS[z][0], H=WORLD_DIMS[z][1];
+  const px=Math.round(W*f[0]), py=Math.round(H*f[1]);
+  if(z===0)return (_clancyPosCache[z]={x:px, y:py});
+  if(!waterPathFor(z))return {x:px, y:py};   // map not built yet: don't cache a guess
+  // Freshwater has banks and islands, so walk outward from the preferred spot
+  // until the boat and a margin round it are all open water.
+  const clear=function(x, y){
+    if(!isWaterAt(x, y, z))return false;
+    for(let a=0;a<8;a++){const r=46, t=a*Math.PI/4;if(!isWaterAt(x+Math.cos(t)*r, y+Math.sin(t)*r, z))return false;}
+    return true;
+  };
+  for(let r=0;r<Math.max(W, H);r+=40){
+    const steps=r?Math.max(8, Math.round(r/30)):1;
+    for(let i=0;i<steps;i++){
+      const t=i/steps*Math.PI*2, x=Math.round(px+Math.cos(t)*r), y=Math.round(py+Math.sin(t)*r);
+      if(x<60||y<60||x>W-60||y>H-60)continue;
+      if(clear(x, y))return (_clancyPosCache[z]={x:x, y:y});
+    }
+  }
+  return (_clancyPosCache[z]={x:px, y:py});
+}
+// Clancy's standing tip: go find the Greenland Shark. Shown until you land one.
+const CLANCY_GREENLAND_HINT="Word on the ice, angler: a <b>Greenland Shark</b> cruises under the <b>Alaskan ice</b> up in the <b>Mountains</b>. Grab the Mountains Licence and an <b>Ice Auger</b>, cut a hole from mid fall through winter, and work yer jig deep, past 50 feet. It's the most catchable Ultra Legendary in these waters, and once she's hooked, win the fight and she's yers. No fancy gear needed.";
+function clancyGreenlandHint(){
+  if(S.caught&&S.caught.greenlandshark)return '';
+  return '<div class="clancy-tip" style="margin-top:10px;padding:9px 11px;border:1.5px solid #4a9fd4;border-radius:11px;background:rgba(74,159,212,.10);">'+CLANCY_GREENLAND_HINT+'</div>';
+}
+const CLANCY_TIPS_FRESH=[
+  "Fish feed best at dawn and dusk, low light makes 'em bold.",
+  "Each region sells its own gear. Buy for the water ye're standing in.",
+  "Fly fishin' is the hardest way to land a fish, and it pays double for it.",
+  "Tap my face up top to see what bites the spot ye last fished.",
+  "Lakes freeze in winter. Bring an Ice Auger and fish through the hole.",
+  "Trout want cold, clean water: riffles, spring creeks and alpine lakes.",
+  "Catfish and sturgeon hug the deep holes, dawn, dusk and dark.",
+  "Licences open new regions for good, prestige won't take 'em back.",
+];
 const CLANCY_TIPS=[
   "Fish feed best at dawn and dusk, low light makes 'em bold.",
   "Match yer leader to the fish: fluoro for the wary, wire for the toothy.",
@@ -19444,9 +19464,10 @@ const CLANCY_TIPS=[
   "Any fish can be a record-breaker. Keep castin' and ye'll find a giant.",
 ];
 function clancyBoatTip(){
-  const tip=CLANCY_TIPS[Math.floor(Math.random()*CLANCY_TIPS.length)];
+  const list=isFresh()?CLANCY_TIPS_FRESH:CLANCY_TIPS;
+  const tip=list[Math.floor(Math.random()*list.length)];
   const modal=document.getElementById('modal'),bg=document.getElementById('modal-bg');
-  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+'<div class="clancy-tip">&ldquo;'+tip+'&rdquo;</div>';
+  modal.innerHTML='<span class="close-x" onclick="closeModal()">×</span>'+_clancyHead()+'<div class="clancy-tip">&ldquo;'+tip+'&rdquo;</div>'+clancyGreenlandHint();
   bg.classList.add('show');try{AUDIO.sfx('open');}catch(e){}
 }
 function drawClancyBoat(sx, sy, t, dark){
