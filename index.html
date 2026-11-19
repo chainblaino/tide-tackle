@@ -18026,7 +18026,8 @@ function land(f, w, perfect, bullseye){
   // Ice Shanty Heater, Northern ice: warm water keeps them feeding by the hole.
   // Keyed off iceActive/iceMode rather than the sdewIce fight flag, which is only
   // cleared on two specific paths and can survive into an unrelated fight.
-  if(heaterOn()&&iceActive&&iceMode==='northern')gold=Math.round(gold*1.2);
+  const _heatCash=heaterOn()&&iceActive&&iceMode==='northern'&&!(activeTournament&&!(activeTournament.def&&activeTournament.def.coop));
+  if(_heatCash)gold=Math.round(gold*1.2);
   // V0.9: prestige (+10%/level) and the Pig pet (+20%) boost coins earned.
   gold=Math.round(gold*coinMult());
   // No gold from fish in a tournament/challenge (you fish for ranking & rubies),
@@ -18063,7 +18064,7 @@ function land(f, w, perfect, bullseye){
   if(f.rarity==='ultra'){toast('UNBELIEVABLE. Ultra Legendary catch!','#ff3df0');grantUltraReward(f);}
   // After surf is unlocked, jacks & amberjacks are kept as the only surf bait.
   if(S.surfUnlocked&&(f.id==='jack'||f.id==='amberjack')){S.surfBait=(S.surfBait||0)+1;setTimeout(function(){toast('Kept as surf bait (x'+S.surfBait+').','#2aa890');},950);}
-  showCatch(f, w,{isNew, perfect, bullseye, trophy, pb:pb&&!isNew, xp, gold, rubies:rubyReward, fly:_flyBonus});
+  showCatch(f, w,{isNew, perfect, bullseye, trophy, pb:pb&&!isNew, xp, gold, rubies:rubyReward, fly:_flyBonus, heater:_heatCash});
   updateRigBar();refreshMenu();queueSave();
   checkAchievements();
   if(typeof maybePrestigeOffer==='function')maybePrestigeOffer();
@@ -18141,6 +18142,7 @@ function showCatch(f, w, o){
   if(ultra)badges.push(['ULTRA LEGENDARY','ultra']);
   if(o.isNew)badges.push(['NEW! 3\u00d7 XP / 2\u00d7 '+_coinWord().toUpperCase(),'#2aa890']);
   if(o.fly)badges.push(['FLY ROD 2\u00d7 XP & '+_coinWord().toUpperCase(),'#2aa890']);
+  if(o.heater)badges.push(['HEATER +20% '+_coinWord().toUpperCase(),'#d8642a']);
   if(o.trophy)badges.push(['TROPHY','#e0a93c']);
   if(o.pb)badges.push(['PERSONAL BEST +10%','#4a9fd4']);
   if(o.perfect)badges.push(['PERFECT FIGHT','#c46f28']);
