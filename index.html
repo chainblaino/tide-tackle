@@ -679,7 +679,7 @@
   .reset-btn:hover{color:#b3402a;border-color:#b3402a;}
 
   /* toast */
-  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--cream);border:3px solid var(--wood);border-radius:13px;box-shadow:0 6px 18px rgba(0,0,0,.4);padding:10px 18px;font-family:'Fredoka';font-size:15px;font-weight:500;color:var(--wood-dark);opacity:0;pointer-events:none;transition:opacity .3s, transform .3s;z-index:300;}
+  .toast{position:fixed;top:18px;left:50%;transform:translateX(-50%) translateY(-20px);background:var(--cream);border:3px solid var(--wood);border-radius:13px;box-shadow:0 6px 18px rgba(0,0,0,.4);padding:10px 18px;font-family:'Fredoka';font-size:15px;font-weight:500;color:var(--wood-dark);opacity:0;pointer-events:none;transition:opacity .3s, transform .3s;z-index:470;}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
   .save-dot{position:fixed;bottom:10px;left:12px;font-size:11px;font-weight:800;color:rgba(255,255,255,.5);opacity:0;transition:opacity .3s;z-index:9;}
   .save-dot.show{opacity:1;}
@@ -17966,8 +17966,8 @@ function hasChainsaw(){return S.rod==='chainsaw'&&(S.ownedRods||[]).indexOf('cha
 function surfRigOK(){return S.reel==='reel4'&&(S.rod==='rod4'||hasChainsaw())&&curBraid().line>=130;}
 function surfHookOK(){return S.surfHook||S.toothHook;}
 function loseTackle(){const tid=currentTackleId();if(tid&&S.tackleInv[tid]){const inv=S.tackleInv[tid];inv.qty--;inv.dur=inv.qty>0?tackleById(tid).dur:0;}}
-function snap(f, w, msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Rig up and cast again. Check the shop (\u2630).');}},2400);}
-function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
+function snap(f, w, msg){phase='done';bobber.active=false;S.misses++;S.breakoffs++;if(iceActive)setIceStatus(msg);if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');queueSave();setTimeout(function(){if(surfActive)startSurfWait();},2300);return;}loseTackle();updateRigBar();setStatus(msg);toast('Snapped off!','#b3402a');queueSave();setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Rig up and cast again. Check the shop (\u2630).');}},2400);}
+function fail(msg){phase='done';bobber.active=false;S.misses++;AUDIO.sfx('fail');queueSave();if(iceActive)setIceStatus(msg);if(surfActive){surfPhase='idle';setSurfStatus(msg+' Rebaiting\u2026');setTimeout(function(){if(surfActive)startSurfWait();},2000);return;}setStatus(msg);setTimeout(()=>{if(phase==='done'){phase='idle';setStatus('Set your rig and cast again.');}},1400);}
 
 // Ruby payout. The Alaskan ice roster carries a FIXED, published price on the
 // species row (V0.9.8.8): a Burbot is always 3 rubies, an Inconnu always 30, so
