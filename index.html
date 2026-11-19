@@ -1726,7 +1726,11 @@ function buildTutSteps(){
   return [
     {say:"Ahoy! <b>Cap'n Clancy</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
     {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook',point:_tutMenuPoint('logbook')},
-    {say:"There she is. She wants <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook keeps yer records, where each fish lives, its seasons, and yer biggest.",btn:"Got it"},
+    {say:"This is yer logbook, every fish in these waters. Find the <b>"+tName+"</b> and <b>tap it</b> to see what she likes.",hint:"Tap the "+tName+" in the logbook",await:'logfish',
+     // The card when the logbook is open; if the menu got closed, lead back to it.
+     point:function(){return ['#menu-panel.show .fish-card[data-fish="'+(T?T.id:'')+'"]'].concat(_tutMenuPoint('logbook'));},
+     onEnter:function(){setTimeout(function(){const c=document.querySelector('#menu-panel.show .fish-card[data-fish="'+(T?T.id:'')+'"]');if(c&&c.scrollIntoView)c.scrollIntoView({block:'center', behavior:'smooth'});},250);}},
+    {say:"There she is. She wants <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. Her card shows where she lives, her seasons, the best time to fish her, and yer biggest.",btn:"Got it",onBtn:function(){closeModal();}},
     {say:"Can't catch 'em without bait. Here's a few coins on me, open the menu <b>☰</b>, tap <b>Shop</b>, and buy a pack of <b>"+baitName+"</b>.",hint:"☰ → Shop → buy "+baitName, await:'buybait',point:function(){return ['#menu-panel.show .shop-item[data-kind="bait"][data-id="'+(bait?bait.id:'')+'"]','#menu-panel.show .shop-tab[data-stab="bait"]','#menu-panel.show .menu-tab[data-mtab="shop"]'].concat(_tutMenuPoint('shop').filter(function(x){return x.indexOf('menu-tab')<0;}));},onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
     {say:"Stocked up, well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
     {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". Ye can't move with the anchor down, so first tap <b>Pull Anchor</b> to bring it up, then the joystick appears and ye can drive. I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it, you want to cast TO the structure, not sit on it.",hint:"Pull anchor, drive, then anchor a short cast from the spot",await:'anchor',point:['#anchor-btn'],onEnter:function(){S.radarActive=true;}},
@@ -19257,6 +19261,8 @@ function openFish(id){
     '<div class="mrow"><span class="ml">Your best</span><span class="mv">'+(S.best[f.id]?fmtLb(S.best[f.id])+' lb · '+fishLenIn(f, S.best[f.id])+' ('+S.caught[f.id]+' caught)':'not yet caught')+'</span></div>'+
     '<div class="mfact">\u201C'+f.fact+'\u201D</div>';
   document.getElementById('modal-bg').classList.add('show');
+  // Tutorial: Clancy asked the player to look up his target fish.
+  if(typeof tut!=='undefined'&&tut.active){if(tut.target&&tut.target.id===id)tutNotify('logfish');tutPlaceBar();}
 }
 // ── CAPTAIN CLANCY: tap his face for fish info about your last-fished spot ──
 function noteLastCast(st){S.lastCastStruct=st?st.kind:'open';S.lastCastZone=S.zone;}
