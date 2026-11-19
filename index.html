@@ -838,6 +838,13 @@
 /* A modal (z 320) would otherwise bury the guide and the button it is waiting on. */
 .tut-npc.over{z-index:330;}
 @keyframes tutpop{from{opacity:0;transform:translateX(-50%) translateY(-10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
+/* Tutorial pointer: a small bouncing arrow on whatever Clancy is asking for. */
+#tut-arrow{position:fixed;left:0;top:0;z-index:340;pointer-events:none;display:none;width:30px;height:34px;margin-left:-15px;}
+#tut-arrow.show{display:block;}
+#tut-arrow.down{transform:rotate(180deg);}
+#tut-arrow.left{transform:rotate(-90deg);}
+#tut-arrow svg{display:block;animation:tutbob .9s ease-in-out infinite;filter:drop-shadow(0 2px 3px rgba(0,0,0,.45));}
+@keyframes tutbob{0%,100%{transform:translateY(0);}50%{transform:translateY(7px);}}
 .tut-npc-portrait{flex:0 0 auto;width:46px;height:46px;border-radius:50%;border:2px solid var(--accent);overflow:hidden;line-height:0;}
 .tut-npc-body{flex:1;min-width:0;}
 .tut-npc-name{font-size:11.5px;font-weight:900;color:var(--accent);margin-bottom:3px;letter-spacing:.4px;text-transform:uppercase;}
@@ -1355,6 +1362,7 @@
   </div>
 </div>
 <!-- Interactive NPC tutorial guide -->
+<div id="tut-arrow"><svg width="30" height="34" viewBox="0 0 30 34"><path d="M15 2 L28 17 H20 V32 H10 V17 H2 Z" fill="#ffc84a" stroke="#5a3a16" stroke-width="2.2" stroke-linejoin="round"/></svg></div>
 <div class="tut-npc" id="tut-npc">
   <div class="tut-npc-portrait" id="tut-npc-portrait"></div>
   <div class="tut-npc-body">
@@ -1658,6 +1666,54 @@ function _tutStructText(T){
   if(!list.length)return 'a good hotspot';
   return list.map(function(k){return structLabel(k);}).slice(0,2).join(' or ');
 }
+// ---- Tutorial pointer ------------------------------------------------------------
+// Each step can name what it wants tapped as a list of selectors, most specific
+// first; the arrow sits on the first one actually on screen. Re-checked a few
+// times a second, so it follows the player through the menu without any step
+// having to say "the dropdown is open now".
+function _tutMenuPoint(go){
+  return ['#menu-dropdown.show .menu-dd-item[data-go="'+go+'"]',
+          '#menu-panel.show .menu-tab[data-mtab="'+go+'"]',
+          '#menu-panel.show #menu-close',   // phone: the full menu hides its tabs, close it and use the menu button
+          '#menu-open'];
+}
+function _tutVisible(el){
+  if(!el)return null;
+  const r=el.getBoundingClientRect();
+  if(r.width<2||r.height<2)return null;
+  if(r.bottom<0||r.top>innerHeight||r.right<0||r.left>innerWidth)return null;
+  const cs=getComputedStyle(el);if(cs.visibility==='hidden'||cs.display==='none')return null;
+  // Covered by something else (the full-screen menu over the menu button)?
+  const hit=document.elementFromPoint(Math.max(0,Math.min(innerWidth-1,r.left+r.width/2)),Math.max(0,Math.min(innerHeight-1,r.top+r.height/2)));
+  if(hit&&hit!==el&&!el.contains(hit)&&!hit.contains(el))return null;
+  return r;
+}
+let _tutArrowT=null;
+function tutPointTick(){
+  const ar=document.getElementById('tut-arrow');if(!ar)return;
+  const s=tut.active&&tut.steps?tut.steps[tut.i]:null;
+  let r=null, el=null;
+  if(s&&s.point){const list=(typeof s.point==='function')?s.point():s.point;
+    for(const sel of list){el=document.querySelector(sel);r=_tutVisible(el);if(r)break;}}
+  if(!r){ar.classList.remove('show');return;}
+  ar.classList.add('show');
+  // A full-width row (a shop item) is aimed at its right end, where the buy button is.
+  const cx=Math.max(18,Math.min(innerWidth-18,(el&&el.classList.contains('shop-item'))?r.right-46:r.left+r.width/2));
+  // Menu rows are wide and short: point at them from the right, pointing left.
+  const wideRow=r.width>140&&r.height<70&&r.left<innerWidth/2&&r.right+44<innerWidth;
+  ar.classList.toggle('left',wideRow);
+  if(wideRow){
+    ar.classList.remove('down');
+    ar.style.left=Math.min(innerWidth-20,r.right+22)+'px';ar.style.top=(r.top+r.height/2-17)+'px';
+  }else if(r.top+r.height/2<innerHeight/2){
+    ar.classList.remove('down');ar.style.left=cx+'px';ar.style.top=(r.bottom+4)+'px';     // below, pointing up
+  }else{
+    ar.classList.add('down');ar.style.left=cx+'px';ar.style.top=(r.top-38)+'px';         // above, pointing down
+  }
+}
+function tutPointStart(){if(!_tutArrowT)_tutArrowT=setInterval(tutPointTick,200);tutPointTick();}
+function tutPointStop(){if(_tutArrowT){clearInterval(_tutArrowT);_tutArrowT=null;}const ar=document.getElementById('tut-arrow');if(ar)ar.classList.remove('show');}
+
 function buildTutSteps(){
   const T=tut.target, L=tut.leg;
   const tName=T?T.name:'a Redfish';
@@ -1667,25 +1723,25 @@ function buildTutSteps(){
   const legName=L?L.name:'Tarpon';
   return [
     {say:"Ahoy! <b>Cap'n Clancy</b> at your service. Let's make an angler of ye. First catch o' the day: a <b>"+tName+"</b>. Follow my lead.",btn:"Let's go"},
-    {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook'},
+    {say:"A smart angler studies the fish first. Open the menu <b>☰</b> (top left), tap <b>Logbook</b>, and look up the <b>"+tName+"</b>.",hint:"Open ☰ → Logbook",await:'logbook',point:_tutMenuPoint('logbook')},
     {say:"There she is. She wants <b>"+baitName+"</b>, holding tight to <b>"+structText+"</b>. The logbook keeps yer records, where each fish lives, its seasons, and yer biggest.",btn:"Got it"},
-    {say:"Can't catch 'em without bait. Here's a few coins on me, open the menu <b>☰</b>, tap <b>Shop</b>, and buy a pack of <b>"+baitName+"</b>.",hint:"☰ → Shop → buy "+baitName, await:'buybait',onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
+    {say:"Can't catch 'em without bait. Here's a few coins on me, open the menu <b>☰</b>, tap <b>Shop</b>, and buy a pack of <b>"+baitName+"</b>.",hint:"☰ → Shop → buy "+baitName, await:'buybait',point:function(){return ['#menu-panel.show .shop-item[data-kind="bait"][data-id="'+(bait?bait.id:'')+'"]','#menu-panel.show .shop-tab[data-stab="bait"]','#menu-panel.show .menu-tab[data-mtab="shop"]'].concat(_tutMenuPoint('shop').filter(function(x){return x.indexOf('menu-tab')<0;}));},onEnter:function(){if((S.gold||0)<((bait?bait.cost:60)+20)){S.gold=(S.gold||0)+Math.max(120,(bait?bait.cost:60)+80);updatePills&&updatePills();updateRigBar&&updateRigBar();toast('Captain Clancy spotted you '+Math.max(120,(bait?bait.cost:60)+80)+' gold!','#e0a93c');}}},
     {say:"Stocked up, well done. Close the menu and let's get on the water.",btn:"To the water",onBtn:function(){closeMenu();}},
-    {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". Ye can't move with the anchor down, so first tap <b>Pull Anchor</b> to bring it up, then the joystick appears and ye can drive. I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it, you want to cast TO the structure, not sit on it.",hint:"Pull anchor, drive, then anchor a short cast from the spot",await:'anchor',onEnter:function(){S.radarActive=true;}},
+    {say:"<b>"+tName+"</b> stack up on <b>structure</b>, "+structText+". Ye can't move with the anchor down, so first tap <b>Pull Anchor</b> to bring it up, then the joystick appears and ye can drive. I switched on your <b>fish radar</b>: follow the blue arrow until you're a short cast from a spot, then <b>Drop Anchor</b> nearby. Don't park right on top of it, you want to cast TO the structure, not sit on it.",hint:"Pull anchor, drive, then anchor a short cast from the spot",await:'anchor',point:['#anchor-btn'],onEnter:function(){S.radarActive=true;}},
     {say:"Right on the money. Now <b>cast onto the spot</b>, tap the water right on the structure, inside your range ring. When she bites, stop the marker in the <b>GREEN</b> to set the hook!",hint:"Cast onto the structure, hit the green",await:'catch',onEnter:function(){tut.forceTargetActive=true;}},
     {say:"HAAA! A beauty of a "+tName+"! See how it all comes together, right bait, right spot. That's the whole game.",btn:"Heck yeah"},
-    {say:"Now a trick worth more than any lure. Ye just cast on that <b>structure</b>. See my face up in the <b>top right</b>? <b>Tap it</b>, and I'll tell ye every species holding on the spot ye last cast to.",hint:"Tap Clancy's face, top right",await:'clancyinfo'},
+    {say:"Now a trick worth more than any lure. Ye just cast on that <b>structure</b>. See my face up in the <b>top right</b>? <b>Tap it</b>, and I'll tell ye every species holding on the spot ye last cast to.",hint:"Tap Clancy's face, top right",await:'clancyinfo',point:['#clancy-pill']},
     {say:"That's every fish on that spot. <b>Tap any of them</b> and I'll tell ye its baits, lures, methods and seasons. Do this every time ye find a new spot: cast on it, then tap me.",btn:"Handy!",onBtn:function(){closeModal();}},
-    {say:"Now look at the four cards along the bottom, that's yer <b>rig</b>. Tap any of them to change it.",btn:"Show me"},
+    {say:"Now look at the four cards along the bottom, that's yer <b>rig</b>. Tap any of them to change it.",btn:"Show me",point:['#rig-bar']},
     {say:"<b>METHOD</b> is HOW ye fish, cork, jig, live bait, bottom, trolling. It decides which fish are even possible AND whether ye're throwing a <b>lure</b> or natural <b>bait</b>.",btn:"Next"},
     {say:"<b>TACKLE</b> is yer hooks and rigs. Ye need the right tackle on to fish bait or lures at all, and it <b>wears out</b> with use, so keep some stocked in the Shop.",btn:"Next"},
     {say:"<b>BAIT &amp; LURES</b> is what ye actually present. Different baits and lures pull different fish, so it has a big say in what bites. Switch them up to find the hot one.",btn:"Next"},
     {say:"And yer <b>LEADER</b>, the last bit o' line to the hook. Tie on <b>WIRE</b> for toothy cutters like mackerel and sharks, or <b>FLUORO</b> for sharp eyed, spooky fish. Match it to whatever ye're targeting.",btn:"Aye"},
     {say:"Your rig matters as much as yer bait. Your <b>ROD</b> and <b>REEL</b> decide how big a fish ye can fight, and your <b>BRAID</b> is the line class, heavier braid lands heavier fish. Upgrade all three in the <b>Shop</b> as ye level up.",btn:"Aye, captain"},
     {say:"No two fish want the same thing, and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b>, cork, jig, live bait, trolling, until ye find what's biting.",btn:"Got it"},
-    {say:"Now, there's <b>two worlds</b> to fish. See the <b>Travel to Freshwater</b> button up in the <b>top left</b>? Tap it to swap between the <b>saltwater</b> and the <b>freshwater</b>, and tap it again to come home. The freshwater opens at <b>Level 3</b>.",btn:"Two worlds!"},
+    {say:"Now, there's <b>two worlds</b> to fish. See the <b>Travel to Freshwater</b> button up in the <b>top left</b>? Tap it to swap between the <b>saltwater</b> and the <b>freshwater</b>, and tap it again to come home. The freshwater opens at <b>Level 3</b>.",btn:"Two worlds!",point:['#world-pill']},
     {say:"Each world keeps its own coin. <b>GOLD</b> is the saltwater wallet and <b>CASH</b> is the freshwater one, and they never convert, so earn each where ye spend it. Gear's the same: saltwater tackle stays in the salt, freshwater tackle in the fresh. <b>RUBIES</b> are the rare stuff that works everywhere: win them in tournaments and challenges for gear sets, abilities and special items.",btn:"Makes sense"},
-    {say:"One more thing to keep an eye on: <b>Projects</b>. Open the menu <b>☰</b> and tap <b>Projects</b>.",hint:"Open ☰ → Projects",await:'projects'},
+    {say:"One more thing to keep an eye on: <b>Projects</b>. Open the menu <b>☰</b> and tap <b>Projects</b>.",hint:"Open ☰ → Projects",await:'projects',point:_tutMenuPoint('projects')},
     {say:"Every project is built from <b>parts</b>, one from each region. Every cast has a <b>1% chance</b> to reel up the part for that region, so fish all over. Finish the <b>Surf Drone</b> for faster surf fishing, the <b>Ruby Submarine</b> for free rubies every day, or the <b>Ice Shanty Heater</b> to earn more on the ice. Yer <b>pets</b> and <b>crowns</b> live in here too.",btn:"Got it",onBtn:function(){closeMenu();}},
     {say:"Now listen close. Every so often a <b>LEGEND</b> hits, they don't use the hookset. It's a tug o' war: <b>HOLD the REEL</b> to keep her in the green bar till the meter fills. Let me give ye a free practice run, no reward, just the feel of it.",btn:"Bring it on"},
     {say:"Here she comes, a giant <b>"+legName+"</b>! <b>Hold REEL</b> to rise, release to sink. Keep her in the green and fill that bar!",hint:"Hold REEL, keep it in the green",await:'trialwin',onEnter:function(){tutStartTrial();}},
@@ -1715,6 +1771,7 @@ function tutRender(){
   document.getElementById('tut-npc').classList.add('show');
   tutPlaceBar();
   const nb=document.getElementById('tut-npc-next');if(nb)nb.onclick=function(){if(s.onBtn)s.onBtn();tutAdvance();};
+  tutPointStart();
   const sk=document.getElementById('tut-npc-skip');if(sk)sk.onclick=tutSkip;
   if(s.onEnter)try{s.onEnter();}catch(e){}
 }
@@ -1725,7 +1782,10 @@ function tutPlaceBar(){
   const bar=document.getElementById('tut-npc');if(!bar)return;
   const mp=document.getElementById('menu-panel'), mb=document.getElementById('modal-bg');
   const modal=!!(mb&&mb.classList.contains('show'));
-  bar.classList.toggle('docked',!!(mp&&mp.classList.contains('show'))||modal);
+  const dd=document.getElementById('menu-dropdown');
+  // The menu dropdown counts too: undocked, the guide sat right over the Logbook
+  // row it was asking the player to tap.
+  bar.classList.toggle('docked',!!(mp&&mp.classList.contains('show'))||!!(dd&&dd.classList.contains('show'))||modal);
   bar.classList.toggle('over',modal);
 }
 // Called from game events; advances if the current step is waiting on that event.
@@ -1736,7 +1796,7 @@ function tutNotify(ev){
 }
 function tutSkip(){tutFinish();}
 function tutFinish(){
-  tut.active=false;tut.trialActive=false;tut.forceTargetActive=false;_forcedBiteFish=null;
+  tut.active=false;tutPointStop();tut.trialActive=false;tut.forceTargetActive=false;_forcedBiteFish=null;
   document.getElementById('tut-npc').classList.remove('show');
   if(fbUser&&fbDb){fbDb.collection('users').doc(fbUser.uid).update({tutorialDone:true}).catch(function(){});}
 }
@@ -18379,14 +18439,14 @@ function openRegionsModal(){
 function openMenu(){AUDIO.sfx('open');document.getElementById('menu-bg').classList.add('show');document.getElementById('menu-panel').classList.add('show');refreshMenu();if(tut&&tut.active)tutPlaceBar();}
 function closeMenu(){document.getElementById('menu-bg').classList.remove('show');document.getElementById('menu-panel').classList.remove('show');stopQuestCountdown();if(typeof stopLobbyBrowse==='function')stopLobbyBrowse();if(tut&&tut.active)tutPlaceBar();}
 // The menu button opens a vertical dropdown; picking an entry opens that page.
-function closeMenuDropdown(){const dd=document.getElementById('menu-dropdown');if(dd)dd.classList.remove('show');}
+function closeMenuDropdown(){const dd=document.getElementById('menu-dropdown');if(dd)dd.classList.remove('show');if(typeof tutPlaceBar==='function')tutPlaceBar();}
 function toggleMenuDropdown(){
   const dd=document.getElementById('menu-dropdown');if(!dd)return;
-  if(dd.classList.contains('show')){dd.classList.remove('show');return;}
+  if(dd.classList.contains('show')){dd.classList.remove('show');if(typeof tutPlaceBar==='function')tutPlaceBar();return;}
   // Shop is hidden in non-coop tournaments, matching the old tab rule.
   const lock=shopLockedNow();
   const shop=dd.querySelector('.menu-dd-item[data-go="shop"]');if(shop)shop.style.display=lock?'none':'';
-  dd.classList.add('show');AUDIO.sfx('open');
+  dd.classList.add('show');AUDIO.sfx('open');if(typeof tutPlaceBar==='function')tutPlaceBar();
 }
 // The shop is open in the open world, in co op worlds, and in a lobby whose host
 // turned the shop on; it's locked in every other live match.
