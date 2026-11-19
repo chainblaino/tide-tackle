@@ -5410,7 +5410,7 @@ function maybePrestigeOffer(){
 function prestigeRewardLine(next, w){
   const cur=(w==='fresh')?'cash':'coin';
   const lines=['You’ll keep your <b>rubies</b>, <b>stats</b> and <b>Ultra</b> catches'
-    +(w==='fresh'?', yer <b>cash</b>, yer <b>region licences</b>, and everything ye own in <b>saltwater</b>.'
+    +(w==='fresh'?', yer <b>region licences</b>, and everything ye own in <b>saltwater</b>.'
                  :', and everything ye own in <b>freshwater</b>.'),
     'A permanent <b>+'+(next*10)+'% '+cur+' bonus</b> on every catch.'];
   const pool=PETS.filter(function(p){return p.prestige===next&&((p.world||'salt')===(w||'salt'))&&!p.reward;});
@@ -5427,8 +5427,8 @@ function showPrestigeOffer(w){
   document.getElementById('tut-npc-say').innerHTML=
     (w==='fresh'
       ? "Well I'll be, ye've caught <b>every fish in fresh water!</b> That earns ye a <b>Freshwater Prestige</b>. "
-        +"It wipes yer freshwater gear and logbook back to the start, but ye <b>keep every penny of yer cash</b>, "
-        +"and yer <b>licences are bought for good</b>, so every region stays open. Saltwater is untouched:<br>"
+        +"It wipes yer cash, freshwater gear and logbook back to the start, but "
+        +"yer <b>licences are bought for good</b>, so every region stays open. Saltwater is untouched:<br>"
       : "Blow me down, ye’ve caught <b>every fish in the sea!</b> That earns ye a <b>Saltwater Prestige</b>. "
         +"It wipes yer coins, saltwater gear and level back to the start, but in return:<br>")
     +prestigeRewardLine(next, w)
@@ -5463,13 +5463,18 @@ function doPrestige(w){
     delete S.caught[f.id];delete S.best[f.id];
   });
   if(fresh){
-    // V0.9.8.9: cash and LICENCES both survive a freshwater prestige. A licence
-    // is a one-time purchase (having bought your way up to the Mountains once,
-    // you keep that access through every prestige after it) and the wallet
-    // carries over with it. Saltwater still does the full economic reset; the
-    // two ladders are deliberately different. What a freshwater prestige costs
-    // you is the logbook, the gear and every region loadout.
-    S.fgear={};grantRegionStarter('midwest');
+    // Mirrors saltwater: the wallet goes to 0 and every freshwater boat, rod, reel
+    // and line goes back to the Midwest starters. (It used to clear only the
+    // equipped bags, so everything bought stayed owned and one tap re-equipped
+    // it: a prestige that cost nothing.) LICENCES survive: a licence is a one-time
+    // purchase and saltwater has nothing like it to reset. The level is shared by
+    // both worlds, so it stays too.
+    S[coinField('fresh')]=0;
+    const dropFresh=function(arr, list){return (arr||[]).filter(function(id){
+      const it=list.find(function(x){return x.id===id;});return !(it&&it.world==='fresh');});};
+    S.ownedBoats=dropFresh(S.ownedBoats,BOATS);S.ownedRods=dropFresh(S.ownedRods,RODS);
+    S.ownedReels=dropFresh(S.ownedReels,REELS);S.ownedBraids=dropFresh(S.ownedBraids,BRAIDS);
+    S.fgear={};grantRegionStarter('midwest');   // hands the Midwest starters back
     S.zone=3;S.lastZone=S.lastZone||{};S.lastZone.fresh=3;
     delete S.fwLoadout; // the shared fishing rig reseeds from the new Midwest bag
     // Freshwater consumables only.
