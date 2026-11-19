@@ -3898,8 +3898,20 @@ function closeHostedLobby(){
 // that skew would either hide live rooms or keep dead ones. Instead we record, on
 // OUR clock, when each doc's stamp last CHANGED. Same technique the position sync
 // uses for exactly the same reason.
+// A lobby is DEAD (and gets deleted by whoever notices) when:
+//   - nobody is in it, or
+//   - we have watched it for LOBBY_STALE_MS on our own clock without its stamp
+//     moving, or
+//   - its stamp is more than LOBBY_DEAD_MS old. Without this a room abandoned
+//     hours ago looked fresh to every client that had only just opened the list
+//     (it had never seen the stamp before), and since an abandoned room never
+//     changes, no new snapshot ever arrived to drop it: it stayed listed for good.
+//     The margin is wide, the same one joinLobby uses, so clock skew between two
+//     phones cannot kill a live room.
+const LOBBY_DEAD_MS=LOBBY_STALE_MS*2;
+let _lobbyRaw=[], _lobbyReaped={}, _lobbySweepT=null;
 function _lobbyIngest(snap){
-  const now=Date.now(), out=[], live={};
+  const now=Date.now(), raw=[], live={};
   snap.forEach(function(doc){
     const dd=doc.data()||{};
     if(dd.kind!=='lobby')return;            // the collection is shared with friends sessions
@@ -3908,10 +3920,37 @@ function _lobbyIngest(snap){
     const seen=_lobbySeen[dd._id];
     if(!seen||seen.stamp!==stamp)_lobbySeen[dd._id]={stamp:stamp, at:now};
     live[dd._id]=1;
-    if(now-_lobbySeen[dd._id].at<LOBBY_STALE_MS)out.push(dd);
+    raw.push(dd);
   });
   Object.keys(_lobbySeen).forEach(function(id){if(!live[id])delete _lobbySeen[id];});
-  _lobbyCache=out;
+  _lobbyRaw=raw;
+  _lobbyFilter();
+  // Rooms die quietly (that is the problem), so re-check on a timer as well.
+  if(!_lobbySweepT)_lobbySweepT=setInterval(_lobbySweep, 30000);
+}
+function _lobbyDead(dd, now){
+  if(!Object.keys(dd.players||{}).length)return true;
+  const seen=_lobbySeen[dd._id];
+  if(seen&&now-seen.at>=LOBBY_STALE_MS)return true;
+  const stamp=(typeof dd.hostSeen==='number')?dd.hostSeen:(dd.createdAt||0);
+  return !!(stamp&&now-stamp>LOBBY_DEAD_MS);
+}
+function _lobbyFilter(){
+  const now=Date.now();
+  _lobbyCache=_lobbyRaw.filter(function(dd){
+    if(!_lobbyDead(dd, now))return true;
+    if(!_lobbyReaped[dd._id]&&fbDb&&!(gameLobby&&gameLobby.id===dd._id)){
+      _lobbyReaped[dd._id]=1;
+      fbDb.collection(LOBBY_COLL).doc(dd._id).delete().catch(function(){});
+    }
+    return false;
+  });
+}
+function _lobbySweep(){
+  if(!_lobbyListUnsub){clearInterval(_lobbySweepT);_lobbySweepT=null;return;}
+  _lobbyFilter();
+  if(typeof renderMpLobbyList==='function')renderMpLobbyList();
+  if(document.getElementById('lobby-list'))_renderLobbyList();
 }
 let gameLobby=null, _lobbyListUnsub=null, _lobbyDocUnsub=null, _lobbyCountdownInt=null, _lobbyCache=[];
 let _lobbyDraft=null;
@@ -4061,6 +4100,7 @@ function openLobbyRoom(){
   _renderLobbyPlayers();
   document.getElementById('session-overlay').style.display='flex';
   _listenLobbyDoc();
+  _startLobbyWatch();
 }
 // Host invites a friend straight into the lobby while waiting.
 function openLobbyInvite(){
@@ -4090,6 +4130,30 @@ function sendLobbyInvite(uid, username){
     toast('Invited '+username+'!','#2aa890');
   }).catch(function(){toast('Could not send invite.','#b3402a');});
 }
+// Players waiting in a room whose host has vanished (phone died, app killed
+// before the close could send) were left staring at it forever. Watch the
+// host's stamp on our own clock; if it stops, the room is closed for everyone.
+let _lobbyWatchT=null, _lobbyHostStamp=null;
+function _startLobbyWatch(){
+  _stopLobbyWatch();
+  if(!gameLobby||gameLobby.isHost)return;
+  _lobbyHostStamp={v:null, at:Date.now()};
+  _lobbyWatchT=setInterval(function(){
+    if(!gameLobby||gameLobby.started){return;}
+    if(Date.now()-_lobbyHostStamp.at>=LOBBY_STALE_MS){
+      const id=gameLobby.id;
+      if(fbDb)fbDb.collection(LOBBY_COLL).doc(id).delete().catch(function(){});
+      toast('The host left, so the lobby closed.','#b58b53');
+      _teardownLobbyRoom();
+    }
+  },15000);
+}
+function _stopLobbyWatch(){if(_lobbyWatchT){clearInterval(_lobbyWatchT);_lobbyWatchT=null;}}
+function _noteLobbyHostStamp(data){
+  if(!_lobbyHostStamp)return;
+  const v=(typeof data.hostSeen==='number')?data.hostSeen:(data.createdAt||0);
+  if(v!==_lobbyHostStamp.v)_lobbyHostStamp={v:v, at:Date.now()};
+}
 function _listenLobbyDoc(){
   if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
   if(!gameLobby||!fbDb)return;
@@ -4098,6 +4162,7 @@ function _listenLobbyDoc(){
     if(!d.exists){ if(!gameLobby.started){toast('The lobby was closed.','#b58b53');_teardownLobbyRoom();} return; }
     const data=d.data()||{};
     gameLobby.players=data.players||gameLobby.players;
+    _noteLobbyHostStamp(data);
     gameLobby.status=data.status;
     if(document.getElementById('session-overlay').style.display==='flex')_renderLobbyPlayers();
     const sb=document.getElementById('session-start-btn'); if(sb&&gameLobby.isHost)sb.textContent='Start ('+_lobbyCount()+'/'+gameLobby.settings.size+')';
@@ -4188,7 +4253,7 @@ function joinLobby(id){
   }).catch(function(){toast('Could not join.','#b3402a');});
 }
 function _teardownLobbyRoom(){
-  stopLobbyBeat();
+  stopLobbyBeat();_stopLobbyWatch();
   if(_lobbyDocUnsub){_lobbyDocUnsub();_lobbyDocUnsub=null;}
   if(_lobbyCountdownInt){clearInterval(_lobbyCountdownInt);_lobbyCountdownInt=null;}
   const so=document.getElementById('session-overlay');if(so)so.style.display='none';
