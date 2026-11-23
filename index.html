@@ -1037,6 +1037,33 @@
 .retry-pay:disabled{opacity:.45;filter:grayscale(.6);cursor:default;}
 .retry-let{padding:11px 20px;border-radius:13px;border:2px solid rgba(255,255,255,.2);background:transparent;color:rgba(255,255,255,.7);font-size:14px;font-weight:700;font-family:'Fredoka';cursor:pointer;}
 .retry-let:active{transform:translateY(2px);}
+.retry-ad{padding:14px 20px;border-radius:13px;border:2px solid #9fe0ff;background:linear-gradient(135deg,#2a8fd8,#155a9c);color:#fff;font-size:16px;font-weight:900;font-family:'Fredoka';cursor:pointer;box-shadow:0 4px 0 #0c3a66;display:none;align-items:center;justify-content:center;gap:7px;}
+.retry-ad.show{display:flex;}
+.retry-ad:active{transform:translateY(3px);box-shadow:0 1px 0 #0c3a66;}
+.retry-ad:disabled{opacity:.45;filter:grayscale(.6);cursor:default;}
+.retry-or{font-size:11px;font-weight:800;color:rgba(255,255,255,.45);letter-spacing:.5px;text-transform:uppercase;margin:-3px 0;}
+/* Ruby store: its own overlay so it works mid-fight and mid-tournament */
+.rstore-bg{position:fixed;inset:0;z-index:480;background:rgba(5,12,22,.82);display:none;align-items:center;justify-content:center;padding:16px;}
+.rstore-bg.show{display:flex;}
+.rstore{background:var(--cream,#fbf3e4);border-radius:18px;max-width:380px;width:100%;max-height:90vh;overflow:auto;padding:18px 16px 14px;box-shadow:0 18px 50px rgba(0,0,0,.55);font-family:Nunito,sans-serif;color:#2a1c0e;}
+.rstore h3{font-family:'Fredoka';font-size:21px;margin:0 0 2px;text-align:center;color:#a8132c;}
+.rstore .rs-sub{font-size:12px;text-align:center;color:#6b5a48;margin-bottom:12px;line-height:1.45;}
+.rs-pack{display:flex;align-items:center;gap:10px;background:#fff;border:1.5px solid #e6d4b8;border-radius:14px;padding:10px 12px;margin-bottom:8px;position:relative;}
+.rs-pack.best{border-color:#d61f3a;box-shadow:0 0 0 2px rgba(214,31,58,.18);}
+.rs-gems{width:36px;height:36px;display:flex;align-items:center;justify-content:center;}
+.rs-gems .gem-s{width:26px;height:26px;}
+.rs-info{flex:1;min-width:0;}
+.rs-amt{font-family:'Fredoka';font-size:17px;font-weight:700;}
+.rs-bonus{font-size:11px;font-weight:800;color:#2a9a5a;}
+.rs-tag{position:absolute;top:-8px;right:10px;background:#d61f3a;color:#fff;font-size:9.5px;font-weight:900;padding:2px 7px;border-radius:8px;letter-spacing:.4px;text-transform:uppercase;}
+.rs-buy{min-width:74px;padding:9px 10px;border-radius:11px;border:none;background:linear-gradient(135deg,#2fa795,#1e7f70);color:#fff;font-family:'Fredoka';font-weight:700;font-size:14px;cursor:pointer;}
+.rs-buy:disabled{background:#b9ad9c;cursor:default;}
+.rs-note{font-size:11px;color:#7a6a58;text-align:center;line-height:1.45;margin:8px 4px 10px;}
+.rs-close{width:100%;padding:11px;border-radius:12px;border:1.5px solid #d6c3a5;background:transparent;font-family:'Fredoka';font-weight:700;font-size:14px;color:#6b5a48;cursor:pointer;}
+.ad-sim{position:fixed;inset:0;z-index:490;background:#000;color:#fff;display:none;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:'Fredoka';}
+.ad-sim.show{display:flex;}
+.ad-sim .as-t{font-size:20px;font-weight:700;}
+.ad-sim .as-c{font-size:13px;opacity:.7;}
 
 </style>
 
@@ -1070,7 +1097,7 @@
       <!-- One soft-currency pill that swaps with the world: gold coin in
            saltwater, green note in freshwater. The two wallets never mix. -->
       <div class="pill" id="coin-pill"><span class="coin-s" id="coin-icon"></span> <span id="gold-pill">0</span></div>
-      <div class="pill" id="rubies-pill" title="Rubies, won in tournaments"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
+      <div class="pill" id="rubies-pill" title="Rubies: win them in tournaments or tap to get more" onclick="openRubyStore()" style="cursor:pointer"><span class="gem-s"></span> <span id="rubies-count">0</span></div>
       <div class="pill click clancy-pill" id="clancy-pill" onclick="openClancyInfo()" title="Ask Captain Clancy"><span class="clancy-face" id="clancy-face"></span></div>
     </div>
     </div>
@@ -1353,11 +1380,15 @@
     <div class="retry-title" id="retry-title">It's getting away!</div>
     <div class="retry-sub" id="retry-sub"></div>
     <div class="retry-btns">
+      <button class="retry-ad" id="retry-ad" onclick="sdewRetryAd()">&#9654; Watch an ad. Try again</button>
+      <div class="retry-or" id="retry-or" style="display:none">or</div>
       <button class="retry-pay" id="retry-pay" onclick="sdewRetryPay()"><span class="gem-s"></span> Pay 5. Try again</button>
       <button class="retry-let" onclick="sdewRetryDecline()">Let it go</button>
     </div>
   </div>
 </div>
+<div class="rstore-bg" id="rstore-bg" onclick="if(event.target===this)closeRubyStore()"><div class="rstore" id="rstore"></div></div>
+<div class="ad-sim" id="ad-sim"><div class="as-t">Test ad</div><div class="as-c" id="ad-sim-c">This stands in for a real video ad.</div></div>
 <div class="auth-overlay" id="skin-overlay" style="display:none">
   <div class="auth-box" style="text-align:center;max-width:400px;">
     <div class="auth-logo">Choose Your Skin Tone</div>
@@ -1523,6 +1554,7 @@ async function doSignup(){
 }
 let _pendingNewUser=false;
 async function afterAuth(user, isNew){
+  try{TTNative.identify(user.uid);}catch(e){}
   fbUser=user;
   // Start the presence heartbeat as soon as we know who this is, not on the
   // first catch: a friend browsing the shop is still online.
@@ -17776,35 +17808,61 @@ function endSdewGame(success){
 // Those are retried as many times as it takes, and they cost nothing.
 const SDEW_RETRY_COST=5;
 function sdewRetryCost(){return (hookedFish&&hookedFish.rarity==='ultra')?0:SDEW_RETRY_COST;}
+// The retry is offered for every lost Stardew fight (legendaries, tournament
+// targets, surf and ice fish). A normal fish gets ONE retry, paid either way:
+// watch a rewarded ad, or spend rubies. Short on rubies, the pay button opens
+// the ruby store instead, so the offer is never a dead end.
 function offerSdewRetry(){
   const f=hookedFish;
   const ultra=f&&f.rarity==='ultra';
-  const canRetry=!!f&&(ultra||(!sdewRetryUsed&&(S.rubies||0)>=SDEW_RETRY_COST));
+  const canRetry=!!f&&(ultra||!sdewRetryUsed);
   if(!canRetry){
-    if(f&&!sdewRetryUsed&&(S.rubies||0)<SDEW_RETRY_COST){
-      fail('The '+f.name+' got away! Not enough rubies for another chance.');
-    }else{
-      fail('The '+(f?f.name:'fish')+' got away! So close...');
-    }
+    fail('The '+(f?f.name:'fish')+' got away! So close...');
     return;
   }
+  const ads=!ultra&&TTNative.adsAvailable();
+  const rich=(S.rubies||0)>=SDEW_RETRY_COST;
   document.getElementById('retry-title').textContent='The '+f.name+' is winning!';
   document.getElementById('retry-sub').innerHTML=ultra
     ? 'It’s an <b style="color:#ff3df0">Ultra Legendary</b>, a once in a lifetime fish. Grab the rod again, <b>free</b>, as many times as it takes. You will not lose this one.'
-    : 'Pay <b>'+SDEW_RETRY_COST+'</b> rubies to grab the rod again. You get <b>one</b> more chance.';
-  const pay=document.getElementById('retry-pay');
+    : (ads?'Watch a short ad or pay <b>'+SDEW_RETRY_COST+'</b> rubies':'Pay <b>'+SDEW_RETRY_COST+'</b> rubies')+' to grab the rod again. You get <b>one</b> more chance.';
+  const ad=document.getElementById('retry-ad');
+  ad.classList.toggle('show',ads);ad.disabled=false;
+  document.getElementById('retry-or').style.display=ads?'':'none';
+  const pay=document.getElementById('retry-pay');pay.disabled=false;
   // Keep this separator in step with the static markup in the retry button:
   // the two render the same line, and they have drifted apart before.
   pay.innerHTML=ultra
     ? 'Grab the rod again, FREE'
-    : '<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+'. Try again ('+(S.rubies||0)+')';
+    : rich
+      ? '<span class="gem-s"></span> Pay '+SDEW_RETRY_COST+'. Try again ('+(S.rubies||0)+')'
+      : '<span class="gem-s"></span> Get rubies ('+(S.rubies||0)+' of '+SDEW_RETRY_COST+')';
   document.getElementById('retry-overlay').classList.add('show');
+}
+function sdewRetryAd(){
+  const f=hookedFish;if(!f||sdewRetryUsed)return;
+  const ad=document.getElementById('retry-ad'), pay=document.getElementById('retry-pay');
+  ad.disabled=true;pay.disabled=true;
+  TTNative.showRewardedAd().then(function(earned){
+    if(!earned){
+      ad.disabled=false;pay.disabled=false;
+      toast('The ad didn’t finish, so no retry yet. Try again or pay rubies.','#b58b53');
+      return;
+    }
+    sdewRetryUsed=true;
+    document.getElementById('retry-overlay').classList.remove('show');
+    startSdewGame(f);
+  });
 }
 function sdewRetryPay(){
   const f=hookedFish;if(!f)return;
   const cost=sdewRetryCost();
   if(cost>0){
-    if((S.rubies||0)<cost){toast('Not enough rubies.','#b3402a');return;}
+    if((S.rubies||0)<cost){
+      // Come back to this same offer once the purchase lands.
+      openRubyStore(function(){offerSdewRetry();});
+      return;
+    }
     S.rubies-=cost;updatePills();queueSave();
     sdewRetryUsed=true;
   }
@@ -17814,6 +17872,174 @@ function sdewRetryPay(){
 function sdewRetryDecline(){
   document.getElementById('retry-overlay').classList.remove('show');
   fail('You let the '+(hookedFish?hookedFish.name:'fish')+' go.');
+}
+
+// ═══════════════ ADS + RUBY PURCHASES (native app bridge) ═══════════════
+// The game is one web page. In the App Store / Google Play build it runs inside
+// a Capacitor wrapper, which exposes two native plugins on window.Capacitor:
+//   AdMob      (@capacitor-community/admob)       rewarded video ads
+//   Purchases  (@revenuecat/purchases-capacitor)  Apple / Google in-app purchases
+// Apple and Google both REQUIRE their own payment systems for digital currency,
+// so rubies are only ever sold through these plugins, never through a web form.
+//
+// On the website there is no wrapper: no ads and no purchases, and the store
+// says to get the app. On a local dev host (localhost / 127.0.0.1) a TEST MODE
+// fakes both, so the whole flow can be played through in a browser.
+//
+// Fill in TT_CONFIG before building the app. The AdMob ids below are Google's
+// public TEST units: they always show test ads and pay nothing.
+const TT_CONFIG={
+  admobRewarded:{
+    ios:'ca-app-pub-3940256099942544/1712485313',
+    android:'ca-app-pub-3940256099942544/5224354917'
+  },
+  admobTesting:true,                       // set false for the release build
+  revenueCatKey:{ios:'appl_REPLACE_ME', android:'goog_REPLACE_ME'}
+};
+// Product ids must match App Store Connect, Google Play Console and RevenueCat
+// exactly. Prices here are only the fallback label: the real, localised price
+// comes from the store at runtime.
+const RUBY_PACKS=[
+  {id:'rubies_100',  rubies:100,  bonus:0,    price:'$0.99'},
+  {id:'rubies_550',  rubies:550,  bonus:50,   price:'$4.99'},
+  {id:'rubies_1200', rubies:1200, bonus:200,  price:'$9.99',  tag:'Popular'},
+  {id:'rubies_2600', rubies:2600, bonus:600,  price:'$19.99'},
+  {id:'rubies_7000', rubies:7000, bonus:2000, price:'$49.99', tag:'Best value'},
+];
+const TTNative=(function(){
+  const cap=function(){return window.Capacitor||null;};
+  const isNative=function(){const c=cap();return !!(c&&c.isNativePlatform&&c.isNativePlatform());};
+  const platform=function(){const c=cap();return c&&c.getPlatform?c.getPlatform():'web';};
+  const plugin=function(n){const c=cap();return c&&c.Plugins?c.Plugins[n]:null;};
+  const testMode=function(){return !isNative()&&/^(localhost|127\.0\.0\.1|\[::1\])$|\.localhost$|\.test$/.test(location.hostname);};
+  let adsReady=false, adLoaded=false, iapReady=false, prices={}, products={};
+  // ---------- ads ----------
+  async function initAds(){
+    const A=plugin('AdMob');if(!A)return;
+    try{
+      // iOS: App Tracking Transparency prompt, then Google's consent form where
+      // the law needs one (EU/UK). Ads still serve, non-personalised, on a "no".
+      try{const st=await A.trackingAuthorizationStatus();if(st&&st.status==='notDetermined')await A.requestTrackingAuthorization();}catch(e){}
+      await A.initialize({initializeForTesting:!!TT_CONFIG.admobTesting});
+      try{const ci=await A.requestConsentInfo();if(ci&&ci.isConsentFormAvailable&&ci.status==='REQUIRED')await A.showConsentForm();}catch(e){}
+      adsReady=true;loadAd();
+    }catch(e){console.warn('AdMob init failed',e);}
+  }
+  async function loadAd(){
+    const A=plugin('AdMob');if(!A||!adsReady)return;
+    try{await A.prepareRewardVideoAd({adId:TT_CONFIG.admobRewarded[platform()]||TT_CONFIG.admobRewarded.android,isTesting:!!TT_CONFIG.admobTesting});adLoaded=true;}
+    catch(e){adLoaded=false;}
+  }
+  function adsAvailable(){return testMode()||(isNative()&&adsReady);}
+  // Resolves true only when the player watched it through and earned the reward.
+  async function showRewardedAd(){
+    if(testMode())return simAd();
+    const A=plugin('AdMob');if(!A||!adsReady)return false;
+    try{
+      if(!adLoaded)await loadAd();
+      if(!adLoaded){toast('No ad is available right now. Try again in a moment.','#b58b53');return false;}
+      adLoaded=false;
+      const r=await A.showRewardVideoAd();
+      loadAd();                         // line up the next one
+      return !!r;
+    }catch(e){loadAd();return false;}
+  }
+  function simAd(){
+    return new Promise(function(res){
+      const el=document.getElementById('ad-sim'),c=document.getElementById('ad-sim-c');
+      let n=3;el.classList.add('show');c.textContent='Reward in '+n+'s (local test mode)';
+      const iv=setInterval(function(){n--;if(n>0){c.textContent='Reward in '+n+'s (local test mode)';return;}
+        clearInterval(iv);el.classList.remove('show');res(true);},1000);
+    });
+  }
+  // ---------- purchases ----------
+  async function initIAP(){
+    const P=plugin('Purchases');if(!P)return;
+    const key=TT_CONFIG.revenueCatKey[platform()];
+    if(!key||/REPLACE_ME/.test(key))return;
+    try{
+      const opts={apiKey:key};
+      if(typeof fbUser!=='undefined'&&fbUser&&fbUser.uid)opts.appUserID=fbUser.uid;
+      await P.configure(opts);
+      const r=await P.getProducts({productIdentifiers:RUBY_PACKS.map(function(p){return p.id;}),type:'NON_SUBSCRIPTION'});
+      (r&&r.products||[]).forEach(function(p){products[p.identifier]=p;prices[p.identifier]=p.priceString;});
+      iapReady=true;
+    }catch(e){console.warn('Purchases init failed',e);}
+  }
+  // Tie purchases to the signed-in account so RevenueCat's records follow the player.
+  async function identify(uid){
+    const P=plugin('Purchases');if(!P||!iapReady||!uid)return;
+    try{await P.logIn({appUserID:uid});}catch(e){}
+  }
+  function storeMode(){return testMode()?'test':(isNative()?(iapReady?'live':'loading'):'web');}
+  function priceOf(id){return prices[id]||(RUBY_PACKS.find(function(p){return p.id===id;})||{}).price||'';}
+  // Resolves {ok, tx} on a completed purchase; {ok:false} on cancel or error.
+  async function buy(id){
+    if(testMode())return {ok:true, tx:'test_'+Date.now()};
+    const P=plugin('Purchases');const prod=products[id];
+    if(!P||!prod)return {ok:false, msg:'The store isn’t ready yet. Try again in a moment.'};
+    try{
+      const r=await P.purchaseStoreProduct({product:prod});
+      const t=r&&r.transaction;
+      return {ok:true, tx:(t&&(t.transactionIdentifier||t.purchaseToken))||('rc_'+Date.now())};
+    }catch(e){
+      if(e&&(e.userCancelled||e.code==='1'||/cancel/i.test(e.message||'')))return {ok:false, cancelled:true};
+      return {ok:false, msg:'The purchase didn’t go through. You were not charged.'};
+    }
+  }
+  function init(){if(isNative()){initAds();initIAP();}}
+  return {init, isNative, testMode, adsAvailable, showRewardedAd, storeMode, priceOf, buy, identify};
+})();
+// Start once the page has settled; plugins are present from the first frame in
+// the app, so there is nothing to wait on beyond the save loading.
+setTimeout(function(){try{TTNative.init();}catch(e){}},1500);
+
+let _rstoreAfter=null;   // run after a successful purchase (e.g. reopen the retry offer)
+function openRubyStore(after){
+  _rstoreAfter=typeof after==='function'?after:null;
+  renderRubyStore();
+  document.getElementById('rstore-bg').classList.add('show');
+}
+function closeRubyStore(){
+  document.getElementById('rstore-bg').classList.remove('show');
+  // Leaving the store from a lost-fight retry returns you to that offer.
+  if(_rstoreAfter){const a=_rstoreAfter;_rstoreAfter=null;a();}
+}
+function renderRubyStore(){
+  const mode=TTNative.storeMode();
+  let h='<h3>Get Rubies</h3><div class="rs-sub">You have <span class="gem-s" style="width:12px;height:12px;"></span> <b>'+(S.rubies||0).toLocaleString()+'</b> rubies. Spend them on sets, items and second chances at a fish that got away.</div>';
+  RUBY_PACKS.forEach(function(p){
+    h+='<div class="rs-pack'+(p.tag==='Best value'?' best':'')+'">'+(p.tag?'<span class="rs-tag">'+p.tag+'</span>':'')
+      +'<div class="rs-gems"><span class="gem-s"></span></div>'
+      +'<div class="rs-info"><div class="rs-amt">'+p.rubies.toLocaleString()+' rubies</div>'+(p.bonus?'<div class="rs-bonus">includes '+p.bonus.toLocaleString()+' bonus</div>':'')+'</div>'
+      +'<button class="rs-buy" '+(mode==='web'||mode==='loading'?'disabled':'')+' onclick="buyRubyPack(\''+p.id+'\',this)">'+TTNative.priceOf(p.id)+'</button></div>';
+  });
+  if(mode==='web')h+='<div class="rs-note">Rubies can be bought in the Tide &amp; Tackle app on the App Store and Google Play. You can still win them in tournaments here.</div>';
+  else if(mode==='loading')h+='<div class="rs-note">Connecting to the store…</div>';
+  else if(mode==='test')h+='<div class="rs-note"><b>Local test mode:</b> buying adds rubies without charging anything.</div>';
+  else h+='<div class="rs-note">Payment is charged to your '+(TTNative.isNative()&&window.Capacitor.getPlatform()==='ios'?'Apple Account':'Google Play account')+'. Rubies are added to '+(typeof fbUser!=='undefined'&&fbUser?'your account':'this device (sign in to keep them safe)')+'.</div>';
+  h+='<button class="rs-close" onclick="closeRubyStore()">Close</button>';
+  document.getElementById('rstore').innerHTML=h;
+}
+async function buyRubyPack(id, btn){
+  const p=RUBY_PACKS.find(function(x){return x.id===id;});if(!p)return;
+  document.querySelectorAll('.rs-buy').forEach(function(b){b.disabled=true;});
+  if(btn)btn.textContent='…';
+  const r=await TTNative.buy(id);
+  if(r.ok){
+    // A transaction is credited once, even if the store reports it twice.
+    S.rubyTx=S.rubyTx||[];
+    if(S.rubyTx.indexOf(r.tx)<0){
+      S.rubyTx.push(r.tx);if(S.rubyTx.length>200)S.rubyTx=S.rubyTx.slice(-200);
+      S.rubies=(S.rubies||0)+p.rubies;
+      updatePills();
+      try{_lastSaveMs=0;saveGame();}catch(e){queueSave();}   // save now, past the 5 s throttle: real money was spent
+      if(typeof AUDIO!=='undefined')try{AUDIO.sfx('coin');}catch(e){}
+      toast('+'+p.rubies.toLocaleString()+' rubies! Thank you for supporting Tide & Tackle.','#d61f3a');
+    }
+    if(_rstoreAfter){document.getElementById('rstore-bg').classList.remove('show');const a=_rstoreAfter;_rstoreAfter=null;a();return;}
+  }else if(!r.cancelled&&r.msg){toast(r.msg,'#b3402a');}
+  renderRubyStore();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -18927,7 +19153,7 @@ function _renderShopNow(){
     subHtml=shopSubChips([['rods','Rods'],['reels','Reels'],['braid',isFresh()?'Line':'Braid']],leaf,'combo');
   } else if(shopTab==='special'){
     if(!shopSub.special)shopSub.special='items';leaf=shopSub.special;
-    subHtml=shopSubChips([['items','Items'],['sets','Sets']],leaf,'special');
+    subHtml=shopSubChips([['items','Items'],['sets','Sets'],['rubies','Get Rubies']],leaf,'special');
   } else if(shopTab==='tackle'){
     leaf='tackle';
     // Only the categories the CURRENT world's methods actually use, so a lake
@@ -19041,6 +19267,9 @@ function _renderShopNow(){
           +action+'</div>';
       }).join('');
     }
+  }
+  else if(leaf==='rubies'){
+    html='<div style="text-align:center;padding:14px 6px;"><div style="font-size:12.5px;color:var(--text-soft);margin-bottom:12px;line-height:1.5;">Rubies are won in tournaments, or bought in ruby packs.</div><button class="rs-buy" style="min-width:160px;padding:11px 16px;" onclick="openRubyStore()">Open the Ruby Store</button></div>';
   }
   else if(leaf==='sets'){
     html='<div style="font-size:11.5px;color:var(--text-soft);margin-bottom:11px;line-height:1.55;">Outfit sets are bought with <span class="gem-s"></span> <b>rubies</b> (won in tournaments). Each gives a passive <b>set bonus</b> for the whole game, plus an <b>ability</b> usable 3× per tournament.</div>';
