@@ -16735,21 +16735,18 @@ function flyMend(){
   flyStats();
 }
 // ---- beat 3: the take, with a fly-specific correct answer ----
+// The fly-specific set step (tap / strip-set hold) is gone: a take now goes
+// straight to the regular stop-the-marker hookset, like every other method.
 function flyTheTake(){
-  flyPhase='take';
-  tbarShow('fly-mendbar', false);     // nothing to mend once it has the fly
-  flySetSpec=FLY_SET[flyKind()]||FLY_SET.nymph;
-  flyTakeAt=performance.now();
-  // Already holding the button when it ate? Then you were ready, and the hold
-  // clock starts at the take rather than never starting at all.
-  flyHoldSet=_flyBtnDown?flyTakeAt:0;
-  const btn=document.getElementById('fly-main');
-  btn.textContent=flySetSpec.hold?'Strip-Set (hold)':'Set the Hook';
-  btn.classList.add('hot');
-  document.getElementById('fly-alt').disabled=true;
-  AUDIO.sfx('bite');
-  flySay('<b>'+flySetSpec.tell+'</b>');
+  // Never hand off with nothing to hook, or the player lands in phase 'done'
+  // with no explanation.
+  if(poolNow().strength<=0){flyEndDrift('Something swirled at it, then nothing. Cast again.');return;}
+  flyFinish();
   if(navigator.vibrate)try{navigator.vibrate(18);}catch(e){}
+  setStatus('Fish on!');
+  // A short beat first, so a mend tap already in flight can't land on the
+  // hookset bar and stop the marker by accident.
+  setTimeout(function(){if(phase==='waiting')triggerBite();},400);
 }
 function flyResolveSet(){
   if(flyPhase!=='take')return;
