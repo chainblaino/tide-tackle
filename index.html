@@ -5303,7 +5303,8 @@ whenArtAllowed(function(){CLANCY_IMG.src='npc/clancy.png';},1);
 // on-canvas draw stays crisp instead of aliasing from 1254px in one step.
 const CHALLENGER_SPRITE={};
 whenArtAllowed(function(){
-[['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png']].forEach(function(p){
+[['marley','npc/marley.png'],['trisha','npc/trisha.png'],['magellan','npc/mangellan.png'],
+ ['cletus','npc/midwest npc.png'],['scarlett','npc/southern npc.png'],['brody','npc/northern npc.png'],['nanuq','npc/mountain npc.png']].forEach(function(p){
   const im=new Image();
   im.onload=function(){try{CHALLENGER_SPRITE[p[0]]=_downscaleHQ(_keyOutPetBg(im),256);}catch(e){CHALLENGER_SPRITE[p[0]]=im;}};
   im.src=p[1];
@@ -5314,7 +5315,8 @@ whenArtAllowed(function(){
 // then a high-quality downscale keeps the boat crisp on the small canvas draw.
 const NPC_BOAT={};
 whenArtAllowed(function(){
-[['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png']].forEach(function(p){
+[['clancy','npc boat/clancy boat.png'],['marley','npc boat/marley boat.png'],['trisha','npc boat/trisha boat.png'],['magellan','npc boat/magellan boat.png'],
+ ['cletus','npc boat/midwest boat.png'],['scarlett','npc boat/southern boat.png'],['brody','npc boat/northern boat.png'],['nanuq','npc boat/mountain boat.png']].forEach(function(p){
   const im=new Image();
   im.onload=function(){try{NPC_BOAT[p[0]]=_downscaleHQ(_keyOutPetBg(im,212),384);}catch(e){NPC_BOAT[p[0]]=im;}};
   im.src=p[1];
@@ -19386,22 +19388,36 @@ function clancyBoatPos(){
   const px=Math.round(W*f[0]), py=Math.round(H*f[1]);
   if(z===0)return (_clancyPosCache[z]={x:px, y:py});
   if(!waterPathFor(z))return {x:px, y:py};   // map not built yet: don't cache a guess
-  // Freshwater has banks and islands, so walk outward from the preferred spot
-  // until the boat and a margin round it are all open water.
-  const clear=function(x, y){
+  return (_clancyPosCache[z]=openWaterNear(z, px, py, null)||{x:px, y:py});
+}
+// Freshwater has banks and islands, so walk outward from a preferred spot until
+// a boat and a margin round it are all open water. `avoid` is a point to keep
+// well clear of (another NPC's boat). Null when the map has no water path yet.
+function openWaterNear(z, px, py, avoid){
+  if(!waterPathFor(z))return null;
+  const W=WORLD_DIMS[z][0], H=WORLD_DIMS[z][1];
+  const spots=(ZONES[z]&&ZONES[z].structures)||[];
+  const clear=function(x, y, margin){
+    if(avoid&&Math.hypot(x-avoid.x, y-avoid.y)<280)return false;
+    // and off the fishing spots: a boat parked on a dock hides it
+    for(const s of spots){if(Math.hypot(x-s.x, y-s.y)<130)return false;}
     if(!isWaterAt(x, y, z))return false;
-    for(let a=0;a<8;a++){const r=46, t=a*Math.PI/4;if(!isWaterAt(x+Math.cos(t)*r, y+Math.sin(t)*r, z))return false;}
+    for(let a=0;a<8;a++){const t=a*Math.PI/4;if(!isWaterAt(x+Math.cos(t)*margin, y+Math.sin(t)*margin, z))return false;}
     return true;
   };
-  for(let r=0;r<Math.max(W, H);r+=40){
-    const steps=r?Math.max(8, Math.round(r/30)):1;
-    for(let i=0;i<steps;i++){
-      const t=i/steps*Math.PI*2, x=Math.round(px+Math.cos(t)*r), y=Math.round(py+Math.sin(t)*r);
-      if(x<60||y<60||x>W-60||y>H-60)continue;
-      if(clear(x, y))return (_clancyPosCache[z]={x:x, y:y});
+  // Open water first; the Mountains is a narrow river, so fall back to any
+  // stretch the boat fits in mid-channel.
+  for(const margin of [46, 16]){
+    for(let r=0;r<Math.max(W, H);r+=20){
+      const steps=r?Math.max(8, Math.round(r/15)):1;
+      for(let i=0;i<steps;i++){
+        const t=i/steps*Math.PI*2, x=Math.round(px+Math.cos(t)*r), y=Math.round(py+Math.sin(t)*r);
+        if(x<60||y<60||x>W-60||y>H-60)continue;
+        if(clear(x, y, margin))return {x:x, y:y};
+      }
     }
   }
-  return (_clancyPosCache[z]={x:px, y:py});
+  return null;
 }
 // Clancy's standing tip: go find the Greenland Shark. Shown until you land one.
 const CLANCY_GREENLAND_HINT="I heard there have been some sightings of a <b>Greenland Shark</b> under the <b>Alaskan ice</b> up in the <b>Mountains</b>. Grab the Mountains Licence and an <b>Ice Auger</b>, cut a hole from mid fall through winter, and work yer jig deep, past 50 feet. It's the most catchable Ultra Legendary in these waters, and once she's hooked, win the fight and she's yers. No fancy gear needed.";
@@ -19472,6 +19488,8 @@ function drawSubmarine(sx, sy, t, dive){
   ctx.restore();
 }
 // ═══════════════════ NPC CHALLENGERS (V0.9.6) ═══════════════════
+// Saltwater: Marley (inshore), Trisha (nearshore), Magellan (offshore). Freshwater:
+// Cletus (Midwest), Scarlett (Southern), Brody (Northern), Nanuq (Mountains).
 // Marley (inshore), Trisha (nearshore) and Magellan (offshore) sail in once you've
 // logged every species in their region (ultra legendaries don't count). They show
 // up once per in-game year; beat them and they leave until next year. Each visit
@@ -19489,16 +19507,46 @@ const CHALLENGERS=[
    greet:['I am Magellan, who charted the uncharted seas. Prove your mettle, sailor.','To the edge of the map and back! Can you keep an explorer’s pace?'],
    win:['By the trade winds! You’ve bested an explorer. This prize is yours.','A discovery indeed. Claim your spoils, navigator.'],
    lose:['The horizon humbles us all. Chart a new course and return.','Even I once lost my way. Try again, sailor.']},
+  // ---- Freshwater challengers: one per region, same rules as the salt three.
+  // `tier` sets the race/duel difficulty (the salt ones use their zone, 0..2) and
+  // `trophyW` is tuned to what actually swims in that region.
+  {id:'cletus', name:'Cletus', zone:3, tier:0, trophyW:8, posF:[0.30,0.30], tint:'#3d6fb0', region:'midwest', img:'npc/midwest npc.png', boatImg:'npc boat/midwest boat.png',
+   greet:['Well I’ll be, a city slicker on my crick! Name’s Cletus. Reckon ye can out-fish ol’ Cletus?','Hoo-wee! Grab yer bait bucket, partner, we’re havin’ us a fish-off.'],
+   win:['Dang it all, ye whupped me fair ’n square! Here, take this ’fore I change my mind.','Well butter my biscuit, ye can fish! Prize is yers, partner.'],
+   lose:['Ha! Ol’ Cletus knows every catfish hole in the county. Come on back now, y’hear?','Shucks, better luck next time, partner. Go practice on them bluegills.']},
+  {id:'scarlett', name:'Scarlett', zone:4, tier:1, trophyW:12, posF:[0.70,0.35], tint:'#a83a5a', region:'southern', img:'npc/southern npc.png', boatImg:'npc boat/southern boat.png',
+   greet:['Why, hello there, darlin’. Miss Scarlett, at your service. Care for a little dance on the water?','A friendly contest, sugar? I do adore a partner who can keep in step.'],
+   win:['Well, I declare! You led that waltz beautifully, darlin’. Do accept this little token.','Bless your heart, you won fair and square. A prize for my favorite partner.'],
+   lose:['Oh, sugar, you stepped on my toes a bit. Do come back for another dance.','Not quite in time with the music, darlin’. Practice your footwork and return.']},
+  {id:'brody', name:'Brody', zone:5, tier:1, trophyW:16, posF:[0.30,0.65], tint:'#c43a32', region:'northern', img:'npc/northern npc.png', boatImg:'npc boat/northern boat.png',
+   greet:['Huddle up! Brody, number 12. Think you can go the distance against a pro?','Game day, rookie! Let’s see what you’ve got on the field. Well, the lake.'],
+   win:['Touchdown! You crushed it out there, MVP. Here’s your trophy.','What a play! You out-hustled me. Take the game ball, champ.'],
+   lose:['Flag on the play! Hit the film room and come back stronger, rookie.','Fumble! Shake it off, run some drills and suit up again.']},
+  {id:'nanuq', name:'Nanuq', zone:6, tier:2, trophyW:10, posF:[0.50,0.70], tint:'#8a5a32', region:'mountains', img:'npc/mountain npc.png', boatImg:'npc boat/mountain boat.png',
+   greet:['Welcome to the cold country. I am Nanuq. The ice teaches patience. Shall we see who listens better?','Bundle up, friend. Up here the wind and the water decide everything. Fish with me?'],
+   win:['You read the water like you were born on the ice. Take this, friend, and stay warm.','Well fished! Even the mountain is impressed. This is yours.'],
+   lose:['The cold is patient, and so must you be. Come back when the wind is kinder.','Not today, friend. Warm your hands and try again.']},
 ];
 function challengerById(id){return CHALLENGERS.find(function(c){return c.id===id;});}
-function challengerPos(ch){return {x:Math.round(WORLD_DIMS[ch.zone][0]*ch.posF[0]), y:Math.round(WORLD_DIMS[ch.zone][1]*ch.posF[1])};}
-function challengerImgSrc(ch){return ({marley:'npc/marley.png',trisha:'npc/trisha.png',magellan:'npc/mangellan.png'})[ch.id];}
+const _chalPosCache={};
+function challengerPos(ch){
+  const px=Math.round(WORLD_DIMS[ch.zone][0]*ch.posF[0]), py=Math.round(WORLD_DIMS[ch.zone][1]*ch.posF[1]);
+  if(worldOf(ch.zone)!=='fresh')return {x:px, y:py};
+  if(_chalPosCache[ch.id])return _chalPosCache[ch.id];
+  // Lakes have banks: find open water near the preferred spot, clear of Clancy.
+  const avoid=(S.zone===ch.zone&&clancyHere())?clancyBoatPos():null;
+  if(!waterPathFor(ch.zone))return {x:px, y:py};   // map not built yet: don't cache a guess
+  // Cached either way: the search is too heavy to repeat every frame.
+  return (_chalPosCache[ch.id]=openWaterNear(ch.zone, px, py, avoid)||{x:px, y:py});
+}
+function challengerImgSrc(ch){return ch.img||({marley:'npc/marley.png',trisha:'npc/trisha.png',magellan:'npc/mangellan.png'})[ch.id];}
 function challengerState(id){if(!S.challengerState)S.challengerState={};return (S.challengerState[id]=S.challengerState[id]||{beatenYear:-1});}
 // V0.9.7: challengers no longer require clearing the region. Each one simply
 // passes through their home waters ONCE per in-game year, on its own random day
 // (a two in-game day window), and the three never overlap. The year is 20 in-game
 // days; each challenger is assigned a window in a different third of the year.
-const CHAL_BAND={marley:[0,5], trisha:[7,12], magellan:[14,18]}; // [earliest, latest] start day
+const CHAL_BAND={marley:[0,5], trisha:[7,12], magellan:[14,18],     // [earliest, latest] start day
+                 cletus:[0,3], scarlett:[5,8], brody:[10,13], nanuq:[15,18]};  // freshwater: four quarters of the year
 function challengerSpawnDay(ch, year){
   const band=CHAL_BAND[ch.id]||[0,18];
   const r=mulberry32((strHash('chal_'+ch.id+'_'+year))>>>0)();
@@ -19523,10 +19571,10 @@ function availableChallenger(){
 function onNewGameYear(){/* challengers re-arm automatically via beatenYear vs gameYear */}
 // ── Challenge difficulty by region (0 inshore .. 2 offshore) ──
 function challengeParams(ch, type){
-  const z=ch.zone;
+  const z=(typeof ch.tier==='number')?ch.tier:ch.zone;   // difficulty tier 0..2
   if(type==='race'){const sec=[75,95,120][z], foeRate=[19,17,16][z];
     return {type:type,sec:sec,foeRate:foeRate,title:'Out-Fish Race',desc:'Catch more fish than '+ch.name+' in '+sec+' seconds.'};}
-  if(type==='trophy'){const sec=[95,115,140][z], w=[8,22,58][z];
+  if(type==='trophy'){const sec=[95,115,140][z], w=ch.trophyW||[8,22,58][z];
     return {type:type,sec:sec,trophyW:w,title:'Beat the Trophy',desc:'Land a fish heavier than '+w+' lb within '+sec+' seconds.'};}
   const casts=[6,7,8][z], target=[140,230,330][z];
   return {type:type,casts:casts,target:target,title:'Points Duel',desc:'Score '+target+' points in '+casts+' casts. Rarer fish score more.'};
@@ -19614,7 +19662,7 @@ function challengeOnCatch(f, w){
 function grantRandomChallengeItem(ch){
   const _pool=itemsHere();
   const it=(_pool.length?_pool:ITEMS)[Math.floor(Math.random()*(_pool.length||ITEMS.length))];
-  const qty=[1,1,2][ch.zone]||1;
+  const qty=[1,1,2][(typeof ch.tier==='number')?ch.tier:ch.zone]||1;
   if(!S.itemInv)S.itemInv={};
   S.itemInv[it.id]=(S.itemInv[it.id]||0)+qty;
   return {name:it.name, qty:qty};
