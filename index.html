@@ -1656,17 +1656,20 @@ function tutTargetStructPos(){
   const z=ZONES[S.zone];if(!z||!z.structures)return null;
   let best=null, bd=1e18;
   for(const s of z.structures){
-    if(T.structure.indexOf(structKindAlias(s.kind))<0)continue;
+    if(!tutStructMatches(s))continue;   // never a crab trap: casting there pulls the trap, not a fish
     const dx=s.x-boat.wx, dy=s.y-boat.wy, d=dx*dx+dy*dy;
     if(d<bd){bd=d;best=s;}
   }
   return best;
 }
-function tutStructMatches(st){return !!(st&&tut.target&&tut.target.structure&&tut.target.structure.indexOf(structKindAlias(st.kind))>=0);}
+function tutStructMatches(st){return !!(st&&st.kind!=='crab_trap'&&tut.target&&tut.target.structure&&tut.target.structure.indexOf(structKindAlias(st.kind))>=0);}
 function _tutStructText(T){
   const list=((T&&T.structure)||['open']).filter(function(s){return s!=='open';});
   if(!list.length)return 'a good hotspot';
-  return list.map(function(k){return structLabel(k);}).slice(0,2).join(' or ');
+  // Name every spot she holds on: the radar leads to the nearest of ANY of them,
+  // so listing only two had it pointing at a bridge Clancy never mentioned.
+  const names=list.map(function(k){return structLabel(k);});
+  return names.length>1?names.slice(0,-1).join(', ')+' or '+names[names.length-1]:names[0];
 }
 // ---- Tutorial pointer ------------------------------------------------------------
 // Each step can name what it wants tapped as a list of selectors, most specific
@@ -8742,8 +8745,11 @@ function drawRadarPointer(t){
   if(best){
     const ang=Math.atan2(best.wy-boat.wy, best.wx-boat.wx);
     ctx.translate(cx, cy);ctx.rotate(ang);
-    ctx.fillStyle='#3ad6ff';
-    ctx.beginPath();ctx.moveTo(11,0);ctx.lineTo(-2,-6);ctx.lineTo(-2,6);ctx.closePath();ctx.fill();
+    // A shaft plus a narrow head. The old head was nearly equilateral, so at many
+    // angles a flat side read as its base and it seemed to point somewhere else.
+    ctx.fillStyle='#3ad6ff';ctx.strokeStyle='#3ad6ff';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-10,0);ctx.lineTo(3,0);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(1,-5.5);ctx.lineTo(3.5,0);ctx.lineTo(1,5.5);ctx.closePath();ctx.fill();
   }else{
     // scanning sweep when nothing is in the water
     ctx.translate(cx, cy);ctx.rotate(t*2.2);
