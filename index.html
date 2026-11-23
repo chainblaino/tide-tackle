@@ -562,6 +562,11 @@
   .opt{display:flex;align-items:center;gap:10px;background:var(--parchment);border:1px solid transparent;border-radius:14px;padding:10px 12px;margin-bottom:7px;cursor:pointer;}
   .opt:hover{background:#efe4cf;}
   .opt.sel{background:#e3f5f1;box-shadow:inset 0 0 0 1.5px rgba(47,167,149,.42);}
+  .opt.web-best{box-shadow:inset 0 0 0 2px #2a62d8;background:#e8effd;}
+  .opt.sel.web-best{background:#e3f5f1;}
+  .web-tag{display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#2a62d8;color:#fff;font-size:9.5px;font-weight:800;letter-spacing:.3px;text-transform:uppercase;vertical-align:1px;}
+  .web-note{font-size:11.5px;color:var(--text-soft);text-align:center;margin:4px 0 2px;}
+  .rig-slot.web-fix{box-shadow:0 0 0 2px #2a62d8;}
   .opt.disabled{opacity:.5;cursor:not-allowed;}
   .opt .oi{font-size:20px;width:26px;text-align:center;flex-shrink:0;}
   .opt .oinfo{flex:1;min-width:0;}
@@ -3382,6 +3387,7 @@ function endTournament(){
   document.body.classList.remove('tourn-active'); // shop unlocked again
   // Reset all ability effects and hide the ability button
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  _webbedUntil=0;_webArm=null;_webHookSure=null;
   jesterStacks=0;_sunBiteUntil=0;_frenzyUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;_hornedUntil=0;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const cbn=document.getElementById('cannon-btn');if(cbn){cbn.classList.remove('show');cbn.classList.remove('armed');}
@@ -3703,6 +3709,7 @@ function _restoreWorldAfterSession(){
   stopTournamentSync();
   tourn.active=false;tourn.coop=false;tourn.seed=null;tourn.ghosts=[];tourn.structs=[];tourn._leaderBots=null;tourn._trail=null;
   confusedUntil=0;knockVX=0;knockVY=0;blindUntil=0;immuneUntil=0;invisibleUntil=0;_abilityFx=[];
+  _webbedUntil=0;_webArm=null;_webHookSure=null;
   jesterStacks=0;_sunBiteUntil=0;_frenzyUntil=0;_lunarSlowNext=false;_snaggedUntil=0;placedItems=[];_placeItemMode=null;_hornedUntil=0;
   const abtn=document.getElementById('ability-btn');if(abtn)abtn.classList.remove('show');
   const cbn=document.getElementById('cannon-btn');if(cbn){cbn.classList.remove('show');cbn.classList.remove('armed');}
@@ -4919,6 +4926,7 @@ const COSMETICS={
     {id:'jester_hat',  slot:'hat', name:'Jester Cap',         icon:'hat-beanie', cost:0, lvl:1, desc:'Part of the Jester Set.',  set:'jester',  setOnly:true},
     {id:'astro_helmet',slot:'hat', name:'Astronaut Helmet',   icon:'hat-bucket', cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
     {id:'robot_antenna',slot:'hat',name:'Robot Antenna',      icon:'hat-visor',  cost:0, lvl:1, desc:'Part of the Robot Set.',   set:'robot',   setOnly:true},
+    {id:'webguy_mask', slot:'hat', name:'Web Mask',           icon:'hat-beanie', cost:0, lvl:1, desc:'Part of the Webguy Set.', set:'webguy', setOnly:true},
   ],
   shirts:[
     {id:'none',      slot:'shirt', name:'No Shirt',        icon:'shirt-none',       cost:0,     lvl:1, desc:'Living free.'},
@@ -4937,6 +4945,7 @@ const COSMETICS={
     {id:'jester_shirt',slot:'shirt',name:'Jester Motley',  icon:'shirt-tee',       cost:0, lvl:1, desc:'Part of the Jester Set.', set:'jester',  setOnly:true},
     {id:'astro_suit', slot:'shirt', name:'Spacesuit',      icon:'shirt-hoodie',    cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
     {id:'robot_chest',slot:'shirt', name:'Robot Chassis',  icon:'shirt-vest',      cost:0, lvl:1, desc:'Part of the Robot Set.',  set:'robot',   setOnly:true},
+    {id:'webguy_suit',slot:'shirt', name:'Web Suit',       icon:'shirt-hoodie',    cost:0, lvl:1, desc:'Part of the Webguy Set.', set:'webguy', setOnly:true},
   ],
   shades:[
     {id:'none',      slot:'shades', name:'No Shades',      icon:'shades-none',      cost:0,     lvl:1, desc:'Squinting into the sun.'},
@@ -4953,6 +4962,7 @@ const COSMETICS={
     {id:'jester_mask', slot:'shades',name:'Jester Mask',    icon:'shades-mask',     cost:0, lvl:1, desc:'Part of the Jester Set.', set:'jester',  setOnly:true},
     {id:'astro_visor', slot:'shades',name:'Black Visor',    icon:'shades-mirror',   cost:0, lvl:1, desc:'Part of the Astronaut Set.',set:'astronaut',setOnly:true},
     {id:'robot_face',  slot:'shades',name:'Robot Face',     icon:'shades-mask',     cost:0, lvl:1, desc:'Part of the Robot Set.',  set:'robot',   setOnly:true},
+    {id:'webguy_eyes', slot:'shades',name:'Web Eyes',       icon:'shades-mask',     cost:0, lvl:1, desc:'Part of the Webguy Set.', set:'webguy', setOnly:true},
   ],
 };
 // ── OUTFIT SETS (bought with rubies; bonus is passive, ability works in tournaments) ──
@@ -4994,6 +5004,10 @@ const SETS=[
    pieces:{hat:'mermaid_crown',shirt:'mermaid_top',shades:'mermaid_face'},
    bonus:'Catch any fish no matter the season. In a tournament or challenge the target species can surface as a sight-fishing fish.',
    ability:'Fish Frenzy', abilityDesc:'Bite rate soars +200% for 10 seconds. (45s cooldown)'},
+  {id:'webguy', name:'Webguy Set', cost:1000, fixedCost:true, color:'#2a62d8', cd:90,
+   pieces:{hat:'webguy_mask',shirt:'webguy_suit',shades:'webguy_eyes'},
+   bonus:'+50% movement speed · Highlights the ideal method, bait or lure, and leader for your target fish.',
+   ability:'Web Shooter', abilityDesc:'Auto-targets the nearest angler and webs them in place: they can’t move for 60 seconds. With no angler in range it webs the nearest spot instead, and your next cast there is a guaranteed hook of the target fish if it lives at that spot. (90s cooldown)'},
 ];
 function setById(id){return SETS.find(function(s){return s.id===id;});}
 function equippedSetId(){
@@ -5019,7 +5033,7 @@ function startArtLoads(){
 }
 // Never wait forever: someone idling on the sign-in screen still gets the art.
 setTimeout(startArtLoads, 12000);
-const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot','mermaid'];
+const SET_ART_IDS=['assassin','astronaut','berserker','jeremy','jester','pirate','princess','robot','mermaid','webguy'];
 function setHasArt(id){return SET_ART_IDS.includes(id);}
 function setImgSrc(id){return 'sets/'+id+'.png';}
 // Progressive-halving downscale to ~target px. Canvas drawImage doesn't
@@ -8394,6 +8408,7 @@ function playerMoveMult(){
   }
   // V0.9 Jester set: +5% movement speed for every ability used against you this match
   if(set==='jester'&&jesterStacks>0)m*=(1+0.05*jesterStacks);
+  if(set==='webguy')m*=1.50;                                  // Webguy set: +50% movement speed
   // V0.9 Slow Buoy item: crawl while inside any active buoy field
   m*=buoySlowMult();
   return m;
@@ -10262,6 +10277,8 @@ function updateGhosts(){
         if(dist(g.wx, g.wy, sc.wx, sc.wy)<sc.r)g._blindUntil=Math.max(g._blindUntil||0,now+(10000+Math.random()*5000));
       }
     }
+    // webbed (Webguy Web Shooter): stuck where it sits
+    if(g._webbedUntil&&now<g._webbedUntil)continue;
     // confused: drift in a random direction (local effect, eases back after)
     if(g._confuseUntil&&now<g._confuseUntil){g._confuseAng=(g._confuseAng||0)+(Math.random()-.5)*0.22;g.wx+=Math.cos(g._confuseAng)*1.7*frameScale;g.wy+=Math.sin(g._confuseAng)*1.2*frameScale;clampGhost(g);continue;}
     // blinded by smoke: stall in place
@@ -10628,8 +10645,8 @@ function drawExploreMap(){
 }
 const GHOST_HULL={kayak:'#c98a3a',jon:'#9a9a78',bay:'#5a8a9a',console:'#6a7a8a',walk:'#4a6a7a',sport:'#2a4a6a'};
 function hexA(hex, a){const h=(hex||'#888').replace('#','');const n=parseInt(h.length===3?h.split('').map(c=>c+c).join(''):h,16);return 'rgba('+((n>>16)&255)+','+((n>>8)&255)+','+(n&255)+','+a+')';}
-function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0'};return (cos&&c[cos.shirt])||'#cf7a35';}
-function ghostHatColor(cos){if(!cos||!cos.hat||cos.hat==='none')return null;const c={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060',assassin_hood:'#0f0f0f',pirate_hat:'#cdb86a',princess_tiara:'#ffd24a',berserker_mohawk:'#c0431c',jeremy_hair:'#eef0f2'};return c[cos.hat]||'#666';}
+function ghostShirtColor(cos){const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0',webguy_suit:'#2a62d8'};return (cos&&c[cos.shirt])||'#cf7a35';}
+function ghostHatColor(cos){if(!cos||!cos.hat||cos.hat==='none')return null;const c={bucket:'#c8a860',baseball:'#2a5a3a',cowboy:'#8a6a3a',visor:'#3a9a9a',beanie:'#9a4a4a',captainshat:'#1a2a50',straw:'#c8b060',assassin_hood:'#0f0f0f',pirate_hat:'#cdb86a',princess_tiara:'#ffd24a',berserker_mohawk:'#c0431c',jeremy_hair:'#eef0f2',webguy_mask:'#2a62d8'};return c[cos.hat]||'#666';}
 function drawSmokeClouds(now){
   if(!activeTournament||!activeTournament.smokeClouds)return;
   for(const sc of activeTournament.smokeClouds){
@@ -10972,6 +10989,7 @@ function useAbility(){
   else if(setId==='astronaut')used=abilityLunarSun();
   else if(setId==='robot')used=abilityHack();
   else if(setId==='mermaid')used=abilityFishFrenzy();
+  else if(setId==='webguy')used=abilityWebShooter();
   if(used){AUDIO.sfx('ability');activeTournament.abilityReadyAt=Date.now()+(s.cd||30)*1000;updateAbilityButton();}
 }
 // Mermaid "Fish Frenzy": bite rate soars +200% for 10 seconds.
@@ -10983,6 +11001,109 @@ function abilityFishFrenzy(){
   return true;
 }
 function mermaidOn(){return equippedSetId()==='mermaid';}
+// ── Webguy "Web Shooter" ──
+// Nearest angler in range gets webbed: no movement for WEB_MS. With nobody in
+// range the shot goes to the nearest spot instead (one the target fish lives at,
+// if there is one in range), and the next cast landing on that spot is a sure
+// hook of the target fish. _webArm stays armed until that cast or the match ends.
+const WEB_MS=60000, WEB_RANGE=420, WEB_SPOT_RANGE=520;
+let _webbedUntil=0;      // set on ME: frozen in place
+let _webArm=null;        // {st, fish}: my webbed spot, waiting on the next cast there
+let _webHookSure=null;   // fish id whose hookset can't miss (the cast off the webbed spot)
+let _webShots=[];        // strand animations {x0,y0,x1,y1,age}
+function webbedNow(){return Date.now()<_webbedUntil;}
+function webTargetFish(){
+  const t=currentTournTarget();
+  if(t)return t;
+  if(typeof tut!=='undefined'&&tut.active&&tut.target)return tut.target;
+  return null;
+}
+function fishLivesAt(f, st){return !!(f&&st&&f.structure&&f.structure.indexOf(structKindAlias(st.kind))>=0);}
+function abilityWebShooter(){
+  const g=nearestGhost(WEB_RANGE);
+  if(g){
+    if(g._immuneUntil&&Date.now()<g._immuneUntil){toast(g.name+' is Untouchable, the web slid off.','#b58b53');return true;}
+    if(g.real)broadcastAbility('web',g.uid,{dur:WEB_MS});
+    else g._webbedUntil=Date.now()+WEB_MS;
+    _webShots.push({x0:boat.wx, y0:boat.wy, x1:g.wx, y1:g.wy, age:0});
+    toast('Webbed '+g.name+'! They’re stuck for 60 seconds.','#2a62d8');
+    spawnAbilityFx(g.wx, g.wy,'#eef2ff','ring');
+    return true;
+  }
+  const tgt=webTargetFish();
+  let best=null, bd=WEB_SPOT_RANGE, bestLive=null, bdl=WEB_SPOT_RANGE;
+  for(const s of activeStructures()){
+    if(s.kind==='crab_trap')continue;
+    const d=dist(boat.wx, boat.wy, s.x, s.y);
+    if(d<bd){bd=d;best=s;}
+    if(tgt&&fishLivesAt(tgt, s)&&d<bdl){bdl=d;bestLive=s;}
+  }
+  const st=bestLive||best;
+  if(!st){toast('Nothing in range to web. Get closer to an angler or a spot.','#b58b53');return false;}
+  _webShots.push({x0:boat.wx, y0:boat.wy, x1:st.x, y1:st.y, age:0});
+  spawnAbilityFx(st.x, st.y,'#eef2ff','ring');
+  if(tgt&&fishLivesAt(tgt, st)){
+    _webArm={st:st, fish:tgt};
+    toast('Webbed the '+structLabel(st.kind)+'! Your next cast there hooks a '+tgt.name+'.','#2a62d8');
+  }else{
+    _webArm=null;
+    toast(tgt?('Webbed the '+structLabel(st.kind)+', but no '+tgt.name+' lives there.'):'Webbed the '+structLabel(st.kind)+', but there’s no target fish to call in.','#b58b53');
+  }
+  return true;
+}
+// A small spider-web disc: radial spokes and three rings.
+function drawWebNet(sx, sy, r, a){
+  ctx.save();ctx.globalAlpha=a;ctx.strokeStyle='rgba(245,248,255,.95)';ctx.lineWidth=1.3;
+  for(let k=0;k<8;k++){const an=k/8*6.28;ctx.beginPath();ctx.moveTo(sx, sy);ctx.lineTo(sx+Math.cos(an)*r, sy+Math.sin(an)*r);ctx.stroke();}
+  for(const f of [0.35,0.65,0.95]){ctx.beginPath();for(let k=0;k<=8;k++){const an=k/8*6.28,x=sx+Math.cos(an)*r*f,y=sy+Math.sin(an)*r*f;if(k)ctx.lineTo(x, y);else ctx.moveTo(x, y);}ctx.stroke();}
+  ctx.restore();
+}
+// Strands in flight, webbed anglers, my webbed spot, and me if I'm stuck.
+function drawWebs(){
+  const now=Date.now();
+  for(let i=_webShots.length-1;i>=0;i--){
+    const w=_webShots[i];w.age+=frameScale/60;
+    if(w.age>0.6){_webShots.splice(i,1);continue;}
+    const p=Math.min(1,w.age/0.25), fade=w.age<0.25?1:1-(w.age-0.25)/0.35;
+    const x1=w.x0+(w.x1-w.x0)*p, y1=w.y0+(w.y1-w.y0)*p;
+    ctx.save();ctx.globalAlpha=fade;ctx.strokeStyle='#f5f8ff';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(w.x0-camera.x, w.y0-camera.y);ctx.lineTo(x1-camera.x, y1-camera.y);ctx.stroke();ctx.restore();
+  }
+  if(_webArm&&_webArm.st)drawWebNet(_webArm.st.x-camera.x, _webArm.st.y-camera.y, 30, 0.85);
+  if(mpActive()){
+    for(const g of (tourn.ghosts||[])){
+      if(g._webbedUntil&&now<g._webbedUntil)drawWebNet(g.wx-camera.x, g.wy-camera.y, 38, 0.8);
+    }
+  }
+}
+// The ideal rig for the target fish (Webguy set bonus). Null when the set is off
+// or there's nothing to aim at.
+function webguyIdeal(){
+  if(equippedSetId()!=='webguy')return null;
+  const f=webTargetFish();if(!f)return null;
+  const zm=methodsForZone(S.zone).map(function(m){return m.id;});
+  const methods=f.methods.filter(function(id){return zm.indexOf(id)>=0;});
+  return {f:f, methods:methods, baits:f.baits||[], leader:f.leader==='wire'?'wire':'fluoro',
+    lureOK:function(l){return l.targets&&l.targets.length?l.targets.indexOf(f.id)>=0:!!(l.baits&&l.baits.some(function(b){return f.baits.indexOf(b)>=0;}));}};
+}
+function webPickTag(){return '<span class="web-tag">Ideal</span>';}
+// Rig bar: outline the slots that don't match the ideal rig yet.
+function updateWebRigHints(){
+  const id=webguyIdeal();
+  const set=function(k, on){const el=document.querySelector('.rig-slot[data-rig="'+k+'"]');if(el)el.classList.toggle('web-fix',!!on);};
+  if(!id){set('method',0);set('bait',0);set('leader',0);return;}
+  const m=curMethod();
+  set('method',id.methods.indexOf(m.id)<0);
+  let baitOk=true;
+  if(!m.snag){
+    const lure=activeLure();
+    if(lure)baitOk=id.lureOK(lure);
+    else if(m.bait||m.id==='troll')baitOk=id.baits.indexOf(gearGet('baitSel'))>=0;
+    else baitOk=false;
+  }
+  set('bait',!baitOk);
+  set('leader',gearGet('leader')!==id.leader);
+}
 // The species you currently need in the active tournament/challenge, if any.
 function currentTournTarget(){
   if(!activeTournament||!activeTournament.def)return null;
@@ -11119,7 +11240,7 @@ function popAnchorFromAbility(){
 }
 function applyIncomingAct(act){
   const now=Date.now();
-  const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder'||act.type==='trick'||act.type==='cannon'||act.type==='tnt'||act.type==='airhorn');
+  const hostile=(act.type==='confuse'||act.type==='punch'||act.type==='plunder'||act.type==='trick'||act.type==='cannon'||act.type==='tnt'||act.type==='airhorn'||act.type==='web');
   if(hostile&&now<immuneUntil){toast('Untouchable, blocked an ability!','#2aa890');return;}
   // A rival's cannonball costs you progress. The penalty fits the mode: bounty
   // knocks you back one species on the list, limited drops a species off your
@@ -11175,6 +11296,7 @@ function applyIncomingAct(act){
     publishMyPosition(true);
     return;
   }
+  if(act.type==='web'){_webbedUntil=now+((act.data&&act.data.dur)||WEB_MS);boat.vx=0;boat.vy=0;toast('You got webbed! Stuck in place for 60 seconds.','#2a62d8');spawnAbilityFx(boat.wx, boat.wy,'#eef2ff','ring');return;}
   if(act.type==='confuse'){confusedUntil=now+(act.data.dur||3000);confuseAng=Math.random()*6.28;popAnchorFromAbility();toast('You were confused!','#a872d8');spawnAbilityFx(boat.wx, boat.wy,'#c77ad8','hearts');}
   else if(act.type==='punch'){knockVX+=act.data.vx||0;knockVY+=act.data.vy||0;popAnchorFromAbility();const l=loseEquippedConsumable(0.10+Math.random()*0.05);toast('You got punched'+(l?' (-'+l+' bait/lures)':'')+'!','#c46f28');spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');}
   else if(act.type==='plunder'){const amt=act.data.amt||0;
@@ -11208,6 +11330,14 @@ function botUseAbility(g, s, dp, now){
     const lost=loseEquippedConsumable(0.10+Math.random()*0.05); // knock 10-15% loose
     if(equippedSetId()==='jester')jesterStacks++;
     toast(g.name+' punched you'+(lost?' (-'+lost+' bait/lures)':'')+'!','#c46f28');spawnAbilityFx(boat.wx, boat.wy,'#ff8a3a','impact');return true;
+  }
+  if(g.set==='webguy'){
+    if(dp>WEB_RANGE)return false;
+    _webShots.push({x0:g.wx, y0:g.wy, x1:boat.wx, y1:boat.wy, age:0});
+    if(blocked){toast('Untouchable, blocked '+g.name+'!','#2aa890');return true;}
+    _webbedUntil=now+WEB_MS;boat.vx=0;boat.vy=0;
+    if(equippedSetId()==='jester')jesterStacks++;
+    toast(g.name+' webbed you! Stuck in place for 60 seconds.','#2a62d8');spawnAbilityFx(boat.wx, boat.wy,'#eef2ff','ring');return true;
   }
   if(g.set==='pirate'){
     if(dp>340)return false;
@@ -13600,7 +13730,7 @@ function anglerHairColor(){
 function anglerShirtColor(){
   const c={fishing_tee:'#4a7a8a',performance:'#2a5a8a',flannel:'#8a3a3a',vest:'#4a6a3a',hoodie:'#3a3a5a',tournament:'#1a3a6a',overalls:'#2a4a6a',
     assassin_suit:'#111111',pirate_shirt:'#c62828',princess_dress:'#ff7ab0',berserker_vest:'#937545',jeremy_shirt:'#9098a0',
-    jester_shirt:'#5a2a8a',astro_suit:'#eef2f6',robot_chest:'#9aa2aa'};
+    jester_shirt:'#5a2a8a',astro_suit:'#eef2f6',robot_chest:'#9aa2aa',webguy_suit:'#2a62d8'};
   return(S.cosmetic&&c[S.cosmetic.shirt])||'#cf7a35';
 }
 function drawAnglerHairBack(cx, cy, r){
@@ -14694,6 +14824,7 @@ function render(ts){
     const k=Math.min(1, (pressing?0.16:0.36)*frameScale);
     boat.vx+=(jdx*spd-boat.vx)*k;
     boat.vy+=(jdy*spd-boat.vy)*k;
+    if(webbedNow()){boat.vx=0;boat.vy=0;}   // webbed: going nowhere
     // Punch / knockback impulse decays over time
     if(typeof knockVX!=='undefined'&&(Math.abs(knockVX)>0.05||Math.abs(knockVY)>0.05)){
       boat.wx+=knockVX*frameScale;boat.wy+=knockVY*frameScale;knockVX*=Math.pow(0.88,frameScale);knockVY*=Math.pow(0.88,frameScale);
@@ -14844,6 +14975,7 @@ function render(ts){
     updateGhosts();drawGhosts(t, sky.darkness);
     drawStructBeacons(t);
     drawAbilityFx();
+    drawWebs();
     // Bounty cannon: move/draw the balls and the slingshot aim line
     if(cannonsEnabled()){updateCannonBalls();drawCannonBalls();drawCannonAim();}
   }
@@ -14881,6 +15013,7 @@ function render(ts){
   // Assassin vanish: render yourself translucent while invisible
   if(invisibleUntil>Date.now()){ctx.save();ctx.globalAlpha=0.35;drawBoat(sky.darkness);ctx.restore();}
   else drawBoat(sky.darkness);
+  if(webbedNow())drawWebNet(boat.wx-camera.x, boat.wy-camera.y, 38, 0.85);
 
   // V0.9: pets float beside the boat
   try{drawPets();}catch(e){}
@@ -15412,6 +15545,12 @@ function cast(x, y){
   // Fly fishing takes over here: its own casting rhythm, drift and set, then it
   // rejoins the normal pipeline at triggerBite(). Deliberately placed AFTER the
   // gear checks above so a fly angler still needs a leader/tippet and a fly.
+  // Webguy: a cast onto the webbed spot is a sure hook of the target fish,
+  // whatever the rig, so it skips the dead-water check below.
+  if(_webArm&&!_forcedBiteFish){
+    const ws=nearestStruct(x, y);
+    if(ws&&ws===_webArm.st){_forcedBiteFish=_webArm.fish;_webHookSure=_webArm.fish.id;_webArm=null;}
+  }
   if(m.fly){flyBeginCast(x, y);return;}
   // Snagging likewise runs its own loop between the cast and the bite.
   if(m.snag){snagBeginCast(x, y);return;}
@@ -15476,6 +15615,7 @@ function cast(x, y){
     const {strength, rarityDelay}=poolNow();
     let wait=st&&st.kind==='crab_trap'?800+Math.random()*600:biteWait(strength, st, rarityDelay);
     if(_forcedBiteFish&&tut&&tut.forceTargetActive)wait=900+Math.random()*700;
+    if(_webHookSure&&_forcedBiteFish)wait=900+Math.random()*700;
     if(_scentArmed)wait=Math.min(wait,600+Math.random()*500);   // scented: it eats almost at once
     biteTimeout=setTimeout(()=>triggerBite(),wait);
   }
@@ -16704,6 +16844,7 @@ function flyPresent(){
   const chance=strength>0?Math.min(0.95,(0.30+strength/170)*environmentBiteFactor()*acc*(reach*0.4+0.75)):0;
   if(hornedNow())flyTakeAt=0;                                  // horned: nothing looks at it
   else if(_forcedBiteFish&&tut&&tut.forceTargetActive)flyTakeAt=now+900;
+  else if(_forcedBiteFish&&_webHookSure)flyTakeAt=now+900;
   else if(S.scentCasts>0){S.scentCasts--;flyTakeAt=now+1200;    // scented: it eats on the swing
     if(S.scentCasts===0)setTimeout(function(){toast('The scent has washed off.','#8b5a2b');},300);}
   else flyTakeAt=(Math.random()<chance)?(now+900+Math.random()*(FLY_DRIFT_MS-2400)):0;
@@ -16740,7 +16881,7 @@ function flyMend(){
 function flyTheTake(){
   // Never hand off with nothing to hook, or the player lands in phase 'done'
   // with no explanation.
-  if(poolNow().strength<=0){flyEndDrift('Something swirled at it, then nothing. Cast again.');return;}
+  if(!_forcedBiteFish&&poolNow().strength<=0){flyEndDrift('Something swirled at it, then nothing. Cast again.');return;}
   flyFinish();
   if(navigator.vibrate)try{navigator.vibrate(18);}catch(e){}
   setStatus('Fish on!');
@@ -16925,10 +17066,11 @@ function snagEnd(msg){
 function retrieveLure(){
   _lureRetrieve=false;
   const {strength}=poolNow();
-  if(strength<=0){scentRefund();phase='idle';bobber.active=false;setStatus('Reeled it in, nothing was interested. Try another lure or spot.');return;}
+  if(strength<=0&&!(_webHookSure&&_forcedBiteFish)){scentRefund();phase='idle';bobber.active=false;setStatus('Reeled it in, nothing was interested. Try another lure or spot.');return;}
   const reelIdx=Math.max(0,forHere(REELS).indexOf(curReel()));
   let chance=Math.min(0.94,(0.22+strength/200)*environmentBiteFactor()*(1+reelIdx*0.07));
   if(_forcedBiteFish&&tut&&tut.forceTargetActive)chance=1;
+  if(_webHookSure&&_forcedBiteFish)chance=1;
   if(_scentArmed)chance=1;   // scented: the retrieve draws a strike (triggerBite clears the flag)
   if(Math.random()<chance){triggerBite();}
   else{phase='idle';bobber.active=false;setStatus('Reeled it in, nothing followed. Cast again.');}
@@ -17483,6 +17625,7 @@ function showLegendaryAlert(fish){
 }
 
 function startSdewGame(fish){
+  _webHookSure=null;   // the target went straight to the fight: the sure hook is spent
   sdewActive=true;sdewHolding=false;
   sdewRound=1;sdewRounds=sdewRoundsFor();
   sdewDiff=sdewDifficultyFor(fish);
@@ -17871,6 +18014,8 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   const snapMarker=marker.pos;
   const bullseye=inBullseye();
   endMiniGame();
+  // Webguy webbed spot: this hookset cannot miss.
+  const _webSure=!!(_webHookSure&&hookedFish&&hookedFish.id===_webHookSure);_webHookSure=null;
   const center=snapZone.left+snapZone.width/2,dd=Math.abs(snapMarker-center);
   const inZone=snapMarker>=snapZone.left&&snapMarker<=snapZone.left+snapZone.width;
   // Track bullseye streak / total even if the fish gets away later
@@ -17882,7 +18027,7 @@ document.getElementById('reel-btn').addEventListener('click',()=>{
   }else if(inZone){
     S.bullseyeStreak=0;
   }
-  if(!inZone){fail('Missed the hookset. The line went slack.');return;}
+  if(!inZone&&!_webSure){fail('Missed the hookset. The line went slack.');return;}
   const f=hookedFish, w=hookW, perfect=dd<snapZone.width*0.2;
   // During the tutorial catch, the fish always lands once you hit the green.
   // Ultra Legendary: hooking one is the achievement. Win the fight and it lands,
@@ -18155,6 +18300,7 @@ function updateRigBar(){
     else{bEl.textContent='out of bait';bq.textContent='tap to buy';bslot.classList.add('empty');}
   }
   document.getElementById('rig-leader').textContent=curLeader().name.replace(' Leader','');
+  updateWebRigHints();
   // HUD
   document.getElementById('lvl-pill').textContent='Lv '+S.level;
   // Soft-currency pill follows the world you're standing in.
@@ -18172,6 +18318,9 @@ function updateRigBar(){
 // choosers
 function openChooser(type){
   const c=document.getElementById('chooser');let html='';
+  // Webguy set bonus: outline the ideal method / bait or lure / leader for the target.
+  const WI=webguyIdeal();
+  const _wbC=function(ok){return ok?' web-best':'';}, _wbT=function(ok){return ok?webPickTag():'';};
   if(type==='zone'){
     html='<h3>Run to...</h3><div class="sub">'+(isFresh()?'Your rig decides how far upstream you can fish.':'Your boat decides how far out you can fish.')+'</div>';
     // Only THIS world's regions, and the lock reason comes from gateBlockReason so
@@ -18183,7 +18332,7 @@ function openChooser(type){
   } else if(type==='method'){
     html='<h3>Fishing method</h3><div class="sub">The technique gates which fish are possible.</div>';
     methodsForZone(S.zone).forEach(m=>{
-      html+='<div class="opt '+(m.id===gearGet('method')?'sel':'')+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+'</div></div></div>';});
+      html+='<div class="opt '+(m.id===gearGet('method')?'sel':'')+_wbC(WI&&WI.methods.includes(m.id))+'" data-pick="method:'+m.id+'"><div class="oi">'+(m.bait?svgIcon('fish',20):svgIcon('tackle-lure',20))+'</div><div class="oinfo"><div class="on">'+m.name+_wbT(WI&&WI.methods.includes(m.id))+'</div></div></div>';});
   } else if(type==='tackle'){
     const cat=methodCat();
     html='<h3>Tackle</h3><div class="sub">Wears out with use. Better tackle lasts longer &amp; draws more. Tap one you don\u2019t own to go buy it.</div>';
@@ -18199,11 +18348,11 @@ function openChooser(type){
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:6px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Trolling lures</div>';
       if(!myLures.length){html+='<div style="font-size:12px;color:var(--text-soft);padding:4px 0 6px;">No '+ZONE_LBL[S.zone].toLowerCase()+' troll lures yet.</div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
+        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+_wbC(WI&&WI.lureOK(l))+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+_wbT(WI&&WI.lureOK(l))+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
       html+='<div style="font-size:10.5px;font-weight:800;color:var(--text-soft);margin:8px 0 3px;text-transform:uppercase;letter-spacing:.4px;">Natural baits</div>';
       forHere(BAIT).forEach(bt=>{const q=S.baitInv[bt.id]||0;const own=q>0;const sel=!gearGet('lureSel')&&gearGet('baitSel')===bt.id;
-        html+='<div class="opt '+(sel?'sel':'')+'" data-pick="'+(own?'trollbait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?'x'+q:'tap to buy')+'</div></div>';});
+        html+='<div class="opt '+(sel?'sel':'')+_wbC(WI&&WI.baits.includes(bt.id))+'" data-pick="'+(own?'trollbait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+_wbT(WI&&WI.baits.includes(bt.id))+'</div></div><div class="oq">'+(own?'x'+q:'tap to buy')+'</div></div>';});
     }
     else if(!curMethod().bait){
       // Artificial method: this chooser becomes a Lure picker
@@ -18211,19 +18360,20 @@ function openChooser(type){
       const myLures=LURES.filter(l=>(S.lureInv[l.id]>0)&&l.methods.includes(curMethod().id)&&(typeof l.zone!=='number'||l.zone===S.zone));
       if(!myLures.length){html+='<div class="opt" data-pick="shop:lures:'+(S.zone|0)+'" style="justify-content:center;"><div class="oinfo" style="text-align:center;"><div class="on">No '+ZONE_LBL[S.zone].toLowerCase()+' lures yet</div><div class="od">Tap to open the Lures shop</div></div></div>';}
       myLures.forEach(function(l){
-        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
+        html+='<div class="opt '+(gearGet('lureSel')===l.id?'sel':'')+_wbC(WI&&WI.lureOK(l))+'" data-pick="lure:'+l.id+'"><div class="oi">'+svgIcon(l.icon,20)+'</div><div class="oinfo"><div class="on">'+l.name+_wbT(WI&&WI.lureOK(l))+'</div></div><div class="oq">x'+(S.lureInv[l.id]||0)+'</div></div>';
       });
     }
     else{html='<h3>Bait</h3><div class="sub">Match the bait to your target. Consumed one per catch.</div>';
       // Reward bait (Sturgeon Eggs) only appears once its ultra has been landed,
       // and is never buyable, so it is filtered in by ownership, not by stock.
       forHere(BAIT).filter(bt=>!bt.reward||baitOwned(bt.id)).forEach(bt=>{const own=baitOwned(bt.id);
-        html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+(bt.endless?' ultra-glint':'')+'" data-pick="'+(own?'bait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+'</div></div><div class="oq">'+(own?baitStock(bt.id):'tap to buy')+'</div></div>';});}
+        html+='<div class="opt '+(gearGet('baitSel')===bt.id?'sel':'')+(bt.endless?' ultra-glint':'')+_wbC(WI&&WI.baits.includes(bt.id))+'" data-pick="'+(own?'bait:'+bt.id:'shop:bait')+'"><div class="oi">'+svgIcon(bt.icon,20)+'</div><div class="oinfo"><div class="on">'+bt.name+_wbT(WI&&WI.baits.includes(bt.id))+'</div></div><div class="oq">'+(own?baitStock(bt.id):'tap to buy')+'</div></div>';});}
   } else if(type==='leader'){
     html='<h3>Leader</h3><div class="sub">Fluoro fools wary fish; wire stops toothy cutoffs. Match it to what you are targeting.</div>';
     LEADERS.forEach(l=>{const own=S.ownedLeaders.includes(l.id);
-      html+='<div class="opt '+(gearGet('leader')===l.id?'sel':'')+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">'+svgIcon('anchor',18)+'</div><div class="oinfo"><div class="on">'+l.name+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
+      html+='<div class="opt '+(gearGet('leader')===l.id?'sel':'')+_wbC(WI&&WI.leader===l.id)+' '+(own?'':'disabled')+'" data-pick="'+(own?'leader:'+l.id:'')+'"><div class="oi">'+svgIcon('anchor',18)+'</div><div class="oinfo"><div class="on">'+l.name+_wbT(WI&&WI.leader===l.id)+'</div><div class="od">'+l.desc+'</div></div><div class="oq">'+(own?'':'buy in shop')+'</div></div>';});
   }
+  if(WI&&(type==='method'||type==='bait'||type==='leader'))html+='<div class="web-note">Webguy: <b>Ideal</b> marks the best pick for the '+WI.f.name+'.</div>';
   html+='<button class="chooser-close" onclick="closeChooser()">Close</button>';
   c.innerHTML=html;
   document.getElementById('chooser-bg').classList.add('show');
