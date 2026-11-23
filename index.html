@@ -1745,6 +1745,8 @@ function buildTutSteps(){
     {say:"And yer <b>LEADER</b>, the last bit o' line to the hook. Tie on <b>WIRE</b> for toothy cutters like mackerel and sharks, or <b>FLUORO</b> for sharp eyed, spooky fish. Match it to whatever ye're targeting.",btn:"Aye"},
     {say:"Your rig matters as much as yer bait. Your <b>ROD</b> and <b>REEL</b> decide how big a fish ye can fight, and your <b>BRAID</b> is the line class, heavier braid lands heavier fish. Upgrade all three in the <b>Shop</b> as ye level up.",btn:"Aye, captain"},
     {say:"No two fish want the same thing, and what they want changes with the <b>time of day</b>, the <b>weather</b> and the <b>season</b>. Some days they hammer <b>lures</b>; other days only natural <b>bait</b> will do. So always switch it up: try different baits and lures, work different <b>structure</b>, and change yer <b>method</b>, cork, jig, live bait, trolling, until ye find what's biting.",btn:"Got it"},
+    {say:"Ye can check the conditions any time. See the <b>weather</b> up top? <b>Tap it</b> and I'll show ye the moon, tide, weather and wind, and how each one is helpin' or hurtin' the bite.",hint:"Tap the weather, top left",await:'conditions',point:['#env-pill']},
+    {say:"That's yer forecast. Each line says how much it's boostin' or cuttin' the bite, and the <b>total</b> at the bottom sums it up. When the fish go quiet, check here first.",btn:"Got it",onBtn:function(){closeModal();}},
     {say:"Now, there's <b>two worlds</b> to fish. See the <b>Travel to Freshwater</b> button up in the <b>top left</b>? Tap it to swap between the <b>saltwater</b> and the <b>freshwater</b>, and tap it again to come home. The freshwater opens at <b>Level 3</b>.",btn:"Two worlds!",point:['#world-pill']},
     {say:"Each world keeps its own coin. <b>GOLD</b> is the saltwater wallet and <b>CASH</b> is the freshwater one, and they never convert, so earn each where ye spend it. Gear's the same: saltwater tackle stays in the salt, freshwater tackle in the fresh. <b>RUBIES</b> are the rare stuff that works everywhere: win them in tournaments and challenges for gear sets, abilities and special items.",btn:"Makes sense"},
     {say:"One more thing to keep an eye on: <b>Projects</b>. Open the menu <b>☰</b> and tap <b>Projects</b>.",hint:"Open ☰ → Projects",await:'projects',point:_tutMenuPoint('projects')},
@@ -15036,6 +15038,8 @@ function openEnvDetails(){
           return '<div class="shop-tab '+(seasonNow()===se?'active':'')+'" style="font-size:11.5px;" onclick="setSeasonGreenIce(\''+se+'\')">'+SEASON_LABEL[se]+'</div>';
         }).join('')+'</div>'):'');
   document.getElementById('modal-bg').classList.add('show');
+  // Tutorial: Clancy asked the player to tap the weather.
+  if(typeof tut!=='undefined'&&tut.active){tutNotify('conditions');tutPlaceBar();}
 }
 // Green Ice jumps S.clock to the start of the chosen season, keeping the time of
 // day intact so it reads as the calendar moving, not the sun teleporting.
