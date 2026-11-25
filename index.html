@@ -1476,13 +1476,16 @@ function fbErr(code){
   const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account found.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect login or password.","permission-denied":"Database permission error. Please try again.","auth/network-request-failed":"Network error. Check your connection."};
   return map[code]||"Something went wrong. Try again.";
 }
-// Resolve a username (or pass through an email) to the account email
+// Resolve a username (or pass through an email) to the Firebase Auth email.
+// The address is not on the public usernames/ doc. loginEmails/{username}
+// allows a single logged-out get and rejects list. Auth itself still holds
+// the real email, so password reset and email login are unchanged.
 async function resolveLoginEmail(id){
   if(id.indexOf("@")>=0)return id;
   const uname=id.toLowerCase().replace(/[^a-zA-Z0-9_]/g,"");
   if(!uname)return null;
   try{
-    const snap=await fbDb.collection("usernames").doc(uname).get();
+    const snap=await fbDb.collection("loginEmails").doc(uname).get();
     if(!snap.exists)return null;
     return (snap.data()||{}).email||null;
   }catch(e){return null;}
@@ -1542,13 +1545,21 @@ async function doSignup(){
       err.textContent="That username is taken. Try another.";
       return;
     }
-    await uref.set({uid:c.user.uid, email:email});
-    await fbDb.collection("users").doc(c.user.uid).set({username:uname, email:email, createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false, totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
+    // Directory doc is uid only. Email goes to loginEmails (not listable) and
+    // stays in Firebase Auth. users/{uid} is readable by every signed-in player.
+    await uref.set({uid:c.user.uid});
+    await fbDb.collection("loginEmails").doc(uname.toLowerCase()).set({uid:c.user.uid, email:email});
+    await fbDb.collection("users").doc(c.user.uid).set({username:uname, createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false, totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
     await afterAuth(c.user, true);
   }catch(e){
     // Firestore failed after the account was made, don't strand a half-made
-    // account; remove it so the player can simply try again.
-    try{await c.user.delete();}catch(_){}
+    // account; remove the docs while we're still signed in, then the auth user,
+    // so the player can simply try again.
+    const key=uname.toLowerCase();
+    try{await fbDb.collection("loginEmails").doc(key).delete();}catch(_){}
+    try{await fbDb.collection("usernames").doc(key).delete();}catch(_){}
+    try{if(c&&c.user)await fbDb.collection("users").doc(c.user.uid).delete();}catch(_){}
+    try{if(c&&c.user)await c.user.delete();}catch(_){}
     err.textContent=fbErr(e.code);
   }
 }
@@ -1559,14 +1570,23 @@ async function afterAuth(user, isNew){
   // Start the presence heartbeat as soon as we know who this is, not on the
   // first catch: a friend browsing the shop is still online.
   if(typeof startPresence==='function')startPresence();
-  try{const doc=await fbDb.collection("users").doc(user.uid).get();fbUsername=(doc.data()||{}).username||"Angler";
-    const tutDone=(doc.data()||{}).tutorialDone;
+  try{const doc=await fbDb.collection("users").doc(user.uid).get();
+    const profile=doc.data()||{};
+    fbUsername=profile.username||"Angler";
+    const tutDone=profile.tutorialDone;
     document.getElementById("auth-overlay").style.display="none";
     const pillBtn=document.getElementById("user-pill-btn");if(pillBtn)pillBtn.style.display="flex";
     const avatar=document.getElementById("user-avatar");if(avatar)avatar.textContent=fbUsername[0].toUpperCase();
-    // Backfill email on the usernames doc so username login works for older accounts
+    // Drop email off the public profile (rules reject writes that leave it
+    // there) and off the username directory. Username login reads
+    // loginEmails/{name}; Firebase Auth keeps the address.
+    if(profile.email){
+      await fbDb.collection("users").doc(user.uid).update({email:firebase.firestore.FieldValue.delete()}).catch(function(){});
+    }
     if(user.email&&fbUsername&&fbUsername!=="Angler"){
-      fbDb.collection("usernames").doc(fbUsername.toLowerCase()).set({uid:user.uid, email:user.email},{merge:true}).catch(function(){});
+      const key=fbUsername.toLowerCase();
+      await fbDb.collection("usernames").doc(key).set({uid:user.uid, email:firebase.firestore.FieldValue.delete()},{merge:true}).catch(function(){});
+      await fbDb.collection("loginEmails").doc(key).set({uid:user.uid, email:user.email},{merge:true}).catch(function(){});
     }
     loadFriends();
     // Pull this account's cloud save and refresh the world so progress
@@ -20166,7 +20186,10 @@ async function purgeUserData(uid){
     fbDb.collection('saves').doc(uid).delete()
   ];
   const uname=(fbUsername||'').toLowerCase();
-  if(uname&&uname!=='guest'&&uname!=='angler')jobs.push(fbDb.collection('usernames').doc(uname).delete());
+  if(uname&&uname!=='guest'&&uname!=='angler'){
+    jobs.push(fbDb.collection('usernames').doc(uname).delete());
+    jobs.push(fbDb.collection('loginEmails').doc(uname).delete());
+  }
   await Promise.all(jobs.map(function(p){return p.catch(function(){});}));
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;if(typeof tutPlaceBar==='function')tutPlaceBar();}

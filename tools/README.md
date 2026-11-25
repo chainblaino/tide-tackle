@@ -34,3 +34,29 @@ node give-currency.js <username> <gold> <rubies>
 - If they keep playing offline after you run this and earn more progress, their
   client could overwrite the grant on its next save. Safest to grant while
   they're offline.
+
+## strip-public-emails.js — take email off public player docs
+
+`users/{uid}` and `usernames/{username}` used to store the account email, and
+any signed-in player could read those collections. The game no longer writes
+email there. Username login reads `loginEmails/{username}` instead (one
+document get, listing the collection is denied). Firebase Auth is unchanged.
+
+Run this **after** the new `firestore.rules` are published and the updated
+`index.html` is what players load. It copies each address into `loginEmails`
+(from Firebase Auth when it can, otherwise from the old Firestore field) and
+then deletes the public `email` fields. It does not change Auth users,
+passwords, saves, friends, or leaderboards.
+
+Dry-run is the default and writes nothing. It was not run against production
+when it was added.
+
+```bash
+cd tools
+npm install firebase-admin
+node strip-public-emails.js                 # plan only
+node strip-public-emails.js --apply         # write the plan
+```
+
+Uses the same `tools/serviceAccount.json` as give-currency.js. The log masks
+the local part of each address. Safe to re-run.
