@@ -39,14 +39,14 @@ node give-currency.js <username> <gold> <rubies>
 
 `users/{uid}` and `usernames/{username}` used to store the account email, and
 any signed-in player could read those collections. The game no longer writes
-email there. Username login reads `loginEmails/{username}` instead (one
-document get, listing the collection is denied). Firebase Auth is unchanged.
+email there. The email lives only in Firebase Auth, and username login looks
+it up on the server (`functions/index.js`), so nothing reads the old copies.
 
-Run this **after** the new `firestore.rules` are published and the updated
-`index.html` is what players load. It copies each address into `loginEmails`
-(from Firebase Auth when it can, otherwise from the old Firestore field) and
-then deletes the public `email` fields. It does not change Auth users,
-passwords, saves, friends, or leaderboards.
+Run this **last**, after the `usernameLogin` function and the new
+`firestore.rules` are deployed and the updated `index.html` is what players
+load (full order: `functions/README.md`). It deletes the `email` field from
+every `users` and `usernames` doc. It does not change Auth users, passwords,
+saves, friends, or leaderboards.
 
 Dry-run is the default and writes nothing. It was not run against production
 when it was added.

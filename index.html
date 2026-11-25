@@ -1070,6 +1070,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
 </head>
 <body>
 <div class="stage">
@@ -1452,8 +1453,9 @@
 // FIREBASE
 // ─────────────────────────────────────────────────────────────
 const FB_CFG={apiKey:"AIzaSyCGNI5snGBSfrL5c-2lRp7X-sIPqLIXmSw",authDomain:"tide-and-tackle.firebaseapp.com",projectId:"tide-and-tackle",storageBucket:"tide-and-tackle.firebasestorage.app",messagingSenderId:"208248255812",appId:"1:208248255812:web:498d580f5e05aaaf885311"};
-let fbApp, fbAuth, fbDb, fbUser=null, fbUsername="Guest",fbFriends=[],isGuest=false;
+let fbApp, fbAuth, fbDb, fbFns=null, fbUser=null, fbUsername="Guest",fbFriends=[],isGuest=false;
 try{fbApp=firebase.initializeApp(FB_CFG);fbAuth=firebase.auth();fbDb=firebase.firestore();}catch(e){console.warn("Firebase unavailable",e);}
+try{if(fbApp&&firebase.functions)fbFns=fbApp.functions("us-central1");}catch(e){fbFns=null;}
 
 // ─────────────────────────────────────────────────────────────
 // AUTH
@@ -1476,19 +1478,16 @@ function fbErr(code){
   const map={"auth/email-already-in-use":"That email is already registered.","auth/invalid-email":"Invalid email address.","auth/wrong-password":"Incorrect password.","auth/user-not-found":"No account found.","auth/weak-password":"Password too weak.","auth/invalid-credential":"Incorrect login or password.","permission-denied":"Database permission error. Please try again.","auth/network-request-failed":"Network error. Check your connection."};
   return map[code]||"Something went wrong. Try again.";
 }
-// Resolve a username (or pass through an email) to the Firebase Auth email.
-// The address is not on the public usernames/ doc. loginEmails/{username}
-// allows a single logged-out get and rejects list. Auth itself still holds
-// the real email, so password reset and email login are unchanged.
-async function resolveLoginEmail(id){
-  if(id.indexOf("@")>=0)return id;
-  const uname=id.toLowerCase().replace(/[^a-zA-Z0-9_]/g,"");
-  if(!uname)return null;
-  try{
-    const snap=await fbDb.collection("loginEmails").doc(uname).get();
-    if(!snap.exists)return null;
-    return (snap.data()||{}).email||null;
-  }catch(e){return null;}
+// Username login runs on the server (functions/index.js: usernameLogin). The
+// browser never sees another player's email: it sends username + password,
+// the function looks the email up in Firebase Auth, checks the password, and
+// hands back a one-time sign-in token. Email login goes straight to Auth.
+function fnErr(e){
+  const c=(e&&e.code)||'';
+  if(/unauthenticated/.test(c))return "Incorrect login or password.";
+  if(/resource-exhausted|permission-denied/.test(c)&&e.message)return e.message;
+  if(/network/.test(c))return "Network error. Check your connection.";
+  return "Username login is unavailable right now. Try logging in with your email.";
 }
 async function doLogin(){
   const id=document.getElementById("li-id").value.trim();
@@ -1496,13 +1495,17 @@ async function doLogin(){
   const err=document.getElementById("li-err");
   err.textContent="";
   if(!id||!pass){err.textContent="Please fill in all fields.";return;}
-  let email=id;
-  if(id.indexOf("@")<0){
-    const resolved=await resolveLoginEmail(id);
-    if(!resolved){err.textContent="No account with that username.";return;}
-    email=resolved;
+  if(id.indexOf("@")>=0){
+    try{const c=await fbAuth.signInWithEmailAndPassword(id, pass);await afterAuth(c.user, false);}
+    catch(e){err.textContent=fbErr(e.code);}
+    return;
   }
-  try{const c=await fbAuth.signInWithEmailAndPassword(email, pass);await afterAuth(c.user, false);}
+  if(!fbFns){err.textContent="Username login is unavailable right now. Try logging in with your email.";return;}
+  let token;
+  try{const r=await fbFns.httpsCallable("usernameLogin")({username:id, password:pass});token=r&&r.data&&r.data.token;}
+  catch(e){err.textContent=fnErr(e);return;}
+  if(!token){err.textContent=fnErr(null);return;}
+  try{const c=await fbAuth.signInWithCustomToken(token);await afterAuth(c.user, false);}
   catch(e){err.textContent=fbErr(e.code);}
 }
 async function doForgotPassword(){
@@ -1545,10 +1548,9 @@ async function doSignup(){
       err.textContent="That username is taken. Try another.";
       return;
     }
-    // Directory doc is uid only. Email goes to loginEmails (not listable) and
-    // stays in Firebase Auth. users/{uid} is readable by every signed-in player.
+    // Directory doc is uid only. The email stays in Firebase Auth and nowhere
+    // else: username login looks it up on the server (functions/index.js).
     await uref.set({uid:c.user.uid});
-    await fbDb.collection("loginEmails").doc(uname.toLowerCase()).set({uid:c.user.uid, email:email});
     await fbDb.collection("users").doc(c.user.uid).set({username:uname, createdAt:firebase.firestore.FieldValue.serverTimestamp(),tutorialDone:false, totalCatches:0,biggestWeight:0,biggestName:"",goldEarned:0,level:1});
     await afterAuth(c.user, true);
   }catch(e){
@@ -1556,7 +1558,6 @@ async function doSignup(){
     // account; remove the docs while we're still signed in, then the auth user,
     // so the player can simply try again.
     const key=uname.toLowerCase();
-    try{await fbDb.collection("loginEmails").doc(key).delete();}catch(_){}
     try{await fbDb.collection("usernames").doc(key).delete();}catch(_){}
     try{if(c&&c.user)await fbDb.collection("users").doc(c.user.uid).delete();}catch(_){}
     try{if(c&&c.user)await c.user.delete();}catch(_){}
@@ -1578,15 +1579,14 @@ async function afterAuth(user, isNew){
     const pillBtn=document.getElementById("user-pill-btn");if(pillBtn)pillBtn.style.display="flex";
     const avatar=document.getElementById("user-avatar");if(avatar)avatar.textContent=fbUsername[0].toUpperCase();
     // Drop email off the public profile (rules reject writes that leave it
-    // there) and off the username directory. Username login reads
-    // loginEmails/{name}; Firebase Auth keeps the address.
+    // there) and off the username directory. Firebase Auth keeps the address,
+    // and username login reads it there, on the server.
     if(profile.email){
       await fbDb.collection("users").doc(user.uid).update({email:firebase.firestore.FieldValue.delete()}).catch(function(){});
     }
     if(user.email&&fbUsername&&fbUsername!=="Angler"){
       const key=fbUsername.toLowerCase();
       await fbDb.collection("usernames").doc(key).set({uid:user.uid, email:firebase.firestore.FieldValue.delete()},{merge:true}).catch(function(){});
-      await fbDb.collection("loginEmails").doc(key).set({uid:user.uid, email:user.email},{merge:true}).catch(function(){});
     }
     loadFriends();
     // Pull this account's cloud save and refresh the world so progress
@@ -20186,10 +20186,7 @@ async function purgeUserData(uid){
     fbDb.collection('saves').doc(uid).delete()
   ];
   const uname=(fbUsername||'').toLowerCase();
-  if(uname&&uname!=='guest'&&uname!=='angler'){
-    jobs.push(fbDb.collection('usernames').doc(uname).delete());
-    jobs.push(fbDb.collection('loginEmails').doc(uname).delete());
-  }
+  if(uname&&uname!=='guest'&&uname!=='angler')jobs.push(fbDb.collection('usernames').doc(uname).delete());
   await Promise.all(jobs.map(function(p){return p.catch(function(){});}));
 }
 function closeModal(){document.getElementById('modal-bg').classList.remove('show');_pendingInvite=null;if(typeof tutPlaceBar==='function')tutPlaceBar();}
