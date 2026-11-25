@@ -3,7 +3,10 @@ rules_version = '2';
 // Tide & Tackle - Firestore security rules.
 //
 // HOW TO APPLY: Firebase console -> Firestore Database -> Rules tab -> paste
-// this whole file over what's there -> Publish.
+// this whole file over what's there -> Publish. Ship the matching index.html
+// in the same pass, then run tools/strip-public-emails.js (dry-run, then
+// --apply) so email fields already stored on users/ and usernames/ are removed.
+// Publishing rules does not hide a field that is already on a document.
 //
 // These rules do NOT expire (the default "test mode" rules deny everything
 // after 30 days). Only signed-in accounts can touch the database; guests never
@@ -11,11 +14,42 @@ rules_version = '2';
 // wipe it. The shared multiplayer docs (lobbies, positions, invites, friend
 // lists) allow cross-account writes because that's how invites / friend
 // requests / co-op sessions work.
+//
+// Player email is NOT a public field. It stays in Firebase Auth (password
+// reset, email login, account-deletion reauth). The only Firestore copy is
+// loginEmails/{username}, and that collection cannot be listed. Username login
+// runs before request.auth exists, so a logged-out client may get that ONE
+// doc by exact username. A signed-in player cannot read someone else's.
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
+
+    // Public profiles and the username directory must not carry an email.
+    // Checked on create and on update: request.resource is the document AFTER
+    // the write, so an update that leaves an existing email in place is denied
+    // until that field is deleted.
+    function noPublicEmail() {
+      return !request.resource.data.keys().hasAny(['email']);
+    }
+
+    function validLoginEmail() {
+      return request.resource.data.keys().hasOnly(['uid', 'email'])
+        && request.resource.data.uid is string
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.email is string
+        && request.resource.data.email.size() >= 3
+        && request.resource.data.email.size() <= 320;
+    }
+
+    // Caller may only attach a login email to a username they already own.
+    // get/exists bypass other matches' read rules; they do not grant the
+    // client a read of that document.
+    function usernameOwnedByCaller(name) {
+      return exists(/databases/$(database)/documents/usernames/$(name))
+        && get(/databases/$(database)/documents/usernames/$(name)).data.uid == request.auth.uid;
+    }
 
     // ---- A player's cloud save: ONLY the owner may read or write it. ----
     match /saves/{uid} {
@@ -23,26 +57,50 @@ service cloud.firestore {
     }
 
     // ---- Public profile + stats: anyone signed in can read (friend search,
-    //      friends lists, leaderboard); only the owner writes their own. ----
+    //      friends lists, invites); only the owner writes their own.
+    //      Email is forbidden. Friend / lobby UI reads username and level. ----
     match /users/{uid} {
-      allow read:  if signedIn();
-      allow write: if signedIn() && request.auth.uid == uid;
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == uid && noPublicEmail();
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
     match /leaderboard/{uid} {
       allow read:  if signedIn();
       allow write: if signedIn() && request.auth.uid == uid;
     }
 
-    // ---- Username directory (login-by-username + friend search). Readable by
-    //      any signed-in user; you may only point a username at YOUR OWN uid.
+    // ---- Username directory (friend search + uniqueness). Readable by any
+    //      signed-in user; you may only point a username at YOUR OWN uid.
+    //      The doc is {uid} only — email used to live here and let every
+    //      signed-in player read every other player's address.
     //      Delete is split out because request.resource is null on a delete, so a
     //      single `write` rule would block you releasing your own username when
     //      you delete your account. ----
     match /usernames/{name} {
       allow read:   if signedIn();
-      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid
+                                  && noPublicEmail();
       allow update: if signedIn() && request.resource.data.uid == request.auth.uid
-                                  && resource.data.uid == request.auth.uid;
+                                  && resource.data.uid == request.auth.uid
+                                  && noPublicEmail();
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Username -> email, for signInWithEmailAndPassword before the player
+    //      has a session. List is denied, so the map cannot be downloaded.
+    //      get is allowed only when logged out (the login form) or when the
+    //      doc is your own. A signed-in player reading someone else's username
+    //      does not receive the address. Knowing the exact username is still
+    //      enough to fetch one address while logged out; that is the cost of
+    //      username login with no Cloud Function and no Auth-email rewrite.
+    //      Writes require you to own usernames/{name}. ----
+    match /loginEmails/{name} {
+      allow get: if request.auth == null
+        || (signedIn() && resource.data.uid == request.auth.uid);
+      allow list: if false;
+      allow create: if signedIn() && validLoginEmail() && usernameOwnedByCaller(name);
+      allow update: if signedIn() && validLoginEmail()
+        && (resource.data.uid == request.auth.uid || usernameOwnedByCaller(name));
       allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
